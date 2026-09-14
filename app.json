@@ -37,6 +37,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8c730012-8237-4f60-83af-53a64e6beaf8"
+      }
+    },
+    "owner": "jerry-stack"
   }
 }
