@@ -1,10 +1,10 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-export default function index() {
+export default function _layout() {
   return (
     <View>
-      <Text>index</Text>
+      <Text>_layout</Text>
     </View>
   )
 }

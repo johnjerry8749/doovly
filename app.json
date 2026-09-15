@@ -1,49 +1,42 @@
 {
   "expo": {
-    "name": "doovly",
+    "name": "Doovly",
     "slug": "doovly",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
     "scheme": "doovly",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash_screen.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "#16A34A"
+    },
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": true,
+      "bundleIdentifier": "com.johnjerry.doovly"
     },
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "predictiveBackGestureEnabled": false
+      "package": "com.johnjerry.doovly"
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "static"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "image": "./assets/images/splash_screen.jpg",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#16A34A"
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "8c730012-8237-4f60-83af-53a64e6beaf8"
-      }
-    },
-    "owner": "jerry-stack"
+    }
   }
 }
