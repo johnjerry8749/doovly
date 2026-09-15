@@ -244,9 +244,14 @@ export default function RegisterScreen() {
           </View>
 
           {/* Terms */}
+
           <Pressable
-            style={styles.termsRow}
             onPress={() => setAcceptedTerms(!acceptedTerms)}
+            android_ripple={null}
+            style={({ pressed }) => [
+              styles.termsRow,
+              { opacity: pressed ? 1 : 1 }, // no opacity change
+            ]}
           >
             <View
               style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}
