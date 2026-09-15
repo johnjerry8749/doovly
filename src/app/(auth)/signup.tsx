@@ -74,13 +74,8 @@ export default function RegisterScreen() {
     Alert.alert(
       "Account created",
       "Your account has been created successfully.",
-      [
-        {
-          text: "Continue",
-          onPress: () => router.replace("/(tabs)"),
-        },
-      ],
     );
+     router.replace("/(tab)/home");
   }
 
   function handleGoogleSignup() {
