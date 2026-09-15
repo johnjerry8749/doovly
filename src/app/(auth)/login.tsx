@@ -47,7 +47,7 @@ export default function Login() {
         router.replace("/(tab)/home");
       }
     } catch (error) {
-      Alert.alert("Error", "Google login failed. Please try again.");
+      Alert.alert("Google login failed. Please try again.");
       console.log(error);
     } finally {
       setLoading(false);
@@ -74,7 +74,7 @@ export default function Login() {
       if (error.code === "ERR_REQUEST_CANCELED") {
         // User cancelled
       } else {
-        Alert.alert("Error", "Apple login failed. Please try again.");
+        Alert.alert("Apple login failed. Please try again.");
         console.log(error);
       }
     } finally {
@@ -85,7 +85,7 @@ export default function Login() {
   // ========== NORMAL LOGIN ==========
   const handleLogin = () => {
     if (!phone || !password) {
-      Alert.alert("Error", "Please enter phone number and password");
+      Alert.alert("Please enter phone number and password");
       return;
     }
 
@@ -132,10 +132,17 @@ export default function Login() {
               />
             </View>
           </View>
-
           {/* Password Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
+            <View style={styles.row}>
+              <Text style={styles.label}>Password</Text>
+              <TouchableOpacity
+                onPress={() => router.push("/(auth)/forgot_password")}
+              >
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </View>
+
             <TextInput
               style={styles.passwordInput}
               placeholder="Enter your password"
@@ -363,5 +370,15 @@ const styles = StyleSheet.create({
   registerLink: {
     color: "#16A34A",
     fontWeight: "600",
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between", // label left, forgot right
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  forgotText: {
+    color: "#007AFF",
+    fontSize: 13,
   },
 });
