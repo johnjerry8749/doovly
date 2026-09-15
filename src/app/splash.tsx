@@ -85,7 +85,7 @@ export default function Splash() {
     // Loading bar animation
     Animated.timing(loadingWidth, {
       toValue: 1,
-      duration: 3000,
+      duration: 4000,
       easing: Easing.inOut(Easing.ease),
       useNativeDriver: false,
     }).start();
@@ -155,7 +155,8 @@ export default function Splash() {
         <Text style={styles.brandName}>DOOVLY</Text>
 
         <Text style={styles.tagline}>
-          Trusted services. Made simple.
+          Quaity service.
+          Right at yout door
         </Text>
       </Animated.View>
 
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
 
   tagline: {
     marginTop: 8,
-    fontSize: 14,
+    fontSize: 18,
     color: "#DCFCE7",
     letterSpacing: 0.5,
   },
