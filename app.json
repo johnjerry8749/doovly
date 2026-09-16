@@ -13,10 +13,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.johnjerry.doovly"
+      "bundleIdentifier": "com.johnjerry.doovly",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Doovly needs your location to show nearby service professionals.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Doovly needs your location to show nearby service professionals."
+      }
     },
     "android": {
-      "package": "com.johnjerry.doovly"
+      "package": "com.johnjerry.doovly",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "static"
@@ -33,7 +41,13 @@
         }
       ],
       "expo-asset",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Doovly to use your location to show nearby services."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
