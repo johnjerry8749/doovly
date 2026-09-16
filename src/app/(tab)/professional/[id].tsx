@@ -14,19 +14,11 @@ import {
   Modal,
 } from "react-native";
 
-import {
-  Ionicons,
-  MaterialCommunityIcons,
-} from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
-import {
-  router,
-  useLocalSearchParams,
-} from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import * as Location from "expo-location";
 
@@ -44,50 +36,38 @@ type TabKey = "services" | "portfolio" | "reviews";
 export default function ProfessionalProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // ----------------------------------------------------------
+  // ============================================================
   // PROFESSIONAL
-  // ----------------------------------------------------------
+  // ============================================================
 
-  const pro = useMemo(
-    () => getProfessionalById(id ?? ""),
-    [id]
-  );
+  const pro = useMemo(() => getProfessionalById(id ?? ""), [id]);
 
-  // ----------------------------------------------------------
+  // ============================================================
   // TAB STATE
-  // ----------------------------------------------------------
+  // ============================================================
 
   const [tab, setTab] = useState<TabKey>("services");
 
-  // ----------------------------------------------------------
+  // ============================================================
   // DISTANCE STATE
-  // ----------------------------------------------------------
+  // ============================================================
 
-  const [distanceKm, setDistanceKm] = useState<number | null>(
-    null
-  );
+  const [distanceKm, setDistanceKm] = useState<number | null>(null);
+  const [loadingDistance, setLoadingDistance] = useState(true);
 
-  const [loadingDistance, setLoadingDistance] =
-    useState(true);
-
-  // ----------------------------------------------------------
+  // ============================================================
   // REVIEW STATE
-  // ----------------------------------------------------------
+  // ============================================================
 
   const [reviews, setReviews] = useState<ProReview[]>([]);
-
   const [reviewText, setReviewText] = useState("");
-
   const [reviewerName, setReviewerName] = useState("");
-
   const [submitting, setSubmitting] = useState(false);
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
 
-  const [reviewModalVisible, setReviewModalVisible] =
-    useState(false);
-
-  // ----------------------------------------------------------
+  // ============================================================
   // LOAD REVIEWS
-  // ----------------------------------------------------------
+  // ============================================================
 
   useEffect(() => {
     if (pro) {
@@ -95,9 +75,9 @@ export default function ProfessionalProfile() {
     }
   }, [pro]);
 
-  // ----------------------------------------------------------
-  // LOCATION / DISTANCE
-  // ----------------------------------------------------------
+  // ============================================================
+  // CALCULATE DISTANCE
+  // ============================================================
 
   useEffect(() => {
     let mounted = true;
@@ -109,23 +89,21 @@ export default function ProfessionalProfile() {
       }
 
       try {
-        const { status } =
-          await Location.requestForegroundPermissionsAsync();
+        const { status } = await Location.requestForegroundPermissionsAsync();
 
         if (status !== "granted") {
           return;
         }
 
-        const location =
-          await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
 
         const distance = getDistanceKm(
           location.coords.latitude,
           location.coords.longitude,
           pro.latitude,
-          pro.longitude
+          pro.longitude,
         );
 
         if (mounted) {
@@ -147,31 +125,27 @@ export default function ProfessionalProfile() {
     };
   }, [pro]);
 
-  // ----------------------------------------------------------
+  // ============================================================
   // PROFESSIONAL NOT FOUND
-  // ----------------------------------------------------------
+  // ============================================================
 
   if (!pro) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <Text style={styles.notFound}>
-            Professional not found
-          </Text>
+          <Text style={styles.notFound}>Professional not found</Text>
 
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backLink}>
-              Go back
-            </Text>
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
+            <Text style={styles.backLink}>Go back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  // ----------------------------------------------------------
+  // ============================================================
   // BOOKING
-  // ----------------------------------------------------------
+  // ============================================================
 
   const onBook = (service?: ProService) => {
     router.push({
@@ -185,9 +159,9 @@ export default function ProfessionalProfile() {
     });
   };
 
-  // ----------------------------------------------------------
+  // ============================================================
   // SUBMIT REVIEW
-  // ----------------------------------------------------------
+  // ============================================================
 
   const submitReview = async () => {
     const comment = reviewText.trim();
@@ -195,7 +169,7 @@ export default function ProfessionalProfile() {
     if (!comment) {
       Alert.alert(
         "Empty review",
-        "Please write a short comment about this professional."
+        "Please write a short comment about this professional.",
       );
       return;
     }
@@ -204,156 +178,134 @@ export default function ProfessionalProfile() {
 
     try {
       const newReview = await addReview(pro.id, {
-        userName:
-          reviewerName.trim() || "Anonymous",
+        userName: reviewerName.trim() || "Anonymous",
         comment,
       });
 
-      // Add newest review to the top
-      setReviews((previous) => [
-        newReview,
-        ...previous,
-      ]);
+      // Add newest review to the beginning
+      setReviews((previous) => [newReview, ...previous]);
 
-      // Clear fields
+      // Clear form
       setReviewText("");
       setReviewerName("");
 
       // Close modal
       setReviewModalVisible(false);
 
-      Alert.alert(
-        "Thanks!",
-        "Your review was added successfully."
-      );
+      Alert.alert("Thanks!", "Your review was added successfully.");
     } catch (error) {
       console.log("Review error:", error);
 
-      Alert.alert(
-        "Error",
-        "Could not post your review. Please try again."
-      );
+      Alert.alert("Error", "Could not post your review. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ----------------------------------------------------------
+  // ============================================================
   // DISTANCE LABEL
-  // ----------------------------------------------------------
+  // ============================================================
 
   const distanceLabel = loadingDistance
     ? "Getting distance..."
     : distanceKm !== null
       ? `${
-          distanceKm < 10
-            ? distanceKm.toFixed(1)
-            : Math.round(distanceKm)
+          distanceKm < 10 ? distanceKm.toFixed(1) : Math.round(distanceKm)
         } km away`
       : pro.city;
 
-  // ----------------------------------------------------------
+  // ============================================================
   // RATING
-  // ----------------------------------------------------------
+  // ============================================================
 
-  const starCount = starsFromReviewCount(
-    reviews.length
-  );
+  const starCount = starsFromReviewCount(reviews.length);
 
-  const reviewsToNextStar =
-    10 - (reviews.length % 10);
+  const reviewsToNextStar = 10 - (reviews.length % 10);
 
-  // ----------------------------------------------------------
+  // ============================================================
   // RENDER
-  // ----------------------------------------------------------
+  // ============================================================
 
   return (
-    <SafeAreaView
-      style={styles.safe}
-      edges={["top"]}
-    >
+    <SafeAreaView style={styles.safe} edges={["top"]}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
-        }
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* ==================================================
+        {/* ======================================================
             HEADER
-        ================================================== */}
+        ====================================================== */}
 
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
+            activeOpacity={0.7}
           >
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color="#16A34A"
-            />
+            <Ionicons name="arrow-back" size={24} color="#16A34A" />
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>
-            Professional Profile
-          </Text>
+          <Text style={styles.headerTitle}>Professional Profile</Text>
 
           <View style={styles.headerSpacer} />
         </View>
 
-        {/* ==================================================
+        {/* ======================================================
             MAIN CONTENT
-        ================================================== */}
+        ====================================================== */}
 
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ==================================================
+          {/* ====================================================
               PROFILE IMAGE
-          ================================================== */}
+          ==================================================== */}
 
           <View style={styles.avatarContainer}>
             <Image
               source={pro.image}
               style={styles.avatar}
+              resizeMode="cover"
             />
 
+            {/* Blue verification badge */}
             {pro.verified && (
               <View style={styles.verifiedBadge}>
-                <Ionicons
-                  name="checkmark"
-                  size={16}
-                  color="#fff"
+                <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+              </View>
+            )}
+          </View>
+
+          {/* ====================================================
+              PROFESSIONAL NAME
+          ==================================================== */}
+
+          <View style={styles.nameRow}>
+            <Text style={styles.nameText}>{pro.name}</Text>
+
+            {/* Gold premium shield */}
+            {pro.subscribed && (
+              <View style={styles.premiumShield}>
+                <MaterialCommunityIcons
+                  name="shield-check"
+                  size={25}
+                  color="#D4AF37"
                 />
               </View>
             )}
           </View>
 
-          {/* ==================================================
-              NAME
-          ================================================== */}
-
-          <Text style={styles.name}>
-            {pro.name}
-          </Text>
-
-          {/* ==================================================
+          {/* ====================================================
               RATING
-          ================================================== */}
+          ==================================================== */}
 
           <View style={styles.ratingRow}>
             {[1, 2, 3, 4, 5].map((star) => (
               <Ionicons
                 key={star}
-                name={
-                  star <= starCount
-                    ? "star"
-                    : "star-outline"
-                }
+                name={star <= starCount ? "star" : "star-outline"}
                 size={18}
                 color="#16A34A"
               />
@@ -361,52 +313,38 @@ export default function ProfessionalProfile() {
 
             <Text style={styles.ratingText}>
               {starCount}/5 · {reviews.length}{" "}
-              {reviews.length === 1
-                ? "review"
-                : "reviews"}
+              {reviews.length === 1 ? "review" : "reviews"}
             </Text>
           </View>
 
-          {/* ==================================================
+          {/* ====================================================
               STAR PROGRESS
-          ================================================== */}
+          ==================================================== */}
 
           {starCount < 5 && (
             <Text style={styles.starHint}>
               {reviewsToNextStar} more review
-              {reviewsToNextStar === 1
-                ? ""
-                : "s"}{" "}
-              to unlock the next star
+              {reviewsToNextStar === 1 ? "" : "s"} to unlock the next star
             </Text>
           )}
 
-          {/* ==================================================
+          {/* ====================================================
               LOCATION
-          ================================================== */}
+          ==================================================== */}
 
           <View style={styles.locationRow}>
-            <Ionicons
-              name="location"
-              size={16}
-              color="#16A34A"
-            />
+            <Ionicons name="location" size={16} color="#16A34A" />
 
             {loadingDistance ? (
-              <ActivityIndicator
-                size="small"
-                color="#16A34A"
-              />
+              <ActivityIndicator size="small" color="#16A34A" />
             ) : (
-              <Text style={styles.locationText}>
-                {distanceLabel}
-              </Text>
+              <Text style={styles.locationText}>{distanceLabel}</Text>
             )}
           </View>
 
-          {/* ==================================================
+          {/* ====================================================
               TABS
-          ================================================== */}
+          ==================================================== */}
 
           <View style={styles.tabs}>
             {(
@@ -418,19 +356,12 @@ export default function ProfessionalProfile() {
             ).map(([key, label]) => (
               <TouchableOpacity
                 key={key}
-                style={[
-                  styles.tab,
-                  tab === key &&
-                    styles.activeTab,
-                ]}
+                style={[styles.tab, tab === key && styles.activeTab]}
                 onPress={() => setTab(key)}
+                activeOpacity={0.7}
               >
                 <Text
-                  style={[
-                    styles.tabText,
-                    tab === key &&
-                      styles.activeTabText,
-                  ]}
+                  style={[styles.tabText, tab === key && styles.activeTabText]}
                 >
                   {label}
                 </Text>
@@ -438,158 +369,102 @@ export default function ProfessionalProfile() {
             ))}
           </View>
 
-          {/* ==================================================
-              SERVICES
-          ================================================== */}
+          {/* ====================================================
+              SERVICES TAB
+          ==================================================== */}
 
           {tab === "services" && (
             <View style={styles.serviceCard}>
-              {pro.services.map(
-                (service, index) => (
-                  <TouchableOpacity
-                    key={service.id}
-                    style={[
-                      styles.serviceRow,
-                      index <
-                        pro.services.length - 1 &&
-                        styles.serviceBorder,
-                    ]}
-                    onPress={() =>
-                      onBook(service)
-                    }
-                    activeOpacity={0.7}
-                  >
-                    <View
-                      style={styles.serviceIcon}
-                    >
-                      <MaterialCommunityIcons
-                        name={
-                          service.icon as any
-                        }
-                        size={22}
-                        color="#16A34A"
-                      />
-                    </View>
+              {pro.services.map((service, index) => (
+                <TouchableOpacity
+                  key={service.id}
+                  style={[
+                    styles.serviceRow,
+                    index < pro.services.length - 1 && styles.serviceBorder,
+                  ]}
+                  onPress={() => onBook(service)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.serviceIcon}>
+                    <MaterialCommunityIcons
+                      name={service.icon as any}
+                      size={22}
+                      color="#16A34A"
+                    />
+                  </View>
 
-                    <View
-                      style={styles.serviceInfo}
-                    >
-                      <Text
-                        style={
-                          styles.serviceName
-                        }
-                      >
-                        {service.name}
-                      </Text>
+                  <View style={styles.serviceInfo}>
+                    <Text style={styles.serviceName}>{service.name}</Text>
 
-                      <Text
-                        style={
-                          styles.serviceDescription
-                        }
-                        numberOfLines={2}
-                      >
-                        {service.description}
-                      </Text>
-                    </View>
-
-                    <Text
-                      style={styles.servicePrice}
-                    >
-                      {service.price}
+                    <Text style={styles.serviceDescription} numberOfLines={2}>
+                      {service.description}
                     </Text>
-                  </TouchableOpacity>
-                )
-              )}
+                  </View>
+
+                  <Text style={styles.servicePrice}>{service.price}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
 
-          {/* ==================================================
-              PORTFOLIO
-          ================================================== */}
+          {/* ====================================================
+              PORTFOLIO TAB
+          ==================================================== */}
 
           {tab === "portfolio" && (
             <View style={styles.portfolioGrid}>
-              {pro.portfolio.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  No portfolio photos yet
-                </Text>
+              {pro.completedProjects?.length === 0 ? (
+                <Text style={styles.emptyText}>No completed projects yet</Text>
               ) : (
-                pro.portfolio.map(
-                  (image, index) => (
-                    <Image
-                      key={index}
-                      source={image}
-                      style={
-                        styles.portfolioImage
-                      }
-                    />
-                  )
-                )
+                pro.completedProjects?.map((project) => (
+                  <View key={project.id} style={styles.projectCard}>
+                    <View style={styles.projectHeader}>
+                      <View style={styles.projectIcon}>
+                        <Ionicons
+                          name="checkmark-done"
+                          size={18}
+                          color="#0A66C2"
+                        />
+                      </View>
+
+                      <Text style={styles.projectTitle}>{project.title}</Text>
+                    </View>
+
+                    <Text style={styles.projectDescription}>
+                      {project.description}
+                    </Text>
+                  </View>
+                ))
               )}
             </View>
           )}
 
-          {/* ==================================================
-              REVIEWS
-          ================================================== */}
+          {/* ====================================================
+              REVIEWS TAB
+          ==================================================== */}
 
           {tab === "reviews" && (
-            <View
-              style={styles.reviewsContainer}
-            >
+            <View style={styles.reviewsContainer}>
               {/* WRITE REVIEW BUTTON */}
 
               <TouchableOpacity
-                style={
-                  styles.writeReviewButton
-                }
+                style={styles.writeReviewButton}
                 activeOpacity={0.8}
-                onPress={() =>
-                  setReviewModalVisible(
-                    true
-                  )
-                }
+                onPress={() => setReviewModalVisible(true)}
               >
-                <View
-                  style={
-                    styles.writeReviewIcon
-                  }
-                >
-                  <Ionicons
-                    name="create-outline"
-                    size={22}
-                    color="#16A34A"
-                  />
+                <View style={styles.writeReviewIcon}>
+                  <Ionicons name="create-outline" size={22} color="#16A34A" />
                 </View>
 
-                <View
-                  style={
-                    styles.writeReviewContent
-                  }
-                >
-                  <Text
-                    style={
-                      styles.writeReviewTitle
-                    }
-                  >
-                    Write a review
-                  </Text>
+                <View style={styles.writeReviewContent}>
+                  <Text style={styles.writeReviewTitle}>Write a review</Text>
 
-                  <Text
-                    style={
-                      styles.writeReviewHint
-                    }
-                  >
-                    Share your experience with
-                    this professional
+                  <Text style={styles.writeReviewHint}>
+                    Share your experience with this professional
                   </Text>
                 </View>
 
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color="#9CA3AF"
-                />
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
               </TouchableOpacity>
 
               {/* REVIEW LIST */}
@@ -600,75 +475,36 @@ export default function ProfessionalProfile() {
                 </Text>
               ) : (
                 reviews.map((review) => (
-                  <View
-                    key={review.id}
-                    style={styles.reviewCard}
-                  >
-                    <View
-                      style={
-                        styles.reviewHeader
-                      }
-                    >
-                      <View
-                        style={
-                          styles.reviewAvatar
-                        }
-                      >
-                        <Text
-                          style={
-                            styles.reviewInitial
-                          }
-                        >
-                          {review.userName
-                            .charAt(0)
-                            .toUpperCase()}
+                  <View key={review.id} style={styles.reviewCard}>
+                    <View style={styles.reviewHeader}>
+                      <View style={styles.reviewAvatar}>
+                        <Text style={styles.reviewInitial}>
+                          {review.userName.charAt(0).toUpperCase()}
                         </Text>
                       </View>
 
-                      <View
-                        style={{ flex: 1 }}
-                      >
-                        <Text
-                          style={
-                            styles.reviewName
-                          }
-                        >
-                          {review.userName}
-                        </Text>
+                      <View style={styles.reviewUserInfo}>
+                        <Text style={styles.reviewName}>{review.userName}</Text>
 
-                        <Text
-                          style={
-                            styles.reviewDate
-                          }
-                        >
-                          {review.date}
-                        </Text>
+                        <Text style={styles.reviewDate}>{review.date}</Text>
                       </View>
                     </View>
 
-                    <Text
-                      style={
-                        styles.reviewComment
-                      }
-                    >
-                      {review.comment}
-                    </Text>
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
                   </View>
                 ))
               )}
             </View>
           )}
 
-          {/* ==================================================
-              BOTTOM SPACE
-          ================================================== */}
+          {/* SPACE FOR FIXED BOOK BUTTON */}
 
           <View style={styles.bottomSpace} />
         </ScrollView>
 
-        {/* ==================================================
+        {/* ======================================================
             FIXED BOOK NOW BUTTON
-        ================================================== */}
+        ====================================================== */}
 
         <View style={styles.bookingFooter}>
           <TouchableOpacity
@@ -676,106 +512,56 @@ export default function ProfessionalProfile() {
             activeOpacity={0.8}
             onPress={() => onBook()}
           >
-            <Ionicons
-              name="calendar-outline"
-              size={20}
-              color="#fff"
-            />
+            <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
 
-            <Text
-              style={styles.bookButtonText}
-            >
-              Book Now
-            </Text>
+            <Text style={styles.bookButtonText}>Book Now</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ==================================================
+        {/* ======================================================
             WRITE REVIEW MODAL
-        ================================================== */}
+        ====================================================== */}
 
         <Modal
           visible={reviewModalVisible}
           transparent
           animationType="slide"
-          onRequestClose={() =>
-            setReviewModalVisible(false)
-          }
+          onRequestClose={() => setReviewModalVisible(false)}
         >
           <KeyboardAvoidingView
             style={styles.modalOverlay}
-            behavior={
-              Platform.OS === "ios"
-                ? "padding"
-                : undefined
-            }
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
           >
             <View style={styles.reviewModal}>
               {/* MODAL HEADER */}
 
-              <View
-                style={styles.modalHeader}
-              >
-                <View
-                  style={
-                    styles.modalTitleContainer
-                  }
-                >
-                  <Text
-                    style={
-                      styles.modalTitle
-                    }
-                  >
-                    Write a review
-                  </Text>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalTitleContainer}>
+                  <Text style={styles.modalTitle}>Write a review</Text>
 
-                  <Text
-                    style={
-                      styles.modalSubtitle
-                    }
-                  >
-                    Share your experience with{" "}
-                    {pro.name}
+                  <Text style={styles.modalSubtitle}>
+                    Share your experience with {pro.name}
                   </Text>
                 </View>
 
                 <TouchableOpacity
-                  style={
-                    styles.modalCloseButton
-                  }
-                  onPress={() =>
-                    setReviewModalVisible(
-                      false
-                    )
-                  }
+                  style={styles.modalCloseButton}
+                  onPress={() => setReviewModalVisible(false)}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name="close"
-                    size={24}
-                    color="#374151"
-                  />
+                  <Ionicons name="close" size={24} color="#374151" />
                 </TouchableOpacity>
               </View>
 
               {/* REVIEW INFO */}
 
-              <View
-                style={styles.modalInfo}
-              >
-                <Ionicons
-                  name="star"
-                  size={20}
-                  color="#16A34A"
-                />
+              <View style={styles.modalInfo}>
+                <Ionicons name="star" size={20} color="#16A34A" />
 
-                {/* <Text
-                  style={
-                    styles.modalInfoText
-                  }
-                >
-                  Every 10 reviews gives this
-                  professional another star.
-                </Text> */}
+                <Text style={styles.modalInfoText}>
+                  Your honest experience can help other users make better
+                  decisions.
+                </Text>
               </View>
 
               {/* NAME INPUT */}
@@ -785,19 +571,14 @@ export default function ProfessionalProfile() {
                 placeholder="Your name (optional)"
                 placeholderTextColor="#9CA3AF"
                 value={reviewerName}
-                onChangeText={
-                  setReviewerName
-                }
+                onChangeText={setReviewerName}
                 editable={!submitting}
               />
 
               {/* REVIEW INPUT */}
 
               <TextInput
-                style={[
-                  styles.input,
-                  styles.commentInput,
-                ]}
+                style={[styles.input, styles.commentInput]}
                 placeholder="Share your experience..."
                 placeholderTextColor="#9CA3AF"
                 value={reviewText}
@@ -812,36 +593,19 @@ export default function ProfessionalProfile() {
               <TouchableOpacity
                 style={[
                   styles.submitButton,
-                  (!reviewText.trim() ||
-                    submitting) &&
-                    styles.disabledButton,
+                  (!reviewText.trim() || submitting) && styles.disabledButton,
                 ]}
-                disabled={
-                  !reviewText.trim() ||
-                  submitting
-                }
+                disabled={!reviewText.trim() || submitting}
                 onPress={submitReview}
                 activeOpacity={0.8}
               >
                 {submitting ? (
-                  <ActivityIndicator
-                    color="#fff"
-                  />
+                  <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <>
-                    <Ionicons
-                      name="send-outline"
-                      size={18}
-                      color="#fff"
-                    />
+                    <Ionicons name="send-outline" size={18} color="#FFFFFF" />
 
-                    <Text
-                      style={
-                        styles.submitButtonText
-                      }
-                    >
-                      Post Review
-                    </Text>
+                    <Text style={styles.submitButtonText}>Post Review</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -858,9 +622,13 @@ export default function ProfessionalProfile() {
 // ============================================================
 
 const styles = StyleSheet.create({
+  // ==========================================================
+  // GENERAL
+  // ==========================================================
+
   safe: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
   },
 
   container: {
@@ -929,9 +697,9 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   avatarContainer: {
+    position: "relative",
     marginTop: 20,
     marginBottom: 14,
-    position: "relative",
   },
 
   avatar: {
@@ -941,26 +709,58 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
   },
 
+  // Blue verified badge on profile image
   verifiedBadge: {
     position: "absolute",
-    right: 2,
-    bottom: 2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#16A34A",
-    borderWidth: 3,
-    borderColor: "#fff",
+    right: 9,
+    bottom: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#0A66C2",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+
+    // Android shadow
+    elevation: 3,
+
+    // iOS shadow
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+  },
+
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+
+  nameText: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  // Gold premium shield
+  premiumShield: {
+    width: 24,
+    height: 24,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  name: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 8,
-  },
+  // ==========================================================
+  // RATING
+  // ==========================================================
 
   ratingRow: {
     flexDirection: "row",
@@ -979,6 +779,10 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     marginBottom: 8,
   },
+
+  // ==========================================================
+  // LOCATION
+  // ==========================================================
 
   locationRow: {
     flexDirection: "row",
@@ -1087,16 +891,53 @@ const styles = StyleSheet.create({
 
   portfolioGrid: {
     width: "100%",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
+    gap: 12,
   },
 
-  portfolioImage: {
-    width: "47%",
-    aspectRatio: 1,
-    borderRadius: 12,
-    backgroundColor: "#E5E7EB",
+  projectCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
+    marginBottom: 12,
+  },
+
+  projectHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+  projectIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#EAF3FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+
+  projectTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111111",
+  },
+
+  projectDescription: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: "#666666",
+    marginLeft: 46,
+  },
+
+  emptyText: {
+    textAlign: "center",
+    fontSize: 14,
+    color: "#888888",
+    paddingVertical: 30,
   },
 
   // ==========================================================
@@ -1168,8 +1009,12 @@ const styles = StyleSheet.create({
   },
 
   reviewInitial: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontWeight: "700",
+  },
+
+  reviewUserInfo: {
+    flex: 1,
   },
 
   reviewName: {
@@ -1213,7 +1058,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#F3F4F6",
   },
@@ -1229,7 +1074,7 @@ const styles = StyleSheet.create({
   },
 
   bookButtonText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
   },
@@ -1245,7 +1090,7 @@ const styles = StyleSheet.create({
   },
 
   reviewModal: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
@@ -1309,7 +1154,7 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
@@ -1345,7 +1190,7 @@ const styles = StyleSheet.create({
   },
 
   submitButtonText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 15,
   },

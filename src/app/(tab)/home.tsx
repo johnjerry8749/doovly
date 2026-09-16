@@ -22,6 +22,7 @@ import {
   listServiceCategories,
   starsFromReviewCount,
 } from "@/services/professionals";
+
 import { NIGERIA_CITIES } from "@/data/cities";
 
 export default function Home() {
@@ -59,8 +60,7 @@ export default function Home() {
       setLoadingLocation(true);
       setShowAllNigeria(false);
 
-      const { status } =
-        await Location.requestForegroundPermissionsAsync();
+      const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== "granted") {
         setLocationName("Click here to select location");
@@ -88,10 +88,7 @@ export default function Home() {
         const place = address[0];
 
         const city =
-          place.city ||
-          place.subregion ||
-          place.district ||
-          "Unknown location";
+          place.city || place.subregion || place.district || "Unknown location";
 
         const country = place.country || "Nigeria";
 
@@ -147,9 +144,7 @@ export default function Home() {
       return [...NIGERIA_CITIES];
     }
 
-    return NIGERIA_CITIES.filter((city) =>
-      city.toLowerCase().includes(query)
-    );
+    return NIGERIA_CITIES.filter((city) => city.toLowerCase().includes(query));
   }, [citySearch]);
 
   // =========================
@@ -169,10 +164,7 @@ export default function Home() {
       return professionals;
     }
 
-    const city = locationName
-      .split(",")[0]
-      .trim()
-      .toLowerCase();
+    const city = locationName.split(",")[0].trim().toLowerCase();
 
     if (!city || city === "nigeria" || city === "all nigeria") {
       return professionals;
@@ -181,10 +173,7 @@ export default function Home() {
     const filtered = professionals.filter((professional) => {
       const professionalCity = professional.city.toLowerCase();
 
-      return (
-        professionalCity.includes(city) ||
-        city.includes(professionalCity)
-      );
+      return professionalCity.includes(city) || city.includes(professionalCity);
     });
 
     return filtered.length > 0 ? filtered : professionals;
@@ -217,48 +206,30 @@ export default function Home() {
             onPress={() => setShowLocationModal(true)}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="location"
-              size={28}
-              color="#159447"
-            />
+            <Ionicons name="location" size={28} color="#159447" />
 
             {loadingLocation ? (
               <View style={styles.locationLoading}>
-                <ActivityIndicator
-                  size="small"
-                  color="#159447"
-                />
+                <ActivityIndicator size="small" color="#159447" />
 
                 <Text style={styles.locationLoadingText}>
                   Getting location...
                 </Text>
               </View>
             ) : (
-              <Text
-                style={styles.locationText}
-                numberOfLines={1}
-              >
+              <Text style={styles.locationText} numberOfLines={1}>
                 {locationName}
               </Text>
             )}
 
-            <Ionicons
-              name="chevron-down"
-              size={18}
-              color="#111"
-            />
+            <Ionicons name="chevron-down" size={18} color="#111" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.notificationButton}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="notifications-outline"
-              size={28}
-              color="#111"
-            />
+            <Ionicons name="notifications-outline" size={28} color="#111" />
 
             <View style={styles.notificationDot} />
           </TouchableOpacity>
@@ -267,11 +238,7 @@ export default function Home() {
         {/* ================= SEARCH ================= */}
 
         <View style={styles.searchContainer}>
-          <Ionicons
-            name="search-outline"
-            size={27}
-            color="#555"
-          />
+          <Ionicons name="search-outline" size={27} color="#555" />
 
           <TextInput
             style={styles.searchInput}
@@ -280,11 +247,7 @@ export default function Home() {
           />
 
           <TouchableOpacity activeOpacity={0.7}>
-            <Ionicons
-              name="options-outline"
-              size={28}
-              color="#159447"
-            />
+            <Ionicons name="options-outline" size={28} color="#159447" />
           </TouchableOpacity>
         </View>
 
@@ -301,9 +264,7 @@ export default function Home() {
         {/* ================= SERVICES HEADER ================= */}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            What do you need help with?
-          </Text>
+          <Text style={styles.sectionTitle}>What do you need help with?</Text>
 
           <TouchableOpacity
             onPress={() => router.push("/(tab)/services")}
@@ -334,9 +295,7 @@ export default function Home() {
                 />
               </View>
 
-              <Text style={styles.serviceName}>
-                {service.name}
-              </Text>
+              <Text style={styles.serviceName}>{service.name}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -370,9 +329,7 @@ export default function Home() {
               key={person.id}
               style={styles.professionalCard}
               activeOpacity={0.8}
-              onPress={() =>
-                router.push(`/professional/${person.id}`)
-              }
+              onPress={() => router.push(`/professional/${person.id}`)}
             >
               {/* HEART */}
 
@@ -381,82 +338,54 @@ export default function Home() {
                 activeOpacity={0.7}
                 onPress={(event) => event.stopPropagation()}
               >
-                <Ionicons
-                  name="heart-outline"
-                  size={17}
-                  color="#111"
-                />
+                <Ionicons name="heart-outline" size={17} color="#111" />
               </TouchableOpacity>
 
               {/* PROFILE IMAGE */}
 
               <View style={styles.profileImageContainer}>
-                <Image
-                  source={person.image}
-                  style={styles.profileImage}
-                />
+                <Image source={person.image} style={styles.profileImage} />
 
-                <View style={styles.verifiedBadge}>
-                  <Ionicons
-                    name="checkmark"
-                    size={9}
-                    color="#fff"
-                  />
-                </View>
+                {person.verified && (
+                  <View style={styles.verifiedBadge}>
+                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                  </View>
+                )}
               </View>
 
               {/* NAME */}
 
-              <Text
-                style={styles.professionalName}
-                numberOfLines={1}
-              >
+              <Text style={styles.professionalName} numberOfLines={1}>
                 {person.name}
               </Text>
 
               {/* RATING */}
 
               <View style={styles.ratingContainer}>
-                <Ionicons
-                  name="star"
-                  size={12}
-                  color="#F4C400"
-                />
+                <Ionicons name="star" size={12} color="#F4C400" />
 
                 <Text style={styles.rating}>
-                  {starsFromReviewCount(
-                    person.reviews.length
-                  )}
+                  {starsFromReviewCount(person.reviews.length)}
                 </Text>
 
-                <Text style={styles.reviews}>
-                  ({person.reviews.length})
-                </Text>
+                <Text style={styles.reviews}>({person.reviews.length})</Text>
               </View>
 
               {/* PROFESSION */}
 
-              <Text
-                style={styles.profession}
-                numberOfLines={1}
-              >
+              <Text style={styles.profession} numberOfLines={1}>
                 {person.profession}
               </Text>
 
               {/* CITY */}
 
-              <Text
-                style={styles.cityText}
-                numberOfLines={1}
-              >
+              <Text style={styles.cityText} numberOfLines={1}>
                 {person.city}
               </Text>
 
               {/* PRICE */}
 
-              <Text style={styles.price}>
-                From {person.priceFrom}
-              </Text>
+              <Text style={styles.price}>From {person.priceFrom}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -485,19 +414,11 @@ export default function Home() {
           <TouchableOpacity
             style={styles.howButton}
             activeOpacity={0.8}
-            onPress={() =>
-              router.push("/(tab)/how-it-works")
-            }
+            onPress={() => router.push("/(tab)/how-it-works")}
           >
-            <Text style={styles.howButtonText}>
-              How it works
-            </Text>
+            <Text style={styles.howButtonText}>How it works</Text>
 
-            <Ionicons
-              name="arrow-forward"
-              size={20}
-              color="#fff"
-            />
+            <Ionicons name="arrow-forward" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -510,22 +431,16 @@ export default function Home() {
         visible={showLocationModal}
         transparent
         animationType="slide"
-        onRequestClose={() =>
-          setShowLocationModal(false)
-        }
+        onRequestClose={() => setShowLocationModal(false)}
       >
         <Pressable
           style={styles.modalOverlay}
-          onPress={() =>
-            setShowLocationModal(false)
-          }
+          onPress={() => setShowLocationModal(false)}
         >
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
 
-            <Text style={styles.modalTitle}>
-              Choose location
-            </Text>
+            <Text style={styles.modalTitle}>Choose location</Text>
 
             {/* CURRENT LOCATION */}
 
@@ -534,11 +449,7 @@ export default function Home() {
               onPress={getUserLocation}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name="navigate"
-                size={24}
-                color="#159447"
-              />
+              <Ionicons name="navigate" size={24} color="#159447" />
 
               <View style={styles.modalOptionText}>
                 <Text style={styles.modalOptionTitle}>
@@ -561,16 +472,10 @@ export default function Home() {
               }}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name="list-outline"
-                size={24}
-                color="#159447"
-              />
+              <Ionicons name="list-outline" size={24} color="#159447" />
 
               <View style={styles.modalOptionText}>
-                <Text style={styles.modalOptionTitle}>
-                  Select a city
-                </Text>
+                <Text style={styles.modalOptionTitle}>Select a city</Text>
 
                 <Text style={styles.modalOptionSub}>
                   Pick from popular cities in Nigeria
@@ -585,16 +490,10 @@ export default function Home() {
               onPress={viewAllInNigeria}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name="globe-outline"
-                size={24}
-                color="#159447"
-              />
+              <Ionicons name="globe-outline" size={24} color="#159447" />
 
               <View style={styles.modalOptionText}>
-                <Text style={styles.modalOptionTitle}>
-                  View all in Nigeria
-                </Text>
+                <Text style={styles.modalOptionTitle}>View all in Nigeria</Text>
 
                 <Text style={styles.modalOptionSub}>
                   See professionals from every city
@@ -606,13 +505,9 @@ export default function Home() {
 
             <TouchableOpacity
               style={styles.modalCancel}
-              onPress={() =>
-                setShowLocationModal(false)
-              }
+              onPress={() => setShowLocationModal(false)}
             >
-              <Text style={styles.modalCancelText}>
-                Cancel
-              </Text>
+              <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -627,26 +522,15 @@ export default function Home() {
         onRequestClose={closeCityPicker}
       >
         <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalSheet,
-              styles.cityPickerSheet,
-            ]}
-          >
+          <View style={[styles.modalSheet, styles.cityPickerSheet]}>
             <View style={styles.modalHandle} />
 
-            <Text style={styles.modalTitle}>
-              Select a city
-            </Text>
+            <Text style={styles.modalTitle}>Select a city</Text>
 
             {/* SEARCH */}
 
             <View style={styles.citySearchBox}>
-              <Ionicons
-                name="search-outline"
-                size={20}
-                color="#888"
-              />
+              <Ionicons name="search-outline" size={20} color="#888" />
 
               <TextInput
                 style={styles.citySearchInput}
@@ -658,14 +542,8 @@ export default function Home() {
               />
 
               {citySearch.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => setCitySearch("")}
-                >
-                  <Ionicons
-                    name="close-circle"
-                    size={20}
-                    color="#aaa"
-                  />
+                <TouchableOpacity onPress={() => setCitySearch("")}>
+                  <Ionicons name="close-circle" size={20} color="#aaa" />
                 </TouchableOpacity>
               )}
             </View>
@@ -689,21 +567,11 @@ export default function Home() {
                   onPress={() => selectCity(item)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name="location-outline"
-                    size={20}
-                    color="#159447"
-                  />
+                  <Ionicons name="location-outline" size={20} color="#159447" />
 
-                  <Text style={styles.cityItemText}>
-                    {item}
-                  </Text>
+                  <Text style={styles.cityItemText}>{item}</Text>
 
-                  <Ionicons
-                    name="chevron-forward"
-                    size={18}
-                    color="#ccc"
-                  />
+                  <Ionicons name="chevron-forward" size={18} color="#ccc" />
                 </TouchableOpacity>
               )}
             />
@@ -712,9 +580,7 @@ export default function Home() {
               style={styles.modalCancel}
               onPress={closeCityPicker}
             >
-              <Text style={styles.modalCancelText}>
-                Cancel
-              </Text>
+              <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -922,16 +788,17 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
 
+  // Blue verified badge on profile image
   verifiedBadge: {
     position: "absolute",
-    right: -2,
+    right: -3,
     bottom: 0,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "#159447",
-    borderWidth: 1.5,
-    borderColor: "#fff",
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#0A66C2",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1155,4 +1022,3 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 });
-
