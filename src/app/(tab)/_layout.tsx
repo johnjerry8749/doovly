@@ -77,6 +77,13 @@ export default function TabLayout() {
         }}
       />
 
+      <Tabs.Screen
+        name="bookme"
+        options={{
+          href: null,
+        }}
+      />
+
     </Tabs>
 
     

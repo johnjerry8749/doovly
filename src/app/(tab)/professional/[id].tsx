@@ -382,7 +382,7 @@ export default function ProfessionalProfile() {
                     styles.serviceRow,
                     index < pro.services.length - 1 && styles.serviceBorder,
                   ]}
-                  onPress={() => onBook(service)}
+                  onPress={() => router.push('/(tab)/bookme/[id]')}
                   activeOpacity={0.7}
                 >
                   <View style={styles.serviceIcon}>
@@ -510,7 +510,7 @@ export default function ProfessionalProfile() {
           <TouchableOpacity
             style={styles.bookButton}
             activeOpacity={0.8}
-            onPress={() => onBook()}
+            onPress={() => router.push('/(tab)/bookme/[id]')}
           >
             <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
 
