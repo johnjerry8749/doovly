@@ -22,7 +22,6 @@ export default function TabLayout() {
         },
       }}
     >
-      {/* 1. Home */}
       <Tabs.Screen
         name="home"
         options={{
@@ -33,7 +32,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 2. Bookings */}
       <Tabs.Screen
         name="bookings"
         options={{
@@ -44,7 +42,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 3. Services */}
       <Tabs.Screen
         name="services"
         options={{
@@ -55,7 +52,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 4. Profile */}
       <Tabs.Screen
         name="profile"
         options={{
