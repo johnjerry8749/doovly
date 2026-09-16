@@ -13,7 +13,7 @@ export default function TabLayout() {
           borderTopColor: "#E5E7EB",
           borderTopWidth: 1,
           height: 75,
-          paddingBottom: 10,
+          paddingBottom: 8,
           paddingTop: 6,
         },
         tabBarLabelStyle: {
@@ -69,6 +69,15 @@ export default function TabLayout() {
           href: null,
         }}
       />
+
+      <Tabs.Screen
+  name="professional"
+  options={{
+    href: null,
+  }}
+/>
     </Tabs>
+
+    
   );
 }
