@@ -10,13 +10,46 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
+  FlatList,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
+
+// Major Nigerian cities / states users can pick from
+const NIGERIA_CITIES = [
+  "Lagos",
+  "Abuja",
+  "Port Harcourt",
+  "Ibadan",
+  "Kano",
+  "Benin City",
+  "Enugu",
+  "Abeokuta",
+  "Onitsha",
+  "Warri",
+  "Calabar",
+  "Uyo",
+  "Ilorin",
+  "Jos",
+  "Kaduna",
+  "Maiduguri",
+  "Aba",
+  "Owerri",
+  "Akure",
+  "Osogbo",
+  "Asaba",
+  "Umuahia",
+  "Yenagoa",
+  "Makurdi",
+  "Minna",
+  "Sokoto",
+  "Katsina",
+  "Gombe",
+  "Bauchi",
+  "Lokoja",
+];
 
 export default function Home() {
   // =========================
@@ -33,9 +66,8 @@ export default function Home() {
 
   // Modal states
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [showManualInput, setShowManualInput] = useState(false);
-  const [manualInput, setManualInput] = useState("");
-  const [manualLoading, setManualLoading] = useState(false);
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  const [citySearch, setCitySearch] = useState("");
 
   // =========================
   // GET USER LOCATION (GPS)
@@ -89,56 +121,15 @@ export default function Home() {
   };
 
   // =========================
-  // MANUAL LOCATION
+  // SELECT CITY FROM LIST
   // =========================
-  const setManualLocation = async () => {
-    const text = manualInput.trim();
-    if (!text) return;
-
-    try {
-      setManualLoading(true);
-      setShowAllNigeria(false);
-
-      // Try to geocode the typed address
-      const results = await Location.geocodeAsync(text);
-
-      if (results.length > 0) {
-        const { latitude, longitude } = results[0];
-        setUserCoords({ latitude, longitude });
-
-        // Reverse geocode for a clean display name
-        const address = await Location.reverseGeocodeAsync({
-          latitude,
-          longitude,
-        });
-
-        if (address.length > 0) {
-          const place = address[0];
-          const city =
-            place.city ||
-            place.subregion ||
-            place.district ||
-            text;
-          const country = place.country || "";
-          setLocationName(`${city}${country ? `, ${country}` : ""}`);
-        } else {
-          setLocationName(text);
-        }
-      } else {
-        // Fallback: just use the typed text (no coords)
-        setLocationName(text);
-        setUserCoords(null);
-      }
-    } catch (error) {
-      console.log("Manual location error:", error);
-      setLocationName(text);
-      setUserCoords(null);
-    } finally {
-      setManualLoading(false);
-      setShowManualInput(false);
-      setShowLocationModal(false);
-      setManualInput("");
-    }
+  const selectCity = (city: string) => {
+    setShowAllNigeria(false);
+    setLocationName(`${city}, Nigeria`);
+    setUserCoords(null);
+    setShowCityPicker(false);
+    setShowLocationModal(false);
+    setCitySearch("");
   };
 
   // =========================
@@ -155,6 +146,13 @@ export default function Home() {
   useEffect(() => {
     getUserLocation();
   }, []);
+
+  // Filtered city list based on search
+  const filteredCities = useMemo(() => {
+    const q = citySearch.trim().toLowerCase();
+    if (!q) return NIGERIA_CITIES;
+    return NIGERIA_CITIES.filter((c) => c.toLowerCase().includes(q));
+  }, [citySearch]);
 
   // =========================
   // SERVICES
@@ -230,7 +228,6 @@ export default function Home() {
 
   // Filter professionals by current location (or show all Nigeria)
   const nearbyProfessionals = useMemo(() => {
-    // Explicit "All Nigeria" mode → show everyone
     if (showAllNigeria || locationName === "All Nigeria") {
       return professionals;
     }
@@ -245,7 +242,6 @@ export default function Home() {
 
     const cityKey = locationName.split(",")[0].trim().toLowerCase();
 
-    // If user typed/selected something like "Nigeria", treat as all
     if (cityKey === "nigeria" || cityKey === "all nigeria") {
       return professionals;
     }
@@ -256,7 +252,6 @@ export default function Home() {
         cityKey.includes(p.city.toLowerCase())
     );
 
-    // If no matches, still show some (fallback) so the UI isn't empty
     return filtered.length > 0 ? filtered : professionals;
   }, [locationName, showAllNigeria]);
 
@@ -271,7 +266,6 @@ export default function Home() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          {/* LOCATION */}
           <TouchableOpacity
             style={styles.locationContainer}
             onPress={() => setShowLocationModal(true)}
@@ -295,7 +289,6 @@ export default function Home() {
             <Ionicons name="chevron-down" size={18} color="#111" />
           </TouchableOpacity>
 
-          {/* NOTIFICATION */}
           <TouchableOpacity
             style={styles.notificationButton}
             activeOpacity={0.7}
@@ -379,7 +372,7 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-        {/* PROFESSIONALS (filtered) */}
+        {/* PROFESSIONALS */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -487,15 +480,15 @@ export default function Home() {
               style={styles.modalOption}
               onPress={() => {
                 setShowLocationModal(false);
-                setShowManualInput(true);
+                setShowCityPicker(true);
               }}
               activeOpacity={0.7}
             >
-              <Ionicons name="create-outline" size={24} color="#159447" />
+              <Ionicons name="list-outline" size={24} color="#159447" />
               <View style={styles.modalOptionText}>
-                <Text style={styles.modalOptionTitle}>Enter manually</Text>
+                <Text style={styles.modalOptionTitle}>Select a city</Text>
                 <Text style={styles.modalOptionSub}>
-                  Type a city or address
+                  Pick from popular cities in Nigeria
                 </Text>
               </View>
             </TouchableOpacity>
@@ -525,62 +518,75 @@ export default function Home() {
       </Modal>
 
       {/* =========================
-          MANUAL INPUT MODAL
+          CITY PICKER MODAL
       ========================= */}
       <Modal
-        visible={showManualInput}
+        visible={showCityPicker}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowManualInput(false)}
+        onRequestClose={() => {
+          setShowCityPicker(false);
+          setCitySearch("");
+        }}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
-        >
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setShowManualInput(false)}
-          />
-          <View style={styles.manualSheet}>
-            <Text style={styles.modalTitle}>Enter your location</Text>
-            <TextInput
-              style={styles.manualInput}
-              placeholder="e.g. Lagos, Abuja, Port Harcourt..."
-              placeholderTextColor="#888"
-              value={manualInput}
-              onChangeText={setManualInput}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={setManualLocation}
-            />
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { maxHeight: "80%" }]}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Select a city</Text>
 
-            <TouchableOpacity
-              style={[
-                styles.manualConfirmBtn,
-                (!manualInput.trim() || manualLoading) && { opacity: 0.5 },
-              ]}
-              onPress={setManualLocation}
-              disabled={!manualInput.trim() || manualLoading}
-              activeOpacity={0.8}
-            >
-              {manualLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.manualConfirmText}>Confirm location</Text>
+            {/* Search box to filter the list (optional) */}
+            <View style={styles.citySearchBox}>
+              <Ionicons name="search-outline" size={20} color="#888" />
+              <TextInput
+                style={styles.citySearchInput}
+                placeholder="Filter cities..."
+                placeholderTextColor="#888"
+                value={citySearch}
+                onChangeText={setCitySearch}
+                autoCorrect={false}
+              />
+              {citySearch.length > 0 && (
+                <TouchableOpacity onPress={() => setCitySearch("")}>
+                  <Ionicons name="close-circle" size={20} color="#aaa" />
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={filteredCities}
+              keyExtractor={(item) => item}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              style={{ marginTop: 8 }}
+              ListEmptyComponent={
+                <Text style={styles.emptyCitiesText}>
+                  No city found. Try another spelling.
+                </Text>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.cityItem}
+                  onPress={() => selectCity(item)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="location-outline" size={20} color="#159447" />
+                  <Text style={styles.cityItemText}>{item}</Text>
+                  <Ionicons name="chevron-forward" size={18} color="#ccc" />
+                </TouchableOpacity>
+              )}
+            />
 
             <TouchableOpacity
               style={styles.modalCancel}
               onPress={() => {
-                setShowManualInput(false);
-                setManualInput("");
+                setShowCityPicker(false);
+                setCitySearch("");
               }}
             >
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -917,34 +923,41 @@ const styles = StyleSheet.create({
     color: "#666",
   },
 
-  // MANUAL INPUT
-  manualSheet: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-    paddingTop: 20,
-  },
-  manualInput: {
+  // CITY PICKER
+  citySearchBox: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 4,
+  },
+  citySearchInput: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 8,
+    color: "#111",
+    paddingVertical: 0,
+  },
+  cityItem: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  cityItemText: {
+    flex: 1,
     fontSize: 16,
     color: "#111",
-    marginBottom: 16,
+    marginLeft: 12,
   },
-  manualConfirmBtn: {
-    backgroundColor: "#159447",
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  manualConfirmText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
+  emptyCitiesText: {
+    textAlign: "center",
+    color: "#888",
+    paddingVertical: 30,
+    fontSize: 15,
   },
 });
