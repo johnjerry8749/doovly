@@ -28,6 +28,8 @@ export default function Home() {
     longitude: number;
   } | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  // When true → show all professionals across Nigeria (no city filter)
+  const [showAllNigeria, setShowAllNigeria] = useState(false);
 
   // Modal states
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -41,6 +43,7 @@ export default function Home() {
   const getUserLocation = async () => {
     try {
       setLoadingLocation(true);
+      setShowAllNigeria(false);
 
       const { status } = await Location.requestForegroundPermissionsAsync();
 
@@ -94,6 +97,7 @@ export default function Home() {
 
     try {
       setManualLoading(true);
+      setShowAllNigeria(false);
 
       // Try to geocode the typed address
       const results = await Location.geocodeAsync(text);
@@ -135,6 +139,16 @@ export default function Home() {
       setShowLocationModal(false);
       setManualInput("");
     }
+  };
+
+  // =========================
+  // VIEW ALL IN NIGERIA
+  // =========================
+  const viewAllInNigeria = () => {
+    setShowAllNigeria(true);
+    setLocationName("All Nigeria");
+    setUserCoords(null);
+    setShowLocationModal(false);
   };
 
   // Get location when screen loads
@@ -214,26 +228,37 @@ export default function Home() {
     },
   ];
 
-  // Filter professionals by current location (simple city match)
+  // Filter professionals by current location (or show all Nigeria)
   const nearbyProfessionals = useMemo(() => {
+    // Explicit "All Nigeria" mode → show everyone
+    if (showAllNigeria || locationName === "All Nigeria") {
+      return professionals;
+    }
+
     if (
       !locationName ||
       locationName === "Location unavailable" ||
       locationName.toLowerCase().includes("getting")
     ) {
-      return professionals; // show all if no location
+      return professionals;
     }
 
     const cityKey = locationName.split(",")[0].trim().toLowerCase();
 
-    const filtered = professionals.filter((p) =>
-      p.city.toLowerCase().includes(cityKey) ||
-      cityKey.includes(p.city.toLowerCase())
+    // If user typed/selected something like "Nigeria", treat as all
+    if (cityKey === "nigeria" || cityKey === "all nigeria") {
+      return professionals;
+    }
+
+    const filtered = professionals.filter(
+      (p) =>
+        p.city.toLowerCase().includes(cityKey) ||
+        cityKey.includes(p.city.toLowerCase())
     );
 
     // If no matches, still show some (fallback) so the UI isn't empty
     return filtered.length > 0 ? filtered : professionals;
-  }, [locationName]);
+  }, [locationName, showAllNigeria]);
 
   // =========================
   // UI
@@ -339,7 +364,11 @@ export default function Home() {
 
         {/* POPULAR */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Popular near you</Text>
+          <Text style={styles.sectionTitle}>
+            {showAllNigeria || locationName === "All Nigeria"
+              ? "Popular in Nigeria"
+              : "Popular near you"}
+          </Text>
           <TouchableOpacity activeOpacity={0.7}>
             <Text
               style={styles.seeAll}
@@ -467,6 +496,20 @@ export default function Home() {
                 <Text style={styles.modalOptionTitle}>Enter manually</Text>
                 <Text style={styles.modalOptionSub}>
                   Type a city or address
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={viewAllInNigeria}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="globe-outline" size={24} color="#159447" />
+              <View style={styles.modalOptionText}>
+                <Text style={styles.modalOptionTitle}>View all in Nigeria</Text>
+                <Text style={styles.modalOptionSub}>
+                  See professionals from every city
                 </Text>
               </View>
             </TouchableOpacity>
