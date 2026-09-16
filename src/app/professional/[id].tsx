@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -28,16 +27,12 @@ import {
   type ProReview,
 } from "@/services/professionals";
 
-
 type TabKey = "services" | "portfolio" | "reviews";
 
 export default function ProfessionalProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const pro = useMemo(
-    () => getProfessionalById(id ?? ""),
-    [id]
-  );
+  const pro = useMemo(() => getProfessionalById(id ?? ""), [id]);
 
   const [tab, setTab] = useState<TabKey>("services");
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
@@ -72,23 +67,21 @@ export default function ProfessionalProfile() {
       }
 
       try {
-        const { status } =
-          await Location.requestForegroundPermissionsAsync();
+        const { status } = await Location.requestForegroundPermissionsAsync();
 
         if (status !== "granted") {
           return;
         }
 
-        const location =
-          await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
 
         const distance = getDistanceKm(
           location.coords.latitude,
           location.coords.longitude,
           pro.latitude,
-          pro.longitude
+          pro.longitude,
         );
 
         if (mounted) {
@@ -118,14 +111,10 @@ export default function ProfessionalProfile() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <Text style={styles.notFound}>
-            Professional not found
-          </Text>
+          <Text style={styles.notFound}>Professional not found</Text>
 
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backLink}>
-              Go back
-            </Text>
+            <Text style={styles.backLink}>Go back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -158,7 +147,7 @@ export default function ProfessionalProfile() {
     if (!comment) {
       Alert.alert(
         "Empty review",
-        "Please write a short comment about this pro."
+        "Please write a short comment about this pro.",
       );
       return;
     }
@@ -171,23 +160,14 @@ export default function ProfessionalProfile() {
         comment,
       });
 
-      setReviews((previous) => [
-        newReview,
-        ...previous,
-      ]);
+      setReviews((previous) => [newReview, ...previous]);
 
       setReviewText("");
       setReviewerName("");
 
-      Alert.alert(
-        "Thanks!",
-        "Your review was added."
-      );
+      Alert.alert("Thanks!", "Your review was added.");
     } catch {
-      Alert.alert(
-        "Error",
-        "Could not post review. Try again."
-      );
+      Alert.alert("Error", "Could not post review. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -201,35 +181,23 @@ export default function ProfessionalProfile() {
     ? "Getting distance..."
     : distanceKm !== null
       ? `${
-          distanceKm < 10
-            ? distanceKm.toFixed(1)
-            : Math.round(distanceKm)
+          distanceKm < 10 ? distanceKm.toFixed(1) : Math.round(distanceKm)
         } km away`
       : pro.city;
 
-  const starCount = starsFromReviewCount(
-    reviews.length
-  );
+  const starCount = starsFromReviewCount(reviews.length);
 
-  const reviewsToNextStar =
-    10 - (reviews.length % 10);
+  const reviewsToNextStar = 10 - (reviews.length % 10);
 
   // ----------------------------------------------------------
   // RENDER
   // ----------------------------------------------------------
 
   return (
-    <SafeAreaView
-      style={styles.safe}
-      edges={["top"]}
-    >
+    <SafeAreaView style={styles.safe} edges={["top"]}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
-        }
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {/* HEADER */}
 
@@ -238,16 +206,10 @@ export default function ProfessionalProfile() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color="#16A34A"
-            />
+            <Ionicons name="arrow-back" size={24} color="#16A34A" />
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>
-            Professional Profile
-          </Text>
+          <Text style={styles.headerTitle}>Professional Profile</Text>
 
           <View style={styles.headerSpacer} />
         </View>
@@ -262,27 +224,18 @@ export default function ProfessionalProfile() {
           {/* PROFILE IMAGE */}
 
           <View style={styles.avatarContainer}>
-            <Image
-              source={pro.image}
-              style={styles.avatar}
-            />
+            <Image source={pro.image} style={styles.avatar} />
 
             {pro.verified && (
               <View style={styles.verifiedBadge}>
-                <Ionicons
-                  name="checkmark"
-                  size={16}
-                  color="#fff"
-                />
+                <Ionicons name="checkmark" size={16} color="#fff" />
               </View>
             )}
           </View>
 
           {/* NAME */}
 
-          <Text style={styles.name}>
-            {pro.name}
-          </Text>
+          <Text style={styles.name}>{pro.name}</Text>
 
           {/* RATING */}
 
@@ -290,11 +243,7 @@ export default function ProfessionalProfile() {
             {[1, 2, 3, 4, 5].map((star) => (
               <Ionicons
                 key={star}
-                name={
-                  star <= starCount
-                    ? "star"
-                    : "star-outline"
-                }
+                name={star <= starCount ? "star" : "star-outline"}
                 size={18}
                 color="#16A34A"
               />
@@ -302,9 +251,7 @@ export default function ProfessionalProfile() {
 
             <Text style={styles.ratingText}>
               {starCount}/5 · {reviews.length}{" "}
-              {reviews.length === 1
-                ? "review"
-                : "reviews"}
+              {reviews.length === 1 ? "review" : "reviews"}
             </Text>
           </View>
 
@@ -313,31 +260,19 @@ export default function ProfessionalProfile() {
           {starCount < 5 && (
             <Text style={styles.starHint}>
               {reviewsToNextStar} more review
-              {reviewsToNextStar === 1
-                ? ""
-                : "s"}{" "}
-              to unlock the next star
+              {reviewsToNextStar === 1 ? "" : "s"} to unlock the next star
             </Text>
           )}
 
           {/* LOCATION */}
 
           <View style={styles.locationRow}>
-            <Ionicons
-              name="location"
-              size={16}
-              color="#16A34A"
-            />
+            <Ionicons name="location" size={16} color="#16A34A" />
 
             {loadingDistance ? (
-              <ActivityIndicator
-                size="small"
-                color="#16A34A"
-              />
+              <ActivityIndicator size="small" color="#16A34A" />
             ) : (
-              <Text style={styles.locationText}>
-                {distanceLabel}
-              </Text>
+              <Text style={styles.locationText}>{distanceLabel}</Text>
             )}
           </View>
 
@@ -353,18 +288,11 @@ export default function ProfessionalProfile() {
             ).map(([key, label]) => (
               <TouchableOpacity
                 key={key}
-                style={[
-                  styles.tab,
-                  tab === key && styles.activeTab,
-                ]}
+                style={[styles.tab, tab === key && styles.activeTab]}
                 onPress={() => setTab(key)}
               >
                 <Text
-                  style={[
-                    styles.tabText,
-                    tab === key &&
-                      styles.activeTabText,
-                  ]}
+                  style={[styles.tabText, tab === key && styles.activeTabText]}
                 >
                   {label}
                 </Text>
@@ -381,13 +309,9 @@ export default function ProfessionalProfile() {
                   key={service.id}
                   style={[
                     styles.serviceRow,
-                    index <
-                      pro.services.length - 1 &&
-                      styles.serviceBorder,
+                    index < pro.services.length - 1 && styles.serviceBorder,
                   ]}
-                  onPress={() =>
-                    onBook(service)
-                  }
+                  onPress={() => onBook(service)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.serviceIcon}>
@@ -399,23 +323,14 @@ export default function ProfessionalProfile() {
                   </View>
 
                   <View style={styles.serviceInfo}>
-                    <Text
-                      style={styles.serviceName}
-                    >
-                      {service.name}
-                    </Text>
+                    <Text style={styles.serviceName}>{service.name}</Text>
 
-                    <Text
-                      style={styles.serviceDescription}
-                      numberOfLines={2}
-                    >
+                    <Text style={styles.serviceDescription} numberOfLines={2}>
                       {service.description}
                     </Text>
                   </View>
 
-                  <Text style={styles.servicePrice}>
-                    {service.price}
-                  </Text>
+                  <Text style={styles.servicePrice}>{service.price}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -426,9 +341,7 @@ export default function ProfessionalProfile() {
           {tab === "portfolio" && (
             <View style={styles.portfolioGrid}>
               {pro.portfolio.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  No portfolio photos yet
-                </Text>
+                <Text style={styles.emptyText}>No portfolio photos yet</Text>
               ) : (
                 pro.portfolio.map((image, index) => (
                   <Image
@@ -446,13 +359,10 @@ export default function ProfessionalProfile() {
           {tab === "reviews" && (
             <View style={styles.reviewsContainer}>
               <View style={styles.writeReview}>
-                <Text style={styles.writeTitle}>
-                  Write a review
-                </Text>
+                <Text style={styles.writeTitle}>Write a review</Text>
 
                 <Text style={styles.writeHint}>
-                  Every 10 reviews gives this pro
-                  another star.
+                  Every 10 reviews gives this pro another star.
                 </Text>
 
                 <TextInput
@@ -464,10 +374,7 @@ export default function ProfessionalProfile() {
                 />
 
                 <TextInput
-                  style={[
-                    styles.input,
-                    styles.commentInput,
-                  ]}
+                  style={[styles.input, styles.commentInput]}
                   placeholder="Share your experience..."
                   placeholderTextColor="#9CA3AF"
                   value={reviewText}
@@ -479,81 +386,41 @@ export default function ProfessionalProfile() {
                 <TouchableOpacity
                   style={[
                     styles.submitButton,
-                    (!reviewText.trim() ||
-                      submitting) &&
-                      styles.disabledButton,
+                    (!reviewText.trim() || submitting) && styles.disabledButton,
                   ]}
-                  disabled={
-                    !reviewText.trim() ||
-                    submitting
-                  }
+                  disabled={!reviewText.trim() || submitting}
                   onPress={submitReview}
                 >
                   {submitting ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text
-                      style={
-                        styles.submitButtonText
-                      }
-                    >
-                      Post Review
-                    </Text>
+                    <Text style={styles.submitButtonText}>Post Review</Text>
                   )}
                 </TouchableOpacity>
               </View>
 
               {reviews.length === 0 ? (
                 <Text style={styles.emptyText}>
-                  No reviews yet — be the first!
+                  No reviews yet be the first!
                 </Text>
               ) : (
                 reviews.map((review) => (
-                  <View
-                    key={review.id}
-                    style={styles.reviewCard}
-                  >
+                  <View key={review.id} style={styles.reviewCard}>
                     <View style={styles.reviewHeader}>
-                      <View
-                        style={
-                          styles.reviewAvatar
-                        }
-                      >
-                        <Text
-                          style={
-                            styles.reviewInitial
-                          }
-                        >
-                          {review.userName
-                            .charAt(0)
-                            .toUpperCase()}
+                      <View style={styles.reviewAvatar}>
+                        <Text style={styles.reviewInitial}>
+                          {review.userName.charAt(0).toUpperCase()}
                         </Text>
                       </View>
 
                       <View style={{ flex: 1 }}>
-                        <Text
-                          style={
-                            styles.reviewName
-                          }
-                        >
-                          {review.userName}
-                        </Text>
+                        <Text style={styles.reviewName}>{review.userName}</Text>
 
-                        <Text
-                          style={
-                            styles.reviewDate
-                          }
-                        >
-                          {review.date}
-                        </Text>
+                        <Text style={styles.reviewDate}>{review.date}</Text>
                       </View>
                     </View>
 
-                    <Text
-                      style={styles.reviewComment}
-                    >
-                      {review.comment}
-                    </Text>
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
                   </View>
                 ))
               )}
@@ -561,9 +428,30 @@ export default function ProfessionalProfile() {
           )}
 
           {/* SPACE FOR FIXED BUTTON */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* all your content */}
 
-          <View style={styles.bottomSpace} />
-        </ScrollView>    
+            {/* Space so content isn't hidden behind the fixed button */}
+            <View style={styles.bottomSpace} />
+          </ScrollView>
+
+          {/* FIXED BOOK NOW BUTTON */}
+          <View style={styles.bookingFooter}>
+            <TouchableOpacity
+              style={styles.bookButton}
+              activeOpacity={0.8}
+              onPress={() => onBook()}
+            >
+              <Ionicons name="calendar-outline" size={20} color="#fff" />
+
+              <Text style={styles.bookButtonText}>Book Now</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
