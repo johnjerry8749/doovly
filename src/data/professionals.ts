@@ -1,6 +1,10 @@
 /**
  * Shared professionals data.
  * Later: replace getProfessionalById / list with API or DB.
+ *
+ * Star rule (as requested):
+ *   every 10 review comments = 1 star (max 5)
+ *   stars = min(5, floor(totalReviews / 10))
  */
 
 export type ProService = {
@@ -9,13 +13,12 @@ export type ProService = {
   description: string;
   price: string;
   priceValue: number;
-  icon: string; // MaterialCommunityIcons name
+  icon: string;
 };
 
 export type ProReview = {
   id: string;
   userName: string;
-  rating: number;
   comment: string;
   date: string;
 };
@@ -24,26 +27,28 @@ export type Professional = {
   id: string;
   name: string;
   profession: string;
-  rating: number;
-  reviewCount: number;
   city: string;
   priceFrom: string;
-  image: number; // require()
+  image: number;
   verified: boolean;
-  // Approx coords for distance (Lagos / Abuja / PH area)
   latitude: number;
   longitude: number;
   services: ProService[];
+  /** Work photos shown in Portfolio tab */
+  portfolio: number[];
   reviews: ProReview[];
 };
+
+/** Every 10 reviews → 1 star, max 5 */
+export function starsFromReviewCount(count: number): number {
+  return Math.min(5, Math.floor(count / 10));
+}
 
 export const PROFESSIONALS: Professional[] = [
   {
     id: "1",
     name: "John Chukwuemeka",
     profession: "Plumber",
-    rating: 4.8,
-    reviewCount: 126,
     city: "Lagos",
     priceFrom: "₦8,000",
     image: require("@/assets/profile_1.jpg"),
@@ -76,25 +81,28 @@ export const PROFESSIONALS: Professional[] = [
         icon: "water-boiler",
       },
     ],
+    portfolio: [
+      require("@/assets/profile_1.jpg"),
+      require("@/assets/profile_3.jpg"),
+      require("@/assets/profile_4.jpg"),
+      require("@/assets/profile_2.jpg"),
+    ],
     reviews: [
       {
         id: "r1",
         userName: "Ada O.",
-        rating: 5,
         comment: "Very professional and on time. Fixed my kitchen sink perfectly.",
         date: "May 10, 2025",
       },
       {
         id: "r2",
         userName: "Tunde A.",
-        rating: 5,
         comment: "Honest pricing and clean work. Highly recommended.",
         date: "Apr 28, 2025",
       },
       {
         id: "r3",
         userName: "Chioma N.",
-        rating: 4,
         comment: "Good job overall. Arrived a bit late but quality was excellent.",
         date: "Apr 12, 2025",
       },
@@ -104,8 +112,6 @@ export const PROFESSIONALS: Professional[] = [
     id: "2",
     name: "Chioma Eze",
     profession: "Nail Tech",
-    rating: 4.8,
-    reviewCount: 98,
     city: "Lagos",
     priceFrom: "₦6,000",
     image: require("@/assets/profile_2.jpg"),
@@ -130,11 +136,14 @@ export const PROFESSIONALS: Professional[] = [
         icon: "hand-okay",
       },
     ],
+    portfolio: [
+      require("@/assets/profile_2.jpg"),
+      require("@/assets/profile_4.jpg"),
+    ],
     reviews: [
       {
         id: "r1",
         userName: "Blessing K.",
-        rating: 5,
         comment: "Beautiful nails and very careful. Will book again.",
         date: "May 5, 2025",
       },
@@ -144,8 +153,6 @@ export const PROFESSIONALS: Professional[] = [
     id: "3",
     name: "Ikechukwu Obi",
     profession: "Mechanic",
-    rating: 4.8,
-    reviewCount: 74,
     city: "Abuja",
     priceFrom: "₦10,000",
     image: require("@/assets/profile_3.jpg"),
@@ -170,11 +177,11 @@ export const PROFESSIONALS: Professional[] = [
         icon: "oil",
       },
     ],
+    portfolio: [require("@/assets/profile_3.jpg"), require("@/assets/profile_1.jpg")],
     reviews: [
       {
         id: "r1",
         userName: "Emeka P.",
-        rating: 5,
         comment: "Fixed my car the same day. Fair price.",
         date: "May 1, 2025",
       },
@@ -184,8 +191,6 @@ export const PROFESSIONALS: Professional[] = [
     id: "4",
     name: "Blessing Joy",
     profession: "Body Massage Therapist",
-    rating: 4.8,
-    reviewCount: 126,
     city: "Lagos",
     priceFrom: "₦18,000",
     image: require("@/assets/profile_4.jpg"),
@@ -202,11 +207,11 @@ export const PROFESSIONALS: Professional[] = [
         icon: "spa",
       },
     ],
+    portfolio: [require("@/assets/profile_4.jpg")],
     reviews: [
       {
         id: "r1",
         userName: "Ngozi M.",
-        rating: 5,
         comment: "So relaxing. Professional and respectful.",
         date: "Apr 20, 2025",
       },
@@ -216,8 +221,6 @@ export const PROFESSIONALS: Professional[] = [
     id: "5",
     name: "Emeka Okoro",
     profession: "Electrician",
-    rating: 4.9,
-    reviewCount: 210,
     city: "Port Harcourt",
     priceFrom: "₦7,500",
     image: require("@/assets/profile_1.jpg"),
@@ -242,11 +245,11 @@ export const PROFESSIONALS: Professional[] = [
         icon: "lightning-bolt",
       },
     ],
+    portfolio: [require("@/assets/profile_1.jpg"), require("@/assets/profile_3.jpg")],
     reviews: [
       {
         id: "r1",
         userName: "Ifeanyi D.",
-        rating: 5,
         comment: "Quick and safe. Explained everything clearly.",
         date: "May 8, 2025",
       },
@@ -256,8 +259,6 @@ export const PROFESSIONALS: Professional[] = [
     id: "6",
     name: "Aisha Bello",
     profession: "Barber",
-    rating: 4.7,
-    reviewCount: 89,
     city: "Abuja",
     priceFrom: "₦4,000",
     image: require("@/assets/profile_2.jpg"),
@@ -282,11 +283,11 @@ export const PROFESSIONALS: Professional[] = [
         icon: "mustache",
       },
     ],
+    portfolio: [require("@/assets/profile_2.jpg")],
     reviews: [
       {
         id: "r1",
         userName: "Yusuf H.",
-        rating: 5,
         comment: "Clean cut every time. Best in the area.",
         date: "May 3, 2025",
       },
@@ -298,7 +299,6 @@ export function getProfessionalById(id: string): Professional | undefined {
   return PROFESSIONALS.find((p) => p.id === String(id));
 }
 
-/** Haversine distance in km */
 export function getDistanceKm(
   lat1: number,
   lon1: number,

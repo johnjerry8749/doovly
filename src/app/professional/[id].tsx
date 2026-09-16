@@ -7,6 +7,10 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
+  TextInput,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -15,25 +19,39 @@ import * as Location from "expo-location";
 import {
   getProfessionalById,
   getDistanceKm,
+  starsFromReviewCount,
   ProService,
+  ProReview,
 } from "@/data/professionals";
 
-type TabKey = "services" | "reviews";
+type TabKey = "services" | "portfolio" | "reviews";
 
 export default function ProfessionalProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const pro = useMemo(() => getProfessionalById(id ?? ""), [id]);
+  const basePro = useMemo(() => getProfessionalById(id ?? ""), [id]);
 
   const [tab, setTab] = useState<TabKey>("services");
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [loadingDistance, setLoadingDistance] = useState(true);
 
-  // Calculate distance from user GPS to pro
+  // Local reviews so user can add new ones (later → API)
+  const [reviews, setReviews] = useState<ProReview[]>([]);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewerName, setReviewerName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (basePro) setReviews(basePro.reviews);
+  }, [basePro]);
+
+  // Stars from review count: every 10 comments = 1 star (max 5)
+  const starCount = starsFromReviewCount(reviews.length);
+  const reviewsToNextStar = 10 - (reviews.length % 10);
+
   useEffect(() => {
     let mounted = true;
-
     (async () => {
-      if (!pro) {
+      if (!basePro) {
         setLoadingDistance(false);
         return;
       }
@@ -49,8 +67,8 @@ export default function ProfessionalProfile() {
         const km = getDistanceKm(
           loc.coords.latitude,
           loc.coords.longitude,
-          pro.latitude,
-          pro.longitude,
+          basePro.latitude,
+          basePro.longitude,
         );
         if (mounted) setDistanceKm(km);
       } catch (e) {
@@ -59,13 +77,12 @@ export default function ProfessionalProfile() {
         if (mounted) setLoadingDistance(false);
       }
     })();
-
     return () => {
       mounted = false;
     };
-  }, [pro]);
+  }, [basePro]);
 
-  if (!pro) {
+  if (!basePro) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
@@ -78,8 +95,9 @@ export default function ProfessionalProfile() {
     );
   }
 
+  const pro = basePro;
+
   const onBook = (service?: ProService) => {
-    // Booking form can be wired later — pass pro + optional service
     router.push({
       pathname: "/(tab)/bookings",
       params: {
@@ -91,175 +109,269 @@ export default function ProfessionalProfile() {
     });
   };
 
+  const submitReview = () => {
+    const comment = reviewText.trim();
+    const name = reviewerName.trim() || "Anonymous";
+    if (!comment) {
+      Alert.alert("Empty review", "Please write a short comment about this pro.");
+      return;
+    }
+    setSubmitting(true);
+    // Simulate save — later: POST /api/professionals/:id/reviews
+    setTimeout(() => {
+      const newReview: ProReview = {
+        id: `local-${Date.now()}`,
+        userName: name,
+        comment,
+        date: new Date().toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+      };
+      setReviews((prev) => [newReview, ...prev]);
+      setReviewText("");
+      setReviewerName("");
+      setSubmitting(false);
+      Alert.alert(
+        "Thanks!",
+        reviews.length + 1 >= 10 && (reviews.length + 1) % 10 === 0
+          ? `Review added. This pro just earned another star! (${starsFromReviewCount(reviews.length + 1)}★)`
+          : "Your review was added.",
+      );
+    }, 400);
+  };
+
   const distanceLabel = loadingDistance
     ? "Getting distance..."
     : distanceKm != null
       ? `${distanceKm < 10 ? distanceKm.toFixed(1) : Math.round(distanceKm)} km away`
-      : `${pro.city}`;
+      : pro.city;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#16A34A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Professional Profile</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* Avatar */}
-        <View style={styles.avatarWrap}>
-          <Image source={pro.image} style={styles.avatar} />
-          {pro.verified && (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark" size={16} color="#fff" />
-            </View>
-          )}
-        </View>
-
-        <Text style={styles.name}>{pro.name}</Text>
-
-        {/* Stars */}
-        <View style={styles.ratingRow}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Ionicons
-              key={i}
-              name={i <= Math.round(pro.rating) ? "star" : "star-outline"}
-              size={18}
-              color="#16A34A"
-            />
-          ))}
-          <Text style={styles.ratingText}>
-            {" "}
-            {pro.rating.toFixed(1)} ({pro.reviewCount} reviews)
-          </Text>
-        </View>
-
-        {/* Distance */}
-        <View style={styles.distanceRow}>
-          <Ionicons name="location" size={16} color="#16A34A" />
-          {loadingDistance ? (
-            <ActivityIndicator
-              size="small"
-              color="#16A34A"
-              style={{ marginLeft: 6 }}
-            />
-          ) : (
-            <Text style={styles.distanceText}>{distanceLabel}</Text>
-          )}
-        </View>
-
-        {/* Tabs: Services | Reviews (no Portfolio) */}
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tab, tab === "services" && styles.tabActive]}
-            onPress={() => setTab("services")}
-          >
-            <Text
-              style={[styles.tabText, tab === "services" && styles.tabTextActive]}
-            >
-              Services
-            </Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color="#16A34A" />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, tab === "reviews" && styles.tabActive]}
-            onPress={() => setTab("reviews")}
-          >
-            <Text
-              style={[styles.tabText, tab === "reviews" && styles.tabTextActive]}
-            >
-              Reviews
-            </Text>
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Professional Profile</Text>
+          <View style={{ width: 40 }} />
         </View>
 
-        {/* Services tab */}
-        {tab === "services" && (
-          <View style={styles.listCard}>
-            {pro.services.map((svc, index) => (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.avatarWrap}>
+            <Image source={pro.image} style={styles.avatar} />
+            {pro.verified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark" size={16} color="#fff" />
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.name}>{pro.name}</Text>
+
+          {/* Stars: every 10 reviews = 1 star */}
+          <View style={styles.ratingRow}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Ionicons
+                key={i}
+                name={i <= starCount ? "star" : "star-outline"}
+                size={18}
+                color="#16A34A"
+              />
+            ))}
+            <Text style={styles.ratingText}>
+              {" "}
+              {starCount}/5 · {reviews.length} review
+              {reviews.length === 1 ? "" : "s"}
+            </Text>
+          </View>
+          {starCount < 5 && (
+            <Text style={styles.starHint}>
+              {reviewsToNextStar} more review
+              {reviewsToNextStar === 1 ? "" : "s"} to unlock the next star
+            </Text>
+          )}
+
+          <View style={styles.distanceRow}>
+            <Ionicons name="location" size={16} color="#16A34A" />
+            {loadingDistance ? (
+              <ActivityIndicator
+                size="small"
+                color="#16A34A"
+                style={{ marginLeft: 6 }}
+              />
+            ) : (
+              <Text style={styles.distanceText}>{distanceLabel}</Text>
+            )}
+          </View>
+
+          {/* Tabs: Services | Portfolio | Reviews */}
+          <View style={styles.tabs}>
+            {(
+              [
+                ["services", "Services"],
+                ["portfolio", "Portfolio"],
+                ["reviews", "Reviews"],
+              ] as const
+            ).map(([key, label]) => (
               <TouchableOpacity
-                key={svc.id}
-                style={[
-                  styles.serviceRow,
-                  index < pro.services.length - 1 && styles.serviceBorder,
-                ]}
-                activeOpacity={0.7}
-                onPress={() => onBook(svc)}
+                key={key}
+                style={[styles.tab, tab === key && styles.tabActive]}
+                onPress={() => setTab(key)}
               >
-                <View style={styles.serviceIcon}>
-                  <MaterialCommunityIcons
-                    name={svc.icon as any}
-                    size={22}
-                    color="#16A34A"
-                  />
-                </View>
-                <View style={styles.serviceInfo}>
-                  <Text style={styles.serviceName}>{svc.name}</Text>
-                  <Text style={styles.serviceDesc} numberOfLines={2}>
-                    {svc.description}
-                  </Text>
-                </View>
-                <Text style={styles.servicePrice}>{svc.price}</Text>
+                <Text
+                  style={[
+                    styles.tabText,
+                    tab === key && styles.tabTextActive,
+                  ]}
+                >
+                  {label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
-        )}
 
-        {/* Reviews tab */}
-        {tab === "reviews" && (
-          <View style={styles.reviewsWrap}>
-            {pro.reviews.length === 0 ? (
-              <Text style={styles.emptyReviews}>No reviews yet</Text>
-            ) : (
-              pro.reviews.map((rev) => (
-                <View key={rev.id} style={styles.reviewCard}>
-                  <View style={styles.reviewHeader}>
-                    <View style={styles.reviewAvatar}>
-                      <Text style={styles.reviewInitial}>
-                        {rev.userName.charAt(0)}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.reviewName}>{rev.userName}</Text>
-                      <Text style={styles.reviewDate}>{rev.date}</Text>
-                    </View>
-                    <View style={styles.reviewStars}>
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <Ionicons
-                          key={i}
-                          name={i <= rev.rating ? "star" : "star-outline"}
-                          size={12}
-                          color="#16A34A"
-                        />
-                      ))}
-                    </View>
+          {/* Services */}
+          {tab === "services" && (
+            <View style={styles.listCard}>
+              {pro.services.map((svc, index) => (
+                <TouchableOpacity
+                  key={svc.id}
+                  style={[
+                    styles.serviceRow,
+                    index < pro.services.length - 1 && styles.serviceBorder,
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => onBook(svc)}
+                >
+                  <View style={styles.serviceIcon}>
+                    <MaterialCommunityIcons
+                      name={svc.icon as any}
+                      size={22}
+                      color="#16A34A"
+                    />
                   </View>
-                  <Text style={styles.reviewComment}>{rev.comment}</Text>
-                </View>
-              ))
-            )}
-          </View>
-        )}
+                  <View style={styles.serviceInfo}>
+                    <Text style={styles.serviceName}>{svc.name}</Text>
+                    <Text style={styles.serviceDesc} numberOfLines={2}>
+                      {svc.description}
+                    </Text>
+                  </View>
+                  <Text style={styles.servicePrice}>{svc.price}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
+          {/* Portfolio */}
+          {tab === "portfolio" && (
+            <View style={styles.portfolioGrid}>
+              {pro.portfolio.length === 0 ? (
+                <Text style={styles.emptyReviews}>No portfolio photos yet</Text>
+              ) : (
+                pro.portfolio.map((img, i) => (
+                  <Image
+                    key={i}
+                    source={img}
+                    style={styles.portfolioImage}
+                  />
+                ))
+              )}
+            </View>
+          )}
 
-      {/* Book Now sticky */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.bookBtn}
-          activeOpacity={0.85}
-          onPress={() => onBook()}
-        >
-          <Ionicons name="calendar" size={20} color="#fff" />
-          <Text style={styles.bookBtnText}>Book Now</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Reviews + write form */}
+          {tab === "reviews" && (
+            <View style={styles.reviewsWrap}>
+              {/* Write a review */}
+              <View style={styles.writeBox}>
+                <Text style={styles.writeTitle}>Write a review</Text>
+                <Text style={styles.writeHint}>
+                  Every 10 reviews give this pro 1 star (max 5).
+                </Text>
+                <TextInput
+                  style={styles.nameInput}
+                  placeholder="Your name (optional)"
+                  placeholderTextColor="#9CA3AF"
+                  value={reviewerName}
+                  onChangeText={setReviewerName}
+                />
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder="Share your experience with this professional..."
+                  placeholderTextColor="#9CA3AF"
+                  value={reviewText}
+                  onChangeText={setReviewText}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.submitBtn,
+                    (!reviewText.trim() || submitting) && { opacity: 0.5 },
+                  ]}
+                  disabled={!reviewText.trim() || submitting}
+                  onPress={submitReview}
+                  activeOpacity={0.85}
+                >
+                  {submitting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.submitBtnText}>Post review</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {reviews.length === 0 ? (
+                <Text style={styles.emptyReviews}>
+                  No reviews yet — be the first!
+                </Text>
+              ) : (
+                reviews.map((rev) => (
+                  <View key={rev.id} style={styles.reviewCard}>
+                    <View style={styles.reviewHeader}>
+                      <View style={styles.reviewAvatar}>
+                        <Text style={styles.reviewInitial}>
+                          {rev.userName.charAt(0)}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.reviewName}>{rev.userName}</Text>
+                        <Text style={styles.reviewDate}>{rev.date}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.reviewComment}>{rev.comment}</Text>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+
+          <View style={{ height: 100 }} />
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.bookBtn}
+            activeOpacity={0.85}
+            onPress={() => onBook()}
+          >
+            <Ionicons name="calendar" size={20} color="#fff" />
+            <Text style={styles.bookBtnText}>Book Now</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -287,11 +399,7 @@ const styles = StyleSheet.create({
 
   content: { paddingHorizontal: 20, alignItems: "center" },
 
-  avatarWrap: {
-    marginTop: 8,
-    marginBottom: 14,
-    position: "relative",
-  },
+  avatarWrap: { marginTop: 8, marginBottom: 14, position: "relative" },
   avatar: {
     width: 110,
     height: 110,
@@ -322,19 +430,20 @@ const styles = StyleSheet.create({
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   ratingText: { fontSize: 14, color: "#6B7280", marginLeft: 4 },
+  starHint: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginBottom: 8,
+  },
   distanceRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 22,
   },
-  distanceText: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginLeft: 4,
-  },
+  distanceText: { fontSize: 14, color: "#6B7280", marginLeft: 4 },
 
   tabs: {
     flexDirection: "row",
@@ -343,16 +452,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E5E7EB",
     marginBottom: 16,
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  tabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#16A34A",
-  },
-  tabText: { fontSize: 15, fontWeight: "600", color: "#9CA3AF" },
+  tab: { flex: 1, paddingVertical: 12, alignItems: "center" },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: "#16A34A" },
+  tabText: { fontSize: 14, fontWeight: "600", color: "#9CA3AF" },
   tabTextActive: { color: "#16A34A" },
 
   listCard: {
@@ -382,15 +484,85 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   serviceInfo: { flex: 1, marginRight: 8 },
-  serviceName: { fontSize: 15, fontWeight: "700", color: "#111", marginBottom: 3 },
+  serviceName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111",
+    marginBottom: 3,
+  },
   serviceDesc: { fontSize: 12, color: "#6B7280", lineHeight: 17 },
   servicePrice: { fontSize: 15, fontWeight: "700", color: "#16A34A" },
 
+  portfolioGrid: {
+    width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  portfolioImage: {
+    width: "47%",
+    aspectRatio: 1,
+    borderRadius: 12,
+    backgroundColor: "#E5E7EB",
+  },
+
   reviewsWrap: { width: "100%", gap: 12 },
+  writeBox: {
+    width: "100%",
+    backgroundColor: "#F0FDF4",
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    marginBottom: 4,
+  },
+  writeTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111",
+    marginBottom: 4,
+  },
+  writeHint: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 10,
+  },
+  nameInput: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#111",
+    marginBottom: 8,
+  },
+  commentInput: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: "#111",
+    minHeight: 90,
+    marginBottom: 10,
+  },
+  submitBtn: {
+    backgroundColor: "#16A34A",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  submitBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+
   emptyReviews: {
     textAlign: "center",
     color: "#9CA3AF",
     paddingVertical: 30,
+    width: "100%",
   },
   reviewCard: {
     backgroundColor: "#F9FAFB",
@@ -414,7 +586,6 @@ const styles = StyleSheet.create({
   reviewInitial: { color: "#fff", fontWeight: "700", fontSize: 15 },
   reviewName: { fontSize: 14, fontWeight: "700", color: "#111" },
   reviewDate: { fontSize: 12, color: "#9CA3AF", marginTop: 1 },
-  reviewStars: { flexDirection: "row", gap: 1 },
   reviewComment: { fontSize: 13, color: "#374151", lineHeight: 19 },
 
   footer: {
