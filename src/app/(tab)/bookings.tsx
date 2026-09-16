@@ -1,10 +1,19 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+import {
+  View,
+  Text,
+  Dimensions,
+  FlatList,
+  Image,
+  StatusBar,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
+import React from "react";
 
-export default function booking() {
+export default function bookings() {
   return (
     <View>
-      <Text>booking</Text>
+      <Text>bookings</Text>
     </View>
-  )
+  );
 }
