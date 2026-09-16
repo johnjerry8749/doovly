@@ -55,7 +55,7 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 4. Profile (Last) */}
+      {/* 4. Profile */}
       <Tabs.Screen
         name="profile"
         options={{
@@ -63,6 +63,14 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
+        }}
+      />
+
+      {/* Hidden from tab bar */}
+      <Tabs.Screen
+        name="how-it-works"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

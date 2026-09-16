@@ -430,8 +430,12 @@ export default function Home() {
               All professionals are background-checked.
             </Text>
           </View>
-          <TouchableOpacity style={styles.howButton} activeOpacity={0.8}>
-            <Text style={styles.howButtonText}  onPress={() => router.push("/(tab)/(tab)(2)/howitwork")}>How it works</Text>
+          <TouchableOpacity
+            style={styles.howButton}
+            activeOpacity={0.8}
+            onPress={() => router.push("/(tab)/how-it-works")}
+          >
+            <Text style={styles.howButtonText}>How it works</Text>
             <Ionicons name="arrow-forward" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -530,7 +534,6 @@ export default function Home() {
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Select a city</Text>
 
-            {/* Search box to filter the list (optional) */}
             <View style={styles.citySearchBox}>
               <Ionicons name="search-outline" size={20} color="#888" />
               <TextInput
