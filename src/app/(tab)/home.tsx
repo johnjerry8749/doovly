@@ -168,6 +168,7 @@ export default function Home() {
   // =========================
   const professionals = [
     {
+      id: 1,
       name: "John Chukwuemeka",
       profession: "Plumber",
       rating: "4.8",
@@ -177,6 +178,7 @@ export default function Home() {
       image: require("@/assets/profile_1.jpg"),
     },
     {
+       id: 2,
       name: "Chioma Eze",
       profession: "Nail Tech",
       rating: "4.8",
@@ -186,6 +188,7 @@ export default function Home() {
       image: require("@/assets/profile_2.jpg"),
     },
     {
+       id: 3,
       name: "Ikechukwu Obi",
       profession: "Mechanic",
       rating: "4.8",
@@ -195,6 +198,7 @@ export default function Home() {
       image: require("@/assets/profile_3.jpg"),
     },
     {
+       id: 4,
       name: "Blessing Joy",
       profession: "Body Massage Therapist",
       rating: "4.8",
@@ -204,6 +208,7 @@ export default function Home() {
       image: require("@/assets/profile_4.jpg"),
     },
     {
+       id: 5,
       name: "Emeka Okoro",
       profession: "Electrician",
       rating: "4.9",
@@ -213,6 +218,7 @@ export default function Home() {
       image: require("@/assets/profile_1.jpg"),
     },
     {
+       id: 6,
       name: "Aisha Bello",
       profession: "Barber",
       rating: "4.7",
@@ -380,7 +386,7 @@ export default function Home() {
               key={index}
               style={styles.professionalCard}
               activeOpacity={0.8}
-            >
+            onPress={() => router.push(`/professional/${person.id}`)}>
               {/* HEART */}
               <TouchableOpacity style={styles.heartButton} activeOpacity={0.7}>
                 <Ionicons name="heart-outline" size={17} color="#111" />
