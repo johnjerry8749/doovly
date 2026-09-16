@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    // paddingBottom: 1,
   },
 
   // HEADER
@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
   // BANNER
   bannerContainer: {
     width: "100%",
-    height: 175,
+    height: 100,
     borderRadius: 18,
     overflow: "hidden",
     marginBottom: 26,
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
 
   // SERVICES
   servicesContainer: {
-    gap: 17,
+    gap: 2,
     paddingBottom: 27,
   },
   serviceItem: {
@@ -727,8 +727,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   serviceCircle: {
-    width: 68,
-    height: 68,
+    width: 40,
+    height: 40,
     borderRadius: 34,
     backgroundColor: "#EEF8EF",
     alignItems: "center",
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
 
   // VERIFIED BANNER
   verifiedContainer: {
-    minHeight: 78,
+    minHeight: 80,
     borderRadius: 17,
     backgroundColor: "#F0FAF0",
     borderWidth: 1,
@@ -857,8 +857,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   shieldContainer: {
-    marginRight: 8,
-  },
+  width: 45,
+  height: 65,
+  borderRadius: 12,
+  backgroundColor: "none",
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: 10,
+},
   verifiedTextContainer: {
     flex: 1,
   },
