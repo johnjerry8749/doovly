@@ -80,7 +80,7 @@ export default function Home() {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== "granted") {
-        setLocationName("Location unavailable");
+        setLocationName("click here to select Location");
         setUserCoords(null);
         setLoadingLocation(false);
         return;
@@ -431,7 +431,7 @@ export default function Home() {
             </Text>
           </View>
           <TouchableOpacity style={styles.howButton} activeOpacity={0.8}>
-            <Text style={styles.howButtonText}>How it works</Text>
+            <Text style={styles.howButtonText}  onPress={() => router.push("/(tab)/(tab)(2)/howitwork")}>How it works</Text>
             <Ionicons name="arrow-forward" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
