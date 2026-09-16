@@ -28,8 +28,6 @@ import {
   type ProReview,
 } from "@/services/professionals";
 
-// Import your bottom navigation
-import TabLayout from "@/app/(tab)/_layout";
 
 type TabKey = "services" | "portfolio" | "reviews";
 
