@@ -20,9 +20,10 @@ import {
   getProfessionalById,
   getDistanceKm,
   starsFromReviewCount,
-  ProService,
-  ProReview,
-} from "@/data/professionals";
+  addReview,
+  type ProService,
+  type ProReview,
+} from "@/services/professionals";
 
 type TabKey = "services" | "portfolio" | "reviews";
 
@@ -33,8 +34,6 @@ export default function ProfessionalProfile() {
   const [tab, setTab] = useState<TabKey>("services");
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [loadingDistance, setLoadingDistance] = useState(true);
-
-  // Local reviews so user can add new ones (later → API)
   const [reviews, setReviews] = useState<ProReview[]>([]);
   const [reviewText, setReviewText] = useState("");
   const [reviewerName, setReviewerName] = useState("");
@@ -44,7 +43,6 @@ export default function ProfessionalProfile() {
     if (basePro) setReviews(basePro.reviews);
   }, [basePro]);
 
-  // Stars from review count: every 10 comments = 1 star (max 5)
   const starCount = starsFromReviewCount(reviews.length);
   const reviewsToNextStar = 10 - (reviews.length % 10);
 
@@ -109,37 +107,33 @@ export default function ProfessionalProfile() {
     });
   };
 
-  const submitReview = () => {
+  const submitReview = async () => {
     const comment = reviewText.trim();
-    const name = reviewerName.trim() || "Anonymous";
     if (!comment) {
       Alert.alert("Empty review", "Please write a short comment about this pro.");
       return;
     }
     setSubmitting(true);
-    // Simulate save — later: POST /api/professionals/:id/reviews
-    setTimeout(() => {
-      const newReview: ProReview = {
-        id: `local-${Date.now()}`,
-        userName: name,
+    try {
+      const newReview = await addReview(pro.id, {
+        userName: reviewerName,
         comment,
-        date: new Date().toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }),
-      };
+      });
       setReviews((prev) => [newReview, ...prev]);
       setReviewText("");
       setReviewerName("");
-      setSubmitting(false);
+      const nextCount = reviews.length + 1;
       Alert.alert(
         "Thanks!",
-        reviews.length + 1 >= 10 && (reviews.length + 1) % 10 === 0
-          ? `Review added. This pro just earned another star! (${starsFromReviewCount(reviews.length + 1)}★)`
+        nextCount >= 10 && nextCount % 10 === 0
+          ? `Review added. This pro just earned another star! (${starsFromReviewCount(nextCount)}★)`
           : "Your review was added.",
       );
-    }, 400);
+    } catch {
+      Alert.alert("Error", "Could not post review. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const distanceLabel = loadingDistance
@@ -154,7 +148,6 @@ export default function ProfessionalProfile() {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={24} color="#16A34A" />
@@ -179,7 +172,6 @@ export default function ProfessionalProfile() {
 
           <Text style={styles.name}>{pro.name}</Text>
 
-          {/* Stars: every 10 reviews = 1 star */}
           <View style={styles.ratingRow}>
             {[1, 2, 3, 4, 5].map((i) => (
               <Ionicons
@@ -215,7 +207,6 @@ export default function ProfessionalProfile() {
             )}
           </View>
 
-          {/* Tabs: Services | Portfolio | Reviews */}
           <View style={styles.tabs}>
             {(
               [
@@ -241,7 +232,6 @@ export default function ProfessionalProfile() {
             ))}
           </View>
 
-          {/* Services */}
           {tab === "services" && (
             <View style={styles.listCard}>
               {pro.services.map((svc, index) => (
@@ -273,27 +263,20 @@ export default function ProfessionalProfile() {
             </View>
           )}
 
-          {/* Portfolio */}
           {tab === "portfolio" && (
             <View style={styles.portfolioGrid}>
               {pro.portfolio.length === 0 ? (
                 <Text style={styles.emptyReviews}>No portfolio photos yet</Text>
               ) : (
                 pro.portfolio.map((img, i) => (
-                  <Image
-                    key={i}
-                    source={img}
-                    style={styles.portfolioImage}
-                  />
+                  <Image key={i} source={img} style={styles.portfolioImage} />
                 ))
               )}
             </View>
           )}
 
-          {/* Reviews + write form */}
           {tab === "reviews" && (
             <View style={styles.reviewsWrap}>
-              {/* Write a review */}
               <View style={styles.writeBox}>
                 <Text style={styles.writeTitle}>Write a review</Text>
                 <Text style={styles.writeHint}>
@@ -381,7 +364,6 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   notFound: { fontSize: 16, color: "#6B7280", marginBottom: 12 },
   backLink: { color: "#16A34A", fontWeight: "600" },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -396,9 +378,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: { fontSize: 17, fontWeight: "700", color: "#111" },
-
   content: { paddingHorizontal: 20, alignItems: "center" },
-
   avatarWrap: { marginTop: 8, marginBottom: 14, position: "relative" },
   avatar: {
     width: 110,
@@ -419,7 +399,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   name: {
     fontSize: 22,
     fontWeight: "800",
@@ -433,18 +412,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   ratingText: { fontSize: 14, color: "#6B7280", marginLeft: 4 },
-  starHint: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    marginBottom: 8,
-  },
+  starHint: { fontSize: 12, color: "#9CA3AF", marginBottom: 8 },
   distanceRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 22,
   },
   distanceText: { fontSize: 14, color: "#6B7280", marginLeft: 4 },
-
   tabs: {
     flexDirection: "row",
     width: "100%",
@@ -456,7 +430,6 @@ const styles = StyleSheet.create({
   tabActive: { borderBottomWidth: 2, borderBottomColor: "#16A34A" },
   tabText: { fontSize: 14, fontWeight: "600", color: "#9CA3AF" },
   tabTextActive: { color: "#16A34A" },
-
   listCard: {
     width: "100%",
     backgroundColor: "#F9FAFB",
@@ -492,7 +465,6 @@ const styles = StyleSheet.create({
   },
   serviceDesc: { fontSize: 12, color: "#6B7280", lineHeight: 17 },
   servicePrice: { fontSize: 15, fontWeight: "700", color: "#16A34A" },
-
   portfolioGrid: {
     width: "100%",
     flexDirection: "row",
@@ -505,7 +477,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#E5E7EB",
   },
-
   reviewsWrap: { width: "100%", gap: 12 },
   writeBox: {
     width: "100%",
@@ -522,11 +493,7 @@ const styles = StyleSheet.create({
     color: "#111",
     marginBottom: 4,
   },
-  writeHint: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginBottom: 10,
-  },
+  writeHint: { fontSize: 12, color: "#6B7280", marginBottom: 10 },
   nameInput: {
     backgroundColor: "#fff",
     borderRadius: 10,
@@ -557,7 +524,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   submitBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
-
   emptyReviews: {
     textAlign: "center",
     color: "#9CA3AF",
@@ -587,7 +553,6 @@ const styles = StyleSheet.create({
   reviewName: { fontSize: 14, fontWeight: "700", color: "#111" },
   reviewDate: { fontSize: 12, color: "#9CA3AF", marginTop: 1 },
   reviewComment: { fontSize: 13, color: "#374151", lineHeight: 19 },
-
   footer: {
     position: "absolute",
     left: 0,
