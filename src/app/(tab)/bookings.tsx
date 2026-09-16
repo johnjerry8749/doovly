@@ -1,19 +1,34 @@
+import React, { useState } from "react";
 import {
-  View,
-  Text,
-  Dimensions,
-  FlatList,
+  Alert,
   Image,
-  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
-  TouchableOpacity,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-import React from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 
 export default function bookings() {
-  return (
-    <View>
+    return (
+      <SafeAreaView>
+        <View style={style.container}>
       <Text>bookings</Text>
     </View>
+    </SafeAreaView>
+    
   );
 }
+
+const style = StyleSheet.create({
+  container: {
+
+  }
+
+})
