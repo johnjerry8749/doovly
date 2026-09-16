@@ -101,10 +101,7 @@ export default function Home() {
       if (address.length > 0) {
         const place = address[0];
         const city =
-          place.city ||
-          place.subregion ||
-          place.district ||
-          "Unknown location";
+          place.city || place.subregion || place.district || "Unknown location";
         const country = place.country || "";
         setLocationName(`${city}, ${country}`);
       } else {
@@ -249,7 +246,7 @@ export default function Home() {
     const filtered = professionals.filter(
       (p) =>
         p.city.toLowerCase().includes(cityKey) ||
-        cityKey.includes(p.city.toLowerCase())
+        cityKey.includes(p.city.toLowerCase()),
     );
 
     return filtered.length > 0 ? filtered : professionals;
@@ -384,10 +381,7 @@ export default function Home() {
               style={styles.professionalCard}
               activeOpacity={0.8}
             >
-              <TouchableOpacity
-                style={styles.heartButton}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity style={styles.heartButton} activeOpacity={0.7}>
                 <Ionicons name="heart-outline" size={25} color="#111" />
               </TouchableOpacity>
 
@@ -469,7 +463,9 @@ export default function Home() {
             >
               <Ionicons name="navigate" size={24} color="#159447" />
               <View style={styles.modalOptionText}>
-                <Text style={styles.modalOptionTitle}>Use current location</Text>
+                <Text style={styles.modalOptionTitle}>
+                  Use current location
+                </Text>
                 <Text style={styles.modalOptionSub}>
                   Allow access to detect your position
                 </Text>
