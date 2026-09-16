@@ -1,17 +1,87 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Image,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import * as Location from "expo-location";
 
 export default function Home() {
+  // =========================
+  // LOCATION STATE
+  // =========================
+  const [locationName, setLocationName] = useState("Lagos, Nigeria");
+  const [loadingLocation, setLoadingLocation] = useState(false);
+
+  // =========================
+  // GET USER LOCATION
+  // =========================
+  const getUserLocation = async () => {
+    try {
+      setLoadingLocation(true);
+
+      // Request permission
+      const { status } =
+        await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        setLocationName("Location unavailable");
+        setLoadingLocation(false);
+        return;
+      }
+
+      // Get current GPS position
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const { latitude, longitude } = location.coords;
+
+      // Convert coordinates to address
+      const address = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+
+      if (address.length > 0) {
+        const place = address[0];
+
+        const city =
+          place.city ||
+          place.subregion ||
+          place.district ||
+          "Unknown location";
+
+        const country = place.country || "";
+
+        setLocationName(`${city}, ${country}`);
+      } else {
+        setLocationName("Location unavailable");
+      }
+    } catch (error) {
+      console.log("Location error:", error);
+      setLocationName("Location unavailable");
+    } finally {
+      setLoadingLocation(false);
+    }
+  };
+
+  // Get location when screen loads
+  useEffect(() => {
+    getUserLocation();
+  }, []);
+
+  // =========================
+  // SERVICES
+  // =========================
   const services = [
     {
       name: "Plumber",
@@ -39,6 +109,9 @@ export default function Home() {
     },
   ];
 
+  // =========================
+  // PROFESSIONALS
+  // =========================
   const professionals = [
     {
       name: "John Chukwuemeka",
@@ -64,7 +137,7 @@ export default function Home() {
       price: "₦10,000",
       image: require("@/assets/profile_3.jpg"),
     },
-     {
+    {
       name: "Blessing Joy",
       profession: "Body Massage Therpist",
       rating: "4.8",
@@ -74,29 +147,62 @@ export default function Home() {
     },
   ];
 
+  // =========================
+  // UI
+  // =========================
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.container}
       >
-        {/* HEADER */}
+        {/* =========================
+            HEADER
+        ========================= */}
         <View style={styles.header}>
-          <View style={styles.locationContainer}>
-            <Ionicons name="location" size={28} color="#159447" />
+          {/* LOCATION */}
+          <TouchableOpacity
+            style={styles.locationContainer}
+            onPress={getUserLocation}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="location"
+              size={28}
+              color="#159447"
+            />
 
-            <Text style={styles.locationText}>
-              Lagos, Nigeria
-            </Text>
+            {loadingLocation ? (
+              <View style={styles.locationLoading}>
+                <ActivityIndicator
+                  size="small"
+                  color="#159447"
+                />
+                <Text style={styles.locationLoadingText}>
+                  Getting location...
+                </Text>
+              </View>
+            ) : (
+              <Text
+                style={styles.locationText}
+                numberOfLines={1}
+              >
+                {locationName}
+              </Text>
+            )}
 
             <Ionicons
               name="chevron-down"
               size={18}
               color="#111"
             />
-          </View>
+          </TouchableOpacity>
 
-          <TouchableOpacity>
+          {/* NOTIFICATION */}
+          <TouchableOpacity
+            style={styles.notificationButton}
+            activeOpacity={0.7}
+          >
             <Ionicons
               name="notifications-outline"
               size={28}
@@ -107,7 +213,9 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-        {/* SEARCH */}
+        {/* =========================
+            SEARCH
+        ========================= */}
         <View style={styles.searchContainer}>
           <Ionicons
             name="search-outline"
@@ -121,7 +229,7 @@ export default function Home() {
             style={styles.searchInput}
           />
 
-          <TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.7}>
             <Ionicons
               name="options-outline"
               size={28}
@@ -130,7 +238,9 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-        {/* HERO BANNER */}
+        {/* =========================
+            HERO BANNER
+        ========================= */}
         <View style={styles.bannerContainer}>
           <Image
             source={require("@/assets/images/home_banner.png")}
@@ -139,18 +249,25 @@ export default function Home() {
           />
         </View>
 
-        {/* SERVICES TITLE */}
+        {/* =========================
+            SERVICES TITLE
+        ========================= */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
             What do you need help with?
           </Text>
 
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push("/(tab)/services")}
+            activeOpacity={0.7}
+          >
             <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         </View>
 
-        {/* SERVICES */}
+        {/* =========================
+            SERVICES
+        ========================= */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -160,6 +277,7 @@ export default function Home() {
             <TouchableOpacity
               key={index}
               style={styles.serviceItem}
+              activeOpacity={0.7}
             >
               <View style={styles.serviceCircle}>
                 <MaterialCommunityIcons
@@ -176,18 +294,22 @@ export default function Home() {
           ))}
         </ScrollView>
 
-        {/* POPULAR */}
+        {/* =========================
+            POPULAR
+        ========================= */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
             Popular near you
           </Text>
 
-          <TouchableOpacity>
-            <Text style={styles.seeAll}>See all</Text>
+          <TouchableOpacity activeOpacity={0.7}>
+            <Text style={styles.seeAll} onPress={() => router.push("/(tab)/services")}>See all</Text>
           </TouchableOpacity>
         </View>
 
-        {/* PROFESSIONALS */}
+        {/* =========================
+            PROFESSIONALS
+        ========================= */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -200,7 +322,10 @@ export default function Home() {
               activeOpacity={0.8}
             >
               {/* HEART */}
-              <TouchableOpacity style={styles.heartButton}>
+              <TouchableOpacity
+                style={styles.heartButton}
+                activeOpacity={0.7}
+              >
                 <Ionicons
                   name="heart-outline"
                   size={25}
@@ -215,6 +340,7 @@ export default function Home() {
                   style={styles.profileImage}
                 />
 
+                {/* VERIFIED */}
                 <View style={styles.verifiedBadge}>
                   <Ionicons
                     name="checkmark"
@@ -224,6 +350,7 @@ export default function Home() {
                 </View>
               </View>
 
+              {/* NAME */}
               <Text
                 style={styles.professionalName}
                 numberOfLines={1}
@@ -248,10 +375,15 @@ export default function Home() {
                 </Text>
               </View>
 
-              <Text style={styles.profession}>
+              {/* PROFESSION */}
+              <Text
+                style={styles.profession}
+                numberOfLines={1}
+              >
                 {person.profession}
               </Text>
 
+              {/* PRICE */}
               <Text style={styles.price}>
                 From {person.price}
               </Text>
@@ -259,7 +391,9 @@ export default function Home() {
           ))}
         </ScrollView>
 
-        {/* VERIFIED BANNER */}
+        {/* =========================
+            VERIFIED BANNER
+        ========================= */}
         <View style={styles.verifiedContainer}>
           <View style={styles.shieldContainer}>
             <Ionicons
@@ -279,7 +413,10 @@ export default function Home() {
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.howButton}>
+          <TouchableOpacity
+            style={styles.howButton}
+            activeOpacity={0.8}
+          >
             <Text style={styles.howButtonText}>
               How it works
             </Text>
@@ -299,7 +436,14 @@ export default function Home() {
   );
 }
 
+// ======================================================
+// STYLES
+// ======================================================
+
 const styles = StyleSheet.create({
+  // =========================
+  // SAFE AREA
+  // =========================
   safeArea: {
     flex: 1,
     backgroundColor: "#fff",
@@ -310,7 +454,9 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
 
+  // =========================
   // HEADER
+  // =========================
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -322,6 +468,8 @@ const styles = StyleSheet.create({
   locationContainer: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+    marginRight: 15,
   },
 
   locationText: {
@@ -330,6 +478,28 @@ const styles = StyleSheet.create({
     color: "#111",
     marginLeft: 8,
     marginRight: 5,
+    flexShrink: 1,
+  },
+
+  locationLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+    flex: 1,
+  },
+
+  locationLoadingText: {
+    fontSize: 15,
+    color: "#555",
+    marginLeft: 7,
+  },
+
+  notificationButton: {
+    width: 35,
+    height: 35,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
   },
 
   notificationDot: {
@@ -342,7 +512,9 @@ const styles = StyleSheet.create({
     top: 0,
   },
 
+  // =========================
   // SEARCH
+  // =========================
   searchContainer: {
     height: 58,
     borderWidth: 1,
@@ -361,7 +533,9 @@ const styles = StyleSheet.create({
     color: "#111",
   },
 
+  // =========================
   // BANNER
+  // =========================
   bannerContainer: {
     width: "100%",
     height: 175,
@@ -375,7 +549,9 @@ const styles = StyleSheet.create({
     height: "100%",
   },
 
+  // =========================
   // SECTION
+  // =========================
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -387,6 +563,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: "#111",
+    flex: 1,
   },
 
   seeAll: {
@@ -395,7 +572,9 @@ const styles = StyleSheet.create({
     color: "#158A40",
   },
 
+  // =========================
   // SERVICES
+  // =========================
   servicesContainer: {
     gap: 17,
     paddingBottom: 27,
@@ -422,7 +601,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
+  // =========================
   // PROFESSIONALS
+  // =========================
   professionalsContainer: {
     gap: 12,
     paddingBottom: 25,
@@ -519,7 +700,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  // =========================
   // VERIFIED BANNER
+  // =========================
   verifiedContainer: {
     minHeight: 78,
     borderRadius: 17,
