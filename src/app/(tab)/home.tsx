@@ -381,33 +381,45 @@ export default function Home() {
               style={styles.professionalCard}
               activeOpacity={0.8}
             >
+              {/* HEART */}
               <TouchableOpacity style={styles.heartButton} activeOpacity={0.7}>
-                <Ionicons name="heart-outline" size={25} color="#111" />
+                <Ionicons name="heart-outline" size={17} color="#111" />
               </TouchableOpacity>
 
+              {/* PROFILE IMAGE */}
               <View style={styles.profileImageContainer}>
                 <Image source={person.image} style={styles.profileImage} />
+
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark" size={13} color="#fff" />
+                  <Ionicons name="checkmark" size={9} color="#fff" />
                 </View>
               </View>
 
+              {/* NAME */}
               <Text style={styles.professionalName} numberOfLines={1}>
                 {person.name}
               </Text>
 
+              {/* RATING */}
               <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={16} color="#F4C400" />
+                <Ionicons name="star" size={12} color="#F4C400" />
+
                 <Text style={styles.rating}>{person.rating}</Text>
+
                 <Text style={styles.reviews}>({person.reviews})</Text>
               </View>
 
+              {/* PROFESSION */}
               <Text style={styles.profession} numberOfLines={1}>
                 {person.profession}
               </Text>
 
-              <Text style={styles.cityText}>{person.city}</Text>
+              {/* CITY */}
+              <Text style={styles.cityText} numberOfLines={1}>
+                {person.city}
+              </Text>
 
+              {/* PRICE */}
               <Text style={styles.price}>From {person.price}</Text>
             </TouchableOpacity>
           ))}
@@ -731,91 +743,104 @@ const styles = StyleSheet.create({
 
   // PROFESSIONALS
   professionalsContainer: {
-    gap: 12,
+    flexDirection: "row",
+    gap: 8,
     paddingBottom: 25,
   },
+
   professionalCard: {
-    width: 183,
-    minHeight: 270,
+    width: 115,
+    minHeight: 105,
     borderWidth: 1,
     borderColor: "#E1E1E1",
-    borderRadius: 17,
+    borderRadius: 12,
     padding: 10,
     backgroundColor: "#fff",
   },
+
   heartButton: {
     position: "absolute",
-    right: 9,
-    top: 9,
+    right: 5,
+    top: 5,
     zIndex: 2,
     backgroundColor: "#fff",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 23,
+    height: 23,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
+
   profileImageContainer: {
-    width: 115,
-    height: 115,
-    borderRadius: 58,
+    width: 60,
+    height: 60,
+    borderRadius: 31,
     backgroundColor: "#eee",
     alignSelf: "center",
-    marginTop: 5,
-    marginBottom: 9,
+    marginTop: 4,
+    marginBottom: 7,
     position: "relative",
   },
+
   profileImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 58,
+    borderRadius: 31,
   },
+
   verifiedBadge: {
     position: "absolute",
     right: -2,
-    bottom: 2,
-    width: 29,
-    height: 29,
-    borderRadius: 15,
+    bottom: 0,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: "#159447",
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
   },
+
   professionalName: {
-    fontSize: 16,
+    fontSize: 11,
     fontWeight: "700",
     color: "#111",
-    marginBottom: 6,
+    marginBottom: 3,
   },
+
   ratingContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 5,
+    marginBottom: 3,
   },
+
   rating: {
-    fontSize: 14,
+    fontSize: 10,
     fontWeight: "600",
-    marginLeft: 4,
+    marginLeft: 2,
   },
+
   reviews: {
-    fontSize: 13,
+    fontSize: 9,
     color: "#666",
-    marginLeft: 3,
+    marginLeft: 2,
   },
+
   profession: {
-    fontSize: 14,
+    fontSize: 10,
     color: "#555",
+    marginBottom: 3,
+  },
+
+  cityText: {
+    fontSize: 9,
+    color: "#777",
     marginBottom: 4,
   },
-  cityText: {
-    fontSize: 12,
-    color: "#888",
-    marginBottom: 6,
-  },
+
   price: {
-    fontSize: 15,
+    fontSize: 10,
     color: "#159447",
     fontWeight: "700",
   },

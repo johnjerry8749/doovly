@@ -75,7 +75,7 @@ export default function RegisterScreen() {
       "Account created",
       "Your account has been created successfully.",
     );
-     router.replace("/(tab)/home");
+    router.replace("/(tab)/home");
   }
 
   function handleGoogleSignup() {

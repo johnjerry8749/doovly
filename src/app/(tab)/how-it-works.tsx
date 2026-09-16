@@ -15,7 +15,7 @@ const STEPS = [
     icon: "search-outline" as const,
     title: "Find a service",
     description:
-      "Browse categories or search for the service you need — plumber, electrician, barber, and more.",
+      "Browse categories or search for the service you need eg. Painter, plumber, electrician, barber, Nail Tech, Spa and more...",
   },
   {
     icon: "location-outline" as const,
@@ -33,7 +33,7 @@ const STEPS = [
     icon: "shield-checkmark-outline" as const,
     title: "Verified & trusted",
     description:
-      "Every pro is background-checked. Pay securely and rate your experience after the job.",
+      "Every pro is background checked. Pay securely and rate your experience after the job.",
   },
 ];
 
@@ -83,8 +83,8 @@ export default function HowItWorks() {
           onPress={() => router.replace("/(tab)/home")}
           activeOpacity={0.8}
         >
-          <Text style={styles.ctaText}>Got it — find a pro</Text>
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
+          <Text style={styles.ctaText}>Got it? find a pro</Text>
+          <Ionicons name="arrow-forward" size={18} color="#fff" />
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />
