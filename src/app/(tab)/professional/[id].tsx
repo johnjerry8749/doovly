@@ -271,9 +271,21 @@ export default function ProfessionalProfile() {
             />
 
             {/* Blue verification badge */}
-            {pro.verified && (
+            {/* {pro.verified && (
               <View style={styles.verifiedBadge}>
                 <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+              </View>
+            )} */}
+
+
+            {pro.verified && (
+              <View style={styles.verifiedBadge}>
+                {" "}
+                <Image
+                  source={require("@/assets/premium/checkmark.png")}
+                  style={{ width: 50, height: 50, marginLeft: -4 }}
+                  resizeMode="contain"
+                />{" "}
               </View>
             )}
           </View>
@@ -382,7 +394,17 @@ export default function ProfessionalProfile() {
                     styles.serviceRow,
                     index < pro.services.length - 1 && styles.serviceBorder,
                   ]}
-                  onPress={() => router.push('/(tab)/bookme/[id]')}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(tab)/bookme/[id]",
+                      params: {
+                        id: pro.id,
+                        serviceId: service.id,
+                        serviceName: service.name,
+                        price: service.price,
+                      },
+                    })
+                  }
                   activeOpacity={0.7}
                 >
                   <View style={styles.serviceIcon}>
@@ -510,7 +532,17 @@ export default function ProfessionalProfile() {
           <TouchableOpacity
             style={styles.bookButton}
             activeOpacity={0.8}
-            onPress={() => router.push('/(tab)/bookme/[id]')}
+            onPress={() =>
+              router.push({
+                pathname: "/(tab)/bookme/[id]",
+                params: {
+                  id: pro.id,
+                  serviceId: "",
+                  serviceName: "",
+                  price: pro.priceFrom,
+                },
+              })
+            }
           >
             <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
 
@@ -717,9 +749,9 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#0A66C2",
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
+    // backgroundColor: "#0A66C2",
+    // borderWidth: 2,
+    // borderColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
 

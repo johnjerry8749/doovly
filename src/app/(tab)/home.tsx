@@ -348,7 +348,12 @@ export default function Home() {
 
                 {person.verified && (
                   <View style={styles.verifiedBadge}>
-                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                    {/* <Ionicons name="checkmark" size={12} color="#FFFFFF" /> */}
+                    <Image
+                      source={require("@/assets/premium/checkmark.png")}
+                      style={{ width: 50, height: 50, marginLeft: -1 }}
+                      resizeMode="contain"
+                    />
                   </View>
                 )}
               </View>
@@ -796,9 +801,9 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#0A66C2",
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
+    // backgroundColor: "#0A66C2",
+    // borderWidth: 2,
+    // borderColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },

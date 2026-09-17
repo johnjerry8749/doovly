@@ -2,7 +2,7 @@ import { View, Text } from 'react-native'
 import React from 'react'
 import { Stack } from 'expo-router'
 
-export default function ProfessionalLayout() {
+export default function bookeLayout() {
   return (
     <Stack
     screenOptions={{

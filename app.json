@@ -47,7 +47,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow Doovly to use your location to show nearby services."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
