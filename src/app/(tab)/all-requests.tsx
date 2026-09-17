@@ -8,19 +8,19 @@ import {
   View,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   listServiceRequests,
   type ServiceRequest,
 } from "@/services/serviceRequests";
+import { useLocation } from "@/context/LocationContext";
 
 const GREEN = "#159447";
 
 export default function AllRequests() {
-  const params = useLocalSearchParams<{ location?: string }>();
-  const locationName = (params.location as string) || "All Nigeria";
+  const { locationName } = useLocation();
   const [search, setSearch] = useState("");
 
   const allRequests = listServiceRequests();
