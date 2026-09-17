@@ -62,7 +62,8 @@ export default function Home() {
       return professionals;
     }
     const city = locationName.split(",")[0].trim().toLowerCase();
-    if (!city || city === "nigeria" || city === "all nigeria") return professionals;
+    if (!city || city === "nigeria" || city === "all nigeria")
+      return professionals;
     return professionals.filter((professional) => {
       const professionalCity = professional.city.toLowerCase();
       return professionalCity.includes(city) || city.includes(professionalCity);
@@ -85,7 +86,9 @@ export default function Home() {
             {loadingLocation ? (
               <View style={styles.locationLoading}>
                 <ActivityIndicator size="small" color="#159447" />
-                <Text style={styles.locationLoadingText}>Getting location...</Text>
+                <Text style={styles.locationLoadingText}>
+                  Getting location...
+                </Text>
               </View>
             ) : (
               <Text style={styles.locationText} numberOfLines={1}>
@@ -95,7 +98,10 @@ export default function Home() {
             <Ionicons name="chevron-down" size={18} color="#111" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            activeOpacity={0.7}
+          >
             <Ionicons name="notifications-outline" size={28} color="#111" />
             <View style={styles.notificationDot} />
           </TouchableOpacity>
@@ -171,7 +177,9 @@ export default function Home() {
         {nearbyProfessionals.length === 0 ? (
           <View style={styles.emptyProsContainer}>
             <Ionicons name="search-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyProsTitle}>No Avaliable professionals near you</Text>
+            <Text style={styles.emptyProsTitle}>
+              No Avaliable professionals near you
+            </Text>
             <Text style={styles.emptyProsSubtitle}>
               Try another location or view all in Nigeria.
             </Text>
@@ -180,7 +188,9 @@ export default function Home() {
               onPress={viewAllInNigeria}
               activeOpacity={0.8}
             >
-              <Text style={styles.emptyProsButtonText}>View all in Nigeria</Text>
+              <Text style={styles.emptyProsButtonText}>
+                View all in Nigeria
+              </Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -245,10 +255,16 @@ export default function Home() {
 
         <View style={styles.verifiedContainer}>
           <View style={styles.shieldContainer}>
-            <Ionicons name="shield-checkmark-outline" size={42} color="#159447" />
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={42}
+              color="#159447"
+            />
           </View>
           <View style={styles.verifiedTextContainer}>
-            <Text style={styles.verifiedTitle}>Verified pros. Trusted service.</Text>
+            <Text style={styles.verifiedTitle}>
+              Verified pros. Trusted service.
+            </Text>
             <Text style={styles.verifiedSubtitle}>
               All professionals are background checked.
             </Text>
@@ -280,11 +296,19 @@ export default function Home() {
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Choose location</Text>
 
-            <TouchableOpacity style={styles.modalOption} onPress={getUserLocation} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={getUserLocation}
+              activeOpacity={0.7}
+            >
               <Ionicons name="navigate" size={24} color="#159447" />
               <View style={styles.modalOptionText}>
-                <Text style={styles.modalOptionTitle}>Use current location</Text>
-                <Text style={styles.modalOptionSub}>Allow access to detect your position</Text>
+                <Text style={styles.modalOptionTitle}>
+                  Use current location
+                </Text>
+                <Text style={styles.modalOptionSub}>
+                  Allow access to detect your position
+                </Text>
               </View>
             </TouchableOpacity>
 
@@ -299,19 +323,30 @@ export default function Home() {
               <Ionicons name="list-outline" size={24} color="#159447" />
               <View style={styles.modalOptionText}>
                 <Text style={styles.modalOptionTitle}>Select a city</Text>
-                <Text style={styles.modalOptionSub}>Pick from popular cities in Nigeria</Text>
+                <Text style={styles.modalOptionSub}>
+                  Pick from popular cities in Nigeria
+                </Text>
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.modalOption} onPress={viewAllInNigeria} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={viewAllInNigeria}
+              activeOpacity={0.7}
+            >
               <Ionicons name="globe-outline" size={24} color="#159447" />
               <View style={styles.modalOptionText}>
                 <Text style={styles.modalOptionTitle}>View all in Nigeria</Text>
-                <Text style={styles.modalOptionSub}>See professionals from every city</Text>
+                <Text style={styles.modalOptionSub}>
+                  See professionals from every city
+                </Text>
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.modalCancel} onPress={() => setShowLocationModal(false)}>
+            <TouchableOpacity
+              style={styles.modalCancel}
+              onPress={() => setShowLocationModal(false)}
+            >
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -370,7 +405,10 @@ export default function Home() {
               )}
             />
 
-            <TouchableOpacity style={styles.modalCancel} onPress={closeCityPicker}>
+            <TouchableOpacity
+              style={styles.modalCancel}
+              onPress={closeCityPicker}
+            >
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -437,7 +475,7 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: "#111" },
   bannerContainer: { borderRadius: 16, overflow: "hidden", marginBottom: 22 },
-  banner: { width: "100%", height: 150 },
+  banner: { width: "100%", height: 130 },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -449,15 +487,20 @@ const styles = StyleSheet.create({
   servicesContainer: { flexDirection: "row", gap: 14, paddingBottom: 22 },
   serviceItem: { alignItems: "center", width: 72 },
   serviceCircle: {
-    width: 62,
-    height: 62,
+    width: 50,
+    height: 50,
     borderRadius: 31,
     backgroundColor: "#E8F5E9",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 7,
   },
-  serviceName: { fontSize: 12, fontWeight: "600", color: "#333", textAlign: "center" },
+  serviceName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
+  },
   professionalsContainer: { flexDirection: "row", gap: 8, paddingBottom: 25 },
   professionalCard: {
     width: 115,
@@ -488,8 +531,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  professionalName: { fontSize: 13, fontWeight: "800", color: "#111", marginBottom: 3 },
-  ratingContainer: { flexDirection: "row", alignItems: "center", marginBottom: 3 },
+  professionalName: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#111",
+    marginBottom: 3,
+  },
+  ratingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 3,
+  },
   rating: { fontSize: 11, fontWeight: "600", marginLeft: 3, color: "#333" },
   reviews: { fontSize: 10, color: "#777", marginLeft: 2 },
   profession: { fontSize: 11, color: "#555", marginBottom: 2 },
@@ -523,31 +575,62 @@ const styles = StyleSheet.create({
   },
   emptyProsButtonText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   verifiedContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
     marginTop: 8,
     backgroundColor: "#F0F9F4",
     borderRadius: 16,
-    padding: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
   },
-  shieldContainer: { marginBottom: 10 },
-  verifiedTextContainer: { marginBottom: 14 },
-  verifiedTitle: { fontSize: 16, fontWeight: "800", color: "#111", marginBottom: 4 },
-  verifiedSubtitle: { fontSize: 13, color: "#555" },
+
+  shieldContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+    flexShrink: 0,
+  },
+
+  verifiedTextContainer: {
+    flex: 2,
+    minWidth: 0,
+    marginRight: 8,
+  },
+
+  verifiedTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#111",
+    marginBottom: 3,
+  },
+
+  verifiedSubtitle: {
+    fontSize: 11,
+    color: "#555",
+    lineHeight: 16,
+  },
+
   howButton: {
     backgroundColor: "#159447",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 9,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    // flexShrink: 1,
+    maxWidth: 105,
   },
-  howButtonText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  bottomSpacing: { height: 30 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
+
+  howButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 11,
+    // flexShrink: 1,
   },
   modalSheet: {
     backgroundColor: "#fff",
@@ -566,7 +649,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
-  modalTitle: { fontSize: 18, fontWeight: "800", color: "#111", marginBottom: 18 },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111",
+    marginBottom: 18,
+  },
   modalOption: {
     flexDirection: "row",
     alignItems: "center",
