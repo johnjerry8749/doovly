@@ -174,9 +174,7 @@ export default function Home() {
     // Strict location filter — only pros in the selected city
     return professionals.filter((professional) => {
       const professionalCity = professional.city.toLowerCase();
-      return (
-        professionalCity.includes(city) || city.includes(professionalCity)
-      );
+      return professionalCity.includes(city) || city.includes(professionalCity);
     });
   }, [locationName, showAllNigeria, professionals]);
 
@@ -318,83 +316,101 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-       { /* ================= PROFESSIONALS ================= */}
+        {/* ================= PROFESSIONALS ================= */}
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.professionalsContainer}
-        >
-          {nearbyProfessionals.map((person) => (
+        {nearbyProfessionals.length === 0 ? (
+          <View style={styles.emptyProsContainer}>
+            <Ionicons name="search-outline" size={48} color="#ccc" />
+            <Text style={styles.emptyProsTitle}>No Avaliable professionals near you</Text>
+            <Text style={styles.emptyProsSubtitle}>
+              Try another location or view all in Nigeria.
+            </Text>
             <TouchableOpacity
-              key={person.id}
-              style={styles.professionalCard}
+              style={styles.emptyProsButton}
+              onPress={viewAllInNigeria}
               activeOpacity={0.8}
-              onPress={() => router.push(`/professional/${person.id}`)}
             >
-              {/* HEART */}
-
-              <TouchableOpacity
-                style={styles.heartButton}
-                activeOpacity={0.7}
-                onPress={(event) => event.stopPropagation()}
-              >
-                <Ionicons name="heart-outline" size={17} color="#111" />
-              </TouchableOpacity>
-
-              {/* PROFILE IMAGE */}
-
-              <View style={styles.profileImageContainer}>
-                <Image source={person.image} style={styles.profileImage} />
-
-                {person.verified && (
-                  <View style={styles.verifiedBadge}>
-                    {/* <Ionicons name="checkmark" size={12} color="#FFFFFF" /> */}
-                    <Image
-                      source={require("@/assets/premium/checkmark.png")}
-                      style={{ width: 40, height: 40, marginLeft: -1 }}
-                      resizeMode="contain"
-                    />
-                  </View>
-                )}
-              </View>
-
-              {/* NAME */}
-
-              <Text style={styles.professionalName} numberOfLines={1}>
-                {person.name}
+              <Text style={styles.emptyProsButtonText}>
+                View all in Nigeria
               </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.professionalsContainer}
+          >
+            {nearbyProfessionals.map((person) => (
+              <TouchableOpacity
+                key={person.id}
+                style={styles.professionalCard}
+                activeOpacity={0.8}
+                onPress={() => router.push(`/professional/${person.id}`)}
+              >
+                {/* HEART */}
 
-              {/* RATING */}
+                <TouchableOpacity
+                  style={styles.heartButton}
+                  activeOpacity={0.7}
+                  onPress={(event) => event.stopPropagation()}
+                >
+                  <Ionicons name="heart-outline" size={17} color="#111" />
+                </TouchableOpacity>
 
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={12} color="#F4C400" />
+                {/* PROFILE IMAGE */}
 
-                <Text style={styles.rating}>
-                  {starsFromReviewCount(person.reviews.length)}
+                <View style={styles.profileImageContainer}>
+                  <Image source={person.image} style={styles.profileImage} />
+
+                  {person.verified && (
+                    <View style={styles.verifiedBadge}>
+                      <Image
+                        source={require("@/assets/premium/checkmark.png")}
+                        style={{ width: 40, height: 40, marginLeft: -1 }}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  )}
+                </View>
+
+                {/* NAME */}
+
+                <Text style={styles.professionalName} numberOfLines={1}>
+                  {person.name}
                 </Text>
 
-                <Text style={styles.reviews}>({person.reviews.length})</Text>
-              </View>
+                {/* RATING */}
 
-              {/* PROFESSION */}
+                <View style={styles.ratingContainer}>
+                  <Ionicons name="star" size={12} color="#F4C400" />
 
-              <Text style={styles.profession} numberOfLines={1}>
-                {person.profession}
-              </Text>
+                  <Text style={styles.rating}>
+                    {starsFromReviewCount(person.reviews.length)}
+                  </Text>
 
-              {/* CITY */}
+                  <Text style={styles.reviews}>({person.reviews.length})</Text>
+                </View>
 
-              <Text style={styles.cityText} numberOfLines={1}>
-                {person.city}
-              </Text>
+                {/* PROFESSION */}
 
-              {/* PRICE */}
+                <Text style={styles.profession} numberOfLines={1}>
+                  {person.profession}
+                </Text>
 
-              <Text style={styles.price}>From {person.priceFrom}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                {/* CITY */}
+
+                <Text style={styles.cityText} numberOfLines={1}>
+                  {person.city}
+                </Text>
+
+                {/* PRICE */}
+
+                <Text style={styles.price}>From {person.priceFrom}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
         {/* ================= VERIFIED BANNER ================= */}
 
@@ -692,7 +708,7 @@ const styles = StyleSheet.create({
 
   banner: {
     width: "100%",
-    height: 150,
+    height: 130,
   },
 
   // SECTION
@@ -728,8 +744,8 @@ const styles = StyleSheet.create({
   },
 
   serviceCircle: {
-    width: 62,
-    height: 62,
+    width: 52,
+    height: 52,
     borderRadius: 31,
     backgroundColor: "#E8F5E9",
     justifyContent: "center",
@@ -745,6 +761,37 @@ const styles = StyleSheet.create({
   },
 
   // PROFESSIONALS
+  emptyProsContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  emptyProsTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#111",
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  emptyProsSubtitle: {
+    fontSize: 14,
+    color: "#888",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  emptyProsButton: {
+    backgroundColor: "#159447",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  emptyProsButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
   professionalsContainer: {
     flexDirection: "row",
     gap: 8,
@@ -843,10 +890,16 @@ const styles = StyleSheet.create({
 
   // VERIFIED BANNER
   verifiedContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    flexWrap: "wrap",
     marginTop: 8,
+    gap: 2,
     backgroundColor: "#F0F9F4",
     borderRadius: 16,
-    padding: 18,
+    padding: 10,
+    marginBottom: 2,
   },
 
   shieldContainer: {
@@ -854,7 +907,7 @@ const styles = StyleSheet.create({
   },
 
   verifiedTextContainer: {
-    marginBottom: 14,
+    marginBottom: 0,
   },
 
   verifiedTitle: {
@@ -865,7 +918,7 @@ const styles = StyleSheet.create({
   },
 
   verifiedSubtitle: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#555",
   },
 
@@ -873,7 +926,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#159447",
     borderRadius: 12,
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -883,7 +936,7 @@ const styles = StyleSheet.create({
   howButtonText: {
     color: "#fff",
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: 12,
   },
 
   bottomSpacing: {
