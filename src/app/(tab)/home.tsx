@@ -301,7 +301,7 @@ export default function Home() {
           ))}
         </ScrollView>
 
-        {/* ================= PROFESSIONALS HEADER ================= */
+        {/* ================= PROFESSIONALS HEADER ================= */}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
@@ -332,6 +332,8 @@ export default function Home() {
               activeOpacity={0.8}
               onPress={() => router.push(`/professional/${person.id}`)}
             >
+              {/* HEART */}
+
               <TouchableOpacity
                 style={styles.heartButton}
                 activeOpacity={0.7}
@@ -340,11 +342,14 @@ export default function Home() {
                 <Ionicons name="heart-outline" size={17} color="#111" />
               </TouchableOpacity>
 
+              {/* PROFILE IMAGE */}
+
               <View style={styles.profileImageContainer}>
                 <Image source={person.image} style={styles.profileImage} />
 
                 {person.verified && (
                   <View style={styles.verifiedBadge}>
+                    {/* <Ionicons name="checkmark" size={12} color="#FFFFFF" /> */}
                     <Image
                       source={require("@/assets/premium/checkmark.png")}
                       style={{ width: 40, height: 40, marginLeft: -1 }}
@@ -354,9 +359,13 @@ export default function Home() {
                 )}
               </View>
 
+              {/* NAME */}
+
               <Text style={styles.professionalName} numberOfLines={1}>
                 {person.name}
               </Text>
+
+              {/* RATING */}
 
               <View style={styles.ratingContainer}>
                 <Ionicons name="star" size={12} color="#F4C400" />
@@ -368,13 +377,19 @@ export default function Home() {
                 <Text style={styles.reviews}>({person.reviews.length})</Text>
               </View>
 
+              {/* PROFESSION */}
+
               <Text style={styles.profession} numberOfLines={1}>
                 {person.profession}
               </Text>
 
+              {/* CITY */}
+
               <Text style={styles.cityText} numberOfLines={1}>
                 {person.city}
               </Text>
+
+              {/* PRICE */}
 
               <Text style={styles.price}>From {person.priceFrom}</Text>
             </TouchableOpacity>
@@ -433,6 +448,8 @@ export default function Home() {
 
             <Text style={styles.modalTitle}>Choose location</Text>
 
+            {/* CURRENT LOCATION */}
+
             <TouchableOpacity
               style={styles.modalOption}
               onPress={getUserLocation}
@@ -450,6 +467,8 @@ export default function Home() {
                 </Text>
               </View>
             </TouchableOpacity>
+
+            {/* CITY */}
 
             <TouchableOpacity
               style={styles.modalOption}
@@ -470,6 +489,8 @@ export default function Home() {
               </View>
             </TouchableOpacity>
 
+            {/* ALL NIGERIA */}
+
             <TouchableOpacity
               style={styles.modalOption}
               onPress={viewAllInNigeria}
@@ -485,6 +506,8 @@ export default function Home() {
                 </Text>
               </View>
             </TouchableOpacity>
+
+            {/* CANCEL */}
 
             <TouchableOpacity
               style={styles.modalCancel}
@@ -510,6 +533,8 @@ export default function Home() {
 
             <Text style={styles.modalTitle}>Select a city</Text>
 
+            {/* SEARCH */}
+
             <View style={styles.citySearchBox}>
               <Ionicons name="search-outline" size={20} color="#888" />
 
@@ -528,6 +553,8 @@ export default function Home() {
                 </TouchableOpacity>
               )}
             </View>
+
+            {/* CITY LIST */}
 
             <FlatList
               data={filteredCities}
@@ -583,6 +610,7 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
 
+  // HEADER
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -621,39 +649,41 @@ const styles = StyleSheet.create({
   },
 
   notificationButton: {
-    width: 35,
-    height: 35,
+    width: 40,
+    height: 40,
     justifyContent: "center",
     alignItems: "center",
   },
 
   notificationDot: {
     position: "absolute",
-    top: 2,
-    right: 2,
+    top: 6,
+    right: 6,
     width: 9,
     height: 9,
     borderRadius: 5,
     backgroundColor: "#159447",
   },
 
+  // SEARCH
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
-    borderRadius: 14,
+    backgroundColor: "#F3F3F3",
+    borderRadius: 12,
     paddingHorizontal: 14,
-    height: 52,
+    height: 50,
     marginBottom: 18,
   },
 
   searchInput: {
     flex: 1,
     marginLeft: 10,
-    fontSize: 16,
+    fontSize: 15,
     color: "#111",
   },
 
+  // BANNER
   bannerContainer: {
     borderRadius: 16,
     overflow: "hidden",
@@ -662,9 +692,10 @@ const styles = StyleSheet.create({
 
   banner: {
     width: "100%",
-    height: 160,
+    height: 150,
   },
 
+  // SECTION
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -673,7 +704,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "800",
     color: "#111",
   },
@@ -681,27 +712,29 @@ const styles = StyleSheet.create({
   seeAll: {
     color: "#159447",
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: 13,
   },
 
+  // SERVICES
   servicesContainer: {
-    paddingBottom: 8,
-    gap: 16,
+    flexDirection: "row",
+    gap: 14,
+    paddingBottom: 22,
   },
 
   serviceItem: {
     alignItems: "center",
-    width: 78,
+    width: 72,
   },
 
   serviceCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     backgroundColor: "#E8F5E9",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 7,
   },
 
   serviceName: {
@@ -711,94 +744,106 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
+  // PROFESSIONALS
   professionalsContainer: {
-    gap: 12,
-    paddingBottom: 8,
+    flexDirection: "row",
+    gap: 8,
+    paddingBottom: 25,
   },
 
   professionalCard: {
-    width: 150,
+    width: 115,
+    minHeight: 100,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
-    borderRadius: 16,
-    padding: 12,
+    borderColor: "#E1E1E1",
+    borderRadius: 12,
+    padding: 10,
     backgroundColor: "#fff",
   },
 
   heartButton: {
     position: "absolute",
-    right: 10,
-    top: 10,
+    right: 8,
+    top: 8,
     zIndex: 5,
   },
 
   profileImageContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     alignSelf: "center",
-    marginBottom: 10,
+    marginBottom: 8,
     position: "relative",
   },
 
   profileImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 40,
+    borderRadius: 35,
   },
 
   verifiedBadge: {
     position: "absolute",
-    right: -6,
-    bottom: -4,
+    right: -3,
+    bottom: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    // backgroundColor: "#0A66C2",
+    // borderWidth: 2,
+    // borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   professionalName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     color: "#111",
-    marginBottom: 4,
+    marginBottom: 3,
   },
 
   ratingContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 3,
   },
 
   rating: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     marginLeft: 3,
     color: "#333",
   },
 
   reviews: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#777",
     marginLeft: 2,
   },
 
   profession: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#555",
-    marginBottom: 3,
+    marginBottom: 2,
   },
 
   cityText: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#777",
-    marginBottom: 6,
+    marginBottom: 5,
   },
 
   price: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
     color: "#159447",
   },
 
+  // VERIFIED BANNER
   verifiedContainer: {
-    marginTop: 24,
+    marginTop: 8,
     backgroundColor: "#F0F9F4",
     borderRadius: 16,
     padding: 18,
@@ -813,7 +858,7 @@ const styles = StyleSheet.create({
   },
 
   verifiedTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "800",
     color: "#111",
     marginBottom: 4,
@@ -845,6 +890,7 @@ const styles = StyleSheet.create({
     height: 30,
   },
 
+  // MODALS
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -944,12 +990,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#F5F5F5",
+    borderBottomColor: "#f0f0f0",
   },
 
   cityItemText: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     color: "#111",
     marginLeft: 12,
   },
