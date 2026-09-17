@@ -632,6 +632,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     // flexShrink: 1,
   },
+  bottomSpacing: { height: 30 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
   modalSheet: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
