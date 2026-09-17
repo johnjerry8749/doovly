@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
   Image,
   Modal,
@@ -28,6 +29,7 @@ import { NIGERIA_CITIES } from "@/data/cities";
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories"
 
 const GREEN = "#159447";
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 /* =========================================================
    SERVICE FILTERS (icon style like photo)
@@ -210,6 +212,12 @@ export default function Services() {
       return matchesSearch && matchesFilter && matchesLocation;
     });
   }, [allRequests, search, selectedFilter, locationName, showAllNigeria]);
+
+  // Top 10 only for the horizontal carousel
+  const topRequests = useMemo(
+    () => filteredRequests.slice(0, 10),
+    [filteredRequests]
+  );
 
   /* =======================================================
      PROFESSIONAL CARD (keep 3-in-a-row layout)
@@ -428,26 +436,37 @@ export default function Services() {
               }}
             />
 
-            {/* RECENT SERVICE REQUESTS (from mock data, location-aware) */}
+            {/* RECENT SERVICE REQUESTS — horizontal, top 10 */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent service requests</Text>
-              <TouchableOpacity>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tab)/all-requests",
+                    params: { location: locationName },
+                  })
+                }
+                activeOpacity={0.7}
+              >
                 <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
             </View>
 
-            {filteredRequests.length === 0 ? (
+            {topRequests.length === 0 ? (
               <View style={styles.emptyRequests}>
                 <Text style={styles.emptyRequestsText}>
                   No requests in this location. Try another city or All Nigeria.
                 </Text>
               </View>
             ) : (
-              <View style={styles.requestsList}>
-                {filteredRequests.map((item) => (
-                  <View key={item.id}>{renderRequest({ item })}</View>
-                ))}
-              </View>
+              <FlatList
+                horizontal
+                data={topRequests}
+                keyExtractor={(item) => item.id}
+                renderItem={renderRequest}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.requestList}
+              />
             )}
 
             {/* PROFESSIONALS HEADER */}
@@ -614,7 +633,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  /* ========== STICKY HEADER ========== */
   stickyHeader: {
     backgroundColor: "#fff",
     paddingHorizontal: 14,
@@ -697,14 +715,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
 
-  /* ========== SCROLL CONTENT ========== */
   container: {
     paddingHorizontal: 14,
     paddingBottom: 20,
     paddingTop: 12,
   },
 
-  /* ========== FILTERS (icon circles) ========== */
   filterContainer: {
     paddingBottom: 8,
     gap: 14,
@@ -742,7 +758,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* ========== SECTION HEADERS ========== */
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -772,9 +787,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  /* ========== REQUEST CARDS ========== */
-  requestsList: {
-    gap: 12,
+  requestList: {
+    paddingRight: 10,
   },
 
   emptyRequests: {
@@ -789,12 +803,14 @@ const styles = StyleSheet.create({
   },
 
   requestCard: {
+    width: SCREEN_WIDTH * 0.85,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E8E8E8",
     borderRadius: 16,
     padding: 12,
+    marginRight: 12,
     backgroundColor: "#fff",
   },
 
@@ -882,7 +898,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* ========== PROFESSIONAL GRID - 3 PER ROW ========== */
   columnWrapper: {
     justifyContent: "space-between",
   },
@@ -984,7 +999,6 @@ const styles = StyleSheet.create({
     color: GREEN,
   },
 
-  /* ========== EMPTY STATE ========== */
   emptyContainer: {
     alignItems: "center",
     paddingVertical: 60,
@@ -1004,7 +1018,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  /* ========== MODALS (location) ========== */
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",

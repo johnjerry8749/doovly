@@ -84,8 +84,12 @@ export default function TabLayout() {
         }}
       />
 
+      <Tabs.Screen
+        name="all-requests"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
-
-    
   );
 }
