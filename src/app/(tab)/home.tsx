@@ -318,7 +318,7 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-        /* ================= PROFESSIONALS ================= */}
+       { /* ================= PROFESSIONALS ================= */}
 
         <ScrollView
           horizontal
