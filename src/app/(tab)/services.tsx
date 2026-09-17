@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Image,
   Modal,
@@ -21,47 +20,13 @@ import {
   listProfessionals,
   type Professional,
 } from "@/services/professionals";
+import {
+  listServiceRequests,
+  type ServiceRequest,
+} from "@/services/serviceRequests";
 import { NIGERIA_CITIES } from "@/data/cities";
 
 const GREEN = "#159447";
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
-/* =========================================================
-   RECENT SERVICE REQUESTS (match design image)
-========================================================= */
-
-const RECENT_REQUESTS = [
-  {
-    id: "1",
-    title: "Leaking pipe in bathroom",
-    category: "Plumbing",
-    location: "Victoria Island",
-    date: "Today, 10:00 AM",
-    timeAgo: "2 min ago",
-    icon: "water-pump",
-    iconBackground: "#FFF1D5",
-  },
-  {
-    id: "2",
-    title: "Need electrician to fix power",
-    category: "Electrical",
-    location: "Lekki Phase 1",
-    date: "Tomorrow, 2:00 PM",
-    timeAgo: "5 min ago",
-    icon: "flash",
-    iconBackground: "#DDF2FF",
-  },
-  {
-    id: "3",
-    title: "Car needs urgent repair",
-    category: "Mechanic",
-    location: "Ikoyi",
-    date: "Today, 4:30 PM",
-    timeAgo: "8 min ago",
-    icon: "car-wrench",
-    iconBackground: "#E9E1FF",
-  },
-];
 
 /* =========================================================
    SERVICE FILTERS (icon style like photo)
@@ -98,6 +63,7 @@ export default function Services() {
   const [citySearch, setCitySearch] = useState("");
 
   const professionals = listProfessionals();
+  const allRequests = listServiceRequests();
 
   /* =======================================================
      LOCATION HELPERS
@@ -176,6 +142,27 @@ export default function Services() {
     setCitySearch("");
   };
 
+  /** Shared location match (professionals + requests) */
+  const matchesLocationCity = (itemCity: string, itemArea?: string) => {
+    if (
+      showAllNigeria ||
+      !locationName ||
+      locationName === "All Nigeria" ||
+      locationName.toLowerCase().includes("unavailable") ||
+      locationName.toLowerCase().includes("click here") ||
+      locationName.toLowerCase().includes("getting")
+    ) {
+      return true;
+    }
+
+    const city = locationName.split(",")[0].trim().toLowerCase();
+    if (!city || city === "nigeria") return true;
+
+    const c = itemCity.toLowerCase();
+    const area = (itemArea || "").toLowerCase();
+    return c.includes(city) || city.includes(c) || area.includes(city);
+  };
+
   /* =======================================================
      FILTER PROFESSIONALS (by search, category, location)
   ======================================================= */
@@ -194,23 +181,7 @@ export default function Services() {
         selectedFilter === "All" ||
         person.profession.toLowerCase() === selectedFilter.toLowerCase();
 
-      // Location filter
-      let matchesLocation = true;
-      if (
-        !showAllNigeria &&
-        locationName &&
-        locationName !== "All Nigeria" &&
-        !locationName.toLowerCase().includes("unavailable") &&
-        !locationName.toLowerCase().includes("click here") &&
-        !locationName.toLowerCase().includes("getting")
-      ) {
-        const city = locationName.split(",")[0].trim().toLowerCase();
-        if (city && city !== "nigeria") {
-          const professionalCity = person.city.toLowerCase();
-          matchesLocation =
-            professionalCity.includes(city) || city.includes(professionalCity);
-        }
-      }
+      const matchesLocation = matchesLocationCity(person.city);
 
       return matchesSearch && matchesFilter && matchesLocation;
     });
@@ -221,6 +192,31 @@ export default function Services() {
     locationName,
     showAllNigeria,
   ]);
+
+  /* =======================================================
+     FILTER SERVICE REQUESTS (by search, category, location)
+  ======================================================= */
+
+  const filteredRequests = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return allRequests.filter((req) => {
+      const matchesSearch =
+        !query ||
+        req.title.toLowerCase().includes(query) ||
+        req.category.toLowerCase().includes(query) ||
+        req.location.toLowerCase().includes(query) ||
+        req.city.toLowerCase().includes(query);
+
+      const matchesFilter =
+        selectedFilter === "All" ||
+        req.profession.toLowerCase() === selectedFilter.toLowerCase();
+
+      const matchesLocation = matchesLocationCity(req.city, req.location);
+
+      return matchesSearch && matchesFilter && matchesLocation;
+    });
+  }, [allRequests, search, selectedFilter, locationName, showAllNigeria]);
 
   /* =======================================================
      PROFESSIONAL CARD (keep 3-in-a-row layout)
@@ -287,11 +283,7 @@ export default function Services() {
      REQUEST CARD (exact match to design image)
   ======================================================= */
 
-  const renderRequest = ({
-    item,
-  }: {
-    item: (typeof RECENT_REQUESTS)[number];
-  }) => {
+  const renderRequest = ({ item }: { item: ServiceRequest }) => {
     return (
       <View style={styles.requestCard}>
         {/* LEFT ICON + NEW BADGE */}
@@ -443,7 +435,7 @@ export default function Services() {
               }}
             />
 
-            {/* RECENT SERVICE REQUESTS */}
+            {/* RECENT SERVICE REQUESTS (from mock data, location-aware) */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent service requests</Text>
               <TouchableOpacity>
@@ -451,11 +443,19 @@ export default function Services() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.requestsList}>
-              {RECENT_REQUESTS.map((item) => (
-                <View key={item.id}>{renderRequest({ item })}</View>
-              ))}
-            </View>
+            {filteredRequests.length === 0 ? (
+              <View style={styles.emptyRequests}>
+                <Text style={styles.emptyRequestsText}>
+                  No requests in this location. Try another city or All Nigeria.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.requestsList}>
+                {filteredRequests.map((item) => (
+                  <View key={item.id}>{renderRequest({ item })}</View>
+                ))}
+              </View>
+            )}
 
             {/* PROFESSIONALS HEADER */}
             <View style={[styles.sectionHeader, styles.professionalHeader]}>
@@ -779,9 +779,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  /* ========== REQUEST CARDS (exact design match) ========== */
+  /* ========== REQUEST CARDS ========== */
   requestsList: {
     gap: 12,
+  },
+
+  emptyRequests: {
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+  },
+
+  emptyRequestsText: {
+    fontSize: 13,
+    color: "#888",
+    textAlign: "center",
   },
 
   requestCard: {
