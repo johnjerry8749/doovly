@@ -25,6 +25,7 @@ import {
   type ServiceRequest,
 } from "@/services/serviceRequests";
 import { NIGERIA_CITIES } from "@/data/cities";
+import { SERVICE_CATEGORIES } from "@/data/serviceCategories"
 
 const GREEN = "#159447";
 
@@ -32,15 +33,7 @@ const GREEN = "#159447";
    SERVICE FILTERS (icon style like photo)
 ========================================================= */
 
-const SERVICE_FILTERS = [
-  { name: "All", icon: "apps" },
-  { name: "Plumber", icon: "water-pump" },
-  { name: "Electrician", icon: "flash" },
-  { name: "Barber", icon: "content-cut" },
-  { name: "Nail Tech", icon: "nail" },
-  { name: "Mechanic", icon: "car-wrench" },
-  { name: "Spa", icon: "spa" },
-];
+const SERVICE_FILTERS = SERVICE_CATEGORIES;
 
 /* =========================================================
    MAIN SCREEN
