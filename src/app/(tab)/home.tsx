@@ -351,7 +351,7 @@ export default function Home() {
                     {/* <Ionicons name="checkmark" size={12} color="#FFFFFF" /> */}
                     <Image
                       source={require("@/assets/premium/checkmark.png")}
-                      style={{ width: 50, height: 50, marginLeft: -1 }}
+                      style={{ width: 40, height: 40, marginLeft: -1 }}
                       resizeMode="contain"
                     />
                   </View>

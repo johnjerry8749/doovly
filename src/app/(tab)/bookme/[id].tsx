@@ -588,8 +588,9 @@ export default function BookMeScreen() {
 
         <View style={styles.secureRow}>
           {" "}
+           <View style={styles.secureDivider} />
           <View style={styles.secureItem}>
-            {" "}
+            {" "} 
             <Ionicons name="lock-closed" size={14} color="#16A34A" />{" "}
             <Text style={styles.secureText}> Secured by Paystack </Text>{" "}
           </View>{" "}
@@ -599,6 +600,8 @@ export default function BookMeScreen() {
             <Ionicons name="shield-checkmark" size={15} color="#16A34A" />{" "}
             <Text style={styles.secureText}> Money-back guarantee </Text>{" "}
           </View>{" "}
+           <View style={styles.secureDivider} />
+
         </View>
 
         <View style={{ height: 24 }} />
