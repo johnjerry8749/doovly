@@ -474,8 +474,8 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: "#111" },
-  bannerContainer: { borderRadius: 16, overflow: "hidden", marginBottom: 22 },
-  banner: { width: "100%", height: 130 },
+  bannerContainer: { borderRadius: 16, overflow: "hidden", marginBottom: 22, backgroundColor: "#F3F3F3", },
+  banner: { width: "100%", height: 125 },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",

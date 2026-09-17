@@ -91,15 +91,15 @@ export default function AllRequests() {
             {item.category} • {item.location}
           </Text>
 
-          <View style={styles.dateRow}>
-            <Ionicons name="calendar-outline" size={14} color="#666" />
-            <Text style={styles.requestDate}>{item.date}</Text>
-          </View>
+          <Text style={styles.price}> {item.price}</Text>
         </View>
 
         <View style={styles.requestRight}>
           <Text style={styles.timeAgo}>{item.timeAgo}</Text>
-          <TouchableOpacity style={styles.viewRequestButton} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.viewRequestButton}
+            activeOpacity={0.8}
+          >
             <Text style={styles.viewRequestText}>View Request</Text>
           </TouchableOpacity>
         </View>
@@ -290,6 +290,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#555",
   },
+  price: { fontSize: 12, fontWeight: "800", color: "#159447" },
 
   requestRight: {
     alignItems: "flex-end",

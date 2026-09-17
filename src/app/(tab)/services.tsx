@@ -16,10 +16,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-  listProfessionals,
-  type Professional,
-} from "@/services/professionals";
+import { listProfessionals, type Professional } from "@/services/professionals";
 import {
   listServiceRequests,
   type ServiceRequest,
@@ -31,10 +28,7 @@ import { useLocation } from "@/context/LocationContext";
 const GREEN = "#159447";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const SERVICE_FILTERS = [
-  { name: "All", icon: "apps" },
-  ...SERVICE_CATEGORIES,
-];
+const SERVICE_FILTERS = [{ name: "All", icon: "apps" }, ...SERVICE_CATEGORIES];
 
 export default function Services() {
   const [search, setSearch] = useState("");
@@ -98,7 +92,9 @@ export default function Services() {
       const matchesFilter =
         selectedFilter === "All" ||
         person.profession.toLowerCase() === selectedFilter.toLowerCase() ||
-        person.profession.toLowerCase().includes(selectedFilter.toLowerCase()) ||
+        person.profession
+          .toLowerCase()
+          .includes(selectedFilter.toLowerCase()) ||
         (selectedFilter.toLowerCase() === "spa" &&
           person.profession.toLowerCase().includes("massage"));
 
@@ -133,7 +129,7 @@ export default function Services() {
 
   const topRequests = useMemo(
     () => filteredRequests.slice(0, 10),
-    [filteredRequests]
+    [filteredRequests],
   );
 
   const renderProfessional = ({ item }: { item: Professional }) => {
@@ -227,11 +223,16 @@ export default function Services() {
             <Ionicons name="calendar-outline" size={14} color="#666" />
             <Text style={styles.requestDate}>{item.date}</Text>
           </View>
+
+          <Text style={styles.price}> {item.price}</Text>
         </View>
 
         <View style={styles.requestRight}>
           <Text style={styles.timeAgo}>{item.timeAgo}</Text>
-          <TouchableOpacity style={styles.viewRequestButton} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.viewRequestButton}
+            activeOpacity={0.8}
+          >
             <Text style={styles.viewRequestText}>View Request</Text>
           </TouchableOpacity>
         </View>
@@ -252,7 +253,9 @@ export default function Services() {
             {loadingLocation ? (
               <View style={styles.locationLoading}>
                 <ActivityIndicator size="small" color={GREEN} />
-                <Text style={styles.locationLoadingText}>Getting location...</Text>
+                <Text style={styles.locationLoadingText}>
+                  Getting location...
+                </Text>
               </View>
             ) : (
               <Text style={styles.locationText} numberOfLines={1}>
@@ -262,7 +265,10 @@ export default function Services() {
             <Ionicons name="chevron-down" size={16} color="#111" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            activeOpacity={0.7}
+          >
             <Ionicons name="notifications-outline" size={24} color="#111" />
             <View style={styles.notificationDot} />
           </TouchableOpacity>
@@ -401,7 +407,9 @@ export default function Services() {
             >
               <Ionicons name="navigate" size={24} color={GREEN} />
               <View style={styles.modalOptionText}>
-                <Text style={styles.modalOptionTitle}>Use current location</Text>
+                <Text style={styles.modalOptionTitle}>
+                  Use current location
+                </Text>
                 <Text style={styles.modalOptionSub}>
                   Allow access to detect your position
                 </Text>
@@ -501,7 +509,10 @@ export default function Services() {
               )}
             />
 
-            <TouchableOpacity style={styles.modalCancel} onPress={closeCityPicker}>
+            <TouchableOpacity
+              style={styles.modalCancel}
+              onPress={closeCityPicker}
+            >
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -589,7 +600,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   activeFilterCircle: { backgroundColor: GREEN },
-  filterName: { fontSize: 12, fontWeight: "600", color: "#333", textAlign: "center" },
+  filterName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
+  },
   activeFilterName: { color: GREEN, fontWeight: "700" },
   sectionHeader: {
     flexDirection: "row",
@@ -635,7 +651,12 @@ const styles = StyleSheet.create({
   },
   newBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
   requestContent: { flex: 1, minWidth: 0, marginRight: 8 },
-  requestTitle: { fontSize: 14, fontWeight: "800", color: "#111", marginBottom: 3 },
+  requestTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#111",
+    marginBottom: 3,
+  },
   requestDetails: { fontSize: 12, color: "#666", marginBottom: 5 },
   dateRow: { flexDirection: "row", alignItems: "center" },
   requestDate: { marginLeft: 4, fontSize: 11, color: "#555" },
@@ -644,6 +665,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     height: 54,
   },
+  price: { fontSize: 12, fontWeight: "800", color: "#159447" },
   timeAgo: { fontSize: 11, color: "#888" },
   viewRequestButton: {
     borderWidth: 1.5,
@@ -693,14 +715,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  checkmark: { width: 29, height: 29 },
-  professionalName: { fontSize: 12, fontWeight: "800", color: "#111", marginBottom: 3 },
+  checkmark: { width: 39, height: 39 },
+  professionalName: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#111",
+    marginBottom: 3,
+  },
   ratingRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
   ratingText: { fontSize: 10, fontWeight: "600", marginLeft: 3, color: "#333" },
   reviewCount: { fontSize: 9, color: "#777", marginLeft: 2 },
   profession: { fontSize: 10, color: "#555", marginBottom: 3 },
   city: { fontSize: 10, color: "#777", marginBottom: 5 },
-  price: { fontSize: 11, fontWeight: "800", color: GREEN },
+  // price: { fontSize: 11, fontWeight: "800", color: GREEN },
   emptyContainer: { alignItems: "center", paddingVertical: 60 },
   emptyTitle: { fontSize: 17, fontWeight: "700", marginTop: 12, color: "#111" },
   emptyText: { color: "#888", marginTop: 5, fontSize: 13, textAlign: "center" },
@@ -726,7 +753,13 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
-  modalTitle: { fontSize: 18, fontWeight: "800", color: "#111", marginBottom: 18 },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111",
+    marginBottom: 18,
+  },
   modalOption: {
     flexDirection: "row",
     alignItems: "center",

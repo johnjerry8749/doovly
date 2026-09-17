@@ -19,6 +19,7 @@ export type ServiceRequest = {
   /** City used for location filtering (same idea as Professional.city) */
   city: string;
   date: string;
+  price: string;
   timeAgo: string;
   /** MaterialCommunityIcons name */
   icon: string;
@@ -41,6 +42,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Victoria Island",
     city: "Lagos",
     date: "Today, 10:00 AM",
+    price: "₦20,000",
     timeAgo: "2 min ago",
     icon: "water-pump",
     iconBackground: "#FFF1D5",
@@ -55,6 +57,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Lekki Phase 1",
     city: "Lagos",
     date: "Tomorrow, 2:00 PM",
+    price: "₦10,000",
     timeAgo: "5 min ago",
     icon: "flash",
     iconBackground: "#DDF2FF",
@@ -69,6 +72,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Ikoyi",
     city: "Lagos",
     date: "Today, 4:30 PM",
+    price: "₦30,000",
     timeAgo: "8 min ago",
     icon: "car-wrench",
     iconBackground: "#E9E1FF",
@@ -83,6 +87,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Garki",
     city: "Abuja",
     date: "Today, 11:00 AM",
+    price: "₦5,000",
     timeAgo: "12 min ago",
     icon: "content-cut",
     iconBackground: "#E8F5E9",
@@ -97,6 +102,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Surulere",
     city: "Lagos",
     date: "Tomorrow, 1:00 PM",
+    price: "₦15,000",
     timeAgo: "20 min ago",
     icon: "nail",
     iconBackground: "#FCE4EC",
@@ -111,6 +117,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "GRA",
     city: "Port Harcourt",
     date: "Today, 3:00 PM",
+    price: "₦25,000",
     timeAgo: "25 min ago",
     icon: "flash",
     iconBackground: "#DDF2FF",
@@ -125,6 +132,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Wuse 2",
     city: "Abuja",
     date: "Today, 5:00 PM",
+    price: "₦30,000",
     timeAgo: "30 min ago",
     icon: "water-pump",
     iconBackground: "#FFF1D5",
@@ -139,6 +147,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Ikeja",
     city: "Lagos",
     date: "Tomorrow, 10:00 AM",
+    price: "₦100,000",
     timeAgo: "45 min ago",
     icon: "spa",
     iconBackground: "#E0F2F1",
@@ -153,6 +162,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "New Haven",
     city: "Enugu",
     date: "Today, 12:00 PM",
+    price: "₦20,000",
     timeAgo: "1 hr ago",
     icon: "car-wrench",
     iconBackground: "#E9E1FF",
@@ -167,6 +177,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Owerri Municipal",
     city: "Owerri",
     date: "Tomorrow, 9:00 AM",
+    price: "₦23,200",
     timeAgo: "1 hr ago",
     icon: "water-pump",
     iconBackground: "#FFF1D5",
