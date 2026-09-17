@@ -15,7 +15,6 @@ import {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as Location from "expo-location";
 
 import {
   listProfessionals,
@@ -27,113 +26,44 @@ import {
 } from "@/services/serviceRequests";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
+import { useLocation } from "@/context/LocationContext";
 
 const GREEN = "#159447";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
-/* =========================================================
-   SERVICE FILTERS — All + categories from shared data
-========================================================= */
 
 const SERVICE_FILTERS = [
   { name: "All", icon: "apps" },
   ...SERVICE_CATEGORIES,
 ];
 
-/* =========================================================
-   MAIN SCREEN
-========================================================= */
-
 export default function Services() {
   const [search, setSearch] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
 
-  const [locationName, setLocationName] = useState("Owerri, Nigeria");
-  const [userCoords, setUserCoords] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [loadingLocation, setLoadingLocation] = useState(false);
-  const [showAllNigeria, setShowAllNigeria] = useState(false);
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [showCityPicker, setShowCityPicker] = useState(false);
-  const [citySearch, setCitySearch] = useState("");
+  const {
+    locationName,
+    loadingLocation,
+    showAllNigeria,
+    showLocationModal,
+    setShowLocationModal,
+    showCityPicker,
+    setShowCityPicker,
+    citySearch,
+    setCitySearch,
+    getUserLocation,
+    selectCity,
+    viewAllInNigeria,
+    closeCityPicker,
+  } = useLocation();
 
   const professionals = listProfessionals();
   const allRequests = listServiceRequests();
 
-  const getUserLocation = async () => {
-    try {
-      setLoadingLocation(true);
-      setShowAllNigeria(false);
-
-      const { status } = await Location.requestForegroundPermissionsAsync();
-
-      if (status !== "granted") {
-        setLocationName("Click here to select location");
-        setUserCoords(null);
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const { latitude, longitude } = location.coords;
-      setUserCoords({ latitude, longitude });
-
-      const address = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
-
-      if (address.length > 0) {
-        const place = address[0];
-        const city =
-          place.city || place.subregion || place.district || "Unknown location";
-        const country = place.country || "Nigeria";
-        setLocationName(`${city}, ${country}`);
-      } else {
-        setLocationName("Location unavailable");
-      }
-    } catch (error) {
-      console.log("Location error:", error);
-      setLocationName("Location unavailable");
-      setUserCoords(null);
-    } finally {
-      setLoadingLocation(false);
-      setShowLocationModal(false);
-    }
-  };
-
-  const selectCity = (city: string) => {
-    setShowAllNigeria(false);
-    setLocationName(`${city}, Nigeria`);
-    setUserCoords(null);
-    setShowCityPicker(false);
-    setShowLocationModal(false);
-    setCitySearch("");
-  };
-
-  const viewAllInNigeria = () => {
-    setShowAllNigeria(true);
-    setLocationName("All Nigeria");
-    setUserCoords(null);
-    setShowLocationModal(false);
-  };
-
   const filteredCities = useMemo(() => {
     const query = citySearch.trim().toLowerCase();
     if (!query) return [...NIGERIA_CITIES];
-    return NIGERIA_CITIES.filter((city) =>
-      city.toLowerCase().includes(query)
-    );
+    return NIGERIA_CITIES.filter((city) => city.toLowerCase().includes(query));
   }, [citySearch]);
-
-  const closeCityPicker = () => {
-    setShowCityPicker(false);
-    setCitySearch("");
-  };
 
   const matchesLocationCity = (itemCity: string, itemArea?: string) => {
     if (
@@ -176,13 +106,7 @@ export default function Services() {
 
       return matchesSearch && matchesFilter && matchesLocation;
     });
-  }, [
-    professionals,
-    search,
-    selectedFilter,
-    locationName,
-    showAllNigeria,
-  ]);
+  }, [professionals, search, selectedFilter, locationName, showAllNigeria]);
 
   const filteredRequests = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -412,12 +336,7 @@ export default function Services() {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent service requests</Text>
               <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: "/(tab)/all-requests",
-                    params: { location: locationName },
-                  })
-                }
+                onPress={() => router.push("/(tab)/all-requests")}
                 activeOpacity={0.7}
               >
                 <Text style={styles.seeAll}>See all</Text>
@@ -593,11 +512,7 @@ export default function Services() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-
+  safeArea: { flex: 1, backgroundColor: "#fff" },
   stickyHeader: {
     backgroundColor: "#fff",
     paddingHorizontal: 14,
@@ -606,7 +521,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F0F0F0",
     zIndex: 10,
   },
-
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -614,14 +528,12 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     marginBottom: 12,
   },
-
   locationContainer: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
     marginRight: 12,
   },
-
   locationText: {
     flex: 1,
     fontSize: 17,
@@ -630,20 +542,13 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     marginRight: 4,
   },
-
   locationLoading: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     marginLeft: 6,
   },
-
-  locationLoadingText: {
-    fontSize: 14,
-    color: "#555",
-    marginLeft: 6,
-  },
-
+  locationLoadingText: { fontSize: 14, color: "#555", marginLeft: 6 },
   notificationButton: {
     width: 40,
     height: 40,
@@ -651,7 +556,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   notificationDot: {
     position: "absolute",
     right: 8,
@@ -661,7 +565,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: GREEN,
   },
-
   searchContainer: {
     height: 48,
     borderWidth: 1,
@@ -672,31 +575,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     backgroundColor: "#fff",
   },
-
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: "#111",
-    marginHorizontal: 8,
-  },
-
-  container: {
-    paddingHorizontal: 14,
-    paddingBottom: 20,
-    paddingTop: 12,
-  },
-
-  filterContainer: {
-    paddingBottom: 8,
-    gap: 14,
-    paddingRight: 8,
-  },
-
-  filterItem: {
-    alignItems: "center",
-    width: 72,
-  },
-
+  searchInput: { flex: 1, fontSize: 15, color: "#111", marginHorizontal: 8 },
+  container: { paddingHorizontal: 14, paddingBottom: 20, paddingTop: 12 },
+  filterContainer: { paddingBottom: 8, gap: 14, paddingRight: 8 },
+  filterItem: { alignItems: "center", width: 72 },
   filterCircle: {
     width: 58,
     height: 58,
@@ -706,23 +588,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 6,
   },
-
-  activeFilterCircle: {
-    backgroundColor: GREEN,
-  },
-
-  filterName: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#333",
-    textAlign: "center",
-  },
-
-  activeFilterName: {
-    color: GREEN,
-    fontWeight: "700",
-  },
-
+  activeFilterCircle: { backgroundColor: GREEN },
+  filterName: { fontSize: 12, fontWeight: "600", color: "#333", textAlign: "center" },
+  activeFilterName: { color: GREEN, fontWeight: "700" },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -730,43 +598,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 12,
   },
-
-  professionalHeader: {
-    marginTop: 22,
-  },
-
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#111",
-  },
-
-  seeAll: {
-    color: GREEN,
-    fontWeight: "700",
-    fontSize: 13,
-  },
-
-  resultCount: {
-    color: "#888",
-    fontSize: 12,
-  },
-
-  requestList: {
-    paddingRight: 10,
-  },
-
-  emptyRequests: {
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-  },
-
-  emptyRequestsText: {
-    fontSize: 13,
-    color: "#888",
-    textAlign: "center",
-  },
-
+  professionalHeader: { marginTop: 22 },
+  sectionTitle: { fontSize: 17, fontWeight: "800", color: "#111" },
+  seeAll: { color: GREEN, fontWeight: "700", fontSize: 13 },
+  resultCount: { color: "#888", fontSize: 12 },
+  requestList: { paddingRight: 10 },
+  emptyRequests: { paddingVertical: 16, paddingHorizontal: 8 },
+  emptyRequestsText: { fontSize: 13, color: "#888", textAlign: "center" },
   requestCard: {
     width: SCREEN_WIDTH * 0.85,
     flexDirection: "row",
@@ -778,12 +616,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     backgroundColor: "#fff",
   },
-
-  requestIconWrapper: {
-    position: "relative",
-    marginRight: 12,
-  },
-
+  requestIconWrapper: { position: "relative", marginRight: 12 },
   requestIcon: {
     width: 54,
     height: 54,
@@ -791,7 +624,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   newBadge: {
     position: "absolute",
     top: -6,
@@ -801,54 +633,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-
-  newBadgeText: {
-    color: "#fff",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-
-  requestContent: {
-    flex: 1,
-    minWidth: 0,
-    marginRight: 8,
-  },
-
-  requestTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#111",
-    marginBottom: 3,
-  },
-
-  requestDetails: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 5,
-  },
-
-  dateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  requestDate: {
-    marginLeft: 4,
-    fontSize: 11,
-    color: "#555",
-  },
-
+  newBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+  requestContent: { flex: 1, minWidth: 0, marginRight: 8 },
+  requestTitle: { fontSize: 14, fontWeight: "800", color: "#111", marginBottom: 3 },
+  requestDetails: { fontSize: 12, color: "#666", marginBottom: 5 },
+  dateRow: { flexDirection: "row", alignItems: "center" },
+  requestDate: { marginLeft: 4, fontSize: 11, color: "#555" },
   requestRight: {
     alignItems: "flex-end",
     justifyContent: "space-between",
     height: 54,
   },
-
-  timeAgo: {
-    fontSize: 11,
-    color: "#888",
-  },
-
+  timeAgo: { fontSize: 11, color: "#888" },
   viewRequestButton: {
     borderWidth: 1.5,
     borderColor: GREEN,
@@ -856,17 +652,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-
-  viewRequestText: {
-    color: GREEN,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
-  columnWrapper: {
-    justifyContent: "space-between",
-  },
-
+  viewRequestText: { color: GREEN, fontSize: 12, fontWeight: "700" },
+  columnWrapper: { justifyContent: "space-between" },
   professionalCard: {
     width: "31.5%",
     borderWidth: 1,
@@ -876,7 +663,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: "#fff",
   },
-
   heartButton: {
     position: "absolute",
     right: 7,
@@ -887,7 +673,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   profileImageWrapper: {
     width: 75,
     height: 75,
@@ -897,13 +682,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     position: "relative",
   },
-
-  profileImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 38,
-  },
-
+  profileImage: { width: "100%", height: "100%", borderRadius: 38 },
   verifiedBadge: {
     position: "absolute",
     right: -5,
@@ -914,81 +693,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
-  checkmark: {
-    width: 29,
-    height: 29,
-  },
-
-  professionalName: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#111",
-    marginBottom: 3,
-  },
-
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-
-  ratingText: {
-    fontSize: 10,
-    fontWeight: "600",
-    marginLeft: 3,
-    color: "#333",
-  },
-
-  reviewCount: {
-    fontSize: 9,
-    color: "#777",
-    marginLeft: 2,
-  },
-
-  profession: {
-    fontSize: 10,
-    color: "#555",
-    marginBottom: 3,
-  },
-
-  city: {
-    fontSize: 10,
-    color: "#777",
-    marginBottom: 5,
-  },
-
-  price: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: GREEN,
-  },
-
-  emptyContainer: {
-    alignItems: "center",
-    paddingVertical: 60,
-  },
-
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    marginTop: 12,
-    color: "#111",
-  },
-
-  emptyText: {
-    color: "#888",
-    marginTop: 5,
-    fontSize: 13,
-    textAlign: "center",
-  },
-
+  checkmark: { width: 29, height: 29 },
+  professionalName: { fontSize: 12, fontWeight: "800", color: "#111", marginBottom: 3 },
+  ratingRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  ratingText: { fontSize: 10, fontWeight: "600", marginLeft: 3, color: "#333" },
+  reviewCount: { fontSize: 9, color: "#777", marginLeft: 2 },
+  profession: { fontSize: 10, color: "#555", marginBottom: 3 },
+  city: { fontSize: 10, color: "#777", marginBottom: 5 },
+  price: { fontSize: 11, fontWeight: "800", color: GREEN },
+  emptyContainer: { alignItems: "center", paddingVertical: 60 },
+  emptyTitle: { fontSize: 17, fontWeight: "700", marginTop: 12, color: "#111" },
+  emptyText: { color: "#888", marginTop: 5, fontSize: 13, textAlign: "center" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
-
   modalSheet: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
@@ -997,11 +717,7 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     paddingTop: 12,
   },
-
-  cityPickerSheet: {
-    maxHeight: "80%",
-  },
-
+  cityPickerSheet: { maxHeight: "80%" },
   modalHandle: {
     width: 40,
     height: 4,
@@ -1010,14 +726,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
-
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111",
-    marginBottom: 18,
-  },
-
+  modalTitle: { fontSize: 18, fontWeight: "800", color: "#111", marginBottom: 18 },
   modalOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -1025,36 +734,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
   },
-
-  modalOptionText: {
-    marginLeft: 14,
-    flex: 1,
-  },
-
-  modalOptionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111",
-  },
-
-  modalOptionSub: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 2,
-  },
-
-  modalCancel: {
-    marginTop: 16,
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-
-  modalCancelText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#888",
-  },
-
+  modalOptionText: { marginLeft: 14, flex: 1 },
+  modalOptionTitle: { fontSize: 15, fontWeight: "700", color: "#111" },
+  modalOptionSub: { fontSize: 12, color: "#777", marginTop: 2 },
+  modalCancel: { marginTop: 16, alignItems: "center", paddingVertical: 12 },
+  modalCancelText: { fontSize: 15, fontWeight: "600", color: "#888" },
   citySearchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -1065,18 +749,8 @@ const styles = StyleSheet.create({
     height: 44,
     marginBottom: 12,
   },
-
-  citySearchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: "#111",
-    marginLeft: 8,
-  },
-
-  cityList: {
-    maxHeight: 320,
-  },
-
+  citySearchInput: { flex: 1, fontSize: 15, color: "#111", marginLeft: 8 },
+  cityList: { maxHeight: 320 },
   cityItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -1084,14 +758,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F5F5F5",
   },
-
-  cityItemText: {
-    flex: 1,
-    fontSize: 15,
-    color: "#111",
-    marginLeft: 12,
-  },
-
+  cityItemText: { flex: 1, fontSize: 15, color: "#111", marginLeft: 12 },
   emptyCitiesText: {
     textAlign: "center",
     color: "#888",
