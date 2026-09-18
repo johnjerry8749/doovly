@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import {
   Animated,
@@ -17,23 +18,31 @@ SplashScreen.preventAutoHideAsync();
 export default function Splash() {
   const router = useRouter();
 
-  // Logo animation
+  // =========================
+  // ANIMATION VALUES
+  // =========================
+
+  // Logo
   const logoScale = useRef(new Animated.Value(0.5)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
 
-  // Glow animation
+  // Glow
   const glowScale = useRef(new Animated.Value(0.7)).current;
   const glowOpacity = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(1)).current;
 
-  // Text animation
+  // Brand text
   const textOpacity = useRef(new Animated.Value(0)).current;
   const textTranslate = useRef(new Animated.Value(24)).current;
 
-  // Loading animation
+  // Loading bar
   const loadingWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Logo + glow animation
+    // =========================
+    // LOGO + GLOW INTRO
+    // =========================
+
     Animated.parallel([
       Animated.spring(logoScale, {
         toValue: 1,
@@ -41,18 +50,21 @@ export default function Splash() {
         tension: 55,
         useNativeDriver: true,
       }),
+
       Animated.timing(logoOpacity, {
         toValue: 1,
         duration: 650,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
+
       Animated.timing(glowScale, {
         toValue: 1.15,
         duration: 900,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
+
       Animated.timing(glowOpacity, {
         toValue: 0.55,
         duration: 700,
@@ -61,7 +73,34 @@ export default function Splash() {
       }),
     ]).start();
 
-    // Brand text animation
+    // =========================
+    // GLOW PULSE
+    // =========================
+
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1.06,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    pulseAnimation.start();
+
+    // =========================
+    // BRAND TEXT ANIMATION
+    // =========================
+
     const textTimer = setTimeout(() => {
       Animated.parallel([
         Animated.timing(textOpacity, {
@@ -70,6 +109,7 @@ export default function Splash() {
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
+
         Animated.timing(textTranslate, {
           toValue: 0,
           duration: 550,
@@ -79,7 +119,10 @@ export default function Splash() {
       ]).start();
     }, 420);
 
-    // Loading bar animation
+    // =========================
+    // LOADING BAR
+    // =========================
+
     Animated.timing(loadingWidth, {
       toValue: 1,
       duration: 2800,
@@ -87,32 +130,49 @@ export default function Splash() {
       useNativeDriver: false,
     }).start();
 
-    // Wait 4 seconds, hide native splash, then go to onboarding
+    // =========================
+    // NAVIGATION
+    // =========================
+
     const navigationTimer = setTimeout(async () => {
       await SplashScreen.hideAsync();
       router.replace("/(onboarding)");
     }, 3200);
 
+    // =========================
+    // CLEANUP
+    // =========================
+
     return () => {
       clearTimeout(textTimer);
       clearTimeout(navigationTimer);
+      pulseAnimation.stop();
     };
   }, []);
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#16A34A" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="#16A34A"
+      />
 
-      {/* Logo */}
+      {/* =========================
+          LOGO
+      ========================= */}
+
       <View style={styles.logoContainer}>
-
         {/* Glow behind logo */}
         <Animated.View
           style={[
             styles.glow,
             {
               opacity: glowOpacity,
-              transform: [{ scale: Animated.multiply(glowScale, pulse) }],
+              transform: [
+                {
+                  scale: Animated.multiply(glowScale, pulse),
+                },
+              ],
             },
           ]}
         />
@@ -135,7 +195,10 @@ export default function Splash() {
         </Animated.View>
       </View>
 
-      {/* Brand */}
+      {/* =========================
+          BRAND
+      ========================= */}
+
       <Animated.View
         style={[
           styles.brandContainer,
@@ -146,12 +209,21 @@ export default function Splash() {
         ]}
       >
         <Text style={styles.brandName}>DOOVLY</Text>
-        <Text style={styles.tagline}>
+
+        <Text
+          style={styles.tagline}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
           Quality service. Right at your door.
         </Text>
       </Animated.View>
 
-      {/* Bottom loading section */}
+      {/* =========================
+          LOADING
+      ========================= */}
+
       <View style={styles.bottomContainer}>
         <View style={styles.loadingBackground}>
           <Animated.View
@@ -187,7 +259,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  // =========================
   // LOGO
+  // =========================
+
   logoContainer: {
     width: 200,
     height: 200,
@@ -231,11 +306,16 @@ const styles = StyleSheet.create({
     borderRadius: 57.5,
   },
 
+  // =========================
   // BRAND
+  // =========================
+
   brandContainer: {
     width: "100%",
     alignItems: "center",
+    justifyContent: "center",
     marginTop: 25,
+    paddingHorizontal: 10,
   },
 
   brandName: {
@@ -248,17 +328,28 @@ const styles = StyleSheet.create({
 
   tagline: {
     marginTop: 8,
+    width: "100%",
+    paddingHorizontal: 5,
     fontSize: 18,
+    fontWeight: "500",
     color: "#DCFCE7",
     letterSpacing: 0.5,
+    textAlign: "center",
+    lineHeight: 22,
+    includeFontPadding: false,
   },
 
+  // =========================
   // LOADING
+  // =========================
+
   bottomContainer: {
     position: "absolute",
     bottom: 55,
     width: "100%",
     alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
   },
 
   loadingBackground: {
@@ -279,5 +370,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 11,
     color: "#DCFCE7",
+    textAlign: "center",
   },
 });
