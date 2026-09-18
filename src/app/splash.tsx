@@ -17,23 +17,38 @@ SplashScreen.preventAutoHideAsync();
 export default function Splash() {
   const router = useRouter();
 
-  // Logo animation
+  // =========================
+  // LOGO ANIMATION
+  // =========================
+
   const logoScale = useRef(new Animated.Value(0.5)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
 
-  // Glow animation
+  // =========================
+  // GLOW ANIMATION
+  // =========================
+
   const glowScale = useRef(new Animated.Value(0.7)).current;
   const glowOpacity = useRef(new Animated.Value(0)).current;
 
-  // Text animation
+  // =========================
+  // TEXT ANIMATION
+  // =========================
+
   const textOpacity = useRef(new Animated.Value(0)).current;
   const textTranslate = useRef(new Animated.Value(20)).current;
 
-  // Loading animation
+  // =========================
+  // LOADING ANIMATION
+  // =========================
+
   const loadingWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Logo + glow animation
+    // =========================
+    // LOGO + GLOW
+    // =========================
+
     Animated.parallel([
       Animated.spring(logoScale, {
         toValue: 1,
@@ -63,7 +78,10 @@ export default function Splash() {
       }),
     ]).start();
 
-    // Brand text animation
+    // =========================
+    // BRAND TEXT
+    // =========================
+
     const textTimer = setTimeout(() => {
       Animated.parallel([
         Animated.timing(textOpacity, {
@@ -82,7 +100,10 @@ export default function Splash() {
       ]).start();
     }, 500);
 
-    // Loading bar animation
+    // =========================
+    // LOADING BAR
+    // =========================
+
     Animated.timing(loadingWidth, {
       toValue: 1,
       duration: 4000,
@@ -90,10 +111,12 @@ export default function Splash() {
       useNativeDriver: false,
     }).start();
 
-    // Wait 4 seconds, hide native splash, then go to onboarding
+    // =========================
+    // NAVIGATION
+    // =========================
+
     const navigationTimer = setTimeout(async () => {
       await SplashScreen.hideAsync();
-
       router.replace("/(onboarding)");
     }, 4000);
 
@@ -110,10 +133,11 @@ export default function Splash() {
         backgroundColor="#16A34A"
       />
 
-      {/* Logo */}
-      <View style={styles.logoContainer}>
+      {/* =========================
+          LOGO
+          ========================= */}
 
-        {/* Glow behind logo */}
+      <View style={styles.logoContainer}>
         <Animated.View
           style={[
             styles.glow,
@@ -124,7 +148,6 @@ export default function Splash() {
           ]}
         />
 
-        {/* Round logo frame */}
         <Animated.View
           style={[
             styles.logoFrame,
@@ -135,14 +158,17 @@ export default function Splash() {
           ]}
         >
           <Image
-            source={require("@/assets/images/splash_screen.jpg")}
+            source={require("@/assets/images/splash_screen.png")}
             style={styles.logo}
-            resizeMode="cover"
+            resizeMode="contain"
           />
         </Animated.View>
       </View>
 
-      {/* Brand */}
+      {/* =========================
+          BRAND
+          ========================= */}
+
       <Animated.View
         style={[
           styles.brandContainer,
@@ -155,12 +181,14 @@ export default function Splash() {
         <Text style={styles.brandName}>DOOVLY</Text>
 
         <Text style={styles.tagline}>
-          Quaity service.
-          Right at yout door
+          Quality service. Right at your door.
         </Text>
       </Animated.View>
 
-      {/* Bottom loading section */}
+      {/* =========================
+          LOADING
+          ========================= */}
+
       <View style={styles.bottomContainer}>
         <View style={styles.loadingBackground}>
           <Animated.View
@@ -185,6 +213,10 @@ export default function Splash() {
 }
 
 const styles = StyleSheet.create({
+  // =========================
+  // CONTAINER
+  // =========================
+
   container: {
     flex: 1,
     backgroundColor: "#16A34A",
@@ -222,7 +254,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
 
-    borderWidth: 5,
+    overflow: "hidden",
+
+    borderWidth: 4,
     borderColor: "#FFFFFF",
 
     shadowColor: "#000000",
@@ -237,9 +271,8 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 115,
-    height: 115,
-    borderRadius: 57.5,
+    width: 110,
+    height: 110,
   },
 
   // =========================
@@ -247,8 +280,11 @@ const styles = StyleSheet.create({
   // =========================
 
   brandContainer: {
+    width: "100%",
     alignItems: "center",
-    marginTop: 25,
+    justifyContent: "center",
+    marginTop: 22,
+    paddingHorizontal: 10,
   },
 
   brandName: {
@@ -256,13 +292,18 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 5,
     color: "#FFFFFF",
+    textAlign: "center",
   },
 
   tagline: {
-    marginTop: 8,
-    fontSize: 18,
+    marginTop: 7,
+    fontSize: 15,
+    fontWeight: "500",
     color: "#DCFCE7",
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
+    textAlign: "center",
+    lineHeight: 20,
+    includeFontPadding: false,
   },
 
   // =========================
@@ -271,13 +312,15 @@ const styles = StyleSheet.create({
 
   bottomContainer: {
     position: "absolute",
-    bottom: 55,
+    bottom: 50,
     width: "100%",
     alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
   },
 
   loadingBackground: {
-    width: 140,
+    width: 150,
     height: 5,
     borderRadius: 10,
     backgroundColor: "#15803D",
@@ -291,9 +334,9 @@ const styles = StyleSheet.create({
   },
 
   loadingText: {
-    marginTop: 12,
+    marginTop: 11,
     fontSize: 11,
     color: "#DCFCE7",
+    textAlign: "center",
   },
 });
-
