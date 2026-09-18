@@ -17,85 +17,102 @@ SplashScreen.preventAutoHideAsync();
 export default function Splash() {
   const router = useRouter();
 
-  // Logo animation
-  const logoScale = useRef(new Animated.Value(0.5)).current;
+  // Logo entrance
+  const logoScale = useRef(new Animated.Value(0.35)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
 
-  // Glow animation
-  const glowScale = useRef(new Animated.Value(0.7)).current;
+  // Soft outer glow / pulse ring
+  const glowScale = useRef(new Animated.Value(0.55)).current;
   const glowOpacity = useRef(new Animated.Value(0)).current;
 
-  // Text animation
-  const textOpacity = useRef(new Animated.Value(0)).current;
-  const textTranslate = useRef(new Animated.Value(20)).current;
+  // Continuous subtle pulse after entrance
+  const pulse = useRef(new Animated.Value(1)).current;
 
-  // Loading animation
+  // Brand text
+  const textOpacity = useRef(new Animated.Value(0)).current;
+  const textTranslate = useRef(new Animated.Value(24)).current;
+
+  // Loading bar
   const loadingWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Logo + glow animation
+    // 1. Logo + glow spring in (Lottie-style entrance)
     Animated.parallel([
       Animated.spring(logoScale, {
         toValue: 1,
-        friction: 5,
-        tension: 45,
+        friction: 6,
+        tension: 55,
         useNativeDriver: true,
       }),
-
       Animated.timing(logoOpacity, {
         toValue: 1,
-        duration: 700,
-        easing: Easing.out(Easing.ease),
+        duration: 650,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-
       Animated.timing(glowScale, {
-        toValue: 1,
+        toValue: 1.15,
         duration: 900,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(glowOpacity, {
+        toValue: 0.55,
+        duration: 700,
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
+    ]).start(() => {
+      // After entrance → continuous soft pulse on the glow
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, {
+            toValue: 1.08,
+            duration: 1100,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulse, {
+            toValue: 1,
+            duration: 1100,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    });
 
-      Animated.timing(glowOpacity, {
-        toValue: 1,
-        duration: 700,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Brand text animation
+    // 2. Brand text slides up + fades in
     const textTimer = setTimeout(() => {
       Animated.parallel([
         Animated.timing(textOpacity, {
           toValue: 1,
-          duration: 600,
-          easing: Easing.out(Easing.ease),
+          duration: 550,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-
         Animated.timing(textTranslate, {
           toValue: 0,
-          duration: 600,
-          easing: Easing.out(Easing.ease),
+          duration: 550,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
-    }, 500);
+    }, 420);
 
-    // Loading bar animation
+    // 3. Progress bar fills smoothly
     Animated.timing(loadingWidth, {
       toValue: 1,
-      duration: 4000,
-      easing: Easing.inOut(Easing.ease),
+      duration: 2800,
+      easing: Easing.inOut(Easing.cubic),
       useNativeDriver: false,
     }).start();
 
-    // Wait 4 seconds, hide native splash, then go to onboarding
+    // 4. Navigate after animation finishes
     const navigationTimer = setTimeout(async () => {
       await SplashScreen.hideAsync();
-
       router.replace("/(onboarding)");
-    }, 4000);
+    }, 3200);
 
     return () => {
       clearTimeout(textTimer);
@@ -105,26 +122,22 @@ export default function Splash() {
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="#16A34A"
-      />
+      <StatusBar barStyle="light-content" backgroundColor="#16A34A" />
 
-      {/* Logo */}
+      {/* ========== LOGO ========== */}
       <View style={styles.logoContainer}>
-
-        {/* Glow behind logo */}
+        {/* Soft expanding glow / pulse ring */}
         <Animated.View
           style={[
             styles.glow,
             {
               opacity: glowOpacity,
-              transform: [{ scale: glowScale }],
+              transform: [{ scale: Animated.multiply(glowScale, pulse) }],
             },
           ]}
         />
 
-        {/* Round logo frame */}
+        {/* White circular frame + logo */}
         <Animated.View
           style={[
             styles.logoFrame,
@@ -135,14 +148,14 @@ export default function Splash() {
           ]}
         >
           <Image
-            source={require("@/assets/images/splash_screen.jpg")}
+            source={require("@/assets/images/splash_screen1.jpg")}
             style={styles.logo}
             resizeMode="cover"
           />
         </Animated.View>
       </View>
 
-      {/* Brand */}
+      {/* ========== BRAND ========== */}
       <Animated.View
         style={[
           styles.brandContainer,
@@ -153,14 +166,12 @@ export default function Splash() {
         ]}
       >
         <Text style={styles.brandName}>DOOVLY</Text>
-
         <Text style={styles.tagline}>
-          Quaity service.
-          Right at yout door
+          Quality service. Right at your door.
         </Text>
       </Animated.View>
 
-      {/* Bottom loading section */}
+      {/* ========== LOADING ========== */}
       <View style={styles.bottomContainer}>
         <View style={styles.loadingBackground}>
           <Animated.View
@@ -192,108 +203,92 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // =========================
   // LOGO
-  // =========================
-
   logoContainer: {
-    width: 190,
-    height: 190,
+    width: 200,
+    height: 200,
     justifyContent: "center",
     alignItems: "center",
   },
 
   glow: {
     position: "absolute",
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
     backgroundColor: "#4ADE80",
-    opacity: 0.5,
   },
 
   logoFrame: {
-    width: 135,
-    height: 135,
-    borderRadius: 67.5,
-
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     backgroundColor: "#FFFFFF",
-
     justifyContent: "center",
     alignItems: "center",
-
-    borderWidth: 5,
-    borderColor: "#FFFFFF",
-
-    shadowColor: "#000000",
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 15,
-
-    elevation: 10,
+    borderWidth: 6,
+    borderColor: "#BBF7D0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    elevation: 12,
   },
 
   logo: {
-    width: 115,
-    height: 115,
-    borderRadius: 57.5,
+    width: 118,
+    height: 118,
+    borderRadius: 59,
   },
 
-  // =========================
   // BRAND
-  // =========================
-
   brandContainer: {
     alignItems: "center",
-    marginTop: 25,
+    marginTop: 28,
   },
 
   brandName: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: "800",
-    letterSpacing: 5,
+    letterSpacing: 6,
     color: "#FFFFFF",
   },
 
   tagline: {
-    marginTop: 8,
-    fontSize: 18,
+    marginTop: 10,
+    fontSize: 16,
     color: "#DCFCE7",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+    textAlign: "center",
   },
 
-  // =========================
   // LOADING
-  // =========================
-
   bottomContainer: {
     position: "absolute",
-    bottom: 55,
+    bottom: 60,
     width: "100%",
     alignItems: "center",
+    paddingHorizontal: 40,
   },
 
   loadingBackground: {
-    width: 140,
-    height: 5,
-    borderRadius: 10,
+    width: 160,
+    height: 6,
+    borderRadius: 12,
     backgroundColor: "#15803D",
     overflow: "hidden",
   },
 
   loadingProgress: {
     height: "100%",
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: "#FFFFFF",
   },
 
   loadingText: {
-    marginTop: 12,
-    fontSize: 11,
+    marginTop: 14,
+    fontSize: 12,
     color: "#DCFCE7",
+    letterSpacing: 0.2,
   },
 });
-
