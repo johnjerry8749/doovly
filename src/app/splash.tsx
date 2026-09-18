@@ -17,108 +17,81 @@ SplashScreen.preventAutoHideAsync();
 export default function Splash() {
   const router = useRouter();
 
-  // =========================
-  // LOGO ANIMATION
-  // =========================
-
+  // Logo animation
   const logoScale = useRef(new Animated.Value(0.5)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
 
-  // =========================
-  // GLOW ANIMATION
-  // =========================
-
+  // Glow animation
   const glowScale = useRef(new Animated.Value(0.7)).current;
   const glowOpacity = useRef(new Animated.Value(0)).current;
 
-  // =========================
-  // TEXT ANIMATION
-  // =========================
-
+  // Text animation
   const textOpacity = useRef(new Animated.Value(0)).current;
-  const textTranslate = useRef(new Animated.Value(20)).current;
+  const textTranslate = useRef(new Animated.Value(24)).current;
 
-  // =========================
-  // LOADING ANIMATION
-  // =========================
-
+  // Loading animation
   const loadingWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // =========================
-    // LOGO + GLOW
-    // =========================
-
+    // Logo + glow animation
     Animated.parallel([
       Animated.spring(logoScale, {
         toValue: 1,
-        friction: 5,
-        tension: 45,
+        friction: 6,
+        tension: 55,
         useNativeDriver: true,
       }),
-
       Animated.timing(logoOpacity, {
         toValue: 1,
-        duration: 700,
-        easing: Easing.out(Easing.ease),
+        duration: 650,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-
       Animated.timing(glowScale, {
-        toValue: 1,
+        toValue: 1.15,
         duration: 900,
-        easing: Easing.out(Easing.ease),
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-
       Animated.timing(glowOpacity, {
-        toValue: 1,
+        toValue: 0.55,
         duration: 700,
+        easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
     ]).start();
 
-    // =========================
-    // BRAND TEXT
-    // =========================
-
+    // Brand text animation
     const textTimer = setTimeout(() => {
       Animated.parallel([
         Animated.timing(textOpacity, {
           toValue: 1,
-          duration: 600,
-          easing: Easing.out(Easing.ease),
+          duration: 550,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-
         Animated.timing(textTranslate, {
           toValue: 0,
-          duration: 600,
-          easing: Easing.out(Easing.ease),
+          duration: 550,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
-    }, 500);
+    }, 420);
 
-    // =========================
-    // LOADING BAR
-    // =========================
-
+    // Loading bar animation
     Animated.timing(loadingWidth, {
       toValue: 1,
-      duration: 4000,
-      easing: Easing.inOut(Easing.ease),
+      duration: 2800,
+      easing: Easing.inOut(Easing.cubic),
       useNativeDriver: false,
     }).start();
 
-    // =========================
-    // NAVIGATION
-    // =========================
-
+    // Wait 4 seconds, hide native splash, then go to onboarding
     const navigationTimer = setTimeout(async () => {
       await SplashScreen.hideAsync();
       router.replace("/(onboarding)");
-    }, 4000);
+    }, 3200);
 
     return () => {
       clearTimeout(textTimer);
@@ -128,26 +101,23 @@ export default function Splash() {
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="#16A34A"
-      />
+      <StatusBar barStyle="light-content" backgroundColor="#16A34A" />
 
-      {/* =========================
-          LOGO
-          ========================= */}
-
+      {/* Logo */}
       <View style={styles.logoContainer}>
+
+        {/* Glow behind logo */}
         <Animated.View
           style={[
             styles.glow,
             {
               opacity: glowOpacity,
-              transform: [{ scale: glowScale }],
+              transform: [{ scale: Animated.multiply(glowScale, pulse) }],
             },
           ]}
         />
 
+        {/* Round logo frame */}
         <Animated.View
           style={[
             styles.logoFrame,
@@ -158,17 +128,14 @@ export default function Splash() {
           ]}
         >
           <Image
-            source={require("@/assets/images/splash_screen.png")}
+            source={require("@/assets/images/splash_screen.jpg")}
             style={styles.logo}
             resizeMode="contain"
           />
         </Animated.View>
       </View>
 
-      {/* =========================
-          BRAND
-          ========================= */}
-
+      {/* Brand */}
       <Animated.View
         style={[
           styles.brandContainer,
@@ -179,16 +146,12 @@ export default function Splash() {
         ]}
       >
         <Text style={styles.brandName}>DOOVLY</Text>
-
         <Text style={styles.tagline}>
           Quality service. Right at your door.
         </Text>
       </Animated.View>
 
-      {/* =========================
-          LOADING
-          ========================= */}
-
+      {/* Bottom loading section */}
       <View style={styles.bottomContainer}>
         <View style={styles.loadingBackground}>
           <Animated.View
@@ -224,39 +187,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // =========================
   // LOGO
-  // =========================
-
   logoContainer: {
-    width: 190,
-    height: 190,
+    width: 200,
+    height: 200,
     justifyContent: "center",
     alignItems: "center",
   },
 
   glow: {
     position: "absolute",
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
     backgroundColor: "#4ADE80",
-    opacity: 0.5,
   },
 
   logoFrame: {
-    width: 135,
-    height: 135,
-    borderRadius: 67.5,
-
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     backgroundColor: "#FFFFFF",
-
     justifyContent: "center",
     alignItems: "center",
 
-    overflow: "hidden",
-
-    borderWidth: 4,
+    borderWidth: 5,
     borderColor: "#FFFFFF",
 
     shadowColor: "#000000",
@@ -271,56 +226,43 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 110,
-    height: 110,
+    width: 115,
+    height: 115,
+    borderRadius: 57.5,
   },
 
-  // =========================
   // BRAND
-  // =========================
-
   brandContainer: {
     width: "100%",
     alignItems: "center",
-    justifyContent: "center",
-    marginTop: 22,
-    paddingHorizontal: 10,
+    marginTop: 25,
   },
 
   brandName: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: "800",
-    letterSpacing: 5,
+    letterSpacing: 6,
     color: "#FFFFFF",
     textAlign: "center",
   },
 
   tagline: {
-    marginTop: 7,
-    fontSize: 15,
-    fontWeight: "500",
+    marginTop: 8,
+    fontSize: 18,
     color: "#DCFCE7",
-    letterSpacing: 0.2,
-    textAlign: "center",
-    lineHeight: 20,
-    includeFontPadding: false,
+    letterSpacing: 0.5,
   },
 
-  // =========================
   // LOADING
-  // =========================
-
   bottomContainer: {
     position: "absolute",
-    bottom: 50,
+    bottom: 55,
     width: "100%",
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
   },
 
   loadingBackground: {
-    width: 150,
+    width: 140,
     height: 5,
     borderRadius: 10,
     backgroundColor: "#15803D",
@@ -329,14 +271,13 @@ const styles = StyleSheet.create({
 
   loadingProgress: {
     height: "100%",
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: "#FFFFFF",
   },
 
   loadingText: {
-    marginTop: 11,
+    marginTop: 12,
     fontSize: 11,
     color: "#DCFCE7",
-    textAlign: "center",
   },
 });
