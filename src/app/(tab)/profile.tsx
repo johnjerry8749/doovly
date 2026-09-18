@@ -28,7 +28,7 @@ function MenuItem({
   icon,
   title,
   rightText,
-  rightColor = "#6B7280",
+  rightColor = "#159447",
   badge,
   onPress,
 }: MenuItemProps) {
@@ -157,8 +157,8 @@ export default function Profile() {
           />
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#DBEAFE" }]}>
-                <Ionicons name="document-text-outline" size={18} color="#2563EB" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="document-text-outline" size={18} color={PRIMARY} />
               </View>
             }
             title="Create Job Request"
@@ -166,8 +166,8 @@ export default function Profile() {
           />
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#FFEDD5" }]}>
-                <Ionicons name="briefcase-outline" size={18} color="#EA580C" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="briefcase-outline" size={18} color={PRIMARY} />
               </View>
             }
             title="My Services"
@@ -177,8 +177,8 @@ export default function Profile() {
           />
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#F3E8FF" }]}>
-                <Ionicons name="calendar-outline" size={18} color="#7C3AED" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="calendar-outline" size={18} color={PRIMARY} />
               </View>
             }
             title="My Bookings"
@@ -191,8 +191,8 @@ export default function Profile() {
         <View style={styles.card}>
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#FEE2E2" }]}>
-                <Ionicons name="person-outline" size={18} color="#DC2626" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="person-outline" size={18} color={PRIMARY} />
               </View>
             }
             title="My Portfolio"
@@ -200,8 +200,8 @@ export default function Profile() {
           />
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#FEE2E2" }]}>
-                <Ionicons name="heart-outline" size={18} color="#DC2626" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="heart-outline" size={18} color={PRIMARY} />
               </View>
             }
             title="Saved Providers"
@@ -209,8 +209,8 @@ export default function Profile() {
           />
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#DBEAFE" }]}>
-                <Ionicons name="chatbubble-outline" size={18} color="#2563EB" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="chatbubble-outline" size={18} color={PRIMARY} />
               </View>
             }
             title="Chat"
@@ -219,8 +219,8 @@ export default function Profile() {
           />
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#FEF3C7" }]}>
-                <Ionicons name="notifications-outline" size={18} color="#D97706" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7"}]}>
+                <Ionicons name="notifications-outline" size={18} color={PRIMARY} />
               </View>
             }
             title="Notifications"
@@ -243,8 +243,8 @@ export default function Profile() {
           />
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#F3E8FF" }]}>
-                <MaterialCommunityIcons name="crown" size={18} color="#7C3AED" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+                <MaterialCommunityIcons name="crown" size={18} color={PRIMARY} />
               </View>
             }
             title="Subscription"
@@ -254,8 +254,8 @@ export default function Profile() {
           />
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#DBEAFE" }]}>
-                <Ionicons name="shield-checkmark-outline" size={18} color="#2563EB" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="shield-checkmark-outline" size={18} color={PRIMARY} />
               </View>
             }
             title="Verification"
@@ -270,8 +270,8 @@ export default function Profile() {
         <View style={styles.card}>
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#E0F2FE" }]}>
-                <Ionicons name="time-outline" size={18} color="#0284C7" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="time-outline" size={18} color={PRIMARY} />
               </View>
             }
             title="Availability"
@@ -279,8 +279,8 @@ export default function Profile() {
           />
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#F3E8FF" }]}>
-                <Ionicons name="settings-outline" size={18} color="#7C3AED" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="settings-outline" size={18} color={PRIMARY} />
               </View>
             }
             title="Settings"
@@ -288,8 +288,8 @@ export default function Profile() {
           />
           <MenuItem
             icon={
-              <View style={[styles.iconBg, { backgroundColor: "#FEF3C7" }]}>
-                <Ionicons name="help-circle-outline" size={18} color="#D97706" />
+              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="help-circle-outline" size={18} color={PRIMARY} />
               </View>
             }
             title="Help & Support"
