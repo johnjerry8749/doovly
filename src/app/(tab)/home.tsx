@@ -204,7 +204,15 @@ export default function Home() {
                 key={person.id}
                 style={styles.professionalCard}
                 activeOpacity={0.8}
-                onPress={() => router.push(`/professional/${person.id}`)}
+              onPress={() =>
+                router.push({
+                  pathname: "/professional/[id]",
+                  params: {
+                    id: person.id,
+                    from: "home",   // or "services"
+                  },
+                })
+              }
               >
                 <TouchableOpacity
                   style={styles.heartButton}

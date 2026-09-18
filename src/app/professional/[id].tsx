@@ -277,7 +277,6 @@ export default function ProfessionalProfile() {
               </View>
             )} */}
 
-
             {pro.verified && (
               <View style={styles.verifiedBadge}>
                 {" "}
@@ -396,7 +395,7 @@ export default function ProfessionalProfile() {
                   ]}
                   onPress={() =>
                     router.push({
-                      pathname: "/(tab)/bookme/[id]",
+                      pathname: "/bookme/[id]",
                       params: {
                         id: pro.id,
                         serviceId: service.id,
@@ -435,21 +434,17 @@ export default function ProfessionalProfile() {
 
           {tab === "portfolio" && (
             <View style={styles.portfolioGrid}>
-              {pro.completedProjects?.length === 0 ? (
+              {pro.portfolio?.length === 0 ? (
                 <Text style={styles.emptyText}>No completed projects yet</Text>
               ) : (
-                pro.completedProjects?.map((project) => (
-                  <View key={project.id} style={styles.projectCard}>
-                    <View style={styles.projectHeader}>
-                      <View style={styles.projectIcon}>
-                        <Ionicons
-                          name="checkmark-done"
-                          size={18}
-                          color="#0A66C2"
-                        />
-                      </View>
-
-                      <Text style={styles.projectTitle}>{project.title}</Text>
+                pro.portfolio?.map((project) => (
+                  <View key={project.id} style={styles.portfolioItem}>
+                    <View style={styles.projectCard}>
+                      <Image
+                        source={project.image}
+                        style={styles.projectImage}
+                        resizeMode="cover"
+                      />
                     </View>
 
                     <Text style={styles.projectDescription}>
@@ -534,7 +529,7 @@ export default function ProfessionalProfile() {
             activeOpacity={0.8}
             onPress={() =>
               router.push({
-                pathname: "/(tab)/bookme/[id]",
+                pathname: "/bookme/[id]",
                 params: {
                   id: pro.id,
                   serviceId: "",
@@ -922,56 +917,45 @@ const styles = StyleSheet.create({
   // ==========================================================
 
   portfolioGrid: {
-    width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
     gap: 12,
   },
 
-  projectCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E8E8E8",
-    marginBottom: 12,
-  },
-
-  projectHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+  portfolioItem: {
+    width: "48%",
     marginBottom: 8,
   },
 
-  projectIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#EAF3FF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
+  projectCard: {
+    width: "100%",
+    height: 150,
+    overflow: "hidden",
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
-  projectTitle: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111111",
+  projectImage: {
+    width: "100%",
+    height: "100%",
   },
 
   projectDescription: {
     fontSize: 13,
-    lineHeight: 20,
-    color: "#666666",
-    marginLeft: 46,
+    lineHeight: 19,
+    color: "#6B7280",
+    marginTop: 8,
   },
-
-  emptyText: {
-    textAlign: "center",
-    fontSize: 14,
-    color: "#888888",
-    paddingVertical: 30,
-  },
-
   // ==========================================================
   // REVIEWS
   // ==========================================================

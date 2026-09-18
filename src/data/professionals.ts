@@ -1,11 +1,12 @@
-
 /**
- * Shared professionals data.
- * Later: replace getProfessionalById / list with API or DB.
+ * Shared professionals mock data.
+ *
+ * Later:
+ * Replace this file with API / database data.
  *
  * Star rule:
- * Every 10 review comments = 1 star, max 5.
- * stars = min(5, floor(totalReviews / 10))
+ * Every 10 reviews = 1 star.
+ * Maximum = 5 stars.
  */
 
 // =========================
@@ -30,8 +31,8 @@ export type ProReview = {
 
 export type CompletedProject = {
   id: string;
-  title: string;
   description: string;
+  image: number;
 };
 
 export type Professional = {
@@ -45,15 +46,11 @@ export type Professional = {
   subscribed: boolean;
   latitude: number;
   longitude: number;
+
   services: ProService[];
 
-  /** Work photos shown in Portfolio tab */
-  portfolio: number[];
+  portfolio: CompletedProject[];
 
-  /** Completed projects shown without images */
-  completedProjects: CompletedProject[];
-
-  /** Customer reviews */
   reviews: ProReview[];
 };
 
@@ -61,7 +58,6 @@ export type Professional = {
 // STAR CALCULATION
 // =========================
 
-/** Every 10 reviews = 1 star, maximum 5 stars */
 export function starsFromReviewCount(count: number): number {
   return Math.min(5, Math.floor(count / 10));
 }
@@ -71,9 +67,9 @@ export function starsFromReviewCount(count: number): number {
 // =========================
 
 export const PROFESSIONALS: Professional[] = [
-  // ========================================
+  // =====================================================
   // 1. JOHN CHUKWUEMEKA
-  // ========================================
+  // =====================================================
   {
     id: "1",
     name: "John Chukwuemeka",
@@ -91,7 +87,7 @@ export const PROFESSIONALS: Professional[] = [
         id: "s1",
         name: "Plumbing Installation",
         description:
-          "Professional installation of pipes, fixtures, taps and fittings.",
+          "Professional installation of pipes, taps, fixtures and fittings.",
         price: "₦8,000",
         priceValue: 8000,
         icon: "pipe",
@@ -100,7 +96,7 @@ export const PROFESSIONALS: Professional[] = [
         id: "s2",
         name: "Drain Cleaning",
         description:
-          "High-pressure drain cleaning and blockage removal.",
+          "Professional drain cleaning and blockage removal.",
         price: "₦10,000",
         priceValue: 10000,
         icon: "pipe-leak",
@@ -117,30 +113,29 @@ export const PROFESSIONALS: Professional[] = [
     ],
 
     portfolio: [
-      require("@/assets/profile_1.jpg"),
-      require("@/assets/profile_3.jpg"),
-      require("@/assets/profile_4.jpg"),
-      require("@/assets/profile_2.jpg"),
-    ],
-
-    completedProjects: [
       {
-        id: "cp1",
-        title: "Home Plumbing Installation",
+        id: "p1",
         description:
-          "Complete plumbing installation for a residential home.",
+          "Installed new kitchen pipes, taps and drainage connections.",
+        image: require("@/assets/profile_1.jpg"),
       },
       {
-        id: "cp2",
-        title: "Kitchen Plumbing",
+        id: "p2",
         description:
-          "Installed and repaired kitchen pipes, taps and fittings.",
+          "Completed a full bathroom plumbing installation.",
+        image: require("@/assets/profile_3.jpg"),
       },
       {
-        id: "cp3",
-        title: "Water Heater Installation",
+        id: "p3",
         description:
-          "Installed and configured a new residential water heater.",
+          "Installed and tested a residential water heating system.",
+        image: require("@/assets/profile_4.jpg"),
+      },
+      {
+        id: "p4",
+        description:
+          "Removed blockage and restored proper drainage flow.",
+        image: require("@/assets/profile_2.jpg"),
       },
     ],
 
@@ -163,15 +158,15 @@ export const PROFESSIONALS: Professional[] = [
         id: "r3",
         userName: "Chioma N.",
         comment:
-          "Good job overall. Arrived a bit late but quality was excellent.",
+          "Good job overall. The quality of the work was excellent.",
         date: "Apr 12, 2025",
       },
     ],
   },
 
-  // ========================================
+  // =====================================================
   // 2. CHIOMA EZE
-  // ========================================
+  // =====================================================
   {
     id: "2",
     name: "Chioma Eze",
@@ -189,7 +184,7 @@ export const PROFESSIONALS: Professional[] = [
         id: "s1",
         name: "Nail Extension",
         description:
-          "Acrylic and gel nail extensions with design options.",
+          "Acrylic and gel nail extensions with custom designs.",
         price: "₦6,000",
         priceValue: 6000,
         icon: "nail",
@@ -198,36 +193,46 @@ export const PROFESSIONALS: Professional[] = [
         id: "s2",
         name: "Manicure & Pedicure",
         description:
-          "Full manicure and pedicure package.",
+          "Complete manicure and pedicure treatment.",
         price: "₦8,000",
         priceValue: 8000,
         icon: "hand-okay",
       },
+      {
+        id: "s3",
+        name: "Nail Art",
+        description:
+          "Creative nail art and detailed custom designs.",
+        price: "₦4,000",
+        priceValue: 4000,
+        icon: "brush",
+      },
     ],
 
     portfolio: [
-      require("@/assets/profile_2.jpg"),
-      require("@/assets/profile_4.jpg"),
-    ],
-
-    completedProjects: [
       {
-        id: "cp1",
-        title: "Bridal Nail Set",
+        id: "p1",
         description:
-          "Custom bridal acrylic nail design and extension.",
+          "Elegant gel nails with a clean modern finish.",
+        image: require("@/assets/profile_2.jpg"),
       },
       {
-        id: "cp2",
-        title: "Gel Nail Extension",
+        id: "p2",
         description:
-          "Professional gel extension and nail finishing.",
+          "Classic French tip design with a polished finish.",
+        image: require("@/assets/profile_4.jpg"),
       },
       {
-        id: "cp3",
-        title: "Manicure & Pedicure",
+        id: "p3",
         description:
-          "Complete manicure and pedicure service.",
+          "Custom bridal nail design with detailed decoration.",
+        image: require("@/assets/profile_1.jpg"),
+      },
+      {
+        id: "p4",
+        description:
+          "Premium nail art with custom patterns and finishing.",
+        image: require("@/assets/profile_3.jpg"),
       },
     ],
 
@@ -239,12 +244,19 @@ export const PROFESSIONALS: Professional[] = [
           "Beautiful nails and very careful. Will book again.",
         date: "May 5, 2025",
       },
+      {
+        id: "r2",
+        userName: "Amaka R.",
+        comment:
+          "Very neat work and friendly service.",
+        date: "Apr 21, 2025",
+      },
     ],
   },
 
-  // ========================================
+  // =====================================================
   // 3. IKECHUKWU OBI
-  // ========================================
+  // =====================================================
   {
     id: "3",
     name: "Ikechukwu Obi",
@@ -262,7 +274,7 @@ export const PROFESSIONALS: Professional[] = [
         id: "s1",
         name: "Engine Diagnostics",
         description:
-          "Full engine check and fault diagnosis.",
+          "Complete engine inspection and fault diagnosis.",
         price: "₦10,000",
         priceValue: 10000,
         icon: "car-wrench",
@@ -271,36 +283,46 @@ export const PROFESSIONALS: Professional[] = [
         id: "s2",
         name: "Oil Change",
         description:
-          "Engine oil and filter replacement.",
+          "Engine oil and filter replacement service.",
         price: "₦15,000",
         priceValue: 15000,
         icon: "oil",
       },
+      {
+        id: "s3",
+        name: "Brake Repair",
+        description:
+          "Brake inspection, repair and replacement.",
+        price: "₦12,000",
+        priceValue: 12000,
+        icon: "car-brake-alert",
+      },
     ],
 
     portfolio: [
-      require("@/assets/profile_3.jpg"),
-      require("@/assets/profile_1.jpg"),
-    ],
-
-    completedProjects: [
       {
-        id: "cp1",
-        title: "Engine Repair",
+        id: "p1",
         description:
-          "Complete engine inspection and repair.",
+          "Diagnosed and repaired a vehicle engine fault.",
+        image: require("@/assets/profile_3.jpg"),
       },
       {
-        id: "cp2",
-        title: "Brake System Repair",
+        id: "p2",
         description:
-          "Brake inspection, repair and replacement.",
+          "Completed brake inspection and replacement.",
+        image: require("@/assets/profile_1.jpg"),
       },
       {
-        id: "cp3",
-        title: "Vehicle Maintenance",
+        id: "p3",
         description:
-          "Full vehicle maintenance and servicing.",
+          "Performed full oil and filter replacement.",
+        image: require("@/assets/profile_4.jpg"),
+      },
+      {
+        id: "p4",
+        description:
+          "Identified and resolved multiple dashboard fault codes.",
+        image: require("@/assets/profile_2.jpg"),
       },
     ],
 
@@ -312,16 +334,23 @@ export const PROFESSIONALS: Professional[] = [
           "Fixed my car the same day. Fair price.",
         date: "May 1, 2025",
       },
+      {
+        id: "r2",
+        userName: "David O.",
+        comment:
+          "Explained the problem clearly and completed the repair.",
+        date: "Apr 18, 2025",
+      },
     ],
   },
 
-  // ========================================
+  // =====================================================
   // 4. BLESSING JOY
-  // ========================================
+  // =====================================================
   {
     id: "4",
     name: "Blessing Joy",
-    profession: "Body Massage Therapist",
+    profession: "Massage Therapist",
     city: "Lagos",
     priceFrom: "₦18,000",
     image: require("@/assets/profile_4.jpg"),
@@ -335,35 +364,46 @@ export const PROFESSIONALS: Professional[] = [
         id: "s1",
         name: "Full Body Massage",
         description:
-          "Relaxing full body massage session (60–90 mins).",
+          "Relaxing full body massage session lasting 60–90 minutes.",
         price: "₦18,000",
         priceValue: 18000,
         icon: "spa",
       },
+      {
+        id: "s2",
+        name: "Deep Tissue Massage",
+        description:
+          "Focused massage designed for muscle tension and relaxation.",
+        price: "₦22,000",
+        priceValue: 22000,
+        icon: "hand-back-right",
+      },
     ],
 
     portfolio: [
-      require("@/assets/profile_4.jpg"),
-    ],
-
-    completedProjects: [
       {
-        id: "cp1",
-        title: "Full Body Massage",
+        id: "p1",
         description:
-          "Professional full body massage session.",
+          "Completed a relaxing full body massage session.",
+        image: require("@/assets/profile_4.jpg"),
       },
       {
-        id: "cp2",
-        title: "Relaxation Therapy",
+        id: "p2",
         description:
-          "Personalized relaxation and massage treatment.",
+          "Provided targeted deep tissue massage treatment.",
+        image: require("@/assets/profile_2.jpg"),
       },
       {
-        id: "cp3",
-        title: "Deep Tissue Massage",
+        id: "p3",
         description:
-          "Professional deep tissue massage session.",
+          "Created a calming wellness session for a returning client.",
+        image: require("@/assets/profile_1.jpg"),
+      },
+      {
+        id: "p4",
+        description:
+          "Delivered a personalized relaxation and wellness treatment.",
+        image: require("@/assets/profile_3.jpg"),
       },
     ],
 
@@ -372,15 +412,22 @@ export const PROFESSIONALS: Professional[] = [
         id: "r1",
         userName: "Ngozi M.",
         comment:
-          "So relaxing. Professional and respectful.",
+          "Very relaxing. Professional and respectful.",
         date: "Apr 20, 2025",
+      },
+      {
+        id: "r2",
+        userName: "Sarah A.",
+        comment:
+          "Great experience and very comfortable environment.",
+        date: "Apr 10, 2025",
       },
     ],
   },
 
-  // ========================================
+  // =====================================================
   // 5. EMEKA OKORO
-  // ========================================
+  // =====================================================
   {
     id: "5",
     name: "Emeka Okoro",
@@ -407,36 +454,46 @@ export const PROFESSIONALS: Professional[] = [
         id: "s2",
         name: "Fault Finding",
         description:
-          "Diagnose and fix electrical faults safely.",
+          "Diagnose and repair electrical faults safely.",
         price: "₦9,000",
         priceValue: 9000,
         icon: "lightning-bolt",
       },
+      {
+        id: "s3",
+        name: "Lighting Installation",
+        description:
+          "Indoor and outdoor lighting installation.",
+        price: "₦6,000",
+        priceValue: 6000,
+        icon: "lightbulb",
+      },
     ],
 
     portfolio: [
-      require("@/assets/profile_1.jpg"),
-      require("@/assets/profile_3.jpg"),
-    ],
-
-    completedProjects: [
       {
-        id: "cp1",
-        title: "House Wiring",
+        id: "p1",
         description:
-          "Complete electrical wiring for a residential property.",
+          "Completed electrical wiring for a residential property.",
+        image: require("@/assets/profile_1.jpg"),
       },
       {
-        id: "cp2",
-        title: "Electrical Installation",
+        id: "p2",
         description:
-          "Installation of electrical fixtures and fittings.",
+          "Installed modern lighting throughout a home.",
+        image: require("@/assets/profile_3.jpg"),
       },
       {
-        id: "cp3",
-        title: "Electrical Fault Repair",
+        id: "p3",
         description:
-          "Diagnosis and repair of electrical faults.",
+          "Diagnosed and repaired multiple electrical faults.",
+        image: require("@/assets/profile_2.jpg"),
+      },
+      {
+        id: "p4",
+        description:
+          "Completed electrical installation for a small office.",
+        image: require("@/assets/profile_4.jpg"),
       },
     ],
 
@@ -448,12 +505,19 @@ export const PROFESSIONALS: Professional[] = [
           "Quick and safe. Explained everything clearly.",
         date: "May 8, 2025",
       },
+      {
+        id: "r2",
+        userName: "Chinedu K.",
+        comment:
+          "Very neat electrical work and fair pricing.",
+        date: "Apr 25, 2025",
+      },
     ],
   },
 
-  // ========================================
+  // =====================================================
   // 6. AISHA BELLO
-  // ========================================
+  // =====================================================
   {
     id: "6",
     name: "Aisha Bello",
@@ -480,35 +544,46 @@ export const PROFESSIONALS: Professional[] = [
         id: "s2",
         name: "Beard Trim",
         description:
-          "Beard shaping and trim.",
+          "Professional beard shaping and trimming.",
         price: "₦2,500",
         priceValue: 2500,
         icon: "mustache",
       },
+      {
+        id: "s3",
+        name: "Haircut & Beard",
+        description:
+          "Complete haircut and beard grooming package.",
+        price: "₦6,000",
+        priceValue: 6000,
+        icon: "face-man",
+      },
     ],
 
     portfolio: [
-      require("@/assets/profile_2.jpg"),
-    ],
-
-    completedProjects: [
       {
-        id: "cp1",
-        title: "Classic Haircut",
+        id: "p1",
         description:
-          "Professional classic haircut and styling.",
+          "Clean classic fade with a sharp professional finish.",
+        image: require("@/assets/profile_2.jpg"),
       },
       {
-        id: "cp2",
-        title: "Beard Grooming",
+        id: "p2",
         description:
-          "Professional beard trimming and shaping.",
+          "Detailed beard shaping and grooming service.",
+        image: require("@/assets/profile_4.jpg"),
       },
       {
-        id: "cp3",
-        title: "Haircut & Beard Package",
+        id: "p3",
         description:
-          "Complete haircut and beard grooming service.",
+          "Modern low fade with a clean line-up.",
+        image: require("@/assets/profile_1.jpg"),
+      },
+      {
+        id: "p4",
+        description:
+          "Complete haircut, beard trim and styling.",
+        image: require("@/assets/profile_3.jpg"),
       },
     ],
 
@@ -517,8 +592,15 @@ export const PROFESSIONALS: Professional[] = [
         id: "r1",
         userName: "Yusuf H.",
         comment:
-          "Clean cut every time. Best in the area.",
+          "Clean cut every time. Very professional.",
         date: "May 3, 2025",
+      },
+      {
+        id: "r2",
+        userName: "Ibrahim S.",
+        comment:
+          "Great attention to detail and excellent service.",
+        date: "Apr 16, 2025",
       },
     ],
   },
