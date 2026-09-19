@@ -163,7 +163,7 @@ export default function Profile() {
               </View>
             }
             title="Add Service"
-             onPress={() => router.push("/(tab)/myprofile/addservice")}
+             onPress={() => router.push("/profile/addservice")}
           />
           <MenuItem
             icon={
@@ -172,7 +172,8 @@ export default function Profile() {
               </View>
             }
             title="Create Job Request"
-            onPress={() => router.push("/(tab)/myprofile/createjob")}
+            onPress={() => router.push("/profile/createjob")}
+            badge={15}
           />
           <MenuItem
             icon={
@@ -199,15 +200,15 @@ export default function Profile() {
         <Text style={styles.sectionTitle}>Grow & Connect</Text>
         <View style={styles.card}>
           <MenuItem
-            icon={
-              <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
-                <Ionicons name="person-outline" size={18} color={PRIMARY} />
-              </View>
-            }
-            title="My Portfolio"
-            onPress={() => {}}
-          />
-          <MenuItem
+          icon={
+            <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
+              <Ionicons name="images-outline" size={18} color={PRIMARY} />
+            </View>
+          }
+          title="Portfolio Gallery"
+          onPress={() => {}}
+        />
+        <MenuItem
             icon={
               <View style={[styles.iconBg, { backgroundColor: "#DCFCE7" }]}>
                 <Ionicons name="heart-outline" size={18} color={PRIMARY} />
