@@ -27,6 +27,14 @@ export type BookingStatus =
   | "Accepted"
   | "Declined";
 
+export type PaymentMethod = "pay_now" | "pay_on_site";
+
+export type PaymentStatus =
+  | "held" // money is in Paystack escrow
+  | "released" // money has been paid to the professional
+  | "pay_on_site" // no online payment
+  | "refunded"; // money returned to customer
+
 export type Booking = {
   id: string;
 
@@ -54,6 +62,18 @@ export type Booking = {
   date: string;
   location: string;
   status: BookingStatus;
+
+  /**
+   * How the customer chose to pay.
+   * - pay_now: paid online, money held by Paystack until job is completed
+   * - pay_on_site: Pro subscribers only, pay the professional directly
+   */
+  paymentMethod: PaymentMethod;
+
+  /**
+   * Current state of the payment.
+   */
+  paymentStatus: PaymentStatus;
 };
 
 // =========================
@@ -132,12 +152,9 @@ export const statusColors: Record<
  * Get a professional from the professional mock
  * using the professional ID.
  */
-function getProfessional(
-  professionalId: string
-) {
+function getProfessional(professionalId: string) {
   return PROFESSIONALS.find(
-    (professional) =>
-      professional.id === professionalId
+    (professional) => professional.id === professionalId,
   );
 }
 
@@ -151,25 +168,23 @@ function getProfessional(
  *
  * from PROFESSIONALS.
  */
-function createBooking(
-  booking: {
-    id: string;
-    professionalId: string;
-    title: string;
-    rating: number;
-    reviews: number;
-    date: string;
-    location: string;
-    status: BookingStatus;
-  }
-): Booking {
-  const professional = getProfessional(
-    booking.professionalId
-  );
+function createBooking(booking: {
+  id: string;
+  professionalId: string;
+  title: string;
+  rating: number;
+  reviews: number;
+  date: string;
+  location: string;
+  status: BookingStatus;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+}): Booking {
+  const professional = getProfessional(booking.professionalId);
 
   if (!professional) {
     throw new Error(
-      `Professional with ID "${booking.professionalId}" was not found.`
+      `Professional with ID "${booking.professionalId}" was not found.`,
     );
   }
 
@@ -188,6 +203,9 @@ function createBooking(
     date: booking.date,
     location: booking.location,
     status: booking.status,
+
+    paymentMethod: booking.paymentMethod,
+    paymentStatus: booking.paymentStatus,
   };
 }
 
@@ -210,6 +228,8 @@ export const BOOKED_JOBS: Booking[] = [
     date: "May 25, 2025 10:00 AM",
     location: "Lagos",
     status: "Upcoming",
+    paymentMethod: "pay_now",
+    paymentStatus: "held",
   }),
 
   // ---------------------------------------
@@ -225,6 +245,8 @@ export const BOOKED_JOBS: Booking[] = [
     date: "May 22, 2025 02:30 PM",
     location: "Lagos",
     status: "Ongoing",
+    paymentMethod: "pay_now",
+    paymentStatus: "held",
   }),
 
   // ---------------------------------------
@@ -240,6 +262,8 @@ export const BOOKED_JOBS: Booking[] = [
     date: "May 18, 2025 11:00 AM",
     location: "Abuja",
     status: "Completed",
+    paymentMethod: "pay_now",
+    paymentStatus: "released",
   }),
 
   // ---------------------------------------
@@ -255,6 +279,8 @@ export const BOOKED_JOBS: Booking[] = [
     date: "May 20, 2025 04:00 PM",
     location: "Lagos",
     status: "Upcoming",
+    paymentMethod: "pay_on_site",
+    paymentStatus: "pay_on_site",
   }),
 
   // ---------------------------------------
@@ -270,6 +296,8 @@ export const BOOKED_JOBS: Booking[] = [
     date: "May 23, 2025 01:00 PM",
     location: "Abuja",
     status: "Accepted",
+    paymentMethod: "pay_now",
+    paymentStatus: "held",
   }),
 ];
 
@@ -300,6 +328,8 @@ export const RECEIVED_JOBS: Booking[] = [
     date: "May 28, 2025 09:00 AM",
     location: "Lagos",
     status: "Pending",
+    paymentMethod: "pay_now",
+    paymentStatus: "held",
   }),
 
   // ---------------------------------------
@@ -315,6 +345,8 @@ export const RECEIVED_JOBS: Booking[] = [
     date: "May 27, 2025 02:30 PM",
     location: "Lagos",
     status: "Ongoing",
+    paymentMethod: "pay_on_site",
+    paymentStatus: "pay_on_site",
   }),
 
   // ---------------------------------------
@@ -330,6 +362,8 @@ export const RECEIVED_JOBS: Booking[] = [
     date: "May 24, 2025 11:00 AM",
     location: "Abuja",
     status: "Completed",
+    paymentMethod: "pay_now",
+    paymentStatus: "released",
   }),
 ];
 
@@ -355,27 +389,19 @@ export function listReceivedJobs(): Booking[] {
 
 export function getBookingById(
   id: string,
-  type: "booked" | "received" = "booked"
+  type: "booked" | "received" = "booked",
 ): Booking | undefined {
-  const list =
-    type === "booked"
-      ? BOOKED_JOBS
-      : RECEIVED_JOBS;
+  const list = type === "booked" ? BOOKED_JOBS : RECEIVED_JOBS;
 
-  return list.find(
-    (job) => job.id === String(id)
-  );
+  return list.find((job) => job.id === String(id));
 }
 
 // =========================
 // GET PROFESSIONAL FOR BOOKING
 // =========================
 
-export function getProfessionalForBooking(
-  booking: Booking
-) {
+export function getProfessionalForBooking(booking: Booking) {
   return PROFESSIONALS.find(
-    (professional) =>
-      professional.id === booking.professionalId
+    (professional) => professional.id === booking.professionalId,
   );
 }
