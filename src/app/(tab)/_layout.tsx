@@ -71,6 +71,12 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="all-requests"
+        options={{
+          href: null,
+        }}
+      />
+      {/* <Tabs.Screen
         name="professional"
         options={{
           href: null,
@@ -82,21 +88,14 @@ export default function TabLayout() {
         options={{
           href: null,
         }}
-      />
+      /> */}
 
-      <Tabs.Screen
-        name="all-requests"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="myprofile"
         options={{
           href: null,
         }}
-      />
+      /> */}
     </Tabs>
   );
 }

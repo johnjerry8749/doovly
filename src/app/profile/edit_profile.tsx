@@ -1,10 +1,10 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-export default function addservice() {
+export default function edit_profile() {
   return (
     <View>
-      <Text>addservice</Text>
+      <Text>edit_profile</Text>
     </View>
   )
 }

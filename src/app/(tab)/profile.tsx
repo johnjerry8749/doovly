@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-
 import {
   View,
   Text,
@@ -9,13 +8,9 @@ import {
   Image,
   StatusBar,
 } from "react-native";
-
 import { SafeAreaView } from "react-native-safe-area-context";
-
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-
 import { router } from "expo-router";
-
 import { getProfessionalById } from "@/services/professionals";
 
 // =====================================================
@@ -27,7 +22,14 @@ const LIGHT_GREEN = "#E8F5E9";
 const GOLD = "#D4AF37";
 
 // =====================================================
-// MENU ITEM TYPES
+// MOCK LOGGED-IN USER ID
+// Later: replace with auth user id from context/API
+// =====================================================
+
+const MOCK_LOGGED_IN_PRO_ID = "1";
+
+// =====================================================
+// MENU ITEM
 // =====================================================
 
 type MenuItemProps = {
@@ -39,10 +41,6 @@ type MenuItemProps = {
   onPress?: () => void;
 };
 
-// =====================================================
-// MENU ITEM
-// =====================================================
-
 function MenuItem({
   icon,
   title,
@@ -51,6 +49,13 @@ function MenuItem({
   badge,
   onPress,
 }: MenuItemProps) {
+  const badgeBg =
+    rightColor === PRIMARY
+      ? "#DCFCE7"
+      : rightColor === "#7C3AED"
+        ? "#F3E8FF"
+        : "#F3F4F6";
+
   return (
     <TouchableOpacity
       style={styles.menuItem}
@@ -59,33 +64,13 @@ function MenuItem({
     >
       <View style={styles.menuLeft}>
         <View style={styles.iconWrapper}>{icon}</View>
-
         <Text style={styles.menuTitle}>{title}</Text>
       </View>
 
       <View style={styles.menuRight}>
         {rightText ? (
-          <View
-            style={[
-              styles.rightBadge,
-              {
-                backgroundColor:
-                  rightColor === PRIMARY
-                    ? "#DCFCE7"
-                    : rightColor === "#7C3AED"
-                      ? "#F3E8FF"
-                      : "#F3F4F6",
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.rightBadgeText,
-                {
-                  color: rightColor,
-                },
-              ]}
-            >
+          <View style={[styles.rightBadge, { backgroundColor: badgeBg }]}>
+            <Text style={[styles.rightBadgeText, { color: rightColor }]}>
               {rightText}
             </Text>
           </View>
@@ -103,6 +88,18 @@ function MenuItem({
   );
 }
 
+function MenuIcon({
+  name,
+}: {
+  name: React.ComponentProps<typeof Ionicons>["name"];
+}) {
+  return (
+    <View style={styles.iconBg}>
+      <Ionicons name={name} size={18} color={PRIMARY} />
+    </View>
+  );
+}
+
 // =====================================================
 // PROFILE SCREEN
 // =====================================================
@@ -110,15 +107,8 @@ function MenuItem({
 export default function Profile() {
   const [isAvailable, setIsAvailable] = useState(true);
 
-  // ===================================================
-  // MOCK LOGGED-IN PROFESSIONAL
-  // ===================================================
-
-  const pro = getProfessionalById("1");
-
-  // ===================================================
-  // SAFETY CHECK
-  // ===================================================
+  // Mock logged-in professional — later: fetch from API / auth
+  const pro = getProfessionalById(MOCK_LOGGED_IN_PRO_ID);
 
   if (!pro) {
     return (
@@ -138,26 +128,15 @@ export default function Profile() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.container}
       >
-        {/* =================================================
-            PROFILE HEADER
-        ================================================= */}
-
+        {/* ========== HEADER ========== */}
         <View style={styles.header}>
           <View style={styles.profileHeaderContent}>
-            {/* =================================================
-                PROFILE IMAGE
-            ================================================= */}
-
             <View style={styles.avatarWrapper}>
               <Image
                 source={pro.image}
                 style={styles.avatar}
                 resizeMode="cover"
               />
-
-              {/* =================================================
-                  VERIFIED CHECKMARK IMAGE
-              ================================================= */}
 
               {pro.verified && (
                 <View style={styles.verifiedBadge}>
@@ -168,46 +147,12 @@ export default function Profile() {
                   />
                 </View>
               )}
-
-              {/* =================================================
-                  CAMERA BUTTON
-              ================================================= */}
-
-              {/* <TouchableOpacity
-                style={styles.cameraButton}
-                activeOpacity={0.8}
-                onPress={() => {}}
-              >
-                <Ionicons
-                  name="camera"
-                  size={14}
-                  color="#FFFFFF"
-                />
-              </TouchableOpacity> */}
             </View>
 
-            {/* =================================================
-                PROFILE INFORMATION
-            ================================================= */}
-
             <View style={styles.profileInfo}>
-              {/* =================================================
-                  NAME + VERIFIED + PREMIUM
-              ================================================= */}
-
               <View style={styles.nameRow}>
                 <Text style={styles.name}>{pro.name}</Text>
 
-                {/* VERIFIED IMAGE
-                {pro.verified && (
-                  <Image
-                    source={require("@/assets/premium/checkmark.png")}
-                    style={styles.nameCheckmark}
-                    resizeMode="contain"
-                  />
-                )} */}
-
-                {/* GOLD PREMIUM SHIELD */}
                 {pro.subscribed && (
                   <MaterialCommunityIcons
                     name="shield-check"
@@ -218,25 +163,12 @@ export default function Profile() {
                 )}
               </View>
 
-              {/* =================================================
-                  PROFESSION
-              ================================================= */}
-
               <Text style={styles.role}>{pro.profession}</Text>
-
-              {/* =================================================
-                  LOCATION
-              ================================================= */}
 
               <View style={styles.locationRow}>
                 <Ionicons name="location-outline" size={14} color="#6B7280" />
-
                 <Text style={styles.location}>{pro.city}, Nigeria</Text>
               </View>
-
-              {/* =================================================
-                  AVAILABILITY
-              ================================================= */}
 
               <TouchableOpacity
                 style={styles.availabilityBadge}
@@ -246,41 +178,28 @@ export default function Profile() {
                 <View
                   style={[
                     styles.dot,
-                    {
-                      backgroundColor: isAvailable ? PRIMARY : "#EF4444",
-                    },
+                    { backgroundColor: isAvailable ? PRIMARY : "#EF4444" },
                   ]}
                 />
-
                 <Text style={styles.availabilityText}>
                   {isAvailable ? "Available for bookings" : "Not available"}
                 </Text>
-
                 <Ionicons name="chevron-down" size={14} color="#6B7280" />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* =================================================
-              EDIT PROFILE
-          ================================================= */}
-
           <TouchableOpacity
             style={styles.editButton}
             activeOpacity={0.8}
-            onPress={() => {}}
+            onPress={() => router.push("/profile/edit_profile")}
           >
             <Ionicons name="pencil" size={16} color={PRIMARY} />
-
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
-        {/* =================================================
-            DOOVLY PRO BANNER
-            ONLY SHOWS WHEN NOT SUBSCRIBED
-        ================================================= */}
-
+        {/* ========== DOOVLY PRO (only if not subscribed) ========== */}
         {!pro.subscribed && (
           <View style={styles.proBanner}>
             <View style={styles.proLeft}>
@@ -294,25 +213,24 @@ export default function Profile() {
 
               <View style={styles.proTextContainer}>
                 <Text style={styles.proTitle}>Doovly Pro</Text>
-
                 <Text style={styles.proSubtitle}>
                   Get more bookings, more visibility and premium features.
                 </Text>
               </View>
             </View>
 
-            <TouchableOpacity style={styles.upgradeButton} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={styles.upgradeButton}
+              activeOpacity={0.85}
+              onPress={() => router.push("/profile/subscription/subscription")}
+            >
               <Text style={styles.upgradeButtonText}>Upgrade</Text>
-
               <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         )}
 
-        {/* =================================================
-            SERVICES & JOBS
-        ================================================= */}
-
+        {/* ========== SERVICES & JOBS ========== */}
         <Text style={styles.sectionTitle}>Services & Jobs</Text>
 
         <View style={styles.card}>
@@ -327,117 +245,75 @@ export default function Profile() {
           />
 
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons
-                  name="document-text-outline"
-                  size={18}
-                  color={PRIMARY}
-                />
-              </View>
-            }
+            icon={<MenuIcon name="document-text-outline" />}
             title="Create Job Request"
-            badge={15}
             onPress={() => router.push("/profile/createjob")}
           />
 
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons name="briefcase-outline" size={18} color={PRIMARY} />
-              </View>
-            }
+            icon={<MenuIcon name="briefcase-outline" />}
             title="My Services"
             onPress={() =>
               router.push({
                 pathname: "/professional/[id]",
-                params: {
-                  id: pro.id,
-                },
+                params: { id: pro.id },
               })
             }
           />
 
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons name="calendar-outline" size={18} color={PRIMARY} />
-              </View>
-            }
+            icon={<MenuIcon name="calendar-outline" />}
             title="My Bookings"
             onPress={() => router.push("/(tab)/bookings")}
           />
+
+          <MenuItem
+            icon={<MenuIcon name="briefcase-outline" />}
+            title="Job Request"
+            badge={15}
+            onPress={() => router.push("/profile/offers")}
+          />
         </View>
 
-        {/* =================================================
-            GROW & CONNECT
-        ================================================= */}
-
+        {/* ========== GROW & CONNECT ========== */}
         <Text style={styles.sectionTitle}>Grow & Connect</Text>
 
         <View style={styles.card}>
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons name="images-outline" size={18} color={PRIMARY} />
-              </View>
-            }
+            icon={<MenuIcon name="images-outline" />}
             title="Portfolio Gallery"
-            onPress={() => {}}
+            onPress={() => router.push("/profile/portfolio_gallery")}
           />
 
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons name="heart-outline" size={18} color={PRIMARY} />
-              </View>
-            }
-            title="Saved Providers"
-            onPress={() => {}}
+            icon={<MenuIcon name="heart-outline" />}
+            title="Saved Professionals"
+            onPress={() => router.push("/profile/saved_providers")}
           />
 
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons name="chatbubble-outline" size={18} color={PRIMARY} />
-              </View>
-            }
+            icon={<MenuIcon name="chatbubble-outline" />}
             title="Chat"
             badge={2}
-            onPress={() => {}}
+            onPress={() => router.push("/profile/chat")}
           />
 
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons
-                  name="notifications-outline"
-                  size={18}
-                  color={PRIMARY}
-                />
-              </View>
-            }
+            icon={<MenuIcon name="notifications-outline" />}
             title="Notifications"
             badge={3}
-            onPress={() => {}}
+            onPress={() => router.push("/profile/notifications")}
           />
         </View>
 
-        {/* =================================================
-            ACCOUNT & SUBSCRIPTION
-        ================================================= */}
-
+        {/* ========== ACCOUNT & SUBSCRIPTION ========== */}
         <Text style={styles.sectionTitle}>Account & Subscription</Text>
 
         <View style={styles.card}>
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons name="wallet-outline" size={18} color={PRIMARY} />
-              </View>
-            }
+            icon={<MenuIcon name="wallet-outline" />}
             title="Wallet / Payment Methods"
-            onPress={() => {}}
+            onPress={() => router.push("/profile/wallet_paymentmeth")}
           />
 
           <MenuItem
@@ -453,75 +329,44 @@ export default function Profile() {
             title="Subscription"
             rightText={pro.subscribed ? "Active" : "Upgrade"}
             rightColor={pro.subscribed ? PRIMARY : "#7C3AED"}
-            onPress={() => {}}
+            onPress={() => router.push("/profile/subscription/subscription")}
           />
 
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={18}
-                  color={PRIMARY}
-                />
-              </View>
-            }
+            icon={<MenuIcon name="shield-checkmark-outline" />}
             title="Verification"
             rightText={pro.verified ? "Verified" : "Not Verified"}
             rightColor={pro.verified ? PRIMARY : "#6B7280"}
-            onPress={() => {}}
+            onPress={() => router.push("/profile/verification")}
           />
         </View>
 
-        {/* =================================================
-            PREFERENCES & SUPPORT
-        ================================================= */}
-
+        {/* ========== PREFERENCES & SUPPORT ========== */}
         <Text style={styles.sectionTitle}>Preferences & Support</Text>
 
         <View style={styles.card}>
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons name="time-outline" size={18} color={PRIMARY} />
-              </View>
-            }
+            icon={<MenuIcon name="time-outline" />}
             title="Availability"
             onPress={() => {}}
           />
 
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons name="settings-outline" size={18} color={PRIMARY} />
-              </View>
-            }
+            icon={<MenuIcon name="settings-outline" />}
             title="Settings"
             onPress={() => {}}
           />
 
           <MenuItem
-            icon={
-              <View style={styles.iconBg}>
-                <Ionicons
-                  name="help-circle-outline"
-                  size={18}
-                  color={PRIMARY}
-                />
-              </View>
-            }
+            icon={<MenuIcon name="help-circle-outline" />}
             title="Help & Support"
-            onPress={() => {}}
+            onPress={() => router.push("/profile/help_support")}
           />
         </View>
 
-        {/* =================================================
-            LOG OUT
-        ================================================= */}
-
+        {/* ========== LOG OUT ========== */}
         <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8}>
           <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
@@ -536,70 +381,48 @@ export default function Profile() {
 // =====================================================
 
 const styles = StyleSheet.create({
-  // ===================================================
-  // SCREEN
-  // ===================================================
-
   safeArea: {
     flex: 1,
     backgroundColor: "#F9FAFB",
   },
-
   container: {
     paddingBottom: 20,
   },
-
   emptyContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
   },
-
   emptyText: {
     fontSize: 15,
     color: "#6B7280",
   },
 
-  // ===================================================
-  // HEADER
-  // ===================================================
-
+  // Header
   header: {
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 18,
   },
-
   profileHeaderContent: {
     flexDirection: "row",
     alignItems: "flex-start",
     width: "100%",
   },
-
-  // ===================================================
-  // PROFILE IMAGE
-  // ===================================================
-
   avatarWrapper: {
     position: "relative",
     width: 76,
     height: 76,
     flexShrink: 0,
   },
-
   avatar: {
     width: 76,
     height: 76,
     borderRadius: 38,
     backgroundColor: "#E5E7EB",
   },
-
-  // ===================================================
-  // VERIFIED CHECKMARK IMAGE
-  // ===================================================
-
   verifiedBadge: {
     position: "absolute",
     right: -8,
@@ -611,27 +434,16 @@ const styles = StyleSheet.create({
     zIndex: 20,
     elevation: 6,
   },
-
   checkmarkImage: {
     width: 48,
     height: 48,
   },
-
-  // ===================================================
-  // PROFILE INFORMATION
-  // ===================================================
-
   profileInfo: {
     flex: 1,
     minWidth: 0,
     marginLeft: 16,
     paddingRight: 2,
   },
-
-  // ===================================================
-  // NAME + BADGES
-  // ===================================================
-
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -639,57 +451,32 @@ const styles = StyleSheet.create({
     minHeight: 28,
     paddingRight: 2,
   },
-
   name: {
     fontSize: 20,
     fontWeight: "700",
     color: "#111827",
     flexShrink: 1,
   },
-
-  nameCheckmark: {
-    width: 32,
-    height: 32,
-    marginLeft: 5,
-    flexShrink: 0,
-  },
-
   premiumShield: {
     marginLeft: 5,
     flexShrink: 0,
   },
-
-  // ===================================================
-  // PROFESSION
-  // ===================================================
-
   role: {
     fontSize: 13,
     color: "#6B7280",
     marginTop: 3,
   },
-
-  // ===================================================
-  // LOCATION
-  // ===================================================
-
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     marginTop: 4,
   },
-
   location: {
     fontSize: 13,
     color: "#6B7280",
     flexShrink: 1,
   },
-
-  // ===================================================
-  // AVAILABILITY
-  // ===================================================
-
   availabilityBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -701,23 +488,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
     gap: 6,
   },
-
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
   },
-
   availabilityText: {
     fontSize: 12,
     color: "#374151",
     fontWeight: "500",
   },
-
-  // ===================================================
-  // EDIT PROFILE
-  // ===================================================
-
   editButton: {
     marginTop: 14,
     alignSelf: "flex-end",
@@ -730,17 +510,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 5,
   },
-
   editButtonText: {
     color: PRIMARY,
     fontSize: 13,
     fontWeight: "600",
   },
 
-  // ===================================================
-  // DOOVLY PRO
-  // ===================================================
-
+  // Pro banner
   proBanner: {
     marginHorizontal: 16,
     marginTop: 16,
@@ -753,18 +529,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#BBF7D0",
   },
-
   proLeft: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
     gap: 12,
   },
-
   proTextContainer: {
     flex: 1,
   },
-
   crownCircle: {
     width: 42,
     height: 42,
@@ -773,20 +546,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   proTitle: {
     fontSize: 15,
     fontWeight: "700",
     color: "#111827",
   },
-
   proSubtitle: {
     fontSize: 12,
     color: "#6B7280",
     marginTop: 2,
     maxWidth: 180,
   },
-
   upgradeButton: {
     backgroundColor: PRIMARY,
     flexDirection: "row",
@@ -796,17 +566,13 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     gap: 4,
   },
-
   upgradeButtonText: {
     color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 13,
   },
 
-  // ===================================================
-  // SECTIONS
-  // ===================================================
-
+  // Sections
   sectionTitle: {
     fontSize: 14,
     fontWeight: "600",
@@ -815,7 +581,6 @@ const styles = StyleSheet.create({
     marginTop: 22,
     marginBottom: 8,
   },
-
   card: {
     marginHorizontal: 16,
     backgroundColor: "#FFFFFF",
@@ -823,10 +588,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  // ===================================================
-  // MENU ITEMS
-  // ===================================================
-
+  // Menu
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -836,21 +598,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-
   menuLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     flex: 1,
   },
-
   iconWrapper: {
     width: 36,
     height: 36,
     alignItems: "center",
     justifyContent: "center",
   },
-
   iconBg: {
     width: 36,
     height: 36,
@@ -859,30 +618,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   menuTitle: {
     fontSize: 15,
     fontWeight: "500",
     color: "#111827",
   },
-
   menuRight: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-
   rightBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
   },
-
   rightBadgeText: {
     fontSize: 12,
     fontWeight: "600",
   },
-
   notificationBadge: {
     backgroundColor: "#EF4444",
     minWidth: 20,
@@ -892,17 +646,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 5,
   },
-
   notificationBadgeText: {
     color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "700",
   },
 
-  // ===================================================
-  // LOGOUT
-  // ===================================================
-
+  // Logout
   logoutButton: {
     marginHorizontal: 16,
     marginTop: 24,
@@ -914,7 +664,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-
   logoutText: {
     color: "#EF4444",
     fontSize: 15,
