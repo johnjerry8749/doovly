@@ -105,7 +105,7 @@ export default function Login() {
           <View style={styles.logoContainer}>
             <View style={styles.logoCircle}>
               <Image
-                source={require("@/assets/images/icon.jpg")}
+                source={require("@/assets/images/splash_screen.png")}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: "#16A34A",
+    backgroundColor: "#fefffe",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
@@ -351,8 +351,8 @@ const styles = StyleSheet.create({
     borderColor: "#000000",
   },
   logoImage: {
-    width: 50,
-    height: 50,
+    width: 170,
+    height: 170,
     borderRadius: 90,
   },
   appleIcon: {
