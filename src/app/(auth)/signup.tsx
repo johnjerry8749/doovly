@@ -102,7 +102,7 @@ export default function RegisterScreen() {
           <View style={styles.logoContainer}>
             <View style={styles.logoIcon}>
               <Image
-                source={require("@/assets/images/icon.jpg")}
+                source={require("@/assets/images/splash_screen.png")}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
@@ -313,15 +313,15 @@ const styles = StyleSheet.create({
 
   container: {
     paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 40,
+    paddingTop: 8,
+    paddingBottom: 3,
   },
 
   backButton: {
     width: 42,
     height: 42,
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 3,
   },
 
   logoContainer: {
@@ -335,16 +335,16 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#16A34A",
+    backgroundColor: "#f9fffb",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: -5,
     overflow: "hidden",
   },
 
   logoImage: {
-    width: 55,
-    height: 80,
+    width: 100,
+    height: 100,
     borderRadius: 50,
   },
 
@@ -352,6 +352,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "800",
     color: "#111827",
+    marginBottom: -5,
   },
 
   logoGreen: {
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
     color: "#111827",
     fontSize: 26,
     fontWeight: "800",
-    marginTop: 28,
+    marginTop: 2,
   },
 
   subtitle: {
@@ -410,7 +411,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 11,
     backgroundColor: "#FFFFFF",
   },
 
@@ -454,7 +455,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     marginTop: 6,
-    marginBottom: 24,
+    marginBottom: 18,
   },
 
   checkbox: {
