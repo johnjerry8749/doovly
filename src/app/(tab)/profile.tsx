@@ -11,6 +11,16 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as Location from "expo-location";
+
+import {
+  getProfessionalById,
+  getDistanceKm,
+  starsFromReviewCount,
+  addReview,
+  type ProService,
+  type ProReview,
+} from "@/services/professionals";
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#E8F5E9";
@@ -153,7 +163,7 @@ export default function Profile() {
               </View>
             }
             title="Add Service"
-            onPress={() => {}}
+             onPress={() => router.push("/(tab)/profile/addservice")}
           />
           <MenuItem
             icon={
@@ -162,7 +172,7 @@ export default function Profile() {
               </View>
             }
             title="Create Job Request"
-            onPress={() => {}}
+            onPress={() => router.push("/(tab)/profile/createjob")}
           />
           <MenuItem
             icon={
@@ -171,9 +181,8 @@ export default function Profile() {
               </View>
             }
             title="My Services"
-            rightText="Provider"
             rightColor={PRIMARY}
-            onPress={() => {}}
+            onPress={() => router.push("/professional/[id]")}
           />
           <MenuItem
             icon={
