@@ -4,7 +4,7 @@ import React from 'react'
 export default function id() {
   return (
     <View>
-      <Text>ID </Text>
+      <Text> ID </Text>
     </View>
   )
 }
