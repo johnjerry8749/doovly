@@ -279,7 +279,6 @@ export default function ProfessionalProfile() {
 
             {pro.verified && (
               <View style={styles.verifiedBadge}>
-                {" "}
                 <Image
                   source={require("@/assets/premium/checkmark.png")}
                   style={{ width: 50, height: 50, marginLeft: -4 }}
@@ -437,17 +436,14 @@ export default function ProfessionalProfile() {
               {pro.portfolio?.length === 0 ? (
                 <Text style={styles.emptyText}>No completed projects yet</Text>
               ) : (
-                pro.portfolio?.map((project) => (
+                pro.portfolio.map((project) => (
                   <View key={project.id} style={styles.portfolioItem}>
-                    <View style={styles.projectCard}>
-                      <Image
-                        source={project.image}
-                        style={styles.projectImage}
-                        resizeMode="cover"
-                      />
-                    </View>
-
-                    <Text style={styles.projectDescription}>
+                    <Image
+                      source={project.image}
+                      style={styles.projectImage}
+                      resizeMode="cover"
+                    />
+                    <Text style={styles.projectTitle} numberOfLines={2}>
                       {project.description}
                     </Text>
                   </View>
@@ -920,41 +916,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 100, // space above Book Now if fixed
     gap: 12,
   },
-
   portfolioItem: {
     width: "48%",
-    marginBottom: 8,
+    marginBottom: 4,
   },
-
-  projectCard: {
-    width: "100%",
-    height: 150,
-    overflow: "hidden",
-    backgroundColor: "#F3F4F6",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-
   projectImage: {
     width: "100%",
-    height: "100%",
+    height: 130,
+    borderRadius: 14,
+    backgroundColor: "#E5E7EB",
   },
-
-  projectDescription: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: "#6B7280",
+  projectTitle: {
     marginTop: 8,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111827",
+    lineHeight: 18,
+  },
+  emptyText: {
+    width: "100%",
+    textAlign: "center",
+    color: "#9CA3AF",
+    fontSize: 14,
+    marginTop: 24,
   },
   // ==========================================================
   // REVIEWS
