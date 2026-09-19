@@ -46,6 +46,7 @@ export type Professional = {
   subscribed: boolean;
   latitude: number;
   longitude: number;
+  role: string;
 
   services: ProService[];
 
@@ -81,6 +82,7 @@ export const PROFESSIONALS: Professional[] = [
     subscribed: false,
     latitude: 6.5244,
     longitude: 3.3792,
+    role: "admin",
 
     services: [
       {
@@ -178,6 +180,7 @@ export const PROFESSIONALS: Professional[] = [
     subscribed: true,
     latitude: 6.6018,
     longitude: 3.3515,
+    role: "user",
 
     services: [
       {
@@ -268,6 +271,7 @@ export const PROFESSIONALS: Professional[] = [
     subscribed: true,
     latitude: 9.0765,
     longitude: 7.3986,
+    role: "user",
 
     services: [
       {
@@ -358,6 +362,7 @@ export const PROFESSIONALS: Professional[] = [
     subscribed: true,
     latitude: 6.4281,
     longitude: 3.4219,
+    role: "user",
 
     services: [
       {
@@ -439,6 +444,7 @@ export const PROFESSIONALS: Professional[] = [
     subscribed: true,
     latitude: 4.8156,
     longitude: 7.0498,
+    role: "user",
 
     services: [
       {
@@ -529,6 +535,7 @@ export const PROFESSIONALS: Professional[] = [
     subscribed: true,
     latitude: 9.0579,
     longitude: 7.4951,
+    role: "user",
 
     services: [
       {

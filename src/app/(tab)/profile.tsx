@@ -22,11 +22,11 @@ const LIGHT_GREEN = "#E8F5E9";
 const GOLD = "#D4AF37";
 
 // =====================================================
-// MOCK LOGGED-IN USER ID
-// Later: replace with auth user id from context/API
+// MOCK DATA — later replace with auth / API
 // =====================================================
 
 const MOCK_LOGGED_IN_PRO_ID = "1";
+const MOCK_ROLE: "user" | "admin" = "admin"; // set to "user" to hide Admin Login
 
 // =====================================================
 // MENU ITEM
@@ -107,7 +107,8 @@ function MenuIcon({
 export default function Profile() {
   const [isAvailable, setIsAvailable] = useState(true);
 
-  // Mock logged-in professional — later: fetch from API / auth
+  // Mock role + professional — later: from auth context / API
+  const role = MOCK_ROLE;
   const pro = getProfessionalById(MOCK_LOGGED_IN_PRO_ID);
 
   if (!pro) {
@@ -169,23 +170,6 @@ export default function Profile() {
                 <Ionicons name="location-outline" size={14} color="#6B7280" />
                 <Text style={styles.location}>{pro.city}, Nigeria</Text>
               </View>
-
-              <TouchableOpacity
-                style={styles.availabilityBadge}
-                onPress={() => setIsAvailable((prev) => !prev)}
-                activeOpacity={0.8}
-              >
-                <View
-                  style={[
-                    styles.dot,
-                    { backgroundColor: isAvailable ? PRIMARY : "#EF4444" },
-                  ]}
-                />
-                <Text style={styles.availabilityText}>
-                  {isAvailable ? "Available for bookings" : "Not available"}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color="#6B7280" />
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -302,7 +286,7 @@ export default function Profile() {
             icon={<MenuIcon name="notifications-outline" />}
             title="Notifications"
             badge={3}
-            onPress={() => router.push("/profile/notifications")}
+            onPress={() => {}}
           />
         </View>
 
@@ -369,6 +353,18 @@ export default function Profile() {
           <Ionicons name="log-out-outline" size={20} color="#EF4444" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
+
+        {/* ========== ADMIN LOGIN (only if role is admin) ========== */}
+        {role === "admin" && (
+          <TouchableOpacity
+            style={styles.adminloginButton}
+            activeOpacity={0.8}
+            onPress={() => {}}
+          >
+            <Ionicons name="shield-outline" size={20} color="#ffffff" />
+            <Text style={styles.adminloginText}>Admin Login</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={{ height: 30 }} />
       </ScrollView>
@@ -477,30 +473,10 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     flexShrink: 1,
   },
-  availabilityBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: LIGHT_GREEN,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    alignSelf: "flex-start",
-    marginTop: 8,
-    gap: 6,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  availabilityText: {
-    fontSize: 12,
-    color: "#374151",
-    fontWeight: "500",
-  },
+ 
   editButton: {
     marginTop: 14,
-    alignSelf: "flex-end",
+    alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
@@ -666,6 +642,24 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: "#EF4444",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  // Admin
+  adminloginButton: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: "#000000",
+    borderRadius: 14,
+    paddingVertical: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  adminloginText: {
+    color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "600",
   },
