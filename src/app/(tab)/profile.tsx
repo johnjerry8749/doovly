@@ -163,7 +163,7 @@ export default function Profile() {
               </View>
             }
             title="Add Service"
-             onPress={() => router.push("/(tab)/profile/addservice")}
+             onPress={() => router.push("/(tab)/myprofile/addservice")}
           />
           <MenuItem
             icon={
@@ -172,7 +172,7 @@ export default function Profile() {
               </View>
             }
             title="Create Job Request"
-            onPress={() => router.push("/(tab)/profile/createjob")}
+            onPress={() => router.push("/(tab)/myprofile/createjob")}
           />
           <MenuItem
             icon={
