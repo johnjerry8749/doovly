@@ -101,6 +101,7 @@ export default function Home() {
           <TouchableOpacity
             style={styles.notificationButton}
             activeOpacity={0.7}
+            onPress={() => router.push("/notification/[id]")}
           >
             <Ionicons name="notifications-outline" size={28} color="#111" />
             <View style={styles.notificationDot} />
@@ -204,15 +205,15 @@ export default function Home() {
                 key={person.id}
                 style={styles.professionalCard}
                 activeOpacity={0.8}
-              onPress={() =>
-                router.push({
-                  pathname: "/professional/[id]",
-                  params: {
-                    id: person.id,
-                    from: "home",   // or "services"
-                  },
-                })
-              }
+                onPress={() =>
+                  router.push({
+                    pathname: "/professional/[id]",
+                    params: {
+                      id: person.id,
+                      from: "home", // or "services"
+                    },
+                  })
+                }
               >
                 <TouchableOpacity
                   style={styles.heartButton}
@@ -482,7 +483,12 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: "#111" },
-  bannerContainer: { borderRadius: 16, overflow: "hidden", marginBottom: 22, backgroundColor: "#F3F3F3", },
+  bannerContainer: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 22,
+    backgroundColor: "#F3F3F3",
+  },
   banner: { width: "100%", height: 125 },
   sectionHeader: {
     flexDirection: "row",

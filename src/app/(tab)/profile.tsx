@@ -286,7 +286,7 @@ export default function Profile() {
             icon={<MenuIcon name="notifications-outline" />}
             title="Notifications"
             badge={3}
-            onPress={() => {}}
+            onPress={() => router.push("/notification/[id]")}
           />
         </View>
 
