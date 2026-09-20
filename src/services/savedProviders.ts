@@ -18,6 +18,12 @@ export type AppUser = {
   name: string;
   /** true = Doovly Pro → unlimited saves */
   subscribed: boolean;
+  /**
+   * Professional profile id that belongs to this user (if they offer services).
+   * Used to detect "own profile" so Book Now / Add Review can be disabled.
+   * Later: from auth context / API (e.g. /me).
+   */
+  professionalId: string | null;
 };
 
 /** Change subscribed to true to test unlimited saves */
@@ -25,7 +31,28 @@ export const MOCK_USER: AppUser = {
   id: "u1",
   name: "John Jerry",
   subscribed: false,
+  // Matches MOCK_LOGGED_IN_PRO_ID in profile tab ("1" = John Chukwuemeka)
+  professionalId: "1",
 };
+
+/**
+ * Professional id of the logged-in user (if any).
+ * NOW  → mock from MOCK_USER
+ * LATER → from auth / GET /me
+ */
+export function getLoggedInProfessionalId(): string | null {
+  return MOCK_USER.professionalId ?? null;
+}
+
+/**
+ * True when the given professional profile belongs to the current auth user.
+ * Use this to disable Book Now / Add Review on own profile.
+ */
+export function isOwnProfessionalProfile(professionalId: string): boolean {
+  const mine = getLoggedInProfessionalId();
+  if (!mine) return false;
+  return String(mine) === String(professionalId);
+}
 
 export const FREE_SAVE_LIMIT = 5;
 
