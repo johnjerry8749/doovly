@@ -25,7 +25,8 @@ export type BookingStatus =
   | "Cancelled"
   | "Pending"
   | "Accepted"
-  | "Declined";
+  | "Declined"
+  | "Awaiting Approval";
 
 export type PaymentMethod = "pay_now" | "pay_on_site";
 
@@ -84,6 +85,7 @@ export const BOOKED_FILTERS = [
   "All",
   "Upcoming",
   "Ongoing",
+  "Awaiting Approval",
   "Completed",
   "Cancelled",
 ] as const;
@@ -93,6 +95,7 @@ export const RECEIVED_FILTERS = [
   "Pending",
   "Accepted",
   "Ongoing",
+  "Awaiting Approval",
   "Completed",
   "Declined",
 ] as const;
@@ -141,6 +144,11 @@ export const statusColors: Record<
   Declined: {
     bg: "#FEE2E2",
     text: "#DC2626",
+  },
+
+  "Awaiting Approval": {
+    bg: "#FFF4E5",
+    text: "#D97706",
   },
 };
 
@@ -299,6 +307,22 @@ export const BOOKED_JOBS: Booking[] = [
     paymentMethod: "pay_now",
     paymentStatus: "held",
   }),
+
+  // ---------------------------------------
+  // Awaiting customer approval (demo)
+  // ---------------------------------------
+  createBooking({
+    id: "6",
+    professionalId: "2",
+    title: "Nail Art Design",
+    rating: 4.9,
+    reviews: 89,
+    date: "May 26, 2025 03:00 PM",
+    location: "Lagos",
+    status: "Awaiting Approval",
+    paymentMethod: "pay_now",
+    paymentStatus: "held",
+  }),
 ];
 
 // =========================
@@ -364,6 +388,22 @@ export const RECEIVED_JOBS: Booking[] = [
     status: "Completed",
     paymentMethod: "pay_now",
     paymentStatus: "released",
+  }),
+
+  // ---------------------------------------
+  // Awaiting customer approval (demo)
+  // ---------------------------------------
+  createBooking({
+    id: "4",
+    professionalId: "2",
+    title: "Deep Cleaning",
+    rating: 5.0,
+    reviews: 12,
+    date: "May 29, 2025 10:00 AM",
+    location: "Lagos",
+    status: "Awaiting Approval",
+    paymentMethod: "pay_now",
+    paymentStatus: "held",
   }),
 ];
 
