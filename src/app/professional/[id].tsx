@@ -32,7 +32,11 @@ import {
   type ProReview,
 } from "@/services/professionals";
 
-import { isSaved, toggleSave } from "@/services/savedProviders";
+import {
+  isSaved,
+  toggleSave,
+  isOwnProfessionalProfile,
+} from "@/services/savedProviders";
 
 type TabKey = "services" | "portfolio" | "reviews";
 
@@ -122,6 +126,10 @@ export default function ProfessionalProfile() {
       </SafeAreaView>
     );
   }
+
+  // Mock auth: true when this profile belongs to the logged-in user.
+  // Later: replace isOwnProfessionalProfile with API /me check.
+  const isOwnProfile = isOwnProfessionalProfile(pro.id);
 
   const onBook = (service?: ProService) => {
     router.push({
@@ -356,8 +364,11 @@ export default function ProfessionalProfile() {
                   style={[
                     styles.serviceRow,
                     index < pro.services.length - 1 && styles.serviceBorder,
+                    isOwnProfile && styles.disabledButton,
                   ]}
-                  onPress={() =>
+                  disabled={isOwnProfile}
+                  onPress={() => {
+                    if (isOwnProfile) return;
                     router.push({
                       pathname: "/bookme/[id]",
                       params: {
@@ -366,9 +377,9 @@ export default function ProfessionalProfile() {
                         serviceName: service.name,
                         price: service.price,
                       },
-                    })
-                  }
-                  activeOpacity={0.7}
+                    });
+                  }}
+                  activeOpacity={isOwnProfile ? 1 : 0.7}
                 >
                   <View style={styles.serviceIcon}>
                     <MaterialCommunityIcons
@@ -416,19 +427,30 @@ export default function ProfessionalProfile() {
           {tab === "reviews" && (
             <View style={styles.reviewsContainer}>
               <TouchableOpacity
-                style={styles.writeReviewButton}
-                activeOpacity={0.8}
-                onPress={() => setReviewModalVisible(true)}
+                style={[
+                  styles.writeReviewButton,
+                  isOwnProfile && styles.disabledButton,
+                ]}
+                activeOpacity={isOwnProfile ? 1 : 0.8}
+                disabled={isOwnProfile}
+                onPress={() => {
+                  if (isOwnProfile) return;
+                  setReviewModalVisible(true);
+                }}
               >
                 <View style={styles.writeReviewIcon}>
                   <Ionicons name="create-outline" size={22} color="#16A34A" />
                 </View>
 
                 <View style={styles.writeReviewContent}>
-                  <Text style={styles.writeReviewTitle}>Write a review</Text>
+                  <Text style={styles.writeReviewTitle}>
+                    {isOwnProfile ? "Your profile" : "Write a review"}
+                  </Text>
 
                   <Text style={styles.writeReviewHint}>
-                    Share your experience with this professional
+                    {isOwnProfile
+                      ? "You cannot review your own profile"
+                      : "Share your experience with this professional"}
                   </Text>
                 </View>
 
@@ -468,9 +490,11 @@ export default function ProfessionalProfile() {
 
         <View style={styles.bookingFooter}>
           <TouchableOpacity
-            style={styles.bookButton}
-            activeOpacity={0.8}
-            onPress={() =>
+            style={[styles.bookButton, isOwnProfile && styles.disabledButton]}
+            activeOpacity={isOwnProfile ? 1 : 0.8}
+            disabled={isOwnProfile}
+            onPress={() => {
+              if (isOwnProfile) return;
               router.push({
                 pathname: "/bookme/[id]",
                 params: {
@@ -479,12 +503,14 @@ export default function ProfessionalProfile() {
                   serviceName: "",
                   price: pro.priceFrom,
                 },
-              })
-            }
+              });
+            }}
           >
             <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
 
-            <Text style={styles.bookButtonText}>Book Now</Text>
+            <Text style={styles.bookButtonText}>
+              {isOwnProfile ? "Your profile" : "Book Now"}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -807,26 +833,26 @@ const styles = StyleSheet.create({
     color: "#16A34A",
   },
 
-portfolioGrid: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  justifyContent: "space-between",
-  paddingHorizontal: 16,
-  paddingTop: 12,
-  paddingBottom: 100,
-},
+  portfolioGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 100,
+  },
 
-portfolioItem: {
-  width: "48%",
-  marginBottom: 12,
-},
+  portfolioItem: {
+    width: "48%",
+    marginBottom: 12,
+  },
 
-projectImage: {
-  width: "100%",
-  height: 130,
-  borderRadius: 14,
-  backgroundColor: "#E5E7EB",
-},
+  projectImage: {
+    width: "100%",
+    height: 130,
+    borderRadius: 14,
+    backgroundColor: "#E5E7EB",
+  },
 
   projectTitle: {
     marginTop: 8,

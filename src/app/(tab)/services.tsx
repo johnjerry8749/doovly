@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   FlatList,
   Image,
@@ -22,6 +23,7 @@ import {
   type ServiceRequest,
 } from "@/services/serviceRequests";
 import { getCurrentUserId } from "@/services/notifications";
+import { isSaved, toggleSave } from "@/services/savedProviders";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { useLocation } from "@/context/LocationContext";
@@ -34,6 +36,26 @@ const SERVICE_FILTERS = [{ name: "All", icon: "apps" }, ...SERVICE_CATEGORIES];
 export default function Services() {
   const [search, setSearch] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [favTick, setFavTick] = useState(0);
+
+  const onToggleFavorite = useCallback((proId: string) => {
+    const result = toggleSave(proId);
+    if (!result.ok && result.reason === "limit") {
+      Alert.alert(
+        "Save limit reached",
+        "Free users can save up to 5 providers. Upgrade to Pro for unlimited saves.",
+        [
+          { text: "Not now", style: "cancel" },
+          {
+            text: "Upgrade",
+            onPress: () => router.push("/profile/subscription/subscription"),
+          },
+        ],
+      );
+      return;
+    }
+    if (result.ok) setFavTick((t) => t + 1);
+  }, []);
 
   const {
     locationName,
@@ -143,9 +165,16 @@ export default function Services() {
         <TouchableOpacity
           style={styles.heartButton}
           activeOpacity={0.7}
-          onPress={(event) => event.stopPropagation()}
+          onPress={(event) => {
+            event.stopPropagation();
+            onToggleFavorite(item.id);
+          }}
         >
-          <Ionicons name="heart-outline" size={18} color="#111" />
+          <Ionicons
+            name={isSaved(item.id) ? "heart" : "heart-outline"}
+            size={18}
+            color={isSaved(item.id) ? "#EF4444" : "#111"}
+          />
         </TouchableOpacity>
 
         <View style={styles.profileImageWrapper}>
@@ -300,6 +329,7 @@ export default function Services() {
 
       <FlatList
         data={filteredProfessionals}
+        extraData={favTick}
         keyExtractor={(item) => item.id}
         numColumns={3}
         showsVerticalScrollIndicator={false}
@@ -736,7 +766,6 @@ const styles = StyleSheet.create({
   reviewCount: { fontSize: 9, color: "#777", marginLeft: 2 },
   profession: { fontSize: 10, color: "#555", marginBottom: 3 },
   city: { fontSize: 10, color: "#777", marginBottom: 5 },
-  // price: { fontSize: 11, fontWeight: "800", color: GREEN },
   emptyContainer: { alignItems: "center", paddingVertical: 60 },
   emptyTitle: { fontSize: 17, fontWeight: "700", marginTop: 12, color: "#111" },
   emptyText: { color: "#888", marginTop: 5, fontSize: 13, textAlign: "center" },
@@ -762,7 +791,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
-
   modalTitle: {
     fontSize: 18,
     fontWeight: "800",
