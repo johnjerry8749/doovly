@@ -390,6 +390,7 @@ export default function Bookings() {
         <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
           <Ionicons name="notifications-outline" size={28} color="#111" />
           <View style={styles.notificationDot} />
+          
         </TouchableOpacity>
       </View>
 

@@ -101,7 +101,7 @@ export default function Home() {
           <TouchableOpacity
             style={styles.notificationButton}
             activeOpacity={0.7}
-            onPress={() => router.push("/notification/[id]")}
+            onPress={() => router.push(`/notification/${getCurrentUserId()}`)}
           >
             <Ionicons name="notifications-outline" size={28} color="#111" />
             <View style={styles.notificationDot} />
