@@ -16,14 +16,18 @@
       "bundleIdentifier": "com.johnjerry.doovly",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Doovly needs your location to show nearby service professionals.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Doovly needs your location to show nearby service professionals."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Doovly needs your location to show nearby service professionals.",
+        "NSPhotoLibraryUsageDescription": "Doovly needs access to your photos so you can attach images when reporting an issue.",
+        "NSCameraUsageDescription": "Doovly needs camera access so you can take photos when reporting an issue."
       }
     },
     "android": {
       "package": "com.johnjerry.doovly",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "READ_MEDIA_IMAGES",
+        "CAMERA"
       ]
     },
     "web": {
@@ -48,7 +52,14 @@
           "locationAlwaysAndWhenInUsePermission": "Allow Doovly to use your location to show nearby services."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Doovly to access your photos so you can attach images when reporting an issue.",
+          "cameraPermission": "Allow Doovly to use your camera so you can take photos when reporting an issue."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
