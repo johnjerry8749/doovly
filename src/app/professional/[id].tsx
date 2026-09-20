@@ -32,32 +32,19 @@ import {
   type ProReview,
 } from "@/services/professionals";
 
+import { isSaved, toggleSave } from "@/services/savedProviders";
+
 type TabKey = "services" | "portfolio" | "reviews";
 
 export default function ProfessionalProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // ============================================================
-  // PROFESSIONAL
-  // ============================================================
-
   const pro = useMemo(() => getProfessionalById(id ?? ""), [id]);
-
-  // ============================================================
-  // TAB STATE
-  // ============================================================
 
   const [tab, setTab] = useState<TabKey>("services");
 
-  // ============================================================
-  // DISTANCE STATE
-  // ============================================================
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [loadingDistance, setLoadingDistance] = useState(true);
-
-  // ============================================================
-  // REVIEW STATE
-  // ============================================================
 
   const [reviews, setReviews] = useState<ProReview[]>([]);
   const [reviewText, setReviewText] = useState("");
@@ -65,10 +52,6 @@ export default function ProfessionalProfile() {
   const [submitting, setSubmitting] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [saved, setSaved] = useState(() => isSaved(id ?? ""));
-
-  // ============================================================
-  // LOAD REVIEWS
-  // ============================================================
 
   useEffect(() => {
     if (pro) {
@@ -79,10 +62,6 @@ export default function ProfessionalProfile() {
   useEffect(() => {
     setSaved(isSaved(id ?? ""));
   }, [id]);
-
-  // ============================================================
-  // CALCULATE DISTANCE
-  // ============================================================
 
   useEffect(() => {
     let mounted = true;
@@ -130,10 +109,6 @@ export default function ProfessionalProfile() {
     };
   }, [pro]);
 
-  // ============================================================
-  // PROFESSIONAL NOT FOUND
-  // ============================================================
-
   if (!pro) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -148,10 +123,6 @@ export default function ProfessionalProfile() {
     );
   }
 
-  // ============================================================
-  // BOOKING
-  // ============================================================
-
   const onBook = (service?: ProService) => {
     router.push({
       pathname: "/(tab)/bookings",
@@ -163,10 +134,6 @@ export default function ProfessionalProfile() {
       },
     });
   };
-
-  // ============================================================
-  // SUBMIT REVIEW
-  // ============================================================
 
   const submitReview = async () => {
     const comment = reviewText.trim();
@@ -187,20 +154,14 @@ export default function ProfessionalProfile() {
         comment,
       });
 
-      // Add newest review to the beginning
       setReviews((previous) => [newReview, ...previous]);
-
-      // Clear form
       setReviewText("");
       setReviewerName("");
-
-      // Close modal
       setReviewModalVisible(false);
 
       Alert.alert("Thanks!", "Your review was added successfully.");
     } catch (error) {
       console.log("Review error:", error);
-
       Alert.alert("Error", "Could not post your review. Please try again.");
     } finally {
       setSubmitting(false);
@@ -242,10 +203,6 @@ export default function ProfessionalProfile() {
     }
   };
 
-  // ============================================================
-  // DISTANCE LABEL
-  // ============================================================
-
   const distanceLabel = loadingDistance
     ? "Getting distance..."
     : distanceKm !== null
@@ -254,17 +211,8 @@ export default function ProfessionalProfile() {
         } km away`
       : pro.city;
 
-  // ============================================================
-  // RATING
-  // ============================================================
-
   const starCount = starsFromReviewCount(reviews.length);
-
   const reviewsToNextStar = 10 - (reviews.length % 10);
-
-  // ============================================================
-  // RENDER
-  // ============================================================
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -272,10 +220,6 @@ export default function ProfessionalProfile() {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* ======================================================
-            HEADER
-        ====================================================== */}
-
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -311,32 +255,17 @@ export default function ProfessionalProfile() {
           </View>
         </View>
 
-        {/* ======================================================
-            MAIN CONTENT
-        ====================================================== */}
-
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ====================================================
-              PROFILE IMAGE
-          ==================================================== */}
-
           <View style={styles.avatarContainer}>
             <Image
               source={pro.image}
               style={styles.avatar}
               resizeMode="cover"
             />
-
-            {/* Blue verification badge */}
-            {/* {pro.verified && (
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-              </View>
-            )} */}
 
             {pro.verified && (
               <View style={styles.verifiedBadge}>
@@ -349,14 +278,9 @@ export default function ProfessionalProfile() {
             )}
           </View>
 
-          {/* ====================================================
-              PROFESSIONAL NAME
-          ==================================================== */}
-
           <View style={styles.nameRow}>
             <Text style={styles.nameText}>{pro.name}</Text>
 
-            {/* Gold premium shield */}
             {pro.subscribed && (
               <View style={styles.premiumShield}>
                 <MaterialCommunityIcons
@@ -367,10 +291,6 @@ export default function ProfessionalProfile() {
               </View>
             )}
           </View>
-
-          {/* ====================================================
-              RATING
-          ==================================================== */}
 
           <View style={styles.ratingRow}>
             {[1, 2, 3, 4, 5].map((star) => (
@@ -388,20 +308,12 @@ export default function ProfessionalProfile() {
             </Text>
           </View>
 
-          {/* ====================================================
-              STAR PROGRESS
-          ==================================================== */}
-
           {starCount < 5 && (
             <Text style={styles.starHint}>
               {reviewsToNextStar} more review
               {reviewsToNextStar === 1 ? "" : "s"} to unlock the next star
             </Text>
           )}
-
-          {/* ====================================================
-              LOCATION
-          ==================================================== */}
 
           <View style={styles.locationRow}>
             <Ionicons name="location" size={16} color="#16A34A" />
@@ -412,10 +324,6 @@ export default function ProfessionalProfile() {
               <Text style={styles.locationText}>{distanceLabel}</Text>
             )}
           </View>
-
-          {/* ====================================================
-              TABS
-          ==================================================== */}
 
           <View style={styles.tabs}>
             {(
@@ -439,10 +347,6 @@ export default function ProfessionalProfile() {
               </TouchableOpacity>
             ))}
           </View>
-
-          {/* ====================================================
-              SERVICES TAB
-          ==================================================== */}
 
           {tab === "services" && (
             <View style={styles.serviceCard}>
@@ -488,10 +392,6 @@ export default function ProfessionalProfile() {
             </View>
           )}
 
-          {/* ====================================================
-              PORTFOLIO TAB
-          ==================================================== */}
-
           {tab === "portfolio" && (
             <View style={styles.portfolioGrid}>
               {pro.portfolio?.length === 0 ? (
@@ -513,14 +413,8 @@ export default function ProfessionalProfile() {
             </View>
           )}
 
-          {/* ====================================================
-              REVIEWS TAB
-          ==================================================== */}
-
           {tab === "reviews" && (
             <View style={styles.reviewsContainer}>
-              {/* WRITE REVIEW BUTTON */}
-
               <TouchableOpacity
                 style={styles.writeReviewButton}
                 activeOpacity={0.8}
@@ -540,8 +434,6 @@ export default function ProfessionalProfile() {
 
                 <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
               </TouchableOpacity>
-
-              {/* REVIEW LIST */}
 
               {reviews.length === 0 ? (
                 <Text style={styles.emptyText}>
@@ -571,14 +463,8 @@ export default function ProfessionalProfile() {
             </View>
           )}
 
-          {/* SPACE FOR FIXED BOOK BUTTON */}
-
           <View style={styles.bottomSpace} />
         </ScrollView>
-
-        {/* ======================================================
-            FIXED BOOK NOW BUTTON
-        ====================================================== */}
 
         <View style={styles.bookingFooter}>
           <TouchableOpacity
@@ -602,10 +488,6 @@ export default function ProfessionalProfile() {
           </TouchableOpacity>
         </View>
 
-        {/* ======================================================
-            WRITE REVIEW MODAL
-        ====================================================== */}
-
         <Modal
           visible={reviewModalVisible}
           transparent
@@ -617,8 +499,6 @@ export default function ProfessionalProfile() {
             behavior={Platform.OS === "ios" ? "padding" : undefined}
           >
             <View style={styles.reviewModal}>
-              {/* MODAL HEADER */}
-
               <View style={styles.modalHeader}>
                 <View style={styles.modalTitleContainer}>
                   <Text style={styles.modalTitle}>Write a review</Text>
@@ -637,8 +517,6 @@ export default function ProfessionalProfile() {
                 </TouchableOpacity>
               </View>
 
-              {/* REVIEW INFO */}
-
               <View style={styles.modalInfo}>
                 <Ionicons name="star" size={20} color="#16A34A" />
 
@@ -648,8 +526,6 @@ export default function ProfessionalProfile() {
                 </Text>
               </View>
 
-              {/* NAME INPUT */}
-
               <TextInput
                 style={styles.input}
                 placeholder="Your name (optional)"
@@ -658,8 +534,6 @@ export default function ProfessionalProfile() {
                 onChangeText={setReviewerName}
                 editable={!submitting}
               />
-
-              {/* REVIEW INPUT */}
 
               <TextInput
                 style={[styles.input, styles.commentInput]}
@@ -671,8 +545,6 @@ export default function ProfessionalProfile() {
                 textAlignVertical="top"
                 editable={!submitting}
               />
-
-              {/* SUBMIT BUTTON */}
 
               <TouchableOpacity
                 style={[
@@ -688,7 +560,6 @@ export default function ProfessionalProfile() {
                 ) : (
                   <>
                     <Ionicons name="send-outline" size={18} color="#FFFFFF" />
-
                     <Text style={styles.submitButtonText}>Post Review</Text>
                   </>
                 )}
@@ -701,15 +572,7 @@ export default function ProfessionalProfile() {
   );
 }
 
-// ============================================================
-// STYLES
-// ============================================================
-
 const styles = StyleSheet.create({
-  // ==========================================================
-  // GENERAL
-  // ==========================================================
-
   safe: {
     flex: 1,
     backgroundColor: "#FFFFFF",
@@ -735,10 +598,6 @@ const styles = StyleSheet.create({
     color: "#16A34A",
     fontWeight: "600",
   },
-
-  // ==========================================================
-  // HEADER
-  // ==========================================================
 
   header: {
     height: 58,
@@ -767,18 +626,22 @@ const styles = StyleSheet.create({
     width: 40,
   },
 
-  // ==========================================================
-  // CONTENT
-  // ==========================================================
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    minWidth: 72,
+  },
+
+  headerActionBtn: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
 
   content: {
     paddingHorizontal: 20,
     alignItems: "center",
   },
-
-  // ==========================================================
-  // PROFILE
-  // ==========================================================
 
   avatarContainer: {
     position: "relative",
@@ -793,7 +656,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
   },
 
-  // Blue verified badge on profile image
   verifiedBadge: {
     position: "absolute",
     right: 9,
@@ -801,16 +663,9 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    // backgroundColor: "#0A66C2",
-    // borderWidth: 2,
-    // borderColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-
-    // Android shadow
     elevation: 3,
-
-    // iOS shadow
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -834,17 +689,12 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
 
-  // Gold premium shield
   premiumShield: {
     width: 24,
     height: 24,
     alignItems: "center",
     justifyContent: "center",
   },
-
-  // ==========================================================
-  // RATING
-  // ==========================================================
 
   ratingRow: {
     flexDirection: "row",
@@ -864,10 +714,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
-  // ==========================================================
-  // LOCATION
-  // ==========================================================
-
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -879,10 +725,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
   },
-
-  // ==========================================================
-  // TABS
-  // ==========================================================
 
   tabs: {
     width: "100%",
@@ -912,10 +754,6 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: "#16A34A",
   },
-
-  // ==========================================================
-  // SERVICES
-  // ==========================================================
 
   serviceCard: {
     width: "100%",
@@ -969,29 +807,28 @@ const styles = StyleSheet.create({
     color: "#16A34A",
   },
 
-  // ==========================================================
-  // PORTFOLIO
-  // ==========================================================
-
   portfolioGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 100, // space above Book Now if fixed
+    paddingBottom: 100,
     gap: 12,
   },
+
   portfolioItem: {
     width: "48%",
     marginBottom: 4,
   },
+
   projectImage: {
     width: "100%",
     height: 130,
     borderRadius: 14,
     backgroundColor: "#E5E7EB",
   },
+
   projectTitle: {
     marginTop: 8,
     fontSize: 13,
@@ -999,25 +836,13 @@ const styles = StyleSheet.create({
     color: "#111827",
     lineHeight: 18,
   },
+
   emptyText: {
     width: "100%",
     textAlign: "center",
     color: "#9CA3AF",
     fontSize: 14,
     marginTop: 24,
-  },
-  // ==========================================================
-  // REVIEWS
-  // ==========================================================
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    minWidth: 72,
-  },
-  headerActionBtn: {
-    paddingHorizontal: 4,
-    paddingVertical: 4,
   },
 
   reviewsContainer: {
@@ -1111,17 +936,6 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 
-  emptyText: {
-    width: "100%",
-    textAlign: "center",
-    color: "#9CA3AF",
-    paddingVertical: 30,
-  },
-
-  // ==========================================================
-  // FIXED BOOK BUTTON
-  // ==========================================================
-
   bottomSpace: {
     height: 110,
   },
@@ -1154,10 +968,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-
-  // ==========================================================
-  // REVIEW MODAL
-  // ==========================================================
 
   modalOverlay: {
     flex: 1,
@@ -1225,10 +1035,6 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
 
-  // ==========================================================
-  // INPUTS
-  // ==========================================================
-
   input: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
@@ -1245,10 +1051,6 @@ const styles = StyleSheet.create({
     minHeight: 110,
     paddingTop: 12,
   },
-
-  // ==========================================================
-  // SUBMIT REVIEW
-  // ==========================================================
 
   submitButton: {
     backgroundColor: "#16A34A",
