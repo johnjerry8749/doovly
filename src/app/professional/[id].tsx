@@ -807,27 +807,26 @@ const styles = StyleSheet.create({
     color: "#16A34A",
   },
 
-  portfolioGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 100,
-    gap: 12,
-  },
+portfolioGrid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  paddingHorizontal: 16,
+  paddingTop: 12,
+  paddingBottom: 100,
+},
 
-  portfolioItem: {
-    width: "48%",
-    marginBottom: 4,
-  },
+portfolioItem: {
+  width: "48%",
+  marginBottom: 12,
+},
 
-  projectImage: {
-    width: "100%",
-    height: 130,
-    borderRadius: 14,
-    backgroundColor: "#E5E7EB",
-  },
+projectImage: {
+  width: "100%",
+  height: 130,
+  borderRadius: 14,
+  backgroundColor: "#E5E7EB",
+},
 
   projectTitle: {
     marginTop: 8,

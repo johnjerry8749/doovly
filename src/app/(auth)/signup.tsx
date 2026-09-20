@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -12,8 +12,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState("");
@@ -25,6 +25,18 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const { termsAccepted } = useLocalSearchParams<{
+    termsAccepted?: string;
+  }>();
+
+  // Automatically tick the checkbox when returning
+  // from the Terms & Conditions screen.
+  useEffect(() => {
+    if (termsAccepted === "true") {
+      setAcceptedTerms(true);
+    }
+  }, [termsAccepted]);
 
   function handleCreateAccount() {
     if (!fullName.trim()) {
@@ -75,6 +87,7 @@ export default function RegisterScreen() {
       "Account created",
       "Your account has been created successfully.",
     );
+
     router.replace("/(tab)/home");
   }
 
@@ -115,8 +128,10 @@ export default function RegisterScreen() {
 
           {/* Heading */}
           <Text style={styles.title}>Create your account</Text>
+
           <Text style={styles.subtitle}>
-            Join thousands of professionals and customers{"\n"}across Nigeria.
+            Join thousands of professionals and customers{"\n"}
+            across Nigeria.
           </Text>
 
           {/* Full Name */}
@@ -127,6 +142,7 @@ export default function RegisterScreen() {
               color="#16A34A"
               style={styles.inputIcon}
             />
+
             <TextInput
               style={styles.input}
               placeholder="Full Name"
@@ -171,6 +187,7 @@ export default function RegisterScreen() {
               color="#16A34A"
               style={styles.inputIcon}
             />
+
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -190,6 +207,7 @@ export default function RegisterScreen() {
               color="#16A34A"
               style={styles.inputIcon}
             />
+
             <TextInput
               style={styles.input}
               placeholder="Password"
@@ -198,12 +216,17 @@ export default function RegisterScreen() {
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
             />
+
             <Pressable
-              onPress={() => setShowPassword(!showPassword)}
+              onPress={() => setShowPassword((prev) => !prev)}
               style={styles.eyeButton}
             >
               <Ionicons
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                name={
+                  showPassword
+                    ? "eye-off-outline"
+                    : "eye-outline"
+                }
                 size={22}
                 color="#6B7280"
               />
@@ -218,6 +241,7 @@ export default function RegisterScreen() {
               color="#16A34A"
               style={styles.inputIcon}
             />
+
             <TextInput
               style={styles.input}
               placeholder="Confirm Password"
@@ -226,12 +250,19 @@ export default function RegisterScreen() {
               onChangeText={setConfirmPassword}
               secureTextEntry={!showConfirmPassword}
             />
+
             <Pressable
-              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              onPress={() =>
+                setShowConfirmPassword((prev) => !prev)
+              }
               style={styles.eyeButton}
             >
               <Ionicons
-                name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                name={
+                  showConfirmPassword
+                    ? "eye-off-outline"
+                    : "eye-outline"
+                }
                 size={22}
                 color="#6B7280"
               />
@@ -239,20 +270,30 @@ export default function RegisterScreen() {
           </View>
 
           {/* Terms */}
-
           <Pressable
-            onPress={() => setAcceptedTerms(!acceptedTerms)}
+            onPress={() =>
+              setAcceptedTerms((prev) => !prev)
+            }
             android_ripple={null}
             style={({ pressed }) => [
               styles.termsRow,
-              { opacity: pressed ? 1 : 1 }, // no opacity change
+              {
+                opacity: 1,
+              },
             ]}
           >
             <View
-              style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}
+              style={[
+                styles.checkbox,
+                acceptedTerms && styles.checkboxChecked,
+              ]}
             >
               {acceptedTerms && (
-                <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                <Ionicons
+                  name="checkmark"
+                  size={16}
+                  color="#FFFFFF"
+                />
               )}
             </View>
 
@@ -260,14 +301,22 @@ export default function RegisterScreen() {
               I agree to the{" "}
               <Text
                 style={styles.greenText}
-                onPress={() => router.push("/(auth)/terms_condition")}
+                onPress={() =>
+                  router.push(
+                    "/(auth)/terms_condition",
+                  )
+                }
               >
                 Terms & Conditions
               </Text>{" "}
               and{" "}
               <Text
                 style={styles.greenText}
-                onPress={() => router.push("/(auth)/terms_condition")}
+                onPress={() =>
+                  router.push(
+                    "/(auth)/terms_condition",
+                  )
+                }
               >
                 Privacy Policy
               </Text>
@@ -275,28 +324,53 @@ export default function RegisterScreen() {
           </Pressable>
 
           {/* Create Account Button */}
-          <Pressable style={styles.createButton} onPress={handleCreateAccount}>
-            <Text style={styles.createButtonText}>Create Account</Text>
+          <Pressable
+            style={styles.createButton}
+            onPress={handleCreateAccount}
+          >
+            <Text style={styles.createButtonText}>
+              Create Account
+            </Text>
           </Pressable>
 
           {/* Divider */}
-          {/* <View style={styles.dividerRow}>
+          {/* 
+          <View style={styles.dividerRow}>
             <View style={styles.divider} />
-            <Text style={styles.orText}>or continue with</Text>
+            <Text style={styles.orText}>
+              or continue with
+            </Text>
             <View style={styles.divider} />
-          </View> */}
+          </View>
+          */}
 
           {/* Google Button */}
-          {/* <Pressable style={styles.googleButton} onPress={handleGoogleSignup}>
+          {/*
+          <Pressable
+            style={styles.googleButton}
+            onPress={handleGoogleSignup}
+          >
             <Text style={styles.googleLogo}>G</Text>
-            <Text style={styles.googleButtonText}>Continue with Google</Text>
-          </Pressable> */}
+            <Text style={styles.googleButtonText}>
+              Continue with Google
+            </Text>
+          </Pressable>
+          */}
 
           {/* Login Link */}
           <View style={styles.loginRow}>
-            <Text style={styles.loginText}>Already have an account? </Text>
-            <Pressable onPress={() => router.push("/(auth)/login")}>
-              <Text style={styles.loginLink}>Login</Text>
+            <Text style={styles.loginText}>
+              Already have an account?{" "}
+            </Text>
+
+            <Pressable
+              onPress={() =>
+                router.push("/(auth)/login")
+              }
+            >
+              <Text style={styles.loginLink}>
+                Login
+              </Text>
             </Pressable>
           </View>
         </ScrollView>
