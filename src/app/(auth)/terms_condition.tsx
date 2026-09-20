@@ -231,18 +231,6 @@ export default function TermsCondition() {
             <Text style={styles.heroTitle}>
               Terms &{"\n"}Conditions
             </Text>
-
-            <View style={styles.updatedRow}>
-              <Ionicons
-                name="calendar-outline"
-                size={16}
-                color={PRIMARY}
-              />
-
-              <Text style={styles.updatedText}>
-                Last updated: 1 September 2026
-              </Text>
-            </View>
           </View>
         </View>
 
