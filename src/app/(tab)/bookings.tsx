@@ -581,7 +581,7 @@ export default function Bookings() {
 
                 <Text style={styles.modalLabel}>Add photos (optional)</Text>
                 <Text style={styles.photosHint}>
-                  You can add up to 3 photos for admin review.
+                  You can add up to 3 photos for review.
                 </Text>
 
                 <View style={styles.photosRow}>
@@ -645,7 +645,7 @@ export default function Bookings() {
                     }
                     Alert.alert(
                       "Report submitted",
-                      "Your report has been sent. Our team will review it shortly. Payment remains held until resolved.",
+                      "Your report has been sent. Our team will review it shortly.",
                     );
                     setShowReportModal(false);
                     setReportBooking(null);
