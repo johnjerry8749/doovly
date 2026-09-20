@@ -82,3 +82,116 @@ export async function addReview(
     }),
   };
 }
+
+// =====================================================
+// AUTH USER SERVICES (My Services screen)
+// =====================================================
+//
+// NOW  → read/write mock data on the professional object
+// LATER → replace each body with apiRequest to your auth user's services API
+//
+// Example later:
+//   GET    /me/services
+//   POST   /me/services
+//   PATCH  /me/services/:id
+//   DELETE /me/services/:id
+//
+
+export type ServiceInput = {
+  name: string;
+  description: string;
+  price: string;
+  icon?: string;
+};
+
+/** Services for the logged-in professional (auth user). */
+export function listMyServices(professionalId: string): ProService[] {
+  // TODO backend: return apiRequest<ProService[]>("/me/services")
+  const pro = getFromData(professionalId);
+  return pro ? [...pro.services] : [];
+}
+
+/** Create a service for the auth user. */
+export async function createMyService(
+  professionalId: string,
+  input: ServiceInput,
+): Promise<ProService> {
+  // TODO backend:
+  // return apiRequest<ProService>("/me/services", {
+  //   method: "POST",
+  //   body: JSON.stringify(input),
+  // })
+  await new Promise((r) => setTimeout(r, 200));
+
+  const priceValue = Number(String(input.price).replace(/[^0-9.]/g, "")) || 0;
+  const newService: ProService = {
+    id: `s-${Date.now()}`,
+    name: input.name.trim(),
+    description: input.description.trim(),
+    price: input.price.trim().startsWith("₦")
+      ? input.price.trim()
+      : `₦${Number(input.price).toLocaleString()}`,
+    priceValue,
+    icon: input.icon || "briefcase-outline",
+  };
+
+  const pro = PROFESSIONALS.find((p) => p.id === String(professionalId));
+  if (pro) {
+    pro.services = [...pro.services, newService];
+  }
+
+  return newService;
+}
+
+/** Update an existing service for the auth user. */
+export async function updateMyService(
+  professionalId: string,
+  serviceId: string,
+  input: ServiceInput,
+): Promise<ProService | null> {
+  // TODO backend:
+  // return apiRequest<ProService>(`/me/services/${serviceId}`, {
+  //   method: "PATCH",
+  //   body: JSON.stringify(input),
+  // })
+  await new Promise((r) => setTimeout(r, 200));
+
+  const pro = PROFESSIONALS.find((p) => p.id === String(professionalId));
+  if (!pro) return null;
+
+  const idx = pro.services.findIndex((s) => s.id === serviceId);
+  if (idx === -1) return null;
+
+  const priceValue = Number(String(input.price).replace(/[^0-9.]/g, "")) || 0;
+  const updated: ProService = {
+    ...pro.services[idx],
+    name: input.name.trim(),
+    description: input.description.trim(),
+    price: input.price.trim().startsWith("₦")
+      ? input.price.trim()
+      : `₦${Number(input.price).toLocaleString()}`,
+    priceValue,
+    icon: input.icon || pro.services[idx].icon,
+  };
+
+  pro.services = pro.services.map((s, i) => (i === idx ? updated : s));
+  return updated;
+}
+
+/** Delete a service for the auth user. */
+export async function deleteMyService(
+  professionalId: string,
+  serviceId: string,
+): Promise<boolean> {
+  // TODO backend:
+  // await apiRequest(`/me/services/${serviceId}`, { method: "DELETE" })
+  // return true
+  await new Promise((r) => setTimeout(r, 150));
+
+  const pro = PROFESSIONALS.find((p) => p.id === String(professionalId));
+  if (!pro) return false;
+
+  const before = pro.services.length;
+  pro.services = pro.services.filter((s) => s.id !== serviceId);
+  return pro.services.length < before;
+}

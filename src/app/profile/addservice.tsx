@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,7 +15,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
-import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
+import {
+  getProfessionalById,
+  listMyServices,
+  createMyService,
+  updateMyService,
+  deleteMyService,
+  listServiceCategories,
+  type ProService,
+} from "@/services/professionals";
 
 const PRIMARY = "#16A34A";
 const LIGHT_GREEN = "#EAF8F0";
@@ -23,72 +31,46 @@ const BORDER = "#E5E7EB";
 const TEXT = "#111827";
 const SECONDARY = "#6B7280";
 
-type Service = {
-  id: string;
-  category: string | null;
-  name: string;
-  description: string;
-  price: string;
-  active: boolean;
-};
+// Same mock logged-in pro as Profile — later replace with auth context / token
+const MOCK_LOGGED_IN_PRO_ID = "1";
 
-const INITIAL_SERVICES: Service[] = [
-  {
-    id: "s1",
-    category: "Plumber",
-    name: "Plumbing Installation",
-    description:
-      "Professional installation of pipes, taps, fixtures and fittings.",
-    price: "8000",
-    active: true,
-  },
-  {
-    id: "s2",
-    category: "Plumber",
-    name: "Drain Cleaning",
-    description: "Professional drain cleaning and blockage removal.",
-    price: "10000",
-    active: true,
-  },
-  {
-    id: "s3",
-    category: "Plumber",
-    name: "Water Heater Repair",
-    description: "Repair and maintenance of electric and gas water heaters.",
-    price: "12000",
-    active: true,
-  },
-];
+function priceToInput(price: string): string {
+  return String(price).replace(/[^0-9.]/g, "");
+}
 
-function getServiceIcon(category: string | null, name: string) {
-  const lower = (name + " " + (category || "")).toLowerCase();
-  if (lower.includes("plumb") || lower.includes("pipe") || lower.includes("install"))
-    return "pipe";
-  if (lower.includes("drain") || lower.includes("leak")) return "pipe-leak";
-  if (lower.includes("water") || lower.includes("heater") || lower.includes("boiler"))
-    return "water-boiler";
-  if (lower.includes("nail")) return "nail";
-  if (lower.includes("electric") || lower.includes("wiring") || lower.includes("light"))
-    return "flash";
-  if (lower.includes("barber") || lower.includes("hair") || lower.includes("cut"))
-    return "content-cut";
-  if (lower.includes("mechanic") || lower.includes("engine") || lower.includes("car"))
-    return "car-wrench";
-  if (lower.includes("spa") || lower.includes("massage")) return "spa";
-  return "briefcase-outline";
+function formatPrice(value: string): string {
+  const n = Number(String(value).replace(/[^0-9.]/g, ""));
+  if (Number.isNaN(n)) return value;
+  return `₦${n.toLocaleString()}`;
 }
 
 export default function AddService() {
-  const [services, setServices] = useState<Service[]>(INITIAL_SERVICES);
+  const pro = getProfessionalById(MOCK_LOGGED_IN_PRO_ID);
+  const categories = listServiceCategories();
+
+  const [services, setServices] = useState<ProService[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [serviceName, setServiceName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+
+  const loadServices = useCallback(() => {
+    // TODO auth: use real user id from auth context
+    const list = listMyServices(MOCK_LOGGED_IN_PRO_ID);
+    setServices(list);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadServices();
+  }, [loadServices]);
 
   const resetForm = () => {
     setSelectedCategory(null);
@@ -101,15 +83,16 @@ export default function AddService() {
 
   const openAddModal = () => {
     resetForm();
+    setSelectedCategory(pro?.profession ?? null);
     setModalVisible(true);
   };
 
-  const openEditModal = (service: Service) => {
+  const openEditModal = (service: ProService) => {
     setEditingServiceId(service.id);
-    setSelectedCategory(service.category);
+    setSelectedCategory(pro?.profession ?? null);
     setServiceName(service.name);
     setDescription(service.description);
-    setPrice(service.price);
+    setPrice(priceToInput(service.price));
     setCategoryOpen(false);
     setModalVisible(true);
   };
@@ -124,7 +107,7 @@ export default function AddService() {
     setCategoryOpen(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!serviceName.trim()) {
       Alert.alert("Missing service name", "Please enter your service name.");
       return;
@@ -141,35 +124,45 @@ export default function AddService() {
       return;
     }
 
-    if (editingServiceId) {
-      setServices((prev) =>
-        prev.map((s) =>
-          s.id === editingServiceId
-            ? {
-                ...s,
-                category: selectedCategory,
-                name: serviceName.trim(),
-                description: description.trim(),
-                price: price.trim(),
-              }
-            : s,
-        ),
-      );
-      Alert.alert("Service Updated", "Your service has been updated.");
-    } else {
-      const newService: Service = {
-        id: Date.now().toString(),
-        category: selectedCategory,
-        name: serviceName.trim(),
-        description: description.trim(),
-        price: price.trim(),
-        active: true,
-      };
-      setServices((prev) => [...prev, newService]);
-      Alert.alert("Service Added", "Your service has been added.");
-    }
+    setSaving(true);
+    try {
+      const categoryIcon =
+        categories.find((c) => c.name === selectedCategory)?.icon ||
+        "briefcase-outline";
 
-    closeModal();
+      if (editingServiceId) {
+        const updated = await updateMyService(
+          MOCK_LOGGED_IN_PRO_ID,
+          editingServiceId,
+          {
+            name: serviceName.trim(),
+            description: description.trim(),
+            price: price.trim(),
+            icon: categoryIcon,
+          },
+        );
+        if (updated) {
+          setServices((prev) =>
+            prev.map((s) => (s.id === editingServiceId ? updated : s)),
+          );
+          Alert.alert("Service Updated", "Your service has been updated.");
+        }
+      } else {
+        const created = await createMyService(MOCK_LOGGED_IN_PRO_ID, {
+          name: serviceName.trim(),
+          description: description.trim(),
+          price: price.trim(),
+          icon: categoryIcon,
+        });
+        setServices((prev) => [...prev, created]);
+        Alert.alert("Service Added", "Your service has been added.");
+      }
+      closeModal();
+    } catch {
+      Alert.alert("Error", "Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -181,16 +174,19 @@ export default function AddService() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            setServices((prev) => prev.filter((s) => s.id !== id));
-            if (editingServiceId === id) closeModal();
+          onPress: async () => {
+            const ok = await deleteMyService(MOCK_LOGGED_IN_PRO_ID, id);
+            if (ok) {
+              setServices((prev) => prev.filter((s) => s.id !== id));
+              if (editingServiceId === id) closeModal();
+            }
           },
         },
       ],
     );
   };
 
-  const activeCount = services.filter((s) => s.active).length;
+  const activeCount = services.length;
 
   return (
     <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
@@ -239,63 +235,79 @@ export default function AddService() {
           </Text>
         </View>
 
-        {/* Service cards */}
-        {services.map((service) => (
-          <View key={service.id} style={styles.serviceCard}>
-            <View style={styles.serviceCardTop}>
-              <View style={styles.serviceIconWrap}>
-                <MaterialCommunityIcons
-                  name={
-                    getServiceIcon(service.category, service.name) as keyof typeof MaterialCommunityIcons.glyphMap
-                  }
-                  size={24}
-                  color={PRIMARY}
-                />
-              </View>
-
-              <View style={styles.serviceMain}>
-                <View style={styles.serviceNameRow}>
-                  <Text style={styles.serviceName} numberOfLines={1}>
-                    {service.name}
-                  </Text>
-                  <Text style={styles.servicePrice}>
-                    ₦{Number(service.price).toLocaleString()}
-                  </Text>
+        {loading ? (
+          <Text style={styles.loadingText}>Loading services…</Text>
+        ) : services.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <MaterialCommunityIcons
+              name="briefcase-outline"
+              size={36}
+              color="#9CA3AF"
+            />
+            <Text style={styles.emptyTitle}>No services yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Add your first service to start getting bookings.
+            </Text>
+          </View>
+        ) : (
+          services.map((service) => (
+            <View key={service.id} style={styles.serviceCard}>
+              <View style={styles.serviceCardTop}>
+                <View style={styles.serviceIconWrap}>
+                  <MaterialCommunityIcons
+                    name={
+                      (service.icon ||
+                        "briefcase-outline") as keyof typeof MaterialCommunityIcons.glyphMap
+                    }
+                    size={24}
+                    color={PRIMARY}
+                  />
                 </View>
 
-                <Text style={styles.serviceDesc} numberOfLines={2}>
-                  {service.description}
-                </Text>
+                <View style={styles.serviceMain}>
+                  <View style={styles.serviceNameRow}>
+                    <Text style={styles.serviceName} numberOfLines={1}>
+                      {service.name}
+                    </Text>
+                    <Text style={styles.servicePrice}>
+                      {service.price.startsWith("₦")
+                        ? service.price
+                        : formatPrice(service.price)}
+                    </Text>
+                  </View>
 
-                <View style={styles.badgeRow}>
-                  {service.active && (
+                  <Text style={styles.serviceDesc} numberOfLines={2}>
+                    {service.description}
+                  </Text>
+
+                  <View style={styles.badgeRow}>
                     <View style={styles.activeBadge}>
                       <Text style={styles.activeBadgeText}>Active</Text>
                     </View>
-                  )}
+                  </View>
                 </View>
               </View>
-            </View>
 
-            <View style={styles.serviceActions}>
-              <Pressable
-                style={styles.editBtn}
-                onPress={() => openEditModal(service)}
-              >
-                <Ionicons name="pencil" size={14} color={PRIMARY} />
-                <Text style={styles.editBtnText}>Edit</Text>
-              </Pressable>
+              <View style={styles.serviceActions}>
+                <Pressable
+                  style={styles.editBtn}
+                  onPress={() => openEditModal(service)}
+                >
+                  <Ionicons name="pencil" size={14} color={PRIMARY} />
+                  <Text style={styles.editBtnText}>Edit</Text>
+                </Pressable>
 
-              <Pressable
-                style={styles.deleteBtn}
-                onPress={() => handleDelete(service.id)}
-              >
-                <Ionicons name="trash-outline" size={14} color="#DC2626" />
-                <Text style={styles.deleteBtnText}>Delete</Text>
-              </Pressable>
+                <Pressable
+                  style={styles.deleteBtn}
+                  onPress={() => handleDelete(service.id)}
+                >
+                  <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                  <Text style={styles.deleteBtnText}>Delete</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
 
         {/* Add New Service dashed button */}
         <Pressable
@@ -360,9 +372,8 @@ export default function AddService() {
                   <View style={styles.dropdownIcon}>
                     <MaterialCommunityIcons
                       name={
-                        ((SERVICE_CATEGORIES.find(
-                          (c) => c.name === selectedCategory,
-                        )?.icon as keyof typeof MaterialCommunityIcons.glyphMap) ||
+                        ((categories.find((c) => c.name === selectedCategory)
+                          ?.icon as keyof typeof MaterialCommunityIcons.glyphMap) ||
                           "shape-outline")
                       }
                       size={20}
@@ -387,7 +398,7 @@ export default function AddService() {
 
               {categoryOpen && (
                 <View style={styles.categoryList}>
-                  {SERVICE_CATEGORIES.map((cat) => {
+                  {categories.map((cat) => {
                     const selected = selectedCategory === cat.name;
                     return (
                       <Pressable
@@ -496,9 +507,10 @@ export default function AddService() {
               <Pressable
                 style={({ pressed }) => [
                   styles.saveBtn,
-                  pressed && { opacity: 0.9 },
+                  (pressed || saving) && { opacity: 0.85 },
                 ]}
                 onPress={handleSave}
+                disabled={saving}
               >
                 <Ionicons
                   name={
@@ -510,7 +522,11 @@ export default function AddService() {
                   color="#FFFFFF"
                 />
                 <Text style={styles.saveBtnText}>
-                  {editingServiceId ? "Update Service" : "Add Service"}
+                  {saving
+                    ? "Saving…"
+                    : editingServiceId
+                      ? "Update Service"
+                      : "Add Service"}
                 </Text>
               </Pressable>
 
@@ -562,7 +578,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
 
-  // Status banner
   statusBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -612,7 +627,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  // Section
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -630,7 +644,30 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  // Service card
+  loadingText: {
+    fontSize: 14,
+    color: SECONDARY,
+    textAlign: "center",
+    marginVertical: 24,
+  },
+  emptyBox: {
+    alignItems: "center",
+    paddingVertical: 32,
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: TEXT,
+    marginTop: 12,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: SECONDARY,
+    marginTop: 4,
+    textAlign: "center",
+  },
+
   serviceCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -740,7 +777,6 @@ const styles = StyleSheet.create({
     color: "#DC2626",
   },
 
-  // Add New dashed box
   addNewBox: {
     marginTop: 8,
     borderWidth: 1.5,
@@ -772,7 +808,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // Modal
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
