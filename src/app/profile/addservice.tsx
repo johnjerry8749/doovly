@@ -34,6 +34,9 @@ const SECONDARY = "#6B7280";
 // Same mock logged-in pro as Profile — later replace with auth context / token
 const MOCK_LOGGED_IN_PRO_ID = "1";
 
+/** Free users can add at most this many services. Pro (subscribed) = unlimited. */
+const FREE_SERVICE_LIMIT = 5;
+
 function priceToInput(price: string): string {
   return String(price).replace(/[^0-9.]/g, "");
 }
@@ -46,6 +49,7 @@ function formatPrice(value: string): string {
 
 export default function AddService() {
   const pro = getProfessionalById(MOCK_LOGGED_IN_PRO_ID);
+  const isPro = !!pro?.subscribed;
   const categories = listServiceCategories();
 
   const [services, setServices] = useState<ProService[]>([]);
@@ -72,6 +76,8 @@ export default function AddService() {
     loadServices();
   }, [loadServices]);
 
+  const atFreeLimit = !isPro && services.length >= FREE_SERVICE_LIMIT;
+
   const resetForm = () => {
     setSelectedCategory(null);
     setServiceName("");
@@ -82,6 +88,21 @@ export default function AddService() {
   };
 
   const openAddModal = () => {
+    if (atFreeLimit) {
+      Alert.alert(
+        "Service limit reached",
+        `Free accounts can add up to ${FREE_SERVICE_LIMIT} services. Upgrade to Doovly Pro for unlimited services.`,
+        [
+          { text: "Not now", style: "cancel" },
+          {
+            text: "Upgrade",
+            onPress: () =>
+              router.push("/profile/subscription/subscription"),
+          },
+        ],
+      );
+      return;
+    }
     resetForm();
     setSelectedCategory(pro?.profession ?? null);
     setModalVisible(true);
@@ -121,6 +142,15 @@ export default function AddService() {
     }
     if (!price.trim()) {
       Alert.alert("Missing price", "Please enter the price for this service.");
+      return;
+    }
+
+    // Block new services for free users at limit (edit is always allowed)
+    if (!editingServiceId && atFreeLimit) {
+      Alert.alert(
+        "Service limit reached",
+        `Free accounts can add up to ${FREE_SERVICE_LIMIT} services. Upgrade to Doovly Pro for unlimited services.`,
+      );
       return;
     }
 
@@ -217,8 +247,11 @@ export default function AddService() {
               <Text style={styles.statusTitle}>You're all set!</Text>
               <Text style={styles.statusSubtitle}>
                 You have {activeCount} active service
-                {activeCount === 1 ? "" : "s"}. Keep your services updated to
-                get more bookings.
+                {activeCount === 1 ? "" : "s"}
+                {!isPro
+                  ? ` · Free plan: ${activeCount}/${FREE_SERVICE_LIMIT}`
+                  : ""}.{" "}
+                Keep your services updated to get more bookings.
               </Text>
             </View>
           </View>
@@ -227,11 +260,45 @@ export default function AddService() {
           </View>
         </View>
 
+        {/* Add New Service — top so users don't scroll */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.addNewBox,
+            pressed && styles.addNewBoxPressed,
+            atFreeLimit && styles.addNewBoxDisabled,
+          ]}
+          onPress={openAddModal}
+        >
+          <View style={styles.addNewContent}>
+            <Ionicons
+              name={atFreeLimit ? "lock-closed-outline" : "add-circle-outline"}
+              size={26}
+              color={atFreeLimit ? "#9CA3AF" : PRIMARY}
+            />
+            <Text
+              style={[
+                styles.addNewTitle,
+                atFreeLimit && styles.addNewTitleDisabled,
+              ]}
+            >
+              {atFreeLimit ? "Limit reached — Upgrade for more" : "Add New Service"}
+            </Text>
+          </View>
+          <Text style={styles.addNewSubtitle}>
+            {atFreeLimit
+              ? `Free accounts can add up to ${FREE_SERVICE_LIMIT} services. Go Pro for unlimited.`
+              : isPro
+                ? "Pro plan — add unlimited services."
+                : `Offer more services and attract more customers. (${activeCount}/${FREE_SERVICE_LIMIT} used)`}
+          </Text>
+        </Pressable>
+
         {/* Section header */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Your Added Services</Text>
           <Text style={styles.sectionCount}>
             {services.length} service{services.length === 1 ? "" : "s"}
+            {!isPro ? ` · max ${FREE_SERVICE_LIMIT}` : ""}
           </Text>
         </View>
 
@@ -308,23 +375,6 @@ export default function AddService() {
             </View>
           ))
         )}
-
-        {/* Add New Service dashed button */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.addNewBox,
-            pressed && styles.addNewBoxPressed,
-          ]}
-          onPress={openAddModal}
-        >
-          <View style={styles.addNewContent}>
-            <Ionicons name="add-circle-outline" size={26} color={PRIMARY} />
-            <Text style={styles.addNewTitle}>Add New Service</Text>
-          </View>
-          <Text style={styles.addNewSubtitle}>
-            Offer more services and attract more customers.
-          </Text>
-        </Pressable>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -587,7 +637,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: "#BBF7D0",
-    marginBottom: 24,
+    marginBottom: 16,
   },
   statusLeft: {
     flexDirection: "row",
@@ -631,6 +681,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginTop: 20,
     marginBottom: 14,
   },
   sectionTitle: {
@@ -778,18 +829,21 @@ const styles = StyleSheet.create({
   },
 
   addNewBox: {
-    marginTop: 8,
     borderWidth: 1.5,
     borderColor: "#BBF7D0",
     borderStyle: "dashed",
     borderRadius: 16,
-    paddingVertical: 22,
+    paddingVertical: 18,
     paddingHorizontal: 16,
     alignItems: "center",
     backgroundColor: "#FFFFFF",
   },
   addNewBoxPressed: {
     backgroundColor: "#F0FDF4",
+  },
+  addNewBoxDisabled: {
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
   },
   addNewContent: {
     flexDirection: "row",
@@ -800,6 +854,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: PRIMARY,
+  },
+  addNewTitleDisabled: {
+    color: "#6B7280",
   },
   addNewSubtitle: {
     fontSize: 13,
