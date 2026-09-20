@@ -14,6 +14,9 @@ import {
   Modal,
   TextInput,
   Pressable,
+  Keyboard,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -86,7 +89,9 @@ export default function Bookings() {
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportBooking, setReportBooking] = useState<Booking | null>(null);
-  const [selectedReason, setSelectedReason] = useState<DisputeReason | null>(null);
+  const [selectedReason, setSelectedReason] = useState<DisputeReason | null>(
+    null,
+  );
   const [reportDescription, setReportDescription] = useState("");
   const [reportPhotos, setReportPhotos] = useState<string[]>([]);
 
@@ -204,7 +209,11 @@ export default function Bookings() {
               )
             }
           >
-            <Ionicons name="checkmark-circle-outline" size={16} color="#16A34A" />
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={16}
+              color="#16A34A"
+            />
             <Text style={styles.completeButtonText}>Completed</Text>
           </TouchableOpacity>
         </View>
@@ -327,7 +336,9 @@ export default function Bookings() {
             </View>
           </View>
 
-          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+          <View
+            style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}
+          >
             <Text style={[styles.statusText, { color: statusStyle.text }]}>
               {item.status}
             </Text>
@@ -372,7 +383,9 @@ export default function Bookings() {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Bookings</Text>
-          <Text style={styles.headerSubtitle}>Manage your bookings and jobs</Text>
+          <Text style={styles.headerSubtitle}>
+            Manage your bookings and jobs
+          </Text>
         </View>
         <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
           <Ionicons name="notifications-outline" size={28} color="#111" />
@@ -397,7 +410,10 @@ export default function Bookings() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.mainTab, mainTab === "received" && styles.activeMainTab]}
+          style={[
+            styles.mainTab,
+            mainTab === "received" && styles.activeMainTab,
+          ]}
           onPress={() => handleMainTabChange("received")}
           activeOpacity={0.8}
         >
@@ -423,11 +439,19 @@ export default function Bookings() {
             return (
               <TouchableOpacity
                 key={itemFilter}
-                style={[styles.filterButton, isActive && styles.activeFilterButton]}
+                style={[
+                  styles.filterButton,
+                  isActive && styles.activeFilterButton,
+                ]}
                 onPress={() => setFilter(itemFilter)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.filterText, isActive && styles.activeFilterText]}>
+                <Text
+                  style={[
+                    styles.filterText,
+                    isActive && styles.activeFilterText,
+                  ]}
+                >
                   {itemFilter}
                 </Text>
               </TouchableOpacity>
@@ -459,134 +483,194 @@ export default function Bookings() {
         visible={showReportModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowReportModal(false)}
+        onRequestClose={() => {
+          Keyboard.dismiss();
+          setShowReportModal(false);
+        }}
       >
-        <Pressable
+        <KeyboardAvoidingView
           style={styles.modalOverlay}
-          onPress={() => setShowReportModal(false)}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
         >
-          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Report Issue</Text>
-
-            {reportBooking ? (
-              <Text style={styles.modalSubtitle}>
-                {reportBooking.title} · {reportBooking.providerName}
-              </Text>
-            ) : null}
-
-            <Text style={styles.modalLabel}>What went wrong?</Text>
-
-            {DISPUTE_REASONS.map((reason) => {
-              const isSelected = selectedReason === reason;
-              return (
-                <TouchableOpacity
-                  key={reason}
-                  style={[styles.reasonRow, isSelected && styles.reasonRowSelected]}
-                  activeOpacity={0.7}
-                  onPress={() => setSelectedReason(reason)}
-                >
-                  <View
-                    style={[
-                      styles.reasonRadio,
-                      isSelected && styles.reasonRadioSelected,
-                    ]}
-                  >
-                    {isSelected ? <View style={styles.reasonRadioDot} /> : null}
-                  </View>
-                  <Text
-                    style={[
-                      styles.reasonText,
-                      isSelected && styles.reasonTextSelected,
-                    ]}
-                  >
-                    {reason}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-
-            <Text style={styles.modalLabel}>Describe the issue</Text>
-
-            <TextInput
-              style={styles.reportInput}
-              placeholder="Please explain what happened..."
-              placeholderTextColor="#9CA3AF"
-              multiline
-              value={reportDescription}
-              onChangeText={setReportDescription}
-              maxLength={500}
+          <View style={styles.modalOverlayInner}>
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowReportModal(false);
+              }}
             />
 
-            <Text style={styles.charCount}>{reportDescription.length}/500</Text>
+            <View style={styles.modalSheet}>
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View>
+                  <View style={styles.modalHandle} />
+                  <Text style={styles.modalTitle}>Report Issue</Text>
 
-            <Text style={styles.modalLabel}>Add photos (optional)</Text>
-            <Text style={styles.photosHint}>
-              You can add up to 3 photos for admin review.
-            </Text>
-
-            <View style={styles.photosRow}>
-              {reportPhotos.map((uri, index) => (
-                <View key={uri + String(index)} style={styles.photoThumbWrap}>
-                  <Image source={{ uri }} style={styles.photoThumb} />
-                  <TouchableOpacity
-                    style={styles.photoRemove}
-                    onPress={() =>
-                      setReportPhotos((prev) => prev.filter((_, i) => i !== index))
-                    }
-                  >
-                    <Ionicons name="close" size={12} color="#FFFFFF" />
-                  </TouchableOpacity>
+                  {reportBooking ? (
+                    <Text style={styles.modalSubtitle}>
+                      {reportBooking.title} · {reportBooking.providerName}
+                    </Text>
+                  ) : null}
                 </View>
-              ))}
+              </TouchableWithoutFeedback>
 
-              {reportPhotos.length < 3 ? (
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.modalScrollContent}
+              >
+                <Text style={styles.modalLabel}>What went wrong?</Text>
+
+                {DISPUTE_REASONS.map((reason) => {
+                  const isSelected = selectedReason === reason;
+                  return (
+                    <TouchableOpacity
+                      key={reason}
+                      style={[
+                        styles.reasonRow,
+                        isSelected && styles.reasonRowSelected,
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setSelectedReason(reason);
+                      }}
+                    >
+                      <View
+                        style={[
+                          styles.reasonRadio,
+                          isSelected && styles.reasonRadioSelected,
+                        ]}
+                      >
+                        {isSelected ? (
+                          <View style={styles.reasonRadioDot} />
+                        ) : null}
+                      </View>
+                      <Text
+                        style={[
+                          styles.reasonText,
+                          isSelected && styles.reasonTextSelected,
+                        ]}
+                      >
+                        {reason}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+
+                <Text style={styles.modalLabel}>Describe the issue</Text>
+
+                <TextInput
+                  style={styles.reportInput}
+                  placeholder="Please explain what happened..."
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  value={reportDescription}
+                  onChangeText={setReportDescription}
+                  maxLength={500}
+                  blurOnSubmit={false}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+
+                <Text style={styles.charCount}>
+                  {reportDescription.length}/500
+                </Text>
+
+                <Text style={styles.modalLabel}>Add photos (optional)</Text>
+                <Text style={styles.photosHint}>
+                  You can add up to 3 photos for admin review.
+                </Text>
+
+                <View style={styles.photosRow}>
+                  {reportPhotos.map((uri, index) => (
+                    <View
+                      key={uri + String(index)}
+                      style={styles.photoThumbWrap}
+                    >
+                      <Image source={{ uri }} style={styles.photoThumb} />
+                      <TouchableOpacity
+                        style={styles.photoRemove}
+                        onPress={() => {
+                          Keyboard.dismiss();
+                          setReportPhotos((prev) =>
+                            prev.filter((_, i) => i !== index),
+                          );
+                        }}
+                      >
+                        <Ionicons name="close" size={12} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+
+                  {reportPhotos.length < 3 ? (
+                    <TouchableOpacity
+                      style={styles.addPhotoBtn}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        pickReportPhotos();
+                      }}
+                    >
+                      <Ionicons
+                        name="camera-outline"
+                        size={22}
+                        color="#16A34A"
+                      />
+                      <Text style={styles.addPhotoText}>Add</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+
                 <TouchableOpacity
-                  style={styles.addPhotoBtn}
-                  activeOpacity={0.7}
-                  onPress={pickReportPhotos}
+                  style={styles.submitReportBtn}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    if (!selectedReason) {
+                      Alert.alert(
+                        "Select a reason",
+                        "Please choose what went wrong.",
+                      );
+                      return;
+                    }
+                    if (!reportDescription.trim()) {
+                      Alert.alert(
+                        "Description required",
+                        "Please describe the issue.",
+                      );
+                      return;
+                    }
+                    Alert.alert(
+                      "Report submitted",
+                      "Your report has been sent. Our team will review it shortly. Payment remains held until resolved.",
+                    );
+                    setShowReportModal(false);
+                    setReportBooking(null);
+                    setSelectedReason(null);
+                    setReportDescription("");
+                    setReportPhotos([]);
+                  }}
                 >
-                  <Ionicons name="camera-outline" size={22} color="#16A34A" />
-                  <Text style={styles.addPhotoText}>Add</Text>
+                  <Text style={styles.submitReportBtnText}>Submit Report</Text>
                 </TouchableOpacity>
-              ) : null}
+
+                <TouchableOpacity
+                  style={styles.cancelReportBtn}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setShowReportModal(false);
+                  }}
+                >
+                  <Text style={styles.cancelReportBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
-
-            <TouchableOpacity
-              style={styles.submitReportBtn}
-              activeOpacity={0.85}
-              onPress={() => {
-                if (!selectedReason) {
-                  Alert.alert("Select a reason", "Please choose what went wrong.");
-                  return;
-                }
-                if (!reportDescription.trim()) {
-                  Alert.alert("Description required", "Please describe the issue.");
-                  return;
-                }
-                Alert.alert(
-                  "Report submitted",
-                  "Your report has been sent. Our team will review it shortly. Payment remains held until resolved.",
-                );
-                setShowReportModal(false);
-                setReportBooking(null);
-                setSelectedReason(null);
-                setReportDescription("");
-                setReportPhotos([]);
-              }}
-            >
-              <Text style={styles.submitReportBtnText}>Submit Report</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.cancelReportBtn}
-              activeOpacity={0.7}
-              onPress={() => setShowReportModal(false)}
-            >
-              <Text style={styles.cancelReportBtnText}>Cancel</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -807,8 +891,15 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "flex-end",
+  },
+  modalOverlayInner: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   modalSheet: {
     backgroundColor: "#FFFFFF",
@@ -817,7 +908,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 28,
     paddingTop: 10,
-    maxHeight: "90%",
+    maxHeight: "88%",
+  },
+  modalScrollContent: {
+    paddingBottom: 24,
   },
   modalHandle: {
     alignSelf: "center",
