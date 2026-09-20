@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  Share,
 } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -51,7 +52,6 @@ export default function ProfessionalProfile() {
   // ============================================================
   // DISTANCE STATE
   // ============================================================
-
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [loadingDistance, setLoadingDistance] = useState(true);
 
@@ -64,6 +64,7 @@ export default function ProfessionalProfile() {
   const [reviewerName, setReviewerName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [saved, setSaved] = useState(() => isSaved(id ?? ""));
 
   // ============================================================
   // LOAD REVIEWS
@@ -74,6 +75,10 @@ export default function ProfessionalProfile() {
       setReviews(pro.reviews);
     }
   }, [pro]);
+
+  useEffect(() => {
+    setSaved(isSaved(id ?? ""));
+  }, [id]);
 
   // ============================================================
   // CALCULATE DISTANCE
@@ -202,6 +207,41 @@ export default function ProfessionalProfile() {
     }
   };
 
+  const onToggleSave = () => {
+    const result = toggleSave(pro.id);
+    if (!result.ok && result.reason === "limit") {
+      Alert.alert(
+        "Save limit reached",
+        "Free users can save up to 5 providers. Upgrade to Pro for unlimited saves.",
+        [
+          { text: "Not now", style: "cancel" },
+          {
+            text: "Upgrade",
+            onPress: () => router.push("/profile/subscription/subscription"),
+          },
+        ],
+      );
+      return;
+    }
+    if (result.ok) setSaved(result.saved);
+  };
+
+  const onShare = async () => {
+    const link = `doovly://professional/${pro.id}`;
+    try {
+      await Share.share({
+        message:
+          Platform.OS === "ios"
+            ? `Check out ${pro.name} (${pro.profession}) on Doovly`
+            : `Check out ${pro.name} (${pro.profession}) on Doovly\n${link}`,
+        url: link,
+        title: `${pro.name} · ${pro.profession}`,
+      });
+    } catch (e) {
+      console.log("Share error:", e);
+    }
+  };
+
   // ============================================================
   // DISTANCE LABEL
   // ============================================================
@@ -247,7 +287,28 @@ export default function ProfessionalProfile() {
 
           <Text style={styles.headerTitle}>Professional Profile</Text>
 
-          <View style={styles.headerSpacer} />
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={onToggleSave}
+              activeOpacity={0.7}
+              hitSlop={8}
+              style={styles.headerActionBtn}
+            >
+              <Ionicons
+                name={saved ? "heart" : "heart-outline"}
+                size={24}
+                color={saved ? "#EF4444" : "#16A34A"}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onShare}
+              activeOpacity={0.7}
+              hitSlop={8}
+              style={styles.headerActionBtn}
+            >
+              <Ionicons name="share-outline" size={24} color="#16A34A" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ======================================================
@@ -948,6 +1009,16 @@ const styles = StyleSheet.create({
   // ==========================================================
   // REVIEWS
   // ==========================================================
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    minWidth: 72,
+  },
+  headerActionBtn: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
 
   reviewsContainer: {
     width: "100%",
