@@ -11,6 +11,9 @@ import {
   Linking,
   Alert,
   Platform,
+  Modal,
+  TextInput,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +26,10 @@ import {
   statusColors,
   type Booking,
 } from "@/data/booking";
+import {
+  DISPUTE_REASONS,
+  type DisputeReason,
+} from "@/data/disputes";
 
 /**
  * Open the customer's booking location
@@ -89,6 +96,12 @@ export default function Bookings() {
   const [mainTab, setMainTab] = useState<"booked" | "received">("booked");
 
   const [filter, setFilter] = useState<string>("All");
+
+  // Report Issue modal
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportBooking, setReportBooking] = useState<Booking | null>(null);
+  const [selectedReason, setSelectedReason] = useState<DisputeReason | null>(null);
+  const [reportDescription, setReportDescription] = useState("");
 
   /**
    * Get bookings depending on selected tab.
@@ -310,12 +323,12 @@ export default function Bookings() {
           <TouchableOpacity
             style={[styles.actionButton, styles.declineButton]}
             activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert(
-                "Report Issue",
-                "You can report a problem with this job.",
-              )
-            }
+            onPress={() => {
+              setReportBooking(item);
+              setSelectedReason(null);
+              setReportDescription("");
+              setShowReportModal(true);
+            }}
           >
             <Ionicons name="close" size={16} color="#DC2626" />
 
@@ -604,6 +617,116 @@ export default function Bookings() {
           </View>
         }
       />
+
+      {/* ----------------------------------------
+          REPORT ISSUE MODAL
+      ----------------------------------------- */}
+      <Modal
+        visible={showReportModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowReportModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowReportModal(false)}
+        >
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHandle} />
+
+            <Text style={styles.modalTitle}>Report Issue</Text>
+
+            {reportBooking ? (
+              <Text style={styles.modalSubtitle}>
+                {reportBooking.title} · {reportBooking.providerName}
+              </Text>
+            ) : null}
+
+            <Text style={styles.modalLabel}>What went wrong?</Text>
+
+            {DISPUTE_REASONS.map((reason) => {
+              const isSelected = selectedReason === reason;
+              return (
+                <TouchableOpacity
+                  key={reason}
+                  style={[
+                    styles.reasonRow,
+                    isSelected && styles.reasonRowSelected,
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => setSelectedReason(reason)}
+                >
+                  <View
+                    style={[
+                      styles.reasonRadio,
+                      isSelected && styles.reasonRadioSelected,
+                    ]}
+                  >
+                    {isSelected ? <View style={styles.reasonRadioDot} /> : null}
+                  </View>
+                  <Text
+                    style={[
+                      styles.reasonText,
+                      isSelected && styles.reasonTextSelected,
+                    ]}
+                  >
+                    {reason}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            <Text style={styles.modalLabel}>Describe the issue</Text>
+
+            <TextInput
+              style={styles.reportInput}
+              placeholder="Please explain what happened..."
+              placeholderTextColor="#9CA3AF"
+              multiline
+              value={reportDescription}
+              onChangeText={setReportDescription}
+              maxLength={500}
+            />
+
+            <Text style={styles.charCount}>
+              {reportDescription.length}/500
+            </Text>
+
+            <TouchableOpacity
+              style={styles.submitReportBtn}
+              activeOpacity={0.85}
+              onPress={() => {
+                if (!selectedReason) {
+                  Alert.alert("Select a reason", "Please choose what went wrong.");
+                  return;
+                }
+                if (!reportDescription.trim()) {
+                  Alert.alert("Description required", "Please describe the issue.");
+                  return;
+                }
+                Alert.alert(
+                  "Report submitted",
+                  "Your report has been sent. Our team will review it shortly. Payment remains held until resolved.",
+                );
+                setShowReportModal(false);
+                setReportBooking(null);
+                setSelectedReason(null);
+                setReportDescription("");
+              }}
+            >
+              <Text style={styles.submitReportBtnText}>Submit Report</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelReportBtn}
+              activeOpacity={0.7}
+              onPress={() => setShowReportModal(false)}
+            >
+              <Text style={styles.cancelReportBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -987,5 +1110,128 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#9CA3AF",
     textAlign: "center",
+  },
+
+  /* Report Issue Modal only */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+    paddingTop: 10,
+    maxHeight: "90%",
+  },
+  modalHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E5E7EB",
+    marginBottom: 14,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginBottom: 16,
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  reasonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginBottom: 8,
+  },
+  reasonRowSelected: {
+    borderColor: "#16A34A",
+    backgroundColor: "#F0FDF4",
+  },
+  reasonRadio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: "#D1D5DB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  reasonRadioSelected: {
+    borderColor: "#16A34A",
+  },
+  reasonRadioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#16A34A",
+  },
+  reasonText: {
+    fontSize: 14,
+    color: "#374151",
+    flex: 1,
+  },
+  reasonTextSelected: {
+    color: "#16A34A",
+    fontWeight: "600",
+  },
+  reportInput: {
+    minHeight: 90,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: "#111827",
+    textAlignVertical: "top",
+  },
+  charCount: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    textAlign: "right",
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  submitReportBtn: {
+    backgroundColor: "#16A34A",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  submitReportBtnText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  cancelReportBtn: {
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  cancelReportBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6B7280",
   },
 });
