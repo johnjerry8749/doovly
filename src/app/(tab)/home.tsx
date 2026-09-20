@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   Modal,
@@ -22,6 +23,11 @@ import {
   starsFromReviewCount,
 } from "@/services/professionals";
 import { getCurrentUserId } from "@/services/notifications";
+import {
+  isSaved,
+  toggleSave,
+  isOwnProfessionalProfile,
+} from "@/services/savedProviders";
 
 import { NIGERIA_CITIES } from "@/data/cities";
 import { useLocation } from "@/context/LocationContext";
@@ -46,6 +52,31 @@ export default function Home() {
   const services = listServiceCategories();
   const professionals = listProfessionals();
 
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [favTick, setFavTick] = useState(0);
+
+  const onToggleFavorite = useCallback((proId: string) => {
+    // Cannot favorite own profile
+    if (isOwnProfessionalProfile(proId)) return;
+
+    const result = toggleSave(proId);
+    if (!result.ok && result.reason === "limit") {
+      Alert.alert(
+        "Save limit reached",
+        "Free users can save up to 5 providers. Upgrade to Pro for unlimited saves.",
+        [
+          { text: "Not now", style: "cancel" },
+          {
+            text: "Upgrade",
+            onPress: () => router.push("/profile/subscription/subscription"),
+          },
+        ],
+      );
+      return;
+    }
+    if (result.ok) setFavTick((t) => t + 1);
+  }, []);
+
   const filteredCities = useMemo(() => {
     const query = citySearch.trim().toLowerCase();
     if (!query) return [...NIGERIA_CITIES];
@@ -53,23 +84,43 @@ export default function Home() {
   }, [citySearch]);
 
   const nearbyProfessionals = useMemo(() => {
-    if (showAllNigeria || locationName === "All Nigeria") return professionals;
+    let list = professionals;
+
     if (
-      !locationName ||
-      locationName === "Location unavailable" ||
-      locationName.toLowerCase().includes("click here") ||
-      locationName.toLowerCase().includes("getting")
+      !(
+        showAllNigeria ||
+        locationName === "All Nigeria" ||
+        !locationName ||
+        locationName === "Location unavailable" ||
+        locationName.toLowerCase().includes("click here") ||
+        locationName.toLowerCase().includes("getting")
+      )
     ) {
-      return professionals;
+      const city = locationName.split(",")[0].trim().toLowerCase();
+      if (city && city !== "nigeria" && city !== "all nigeria") {
+        list = list.filter((professional) => {
+          const professionalCity = professional.city.toLowerCase();
+          return (
+            professionalCity.includes(city) || city.includes(professionalCity)
+          );
+        });
+      }
     }
-    const city = locationName.split(",")[0].trim().toLowerCase();
-    if (!city || city === "nigeria" || city === "all nigeria")
-      return professionals;
-    return professionals.filter((professional) => {
-      const professionalCity = professional.city.toLowerCase();
-      return professionalCity.includes(city) || city.includes(professionalCity);
-    });
-  }, [locationName, showAllNigeria, professionals]);
+
+    if (selectedCategory && selectedCategory !== "All") {
+      const cat = selectedCategory.toLowerCase();
+      list = list.filter((p) => {
+        const prof = p.profession.toLowerCase();
+        return (
+          prof === cat ||
+          prof.includes(cat) ||
+          (cat === "spa" && prof.includes("massage"))
+        );
+      });
+    }
+
+    return list;
+  }, [locationName, showAllNigeria, professionals, selectedCategory]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -151,22 +202,52 @@ export default function Home() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.servicesContainer}
         >
-          {services.map((service, index) => (
-            <TouchableOpacity
-              key={`${service.name}-${index}`}
-              style={styles.serviceItem}
-              activeOpacity={0.7}
+          <TouchableOpacity
+            style={styles.serviceItem}
+            activeOpacity={0.7}
+            onPress={() => setSelectedCategory("All")}
+          >
+            <View style={styles.serviceCircle}>
+              <MaterialCommunityIcons
+                name="apps"
+                size={31}
+                color={selectedCategory === "All" ? "#159447" : "#087A38"}
+              />
+            </View>
+            <Text
+              style={[
+                styles.serviceName,
+                selectedCategory === "All" && { color: "#159447" },
+              ]}
             >
-              <View style={styles.serviceCircle}>
-                <MaterialCommunityIcons
-                  name={service.icon as any}
-                  size={31}
-                  color="#087A38"
-                />
-              </View>
-              <Text style={styles.serviceName}>{service.name}</Text>
-            </TouchableOpacity>
-          ))}
+              All
+            </Text>
+          </TouchableOpacity>
+
+          {services.map((service, index) => {
+            const active = selectedCategory === service.name;
+            return (
+              <TouchableOpacity
+                key={`${service.name}-${index}`}
+                style={styles.serviceItem}
+                activeOpacity={0.7}
+                onPress={() => setSelectedCategory(service.name)}
+              >
+                <View style={styles.serviceCircle}>
+                  <MaterialCommunityIcons
+                    name={service.icon as any}
+                    size={31}
+                    color={active ? "#159447" : "#087A38"}
+                  />
+                </View>
+                <Text
+                  style={[styles.serviceName, active && { color: "#159447" }]}
+                >
+                  {service.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         <View style={styles.sectionHeader}>
@@ -208,65 +289,77 @@ export default function Home() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.professionalsContainer}
           >
-            {nearbyProfessionals.map((person) => (
-              <TouchableOpacity
-                key={person.id}
-                style={styles.professionalCard}
-                activeOpacity={0.8}
-                onPress={() =>
-                  router.push({
-                    pathname: "/professional/[id]",
-                    params: {
-                      id: person.id,
-                      from: "home", // or "services"
-                    },
-                  })
-                }
-              >
+            {nearbyProfessionals.map((person) => {
+              const isOwn = isOwnProfessionalProfile(person.id);
+              const liked = isOwn || isSaved(person.id);
+
+              return (
                 <TouchableOpacity
-                  style={styles.heartButton}
-                  activeOpacity={0.7}
-                  onPress={(event) => event.stopPropagation()}
+                  key={`${person.id}-${favTick}`}
+                  style={styles.professionalCard}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/professional/[id]",
+                      params: {
+                        id: person.id,
+                        from: "home",
+                      },
+                    })
+                  }
                 >
-                  <Ionicons name="heart-outline" size={17} color="#111" />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.heartButton}
+                    activeOpacity={isOwn ? 1 : 0.7}
+                    disabled={isOwn}
+                    onPress={() => onToggleFavorite(person.id)}
+                  >
+                    <Ionicons
+                      name={liked ? "heart" : "heart-outline"}
+                      size={17}
+                      color={liked ? "#EF4444" : "#111"}
+                    />
+                  </TouchableOpacity>
 
-                <View style={styles.profileImageContainer}>
-                  <Image source={person.image} style={styles.profileImage} />
-                  {person.verified && (
-                    <View style={styles.verifiedBadge}>
-                      <Image
-                        source={require("@/assets/premium/checkmark.png")}
-                        style={{ width: 40, height: 40, marginLeft: -1 }}
-                        resizeMode="contain"
-                      />
-                    </View>
-                  )}
-                </View>
+                  <View style={styles.profileImageContainer}>
+                    <Image source={person.image} style={styles.profileImage} />
+                    {person.verified && (
+                      <View style={styles.verifiedBadge}>
+                        <Image
+                          source={require("@/assets/premium/checkmark.png")}
+                          style={{ width: 40, height: 40, marginLeft: -1 }}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    )}
+                  </View>
 
-                <Text style={styles.professionalName} numberOfLines={1}>
-                  {person.name}
-                </Text>
-
-                <View style={styles.ratingContainer}>
-                  <Ionicons name="star" size={12} color="#F4C400" />
-                  <Text style={styles.rating}>
-                    {starsFromReviewCount(person.reviews.length)}
+                  <Text style={styles.professionalName} numberOfLines={1}>
+                    {person.name}
                   </Text>
-                  <Text style={styles.reviews}>({person.reviews.length})</Text>
-                </View>
 
-                <Text style={styles.profession} numberOfLines={1}>
-                  {person.profession}
-                </Text>
+                  <View style={styles.ratingContainer}>
+                    <Ionicons name="star" size={12} color="#F4C400" />
+                    <Text style={styles.rating}>
+                      {starsFromReviewCount(person.reviews.length)}
+                    </Text>
+                    <Text style={styles.reviews}>
+                      ({person.reviews.length})
+                    </Text>
+                  </View>
 
-                <Text style={styles.cityText} numberOfLines={1}>
-                  {person.city}
-                </Text>
+                  <Text style={styles.profession} numberOfLines={1}>
+                    {person.profession}
+                  </Text>
 
-                <Text style={styles.price}>From {person.priceFrom}</Text>
-              </TouchableOpacity>
-            ))}
+                  <Text style={styles.cityText} numberOfLines={1}>
+                    {person.city}
+                  </Text>
+
+                  <Text style={styles.price}>From {person.priceFrom}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         )}
 
@@ -606,7 +699,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
   },
-
   shieldContainer: {
     width: 44,
     height: 44,
@@ -616,26 +708,22 @@ const styles = StyleSheet.create({
     marginRight: 10,
     flexShrink: 0,
   },
-
   verifiedTextContainer: {
     flex: 2,
     minWidth: 0,
     marginRight: 8,
   },
-
   verifiedTitle: {
     fontSize: 14,
     fontWeight: "800",
     color: "#111",
     marginBottom: 3,
   },
-
   verifiedSubtitle: {
     fontSize: 11,
     color: "#555",
     lineHeight: 16,
   },
-
   howButton: {
     backgroundColor: "#159447",
     borderRadius: 10,
@@ -644,15 +732,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    // flexShrink: 1,
     maxWidth: 105,
   },
-
   howButtonText: {
     color: "#fff",
     fontWeight: "700",
     fontSize: 11,
-    // flexShrink: 1,
   },
   bottomSpacing: { height: 30 },
   modalOverlay: {
