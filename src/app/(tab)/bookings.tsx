@@ -102,6 +102,7 @@ export default function Bookings() {
   const [reportBooking, setReportBooking] = useState<Booking | null>(null);
   const [selectedReason, setSelectedReason] = useState<DisputeReason | null>(null);
   const [reportDescription, setReportDescription] = useState("");
+  const [reportPhotos, setReportPhotos] = useState<string[]>([]);
 
   /**
    * Get bookings depending on selected tab.
@@ -151,16 +152,6 @@ export default function Bookings() {
    * - Completed = No button
    */
   const renderStatusActions = (item: Booking) => {
-    /**
-     * ----------------------------------------
-     * RECEIVED JOBS + PENDING
-     * ----------------------------------------
-     *
-     * Provider can:
-     * - Open customer's location
-     * - Accept job
-     * - Decline job
-     */
     if (mainTab === "received" && item.status === "Pending") {
       return (
         <View style={styles.actionRow}>
@@ -204,14 +195,6 @@ export default function Bookings() {
       );
     }
 
-    /**
-     * ----------------------------------------
-     * RECEIVED JOBS + ACCEPTED / ONGOING
-     * ----------------------------------------
-     *
-     * Provider marks job as done → status becomes
-     * "Awaiting Approval". Payment is NOT released yet.
-     */
     if (
       mainTab === "received" &&
       (item.status === "Accepted" || item.status === "Ongoing")
@@ -252,25 +235,10 @@ export default function Bookings() {
       );
     }
 
-    /**
-     * ----------------------------------------
-     * RECEIVED JOBS + AWAITING APPROVAL
-     * ----------------------------------------
-     *
-     * Professional is waiting for the customer to approve.
-     * No extra action buttons needed on this side.
-     */
     if (mainTab === "received" && item.status === "Awaiting Approval") {
       return null;
     }
 
-    /**
-     * ----------------------------------------
-     * MY BOOKINGS + UPCOMING / ACCEPTED / ONGOING
-     * ----------------------------------------
-     *
-     * Customer can ONLY cancel.
-     */
     if (
       mainTab === "booked" &&
       (item.status === "Upcoming" ||
@@ -294,14 +262,6 @@ export default function Bookings() {
       );
     }
 
-    /**
-     * ----------------------------------------
-     * MY BOOKINGS + AWAITING APPROVAL
-     * ----------------------------------------
-     *
-     * Customer must Approve before payment is released.
-     * Reuses existing button styles (no new CSS).
-     */
     if (mainTab === "booked" && item.status === "Awaiting Approval") {
       return (
         <View style={styles.actionRow}>
@@ -327,6 +287,7 @@ export default function Bookings() {
               setReportBooking(item);
               setSelectedReason(null);
               setReportDescription("");
+              setReportPhotos([]);
               setShowReportModal(true);
             }}
           >
@@ -338,22 +299,10 @@ export default function Bookings() {
       );
     }
 
-    /**
-     * ----------------------------------------
-     * COMPLETED
-     * ----------------------------------------
-     *
-     * No action button.
-     */
     if (item.status === "Completed") {
       return null;
     }
 
-    /**
-     * ----------------------------------------
-     * CANCELLED / DECLINED
-     * ----------------------------------------
-     */
     if (item.status === "Cancelled" || item.status === "Declined") {
       return (
         <View style={styles.actionRow}>
@@ -372,19 +321,12 @@ export default function Bookings() {
     return null;
   };
 
-  /**
-   * Render booking card.
-   */
   const renderBooking = ({ item }: { item: Booking }) => {
     const statusStyle = statusColors[item.status];
 
     return (
       <View style={styles.card}>
-        {/* ----------------------------------------
-            TOP SECTION
-        ----------------------------------------- */}
         <View style={styles.topSection}>
-          {/* Avatar */}
           <View style={styles.avatarContainer}>
             <Image
               source={item.image}
@@ -392,7 +334,6 @@ export default function Bookings() {
               resizeMode="cover"
             />
 
-            {/* Verification badge */}
             {item.verified === true && (
               <View style={styles.verifiedBadge}>
                 <Image
@@ -409,7 +350,6 @@ export default function Bookings() {
             )}
           </View>
 
-          {/* Provider information */}
           <View style={styles.providerInfo}>
             <View style={styles.nameRow}>
               <Text style={styles.providerName} numberOfLines={1}>
@@ -426,7 +366,6 @@ export default function Bookings() {
             </View>
           </View>
 
-          {/* Status */}
           <View
             style={[
               styles.statusBadge,
@@ -448,14 +387,8 @@ export default function Bookings() {
           </View>
         </View>
 
-        {/* ----------------------------------------
-            JOB TITLE
-        ----------------------------------------- */}
         <Text style={styles.jobTitle}>{item.title}</Text>
 
-        {/* ----------------------------------------
-            BOOKING INFORMATION
-        ----------------------------------------- */}
         <View style={styles.infoContainer}>
           <View style={styles.infoItem}>
             <Ionicons name="calendar-outline" size={17} color="#6B7280" />
@@ -472,9 +405,6 @@ export default function Bookings() {
           </View>
         </View>
 
-        {/* ----------------------------------------
-            CONTACT ACTIONS
-        ----------------------------------------- */}
         <View style={styles.contactRow}>
           <TouchableOpacity style={styles.contactButton} activeOpacity={0.8}>
             <Ionicons name="chatbubble-outline" size={17} color="#16A34A" />
@@ -489,9 +419,6 @@ export default function Bookings() {
           </TouchableOpacity>
         </View>
 
-        {/* ----------------------------------------
-            STATUS ACTIONS
-        ----------------------------------------- */}
         {renderStatusActions(item)}
       </View>
     );
@@ -501,9 +428,6 @@ export default function Bookings() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* ----------------------------------------
-          HEADER
-      ----------------------------------------- */}
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Bookings</Text>
@@ -520,9 +444,6 @@ export default function Bookings() {
         </TouchableOpacity>
       </View>
 
-      {/* ----------------------------------------
-          MAIN TABS
-      ----------------------------------------- */}
       <View style={styles.mainTabsContainer}>
         <TouchableOpacity
           style={[styles.mainTab, mainTab === "booked" && styles.activeMainTab]}
@@ -558,9 +479,6 @@ export default function Bookings() {
         </TouchableOpacity>
       </View>
 
-      {/* ----------------------------------------
-          STATUS FILTERS
-      ----------------------------------------- */}
       <View style={styles.filterWrapper}>
         <ScrollView
           horizontal
@@ -594,9 +512,6 @@ export default function Bookings() {
         </ScrollView>
       </View>
 
-      {/* ----------------------------------------
-          BOOKINGS LIST
-      ----------------------------------------- */}
       <FlatList
         data={filteredData}
         keyExtractor={(item) => item.id}
@@ -618,9 +533,6 @@ export default function Bookings() {
         }
       />
 
-      {/* ----------------------------------------
-          REPORT ISSUE MODAL
-      ----------------------------------------- */}
       <Modal
         visible={showReportModal}
         transparent
@@ -692,6 +604,45 @@ export default function Bookings() {
               {reportDescription.length}/500
             </Text>
 
+            <Text style={styles.modalLabel}>Add photos (optional)</Text>
+            <Text style={styles.photosHint}>
+              You can add up to 3 photos for admin review.
+            </Text>
+
+            <View style={styles.photosRow}>
+              {reportPhotos.map((uri, index) => (
+                <View key={uri + String(index)} style={styles.photoThumbWrap}>
+                  <Image source={{ uri }} style={styles.photoThumb} />
+                  <TouchableOpacity
+                    style={styles.photoRemove}
+                    onPress={() =>
+                      setReportPhotos((prev) =>
+                        prev.filter((_, i) => i !== index),
+                      )
+                    }
+                  >
+                    <Ionicons name="close" size={12} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {reportPhotos.length < 3 ? (
+                <TouchableOpacity
+                  style={styles.addPhotoBtn}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    // Mock for now — later replace with expo-image-picker
+                    if (reportPhotos.length >= 3) return;
+                    const mockUri = `https://picsum.photos/seed/doovly${Date.now()}/200`;
+                    setReportPhotos((prev) => [...prev, mockUri]);
+                  }}
+                >
+                  <Ionicons name="camera-outline" size={22} color="#16A34A" />
+                  <Text style={styles.addPhotoText}>Add</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
             <TouchableOpacity
               style={styles.submitReportBtn}
               activeOpacity={0.85}
@@ -712,6 +663,7 @@ export default function Bookings() {
                 setReportBooking(null);
                 setSelectedReason(null);
                 setReportDescription("");
+                setReportPhotos([]);
               }}
             >
               <Text style={styles.submitReportBtnText}>Submit Report</Text>
@@ -737,9 +689,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
 
-  /* ----------------------------------------
-     HEADER
-  ----------------------------------------- */
   header: {
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 20,
@@ -780,9 +729,6 @@ const styles = StyleSheet.create({
     top: 0,
   },
 
-  /* ----------------------------------------
-     MAIN TABS
-  ----------------------------------------- */
   mainTabsContainer: {
     backgroundColor: "#FFFFFF",
     flexDirection: "row",
@@ -814,9 +760,6 @@ const styles = StyleSheet.create({
     color: "#16A34A",
   },
 
-  /* ----------------------------------------
-     FILTERS
-  ----------------------------------------- */
   filterWrapper: {
     backgroundColor: "#FFFFFF",
     paddingVertical: 10,
@@ -848,17 +791,11 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  /* ----------------------------------------
-     LIST
-  ----------------------------------------- */
   listContent: {
     padding: 16,
     paddingBottom: 40,
   },
 
-  /* ----------------------------------------
-     BOOKING CARD
-  ----------------------------------------- */
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
@@ -1112,7 +1049,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  /* Report Issue Modal only */
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
@@ -1233,5 +1169,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#6B7280",
+  },
+  photosHint: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginBottom: 10,
+  },
+  photosRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 10,
+  },
+  photoThumbWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    overflow: "hidden",
+    position: "relative",
+  },
+  photoThumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+  },
+  photoRemove: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addPhotoBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#16A34A",
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F0FDF4",
+  },
+  addPhotoText: {
+    marginTop: 2,
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#16A34A",
   },
 });
