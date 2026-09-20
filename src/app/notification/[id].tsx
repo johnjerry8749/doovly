@@ -69,7 +69,7 @@ function NotifIcon({ type }: { type: NotifType }) {
     return (
       <View style={[styles.iconCircle, { backgroundColor: LIGHT_GREEN }]}>
         <Image
-          source={require("@/assets/images/icon.jpg")}
+          source={require("@/assets/images/icon.png")}
           style={styles.logoIcon}
           resizeMode="contain"
         />
@@ -260,8 +260,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   logoIcon: {
-    width: 22,
-    height: 22,
+    width: 62,
+    height: 62,
     borderRadius: 6,
   },
   cardBody: {

@@ -21,6 +21,7 @@ import {
   listServiceRequests,
   type ServiceRequest,
 } from "@/services/serviceRequests";
+import { getCurrentUserId } from "@/services/notifications";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { useLocation } from "@/context/LocationContext";
@@ -268,6 +269,14 @@ export default function Services() {
           <TouchableOpacity
             style={styles.notificationButton}
             activeOpacity={0.7}
+            onPress={() =>
+              router.push({
+                pathname: "/notification/[id]",
+                params: {
+                  id: String(getCurrentUserId()),
+                },
+              })
+            }
           >
             <Ionicons name="notifications-outline" size={24} color="#111" />
             <View style={styles.notificationDot} />

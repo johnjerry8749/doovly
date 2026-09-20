@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { getCurrentUserId } from "@/services/notifications";
 import { getProfessionalById } from "@/services/professionals";
 
 // =====================================================
@@ -286,7 +287,14 @@ export default function Profile() {
             icon={<MenuIcon name="notifications-outline" />}
             title="Notifications"
             badge={3}
-            onPress={() => router.push("/notification/[id]")}
+            onPress={() =>
+              router.push({
+                pathname: "/notification/[id]",
+                params: {
+                  id: String(getCurrentUserId()),
+                },
+              })
+            }
           />
         </View>
 
@@ -473,7 +481,7 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     flexShrink: 1,
   },
- 
+
   editButton: {
     marginTop: 14,
     alignSelf: "flex-start",

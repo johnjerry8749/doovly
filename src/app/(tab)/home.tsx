@@ -21,6 +21,7 @@ import {
   listServiceCategories,
   starsFromReviewCount,
 } from "@/services/professionals";
+import { getCurrentUserId } from "@/services/notifications";
 
 import { NIGERIA_CITIES } from "@/data/cities";
 import { useLocation } from "@/context/LocationContext";
@@ -101,7 +102,14 @@ export default function Home() {
           <TouchableOpacity
             style={styles.notificationButton}
             activeOpacity={0.7}
-            onPress={() => router.push(`/notification/${getCurrentUserId()}`)}
+            onPress={() =>
+              router.push({
+                pathname: "/notification/[id]",
+                params: {
+                  id: String(getCurrentUserId()),
+                },
+              })
+            }
           >
             <Ionicons name="notifications-outline" size={28} color="#111" />
             <View style={styles.notificationDot} />

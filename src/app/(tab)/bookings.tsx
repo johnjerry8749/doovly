@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { router } from "expo-router";
 import {
   View,
   Text,
@@ -30,10 +31,8 @@ import {
   statusColors,
   type Booking,
 } from "@/data/booking";
-import {
-  DISPUTE_REASONS,
-  type DisputeReason,
-} from "@/data/disputes";
+import { DISPUTE_REASONS, type DisputeReason } from "@/data/disputes";
+import { getCurrentUserId } from "@/services/notifications";
 
 const openBookingLocation = async (item: Booking) => {
   try {
@@ -307,7 +306,11 @@ export default function Bookings() {
       <View style={styles.card}>
         <View style={styles.topSection}>
           <View style={styles.avatarContainer}>
-            <Image source={item.image} style={styles.avatar} resizeMode="cover" />
+            <Image
+              source={item.image}
+              style={styles.avatar}
+              resizeMode="cover"
+            />
             {item.verified === true && (
               <View style={styles.verifiedBadge}>
                 <Image
@@ -387,10 +390,21 @@ export default function Bookings() {
             Manage your bookings and jobs
           </Text>
         </View>
-        <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.notificationButton}
+          activeOpacity={0.7}
+          onPress={() =>
+            router.push({
+              pathname: "/notification/[id]",
+              params: {
+                id: String(getCurrentUserId()),
+              },
+            })
+          }
+        >
           <Ionicons name="notifications-outline" size={28} color="#111" />
+
           <View style={styles.notificationDot} />
-          
         </TouchableOpacity>
       </View>
 
