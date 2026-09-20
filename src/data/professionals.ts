@@ -48,6 +48,7 @@ export type Professional = {
   longitude: number;
   role: string;
 
+
   services: ProService[];
 
   portfolio: CompletedProject[];
@@ -566,7 +567,8 @@ export const PROFESSIONALS: Professional[] = [
         icon: "face-man",
       },
     ],
-
+    // None subscribe user allow only 5 images
+    //subcribe pro user only allow up to 20 img 
     portfolio: [
       {
         id: "p1",
