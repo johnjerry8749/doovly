@@ -125,18 +125,16 @@ export default function Bookings() {
    * Render action buttons depending on
    * the current booking status.
    *
-   * IMPORTANT:
-   *
-   * My Bookings:
-   * - Upcoming  = Cancel only
-   * - Accepted  = Cancel only
-   * - Ongoing   = Cancel only
+   * My Bookings (customer):
+   * - Upcoming / Accepted / Ongoing = Cancel only
+   * - Awaiting Approval = Approve + Report Issue
    * - Completed = No button
    *
-   * Received Jobs:
-   * - Pending   = Map + Accept + Decline
-   * - Accepted  = Cancel + Completed
-   * - Ongoing   = Cancel + Completed
+   * Received Jobs (professional):
+   * - Pending = Map + Accept + Decline
+   * - Accepted / Ongoing = Cancel + Completed
+   *   (Completed → moves to Awaiting Approval)
+   * - Awaiting Approval = waiting for customer
    * - Completed = No button
    */
   const renderStatusActions = (item: Booking) => {
@@ -166,6 +164,12 @@ export default function Bookings() {
           <TouchableOpacity
             style={[styles.actionButton, styles.acceptButton]}
             activeOpacity={0.8}
+            onPress={() =>
+              Alert.alert(
+                "Accept Job",
+                "This job will be marked as Accepted.",
+              )
+            }
           >
             <Ionicons name="checkmark" size={16} color="#FFFFFF" />
 
@@ -175,6 +179,9 @@ export default function Bookings() {
           <TouchableOpacity
             style={[styles.actionButton, styles.declineButton]}
             activeOpacity={0.8}
+            onPress={() =>
+              Alert.alert("Decline Job", "This job will be declined.")
+            }
           >
             <Ionicons name="close" size={16} color="#DC2626" />
 
@@ -186,22 +193,24 @@ export default function Bookings() {
 
     /**
      * ----------------------------------------
-     * RECEIVED JOBS + ACCEPTED
+     * RECEIVED JOBS + ACCEPTED / ONGOING
      * ----------------------------------------
      *
-     * Provider can:
-     * - Cancel
-     * - Mark job as Completed
-     *
-     * This Completed button belongs ONLY
-     * to the provider/receiver.
+     * Provider marks job as done → status becomes
+     * "Awaiting Approval". Payment is NOT released yet.
      */
-    if (mainTab === "received" && item.status === "Accepted") {
+    if (
+      mainTab === "received" &&
+      (item.status === "Accepted" || item.status === "Ongoing")
+    ) {
       return (
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={[styles.actionButton, styles.cancelButton]}
             activeOpacity={0.8}
+            onPress={() =>
+              Alert.alert("Cancel Job", "This job will be cancelled.")
+            }
           >
             <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
 
@@ -211,6 +220,12 @@ export default function Bookings() {
           <TouchableOpacity
             style={[styles.actionButton, styles.completeButton]}
             activeOpacity={0.8}
+            onPress={() =>
+              Alert.alert(
+                "Mark as Completed",
+                "Customer will be asked to Approve the job before payment is released.",
+              )
+            }
           >
             <Ionicons
               name="checkmark-circle-outline"
@@ -226,56 +241,37 @@ export default function Bookings() {
 
     /**
      * ----------------------------------------
-     * RECEIVED JOBS + ONGOING
+     * RECEIVED JOBS + AWAITING APPROVAL
      * ----------------------------------------
      *
-     * Provider can:
-     * - Cancel
-     * - Mark job as Completed
+     * Professional is waiting for the customer to approve.
+     * No extra action buttons needed on this side.
      */
-    if (mainTab === "received" && item.status === "Ongoing") {
-      return (
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.cancelButton]}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
-
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.completeButton]}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="checkmark-circle-outline"
-              size={16}
-              color="#16A34A"
-            />
-
-            <Text style={styles.completeButtonText}>Completed</Text>
-          </TouchableOpacity>
-        </View>
-      );
+    if (mainTab === "received" && item.status === "Awaiting Approval") {
+      return null;
     }
 
     /**
      * ----------------------------------------
-     * MY BOOKINGS + UPCOMING
+     * MY BOOKINGS + UPCOMING / ACCEPTED / ONGOING
      * ----------------------------------------
      *
      * Customer can ONLY cancel.
-     *
-     * There is NO Completed button.
      */
-    if (mainTab === "booked" && item.status === "Upcoming") {
+    if (
+      mainTab === "booked" &&
+      (item.status === "Upcoming" ||
+        item.status === "Accepted" ||
+        item.status === "Ongoing")
+    ) {
       return (
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={[styles.actionButton, styles.cancelButton]}
             activeOpacity={0.8}
+            onPress={() =>
+              Alert.alert("Cancel Booking", "This booking will be cancelled.")
+            }
           >
             <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
 
@@ -287,47 +283,43 @@ export default function Bookings() {
 
     /**
      * ----------------------------------------
-     * MY BOOKINGS + ACCEPTED
+     * MY BOOKINGS + AWAITING APPROVAL
      * ----------------------------------------
      *
-     * Customer can ONLY cancel.
-     *
-     * There is NO Completed button.
+     * Customer must Approve before payment is released.
+     * Reuses existing button styles (no new CSS).
      */
-    if (mainTab === "booked" && item.status === "Accepted") {
+    if (mainTab === "booked" && item.status === "Awaiting Approval") {
       return (
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.cancelButton]}
+            style={[styles.actionButton, styles.acceptButton]}
             activeOpacity={0.8}
+            onPress={() =>
+              Alert.alert(
+                "Approve Job",
+                "Job approved. Payment will be released to the professional.",
+              )
+            }
           >
-            <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
+            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
 
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.acceptButtonText}>Approve</Text>
           </TouchableOpacity>
-        </View>
-      );
-    }
 
-    /**
-     * ----------------------------------------
-     * MY BOOKINGS + ONGOING
-     * ----------------------------------------
-     *
-     * Customer can ONLY cancel.
-     *
-     * There is NO Completed button.
-     */
-    if (mainTab === "booked" && item.status === "Ongoing") {
-      return (
-        <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.cancelButton]}
+            style={[styles.actionButton, styles.declineButton]}
             activeOpacity={0.8}
+            onPress={() =>
+              Alert.alert(
+                "Report Issue",
+                "You can report a problem with this job.",
+              )
+            }
           >
-            <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
+            <Ionicons name="close" size={16} color="#DC2626" />
 
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.declineButtonText}>Report Issue</Text>
           </TouchableOpacity>
         </View>
       );
@@ -750,52 +742,47 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
 
-  /* ----------------------------------------
-     TOP SECTION
-  ----------------------------------------- */
   topSection: {
     flexDirection: "row",
     alignItems: "center",
   },
 
   avatarContainer: {
-    width: 57,
-    height: 57,
     position: "relative",
+    width: 52,
+    height: 52,
   },
 
   avatar: {
-    width: 57,
-    height: 57,
-    borderRadius: 29,
-    backgroundColor: "#F3F4F6",
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#E5E7EB",
   },
 
-  /* ----------------------------------------
-     VERIFICATION BADGE
-  ----------------------------------------- */
   verifiedBadge: {
     position: "absolute",
-    right: -2,
-    bottom: -2,
-    width: 21,
-    height: 21,
-    borderRadius: 11,
+    right: -6,
+    bottom: -4,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
-   },
-
-  verifiedBadgeImage: {
-    width: 21,
-    height: 21,
   },
 
-  /* ----------------------------------------
-     PROVIDER INFORMATION
-  ----------------------------------------- */
+  verifiedBadgeImage: {
+    width: 28,
+    height: 28,
+  },
+
   providerInfo: {
     flex: 1,
     marginLeft: 12,
@@ -808,7 +795,6 @@ const styles = StyleSheet.create({
   },
 
   providerName: {
-    flex: 1,
     fontSize: 15,
     fontWeight: "700",
     color: "#111827",
@@ -817,70 +803,57 @@ const styles = StyleSheet.create({
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 6,
+    marginTop: 3,
   },
 
   ratingText: {
     marginLeft: 4,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#374151",
+    color: "#111827",
   },
 
   reviewText: {
     marginLeft: 4,
-    fontSize: 11,
+    fontSize: 12,
     color: "#9CA3AF",
   },
 
-  /* ----------------------------------------
-     STATUS
-  ----------------------------------------- */
   statusBadge: {
-    paddingHorizontal: 9,
+    paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
-    alignSelf: "flex-start",
   },
 
   statusText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
   },
 
-  /* ----------------------------------------
-     JOB TITLE
-  ----------------------------------------- */
   jobTitle: {
-    marginTop: 16,
-    fontSize: 17,
-    fontWeight: "700",
+    marginTop: 14,
+    fontSize: 15,
+    fontWeight: "600",
     color: "#111827",
   },
 
-  /* ----------------------------------------
-     INFORMATION
-  ----------------------------------------- */
   infoContainer: {
-    marginTop: 12,
+    marginTop: 10,
+    gap: 6,
   },
 
   infoItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
   },
 
   infoText: {
-    flex: 1,
-    marginLeft: 9,
+    marginLeft: 8,
     fontSize: 13,
     color: "#6B7280",
+    flex: 1,
   },
 
-  /* ----------------------------------------
-     CONTACT BUTTONS
-  ----------------------------------------- */
   contactRow: {
     flexDirection: "row",
     marginTop: 2,
@@ -902,9 +875,6 @@ const styles = StyleSheet.create({
     color: "#16A34A",
   },
 
-  /* ----------------------------------------
-     ACTION ROW
-  ----------------------------------------- */
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -923,7 +893,6 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
 
-  /* Map */
   mapButton: {
     backgroundColor: "#EFF6FF",
   },
@@ -935,7 +904,6 @@ const styles = StyleSheet.create({
     color: "#16A34A",
   },
 
-  /* Accept */
   acceptButton: {
     backgroundColor: "#16A34A",
   },
@@ -947,7 +915,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  /* Decline */
   declineButton: {
     backgroundColor: "#FEF2F2",
   },
@@ -959,7 +926,6 @@ const styles = StyleSheet.create({
     color: "#DC2626",
   },
 
-  /* Cancel */
   cancelButton: {
     backgroundColor: "#FEF2F2",
   },
@@ -971,7 +937,6 @@ const styles = StyleSheet.create({
     color: "#DC2626",
   },
 
-  /* Complete */
   completeButton: {
     backgroundColor: "#F0FDF4",
   },
@@ -983,7 +948,6 @@ const styles = StyleSheet.create({
     color: "#16A34A",
   },
 
-  /* Other */
   secondaryActionButton: {
     backgroundColor: "#EFF6FF",
   },
@@ -995,9 +959,6 @@ const styles = StyleSheet.create({
     color: "#16A34A",
   },
 
-  /* ----------------------------------------
-     EMPTY STATE
-  ----------------------------------------- */
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
