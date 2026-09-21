@@ -1,9 +1,11 @@
 /**
- * Notifications service
- * --------------------
- * Screens import ONLY from here.
+ * In-App Notifications service
+ * ----------------------------
+ * Screens import ONLY from here for the notification list inside the app.
  * NOW  → mock from src/data/notifications.ts filtered by userId
  * LATER → apiRequest(`/notifications?userId=...`)
+ *
+ * NOTE: Push notifications (device alerts) live in src/services/notifications/
  */
 
 import {

@@ -20,7 +20,7 @@ import {
   markAllNotificationsRead,
   type Notification,
   type NotifType,
-} from "@/services/notifications";
+} from "@/services/inAppNotifications";
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#E8F5E9";
