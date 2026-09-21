@@ -22,7 +22,7 @@ import {
   listServiceCategories,
   starsFromReviewCount,
 } from "@/services/professionals";
-// import { getCurrentUserId } from "@/services/notifications";
+import { getCurrentUserId } from "@/services/notifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
 
 import { NIGERIA_CITIES } from "@/data/cities";
