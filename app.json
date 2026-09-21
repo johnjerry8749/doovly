@@ -18,7 +18,8 @@
         "NSLocationWhenInUseUsageDescription": "Doovly needs your location to show nearby service professionals.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Doovly needs your location to show nearby service professionals.",
         "NSPhotoLibraryUsageDescription": "Doovly needs access to your photos so you can attach images when reporting an issue.",
-        "NSCameraUsageDescription": "Doovly needs camera access so you can take photos when reporting an issue."
+        "NSCameraUsageDescription": "Doovly needs camera access so you can take photos when reporting an issue.",
+        "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
@@ -27,7 +28,10 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "READ_MEDIA_IMAGES",
-        "CAMERA"
+        "CAMERA",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -58,6 +62,14 @@
         {
           "photosPermission": "Allow Doovly to access your photos so you can attach images when reporting an issue.",
           "cameraPermission": "Allow Doovly to use your camera so you can take photos when reporting an issue."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#16A34A",
+          "sounds": []
         }
       ]
     ],
