@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { getCurrentUserId } from "@/services/notifications";
+import { getCurrentUserId } from "@/services/inAppNotifications";
 import { getProfessionalById } from "@/services/professionals";
 
 // =====================================================

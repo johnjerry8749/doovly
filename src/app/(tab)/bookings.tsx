@@ -32,7 +32,7 @@ import {
   type Booking,
 } from "@/data/booking";
 import { DISPUTE_REASONS, type DisputeReason } from "@/data/disputes";
-import { getCurrentUserId } from "@/services/notifications";
+import { getCurrentUserId } from "@/services/inAppNotifications";
 
 const openBookingLocation = async (item: Booking) => {
   try {

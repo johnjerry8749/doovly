@@ -22,7 +22,7 @@ import {
   listServiceRequests,
   type ServiceRequest,
 } from "@/services/serviceRequests";
-import { getCurrentUserId } from "@/services/notifications";
+import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
