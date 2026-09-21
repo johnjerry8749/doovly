@@ -22,12 +22,8 @@ import {
   listServiceCategories,
   starsFromReviewCount,
 } from "@/services/professionals";
-import { getCurrentUserId } from "@/services/inAppNotifications";
-import {
-  isSaved,
-  toggleSave,
-  isOwnProfessionalProfile,
-} from "@/services/savedProviders";
+// import { getCurrentUserId } from "@/services/notifications";
+import { isSaved, toggleSave } from "@/services/savedProviders";
 
 import { NIGERIA_CITIES } from "@/data/cities";
 import { useLocation } from "@/context/LocationContext";
@@ -56,9 +52,6 @@ export default function Home() {
   const [favTick, setFavTick] = useState(0);
 
   const onToggleFavorite = useCallback((proId: string) => {
-    // Cannot favorite own profile
-    if (isOwnProfessionalProfile(proId)) return;
-
     const result = toggleSave(proId);
     if (!result.ok && result.reason === "limit") {
       Alert.alert(
@@ -289,77 +282,69 @@ export default function Home() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.professionalsContainer}
           >
-            {nearbyProfessionals.map((person) => {
-              const isOwn = isOwnProfessionalProfile(person.id);
-              const liked = isOwn || isSaved(person.id);
-
-              return (
+            {nearbyProfessionals.map((person) => (
+              <TouchableOpacity
+                key={`${person.id}-${favTick}`}
+                style={styles.professionalCard}
+                activeOpacity={0.8}
+                onPress={() =>
+                  router.push({
+                    pathname: "/professional/[id]",
+                    params: {
+                      id: person.id,
+                      from: "home",
+                    },
+                  })
+                }
+              >
                 <TouchableOpacity
-                  key={`${person.id}-${favTick}`}
-                  style={styles.professionalCard}
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/professional/[id]",
-                      params: {
-                        id: person.id,
-                        from: "home",
-                      },
-                    })
-                  }
+                  style={styles.heartButton}
+                  activeOpacity={0.7}
+                  onPress={() => onToggleFavorite(person.id)}
                 >
-                  <TouchableOpacity
-                    style={styles.heartButton}
-                    activeOpacity={isOwn ? 1 : 0.7}
-                    disabled={isOwn}
-                    onPress={() => onToggleFavorite(person.id)}
-                  >
-                    <Ionicons
-                      name={liked ? "heart" : "heart-outline"}
-                      size={17}
-                      color={liked ? "#EF4444" : "#111"}
-                    />
-                  </TouchableOpacity>
-
-                  <View style={styles.profileImageContainer}>
-                    <Image source={person.image} style={styles.profileImage} />
-                    {person.verified && (
-                      <View style={styles.verifiedBadge}>
-                        <Image
-                          source={require("@/assets/premium/checkmark.png")}
-                          style={{ width: 40, height: 40, marginLeft: -1 }}
-                          resizeMode="contain"
-                        />
-                      </View>
-                    )}
-                  </View>
-
-                  <Text style={styles.professionalName} numberOfLines={1}>
-                    {person.name}
-                  </Text>
-
-                  <View style={styles.ratingContainer}>
-                    <Ionicons name="star" size={12} color="#F4C400" />
-                    <Text style={styles.rating}>
-                      {starsFromReviewCount(person.reviews.length)}
-                    </Text>
-                    <Text style={styles.reviews}>
-                      ({person.reviews.length})
-                    </Text>
-                  </View>
-
-                  <Text style={styles.profession} numberOfLines={1}>
-                    {person.profession}
-                  </Text>
-
-                  <Text style={styles.cityText} numberOfLines={1}>
-                    {person.city}
-                  </Text>
-
-                  <Text style={styles.price}>From {person.priceFrom}</Text>
+                  <Ionicons
+                    name={isSaved(person.id) ? "heart" : "heart-outline"}
+                    size={17}
+                    color={isSaved(person.id) ? "#EF4444" : "#111"}
+                  />
                 </TouchableOpacity>
-              );
-            })}
+
+                <View style={styles.profileImageContainer}>
+                  <Image source={person.image} style={styles.profileImage} />
+                  {person.verified && (
+                    <View style={styles.verifiedBadge}>
+                      <Image
+                        source={require("@/assets/premium/checkmark.png")}
+                        style={{ width: 40, height: 40, marginLeft: -1 }}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  )}
+                </View>
+
+                <Text style={styles.professionalName} numberOfLines={1}>
+                  {person.name}
+                </Text>
+
+                <View style={styles.ratingContainer}>
+                  <Ionicons name="star" size={12} color="#F4C400" />
+                  <Text style={styles.rating}>
+                    {starsFromReviewCount(person.reviews.length)}
+                  </Text>
+                  <Text style={styles.reviews}>({person.reviews.length})</Text>
+                </View>
+
+                <Text style={styles.profession} numberOfLines={1}>
+                  {person.profession}
+                </Text>
+
+                <Text style={styles.cityText} numberOfLines={1}>
+                  {person.city}
+                </Text>
+
+                <Text style={styles.price}>From {person.priceFrom}</Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
         )}
 
@@ -567,225 +552,179 @@ const styles = StyleSheet.create({
   },
   notificationDot: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#EF4444",
+    top: 6,
+    right: 6,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#159447",
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#F3F3F3",
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 50,
     marginBottom: 18,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: 10,
-    color: "#111",
-  },
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: "#111" },
   bannerContainer: {
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 22,
+    backgroundColor: "#F3F3F3",
   },
-  banner: {
-    width: "100%",
-    height: 140,
-  },
+  banner: { width: "100%", height: 125 },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111",
-  },
-  seeAll: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#159447",
-  },
-  servicesContainer: {
-    paddingBottom: 8,
-    marginBottom: 20,
-  },
-  serviceItem: {
-    alignItems: "center",
-    marginRight: 18,
-  },
+  sectionTitle: { fontSize: 17, fontWeight: "800", color: "#111" },
+  seeAll: { color: "#159447", fontWeight: "700", fontSize: 13 },
+  servicesContainer: { flexDirection: "row", gap: 14, paddingBottom: 22 },
+  serviceItem: { alignItems: "center", width: 72 },
   serviceCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 31,
     backgroundColor: "#E8F5E9",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 7,
   },
   serviceName: {
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#333",
+    textAlign: "center",
   },
-  professionalsContainer: {
-    paddingBottom: 10,
-    marginBottom: 20,
-  },
+  professionalsContainer: { flexDirection: "row", gap: 8, paddingBottom: 25 },
   professionalCard: {
-    width: 150,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 12,
-    marginRight: 14,
+    width: 115,
+    minHeight: 100,
     borderWidth: 1,
-    borderColor: "#F0F0F0",
-  },
-  heartButton: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    zIndex: 2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    borderColor: "#E1E1E1",
+    borderRadius: 12,
+    padding: 10,
     backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 2,
   },
+  heartButton: { position: "absolute", right: 8, top: 8, zIndex: 5 },
   profileImageContainer: {
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  profileImage: {
     width: 70,
     height: 70,
     borderRadius: 35,
+    alignSelf: "center",
+    marginBottom: 8,
+    position: "relative",
   },
+  profileImage: { width: "100%", height: "100%", borderRadius: 35 },
   verifiedBadge: {
     position: "absolute",
-    bottom: -4,
-    right: 30,
+    right: -3,
+    bottom: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   professionalName: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
     color: "#111",
-    textAlign: "center",
+    marginBottom: 3,
   },
   ratingContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginTop: 3,
+    marginBottom: 3,
   },
-  rating: {
-    fontSize: 12,
-    fontWeight: "600",
-    marginLeft: 3,
-    color: "#111",
-  },
-  reviews: {
-    fontSize: 11,
-    color: "#888",
-    marginLeft: 2,
-  },
-  profession: {
-    fontSize: 12,
-    color: "#555",
-    textAlign: "center",
-    marginTop: 2,
-  },
-  cityText: {
-    fontSize: 11,
-    color: "#888",
-    textAlign: "center",
-    marginTop: 1,
-  },
-  price: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#159447",
-    textAlign: "center",
-    marginTop: 6,
-  },
+  rating: { fontSize: 11, fontWeight: "600", marginLeft: 3, color: "#333" },
+  reviews: { fontSize: 10, color: "#777", marginLeft: 2 },
+  profession: { fontSize: 11, color: "#555", marginBottom: 2 },
+  cityText: { fontSize: 10, color: "#777", marginBottom: 5 },
+  price: { fontSize: 12, fontWeight: "800", color: "#159447" },
   emptyProsContainer: {
     alignItems: "center",
-    paddingVertical: 30,
+    justifyContent: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    marginBottom: 10,
   },
   emptyProsTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#555",
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#111",
     marginTop: 12,
+    marginBottom: 6,
   },
   emptyProsSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#888",
-    marginTop: 4,
     textAlign: "center",
+    marginBottom: 16,
   },
   emptyProsButton: {
-    marginTop: 16,
     backgroundColor: "#159447",
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
-  emptyProsButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+  emptyProsButtonText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   verifiedContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F0FDF4",
+    width: "100%",
+    marginTop: 8,
+    backgroundColor: "#F0F9F4",
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
   },
   shieldContainer: {
-    marginRight: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+    flexShrink: 0,
   },
   verifiedTextContainer: {
-    flex: 1,
+    flex: 2,
+    minWidth: 0,
+    marginRight: 8,
   },
   verifiedTitle: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "800",
     color: "#111",
+    marginBottom: 3,
   },
   verifiedSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#555",
-    marginTop: 2,
+    lineHeight: 16,
   },
   howButton: {
+    backgroundColor: "#159447",
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 9,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#159447",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    justifyContent: "center",
+    maxWidth: 105,
   },
   howButtonText: {
     color: "#fff",
-    fontWeight: "600",
-    fontSize: 13,
-    marginRight: 4,
+    fontWeight: "700",
+    fontSize: 11,
   },
-  bottomSpacing: {
-    height: 30,
-  },
+  bottomSpacing: { height: 30 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -793,91 +732,63 @@ const styles = StyleSheet.create({
   },
   modalSheet: {
     backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 40,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+    paddingTop: 12,
   },
+  cityPickerSheet: { maxHeight: "80%" },
   modalHandle: {
     width: 40,
     height: 4,
-    backgroundColor: "#ddd",
     borderRadius: 2,
+    backgroundColor: "#ddd",
     alignSelf: "center",
     marginBottom: 16,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 20,
+    fontWeight: "800",
     color: "#111",
+    marginBottom: 18,
   },
   modalOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-  },
-  modalOptionText: {
-    marginLeft: 14,
-    flex: 1,
-  },
-  modalOptionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111",
-  },
-  modalOptionSub: {
-    fontSize: 13,
-    color: "#888",
-    marginTop: 2,
-  },
-  modalCancel: {
-    marginTop: 10,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  modalCancelText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#EF4444",
-  },
-  cityPickerSheet: {
-    maxHeight: "80%",
-  },
-  citySearchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    marginBottom: 12,
-  },
-  citySearchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 15,
-    color: "#111",
-  },
-  cityList: {
-    maxHeight: 300,
-  },
-  cityItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
   },
-  cityItemText: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
-    color: "#111",
+  modalOptionText: { marginLeft: 14, flex: 1 },
+  modalOptionTitle: { fontSize: 15, fontWeight: "700", color: "#111" },
+  modalOptionSub: { fontSize: 12, color: "#777", marginTop: 2 },
+  modalCancel: { marginTop: 16, alignItems: "center", paddingVertical: 12 },
+  modalCancelText: { fontSize: 15, fontWeight: "600", color: "#888" },
+  citySearchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 12,
   },
+  citySearchInput: { flex: 1, fontSize: 15, color: "#111", marginLeft: 8 },
+  cityList: { maxHeight: 320 },
+  cityItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  cityItemText: { flex: 1, fontSize: 16, color: "#111", marginLeft: 12 },
   emptyCitiesText: {
     textAlign: "center",
     color: "#888",
-    marginTop: 20,
+    paddingVertical: 30,
+    fontSize: 15,
   },
 });
