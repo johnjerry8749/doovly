@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { mockNotificationService } from "@/services/notifications/mockNotificationService"
+import { Notification } from "@/services/notifications";
 import {
   View,
   Text,
@@ -61,6 +61,20 @@ const TYPE_META: Record<
     color: PRIMARY,
   },
 };
+//======================================
+///MOCK NOTIFICATION DATA DELETED LATER 
+//======================================
+// Call any of these:
+Notifications.newBooking();
+Notifications.bookingAccepted();
+Notifications.bookingCancelled();
+Notifications.newMessage();
+
+//======================================
+///MOCK NOTIFICATION DATA DELETED LATER 
+//======================================
+
+
 
 function NotifIcon({ type }: { type: NotifType }) {
   const meta = type !== "general" ? TYPE_META[type] : null;
@@ -130,12 +144,36 @@ export default function NotificationsScreen() {
         <Text style={styles.headerTitle}>Notifications</Text>
 
 
-        //DELETE LATER
-        <TouchableOpacity onPress={() => MockNotifications.newBooking()}>
-          <Text>Test Notification</Text>
-        </TouchableOpacity>
-        //DELETE LATER
+       //======================================
+      ///MOCK NOTIFICATION DATA DELETED LATER 
+      //======================================
 
+      import { Notifications } from '@/services/notifications';
+
+// Inside your component return:
+<TouchableOpacity
+  onPress={() => Notifications.newBooking()}
+  style={{
+    backgroundColor: '#16A34A',
+    padding: 14,
+    borderRadius: 10,
+    margin: 20,
+    alignItems: 'center',
+  }}
+>
+  <Text style={{ color: '#fff', fontWeight: '600' }}>
+    Test Notification
+  </Text>
+</TouchableOpacity>
+
+
+
+
+
+
+      //======================================
+      ///MOCK NOTIFICATION DATA DELETED LATER 
+      //======================================
         <TouchableOpacity
           style={styles.markReadBtn}
           onPress={markAllRead}
