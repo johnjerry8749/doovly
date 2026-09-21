@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from "react";
+import { mockNotificationService } from "@/services/notifications/mockNotificationService"
 import {
   View,
   Text,
@@ -126,8 +127,14 @@ export default function NotificationsScreen() {
         >
           <Ionicons name="arrow-back" size={22} color="#111827" />
         </TouchableOpacity>
-
         <Text style={styles.headerTitle}>Notifications</Text>
+
+
+        //DELETE LATER
+        <TouchableOpacity onPress={() => MockNotifications.newBooking()}>
+          <Text>Test Notification</Text>
+        </TouchableOpacity>
+        //DELETE LATER
 
         <TouchableOpacity
           style={styles.markReadBtn}
