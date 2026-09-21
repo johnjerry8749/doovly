@@ -30,7 +30,7 @@ export type AppUser = {
 export const MOCK_USER: AppUser = {
   id: "u1",
   name: "John Jerry",
-  subscribed: false,
+  subscribed: true, // Pro user → unlimited saves
   // Matches MOCK_LOGGED_IN_PRO_ID in profile tab ("1" = John Chukwuemeka)
   professionalId: "1",
 };
