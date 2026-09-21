@@ -1,5 +1,4 @@
 import React, { useCallback, useState } from "react";
-import { Notification } from "@/services/notifications";
 import {
   View,
   Text,
@@ -21,6 +20,10 @@ import {
   type Notification,
   type NotifType,
 } from "@/services/inAppNotifications";
+
+// ========== TEMPORARY - DELETE LATER ==========
+import { Notifications } from "@/services/notifications";
+// ========== TEMPORARY - DELETE LATER ==========
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#E8F5E9";
@@ -61,20 +64,6 @@ const TYPE_META: Record<
     color: PRIMARY,
   },
 };
-//======================================
-///MOCK NOTIFICATION DATA DELETED LATER 
-//======================================
-// Call any of these:
-Notifications.newBooking();
-Notifications.bookingAccepted();
-Notifications.bookingCancelled();
-Notifications.newMessage();
-
-//======================================
-///MOCK NOTIFICATION DATA DELETED LATER 
-//======================================
-
-
 
 function NotifIcon({ type }: { type: NotifType }) {
   const meta = type !== "general" ? TYPE_META[type] : null;
@@ -141,39 +130,9 @@ export default function NotificationsScreen() {
         >
           <Ionicons name="arrow-back" size={22} color="#111827" />
         </TouchableOpacity>
+
         <Text style={styles.headerTitle}>Notifications</Text>
 
-
-       //======================================
-      ///MOCK NOTIFICATION DATA DELETED LATER 
-      //======================================
-
-      import { Notifications } from '@/services/notifications';
-
-// Inside your component return:
-<TouchableOpacity
-  onPress={() => Notifications.newBooking()}
-  style={{
-    backgroundColor: '#16A34A',
-    padding: 14,
-    borderRadius: 10,
-    margin: 20,
-    alignItems: 'center',
-  }}
->
-  <Text style={{ color: '#fff', fontWeight: '600' }}>
-    Test Notification
-  </Text>
-</TouchableOpacity>
-
-
-
-
-
-
-      //======================================
-      ///MOCK NOTIFICATION DATA DELETED LATER 
-      //======================================
         <TouchableOpacity
           style={styles.markReadBtn}
           onPress={markAllRead}
@@ -182,6 +141,53 @@ export default function NotificationsScreen() {
           <Text style={styles.markReadText}>Read all</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ========== TEMPORARY TEST BUTTONS - DELETE LATER ========== */}
+      <View style={{ paddingHorizontal: 16, paddingBottom: 12, gap: 8 }}>
+        <Text style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 4 }}>
+          Temporary test buttons (remove later)
+        </Text>
+        <TouchableOpacity
+          onPress={() => Notifications.newBooking()}
+          style={{
+            backgroundColor: "#16A34A",
+            paddingVertical: 10,
+            borderRadius: 8,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "600" }}>
+            Test: New Booking
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => Notifications.bookingAccepted()}
+          style={{
+            backgroundColor: "#16A34A",
+            paddingVertical: 10,
+            borderRadius: 8,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "600" }}>
+            Test: Booking Accepted
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => Notifications.newMessage()}
+          style={{
+            backgroundColor: "#16A34A",
+            paddingVertical: 10,
+            borderRadius: 8,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "600" }}>
+            Test: New Message
+          </Text>
+        </TouchableOpacity>
+      </View>
+      {/* ========== TEMPORARY TEST BUTTONS - DELETE LATER ========== */}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
