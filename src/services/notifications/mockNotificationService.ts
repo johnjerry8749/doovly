@@ -18,8 +18,30 @@ Notifications.setNotificationHandler({
  */
 class MockNotificationService implements NotificationService {
   async register(): Promise<string | null> {
-    // In mock mode we just return a fake token
-    // This makes it easy to test the flow without a real device token
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      console.log('[MockNotifications] Permission not granted');
+      return null;
+    }
+
+    // Android 13+ requires explicit channel for notifications to appear
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#16A34A',
+      });
+    }
+
+    // In mock mode we still return a fake token for compatibility
     const mockToken = `ExponentPushToken[mock-${Date.now()}]`;
     console.log('[MockNotifications] Registered with token:', mockToken);
     return mockToken;
