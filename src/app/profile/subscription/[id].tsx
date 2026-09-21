@@ -21,7 +21,7 @@ const TEXT_DARK = "#111827";
 const TEXT_MUTED = "#6B7280";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_GAP = 10;
-const STAT_WIDTH = (SCREEN_WIDTH - 32 - CARD_GAP * 3) / 4;
+const STAT_WIDTH = (SCREEN_WIDTH - 32 - CARD_GAP * 2) / 3;
 
 // Simple sparkline made of small bars
 function MiniSparkline({
@@ -198,6 +198,13 @@ function ProDashboard() {
       >
         {/* Header */}
         <View style={styles.topRow}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={22} color={TEXT_DARK} />
+          </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>
               Good morning, {firstName}! 👋
@@ -262,16 +269,6 @@ function ProDashboard() {
             change="18.8% vs last week"
             sparkColor="#8B5CF6"
             sparkHeights={[7, 11, 9, 13, 8, 14, 10, 12]}
-          />
-          <StatCard
-            icon="people-outline"
-            iconBg="#FFEDD5"
-            iconColor="#F97316"
-            label="New Customers"
-            value="24"
-            change="14.3% vs last week"
-            sparkColor="#F97316"
-            sparkHeights={[5, 9, 7, 12, 8, 11, 14, 10]}
           />
         </View>
 
@@ -459,7 +456,11 @@ function ProDashboard() {
             <Text style={styles.aiTitle}>AI Business Insight</Text>
             <View style={styles.aiBody}>
               <View style={styles.robotCircle}>
-                <Ionicons name="hardware-chip" size={28} color="#8B5CF6" />
+                <Image
+                  source={require("@/assets/premium/WhatsApp Image 2026-09-21 at 2.54.39 PM.jpeg")}
+                  style={styles.robotImage}
+                  resizeMode="cover"
+                />
               </View>
               <Text style={styles.aiText}>
                 Your bookings on Saturday are 24% higher than your weekday
@@ -579,6 +580,16 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginTop: 8,
     marginBottom: 12,
+    gap: 8,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
   },
   greeting: {
     fontSize: 20,
@@ -906,6 +917,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#EDE9FE",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  robotImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   aiText: {
     flex: 1,
