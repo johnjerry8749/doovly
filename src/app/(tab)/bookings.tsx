@@ -45,14 +45,10 @@ const GREEN = "#16A34A";
  * SUBSCRIPTION
  * ============================================
  *
- * Connect this value to your real subscription
- * state when your subscription API is ready.
- *
  * true  = Doovly Pro user
  * false = Free user
  */
 const IS_PRO_USER = false;
-
 
 /**
  * ============================================
@@ -111,11 +107,15 @@ const openBookingLocation = async (item: Booking) => {
   }
 };
 
-
 /**
  * ============================================
  * JOB LOCATION ACCESS
  * ============================================
+ *
+ * Used for Accepted / Ongoing jobs.
+ *
+ * Released payment OR Pay on site
+ * = location available.
  */
 function canViewJobLocation(item: Booking): boolean {
   return (
@@ -125,8 +125,37 @@ function canViewJobLocation(item: Booking): boolean {
   );
 }
 
-
+/**
+ * ============================================
+ * HANDLE MAP
+ * ============================================
+ *
+ * IMPORTANT:
+ *
+ * Pending Received Jobs:
+ * - Map is ALWAYS unlocked.
+ *
+ * Accepted / Ongoing:
+ * - Map follows payment / Pay on site rule.
+ */
 const handleOpenMap = (item: Booking) => {
+  /**
+   * PENDING RECEIVED JOB
+   *
+   * Always allow map.
+   */
+  if (
+    item.status === "Pending"
+  ) {
+    openBookingLocation(item);
+    return;
+  }
+
+  /**
+   * OTHER JOBS
+   *
+   * Keep existing payment/location protection.
+   */
   if (!canViewJobLocation(item)) {
     Alert.alert(
       "Location locked",
@@ -137,7 +166,6 @@ const handleOpenMap = (item: Booking) => {
 
   openBookingLocation(item);
 };
-
 
 /**
  * ============================================
@@ -165,7 +193,6 @@ export default function Bookings() {
   const [reportPhotos, setReportPhotos] =
     useState<string[]>([]);
 
-
   /**
    * ============================================
    * DATA
@@ -177,7 +204,6 @@ export default function Bookings() {
       : listReceivedJobs();
   }, [mainTab]);
 
-
   const filteredData = useMemo<Booking[]>(() => {
     if (filter === "All") {
       return data;
@@ -188,7 +214,6 @@ export default function Bookings() {
     );
   }, [data, filter]);
 
-
   const handleMainTabChange = (
     tab: "booked" | "received",
   ) => {
@@ -196,12 +221,10 @@ export default function Bookings() {
     setFilter("All");
   };
 
-
   const filters =
     mainTab === "booked"
       ? BOOKED_FILTERS
       : RECEIVED_FILTERS;
-
 
   /**
    * ============================================
@@ -254,7 +277,6 @@ export default function Bookings() {
     }
   };
 
-
   /**
    * ============================================
    * STATUS ACTIONS
@@ -262,7 +284,11 @@ export default function Bookings() {
    */
   const renderStatusActions = (item: Booking) => {
     /**
+     * ==========================================
      * RECEIVED - PENDING
+     * ==========================================
+     *
+     * MAP IS ALWAYS UNLOCKED HERE.
      */
     if (
       mainTab === "received" &&
@@ -270,6 +296,7 @@ export default function Bookings() {
     ) {
       return (
         <View style={styles.actionRow}>
+          {/* UNLOCKED MAP */}
           <TouchableOpacity
             style={[
               styles.actionButton,
@@ -281,25 +308,15 @@ export default function Bookings() {
             <Ionicons
               name="map-outline"
               size={16}
-              color={
-                canViewJobLocation(item)
-                  ? GREEN
-                  : "#9CA3AF"
-              }
+              color={GREEN}
             />
 
-            <Text
-              style={[
-                styles.mapButtonText,
-                !canViewJobLocation(item) && {
-                  color: "#9CA3AF",
-                },
-              ]}
-            >
+            <Text style={styles.mapButtonText}>
               Map
             </Text>
           </TouchableOpacity>
 
+          {/* ACCEPT */}
           <TouchableOpacity
             style={[
               styles.actionButton,
@@ -324,6 +341,7 @@ export default function Bookings() {
             </Text>
           </TouchableOpacity>
 
+          {/* DECLINE */}
           <TouchableOpacity
             style={[
               styles.actionButton,
@@ -351,9 +369,10 @@ export default function Bookings() {
       );
     }
 
-
     /**
+     * ==========================================
      * RECEIVED - ACCEPTED / ONGOING
+     * ==========================================
      */
     if (
       mainTab === "received" &&
@@ -362,21 +381,31 @@ export default function Bookings() {
         item.status === "Ongoing"
       )
     ) {
+      const locationAvailable =
+        canViewJobLocation(item);
+
       return (
         <View style={styles.actionRow}>
+          {/* MAP */}
           <TouchableOpacity
             style={[
               styles.actionButton,
               styles.mapButton,
+              !locationAvailable &&
+                styles.lockedMapButton,
             ]}
             activeOpacity={0.8}
             onPress={() => handleOpenMap(item)}
           >
             <Ionicons
-              name="map-outline"
+              name={
+                locationAvailable
+                  ? "map-outline"
+                  : "lock-closed-outline"
+              }
               size={16}
               color={
-                canViewJobLocation(item)
+                locationAvailable
                   ? GREEN
                   : "#9CA3AF"
               }
@@ -385,15 +414,15 @@ export default function Bookings() {
             <Text
               style={[
                 styles.mapButtonText,
-                !canViewJobLocation(item) && {
-                  color: "#9CA3AF",
-                },
+                !locationAvailable &&
+                  styles.lockedMapButtonText,
               ]}
             >
               Map
             </Text>
           </TouchableOpacity>
 
+          {/* CANCEL */}
           <TouchableOpacity
             style={[
               styles.actionButton,
@@ -418,6 +447,7 @@ export default function Bookings() {
             </Text>
           </TouchableOpacity>
 
+          {/* COMPLETE */}
           <TouchableOpacity
             style={[
               styles.actionButton,
@@ -445,9 +475,10 @@ export default function Bookings() {
       );
     }
 
-
     /**
+     * ==========================================
      * RECEIVED - AWAITING APPROVAL
+     * ==========================================
      */
     if (
       mainTab === "received" &&
@@ -456,9 +487,10 @@ export default function Bookings() {
       return null;
     }
 
-
     /**
+     * ==========================================
      * BOOKED - UPCOMING / ACCEPTED / ONGOING
+     * ==========================================
      */
     if (
       mainTab === "booked" &&
@@ -497,9 +529,10 @@ export default function Bookings() {
       );
     }
 
-
     /**
+     * ==========================================
      * BOOKED - AWAITING APPROVAL
+     * ==========================================
      */
     if (
       mainTab === "booked" &&
@@ -507,6 +540,7 @@ export default function Bookings() {
     ) {
       return (
         <View style={styles.actionRow}>
+          {/* APPROVE */}
           <TouchableOpacity
             style={[
               styles.actionButton,
@@ -531,6 +565,7 @@ export default function Bookings() {
             </Text>
           </TouchableOpacity>
 
+          {/* REPORT */}
           <TouchableOpacity
             style={[
               styles.actionButton,
@@ -559,17 +594,19 @@ export default function Bookings() {
       );
     }
 
-
     /**
+     * ==========================================
      * COMPLETED
+     * ==========================================
      */
     if (item.status === "Completed") {
       return null;
     }
 
-
     /**
+     * ==========================================
      * CANCELLED / DECLINED
+     * ==========================================
      */
     if (
       item.status === "Cancelled" ||
@@ -601,7 +638,6 @@ export default function Bookings() {
     return null;
   };
 
-
   /**
    * ============================================
    * BOOKING CARD
@@ -628,6 +664,7 @@ export default function Bookings() {
 
     return (
       <View style={styles.card}>
+        {/* TOP SECTION */}
         <View style={styles.topSection}>
           <View style={styles.avatarContainer}>
             <Image
@@ -636,6 +673,7 @@ export default function Bookings() {
               resizeMode="cover"
             />
 
+            {/* VERIFIED BADGE */}
             {item.verified === true && (
               <View style={styles.verifiedBadge}>
                 <Image
@@ -672,6 +710,7 @@ export default function Bookings() {
             </View>
           </View>
 
+          {/* STATUS */}
           <View
             style={[
               styles.statusBadge,
@@ -693,10 +732,12 @@ export default function Bookings() {
           </View>
         </View>
 
+        {/* JOB TITLE */}
         <Text style={styles.jobTitle}>
           {item.title}
         </Text>
 
+        {/* INFO */}
         <View style={styles.infoContainer}>
           <View style={styles.infoItem}>
             <Ionicons
@@ -761,11 +802,11 @@ export default function Bookings() {
           </TouchableOpacity>
         </View>
 
+        {/* STATUS ACTIONS */}
         {renderStatusActions(item)}
       </View>
     );
   };
-
 
   /**
    * ============================================
@@ -779,6 +820,7 @@ export default function Bookings() {
         backgroundColor="#FFFFFF"
       />
 
+      {/* HEADER */}
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>
@@ -811,7 +853,6 @@ export default function Bookings() {
           <View style={styles.notificationDot} />
         </TouchableOpacity>
       </View>
-
 
       {/* MAIN TABS */}
       <View style={styles.mainTabsContainer}>
@@ -860,7 +901,6 @@ export default function Bookings() {
         </TouchableOpacity>
       </View>
 
-
       {/* FILTERS */}
       <View style={styles.filterWrapper}>
         <ScrollView
@@ -902,7 +942,6 @@ export default function Bookings() {
         </ScrollView>
       </View>
 
-
       {/* BOOKINGS */}
       <FlatList
         style={{ flex: 1 }}
@@ -931,7 +970,6 @@ export default function Bookings() {
           </View>
         }
       />
-
 
       {/* REPORT MODAL */}
       <Modal
@@ -1138,7 +1176,6 @@ export default function Bookings() {
   );
 }
 
-
 /**
  * ============================================
  * STYLES
@@ -1281,28 +1318,27 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
 
-  /**
-   * Blue verified tick:
-   * Small, circular and positioned
-   * directly against the avatar.
-   */
-   verifiedBadge: {
-  position: "absolute",
-  right: 0,
-  bottom: 0,
-  width: 15,
-  height: 15,
-  borderRadius: 8,
-  backgroundColor: "#FFFFFF",
-  alignItems: "center",
-  justifyContent: "center",
-},
+  verifiedBadge: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-verifiedBadgeImage: {
-  width: 13,
-  height: 13,
-},
-  checkmark: { width: 39, height: 39 },
+  verifiedBadgeImage: {
+    width: 13,
+    height: 13,
+  },
+
+  checkmark: {
+    width: 39,
+    height: 39,
+  },
 
   providerInfo: {
     flex: 1,
@@ -1415,6 +1451,15 @@ verifiedBadgeImage: {
     fontSize: 13,
     fontWeight: "600",
     color: GREEN,
+  },
+
+  lockedMapButton: {
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
+  },
+
+  lockedMapButtonText: {
+    color: "#9CA3AF",
   },
 
   acceptButton: {
