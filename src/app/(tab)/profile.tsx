@@ -15,7 +15,6 @@ import { getCurrentUserId } from "@/services/inAppNotifications";
 import { getProfessionalById } from "@/services/professionals";
 import { MOCK_USER } from "@/services/savedProviders";
 
-
 // =====================================================
 // COLORS
 // =====================================================
@@ -114,6 +113,9 @@ export default function Profile() {
   const role = MOCK_ROLE;
   const pro = getProfessionalById(MOCK_LOGGED_IN_PRO_ID);
 
+  // Single source of truth for Pro status
+  const isPro = MOCK_USER.subscribed;
+
   if (!pro) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -123,6 +125,13 @@ export default function Profile() {
       </SafeAreaView>
     );
   }
+
+  const goToSubscription = () => {
+    router.push({
+      pathname: "/profile/subscription/[id]",
+      params: { id: MOCK_USER.id },
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -157,7 +166,7 @@ export default function Profile() {
               <View style={styles.nameRow}>
                 <Text style={styles.name}>{pro.name}</Text>
 
-                {pro.subscribed && (
+                {isPro && (
                   <MaterialCommunityIcons
                     name="shield-check"
                     size={23}
@@ -187,7 +196,7 @@ export default function Profile() {
         </View>
 
         {/* ========== DOOVLY PRO (only if not subscribed) ========== */}
-        {!pro.subscribed && (
+        {!isPro && (
           <View style={styles.proBanner}>
             <View style={styles.proLeft}>
               <View style={styles.crownCircle}>
@@ -209,7 +218,7 @@ export default function Profile() {
             <TouchableOpacity
               style={styles.upgradeButton}
               activeOpacity={0.85}
-              onPress={() => router.push("/profile/subscription/subscription")}
+              onPress={goToSubscription}
             >
               <Text style={styles.upgradeButtonText}>Upgrade</Text>
               <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
@@ -321,9 +330,9 @@ export default function Profile() {
               </View>
             }
             title="Subscription"
-            rightText={pro.subscribed ? "Active" : "Upgrade"}
-            rightColor={pro.subscribed ? PRIMARY : "#7C3AED"}
-            onPress={() => router.push(`/profile/subscription/[id]`)}
+            rightText={isPro ? "Active" : "Upgrade"}
+            rightColor={isPro ? PRIMARY : "#7C3AED"}
+            onPress={goToSubscription}
           />
 
           <MenuItem
