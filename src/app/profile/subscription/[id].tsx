@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { MOCK_USER } from "@/services/savedProviders";
+import { MOCK_USER, isCurrentUserPro } from "@/services/savedProviders";
 import Subscription from "./subscription";
 
 const PRIMARY = "#159447";
@@ -555,9 +555,9 @@ function ProDashboard() {
 }
 
 export default function SubscriptionRoute() {
-  // If user is Pro → show analytics dashboard
+  // If user is Pro (from professional mock data) → show analytics dashboard
   // Else → show subscription plans
-  if (MOCK_USER.subscribed) {
+  if (isCurrentUserPro()) {
     return <ProDashboard />;
   }
   return <Subscription />;
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
   proBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#7C3AED",
+    backgroundColor: PRIMARY,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
   },
   proBadgeText: {
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#FFFFFF",
   },
   bellBtn: {
@@ -632,27 +632,22 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   periodRow: {
-    alignItems: "flex-end",
     marginBottom: 14,
   },
   periodBtn: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
   periodText: {
-    fontSize: 12,
+    fontSize: 13,
     color: TEXT_MUTED,
-    fontWeight: "500",
   },
-
-  // Stats
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -662,7 +657,7 @@ const styles = StyleSheet.create({
   statCard: {
     width: STAT_WIDTH,
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    borderRadius: 12,
     padding: 10,
   },
   statIcon: {
@@ -676,27 +671,25 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 10,
     color: TEXT_MUTED,
-    marginBottom: 2,
   },
   statValue: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "800",
     color: TEXT_DARK,
+    marginTop: 2,
   },
   statChange: {
     fontSize: 9,
     color: PRIMARY,
     marginTop: 2,
-    marginBottom: 6,
   },
   sparkline: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 2,
     height: 16,
+    marginTop: 6,
   },
-
-  // Charts
   chartsRow: {
     flexDirection: "row",
     gap: 10,
@@ -706,7 +699,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
-    padding: 12,
+    padding: 14,
   },
   chartHeader: {
     flexDirection: "row",
@@ -724,7 +717,7 @@ const styles = StyleSheet.create({
     color: TEXT_MUTED,
   },
   chartBigValue: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "800",
     color: TEXT_DARK,
   },
@@ -735,14 +728,13 @@ const styles = StyleSheet.create({
   chartChange: {
     fontSize: 11,
     color: "#3B82F6",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   lineChart: {
-    height: 60,
+    height: 70,
     flexDirection: "row",
     alignItems: "flex-end",
     position: "relative",
-    marginBottom: 4,
   },
   linePointWrap: {
     flex: 1,
@@ -762,30 +754,28 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 30,
+    height: 40,
     backgroundColor: "#DBEAFE",
-    opacity: 0.4,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
+    opacity: 0.3,
+    borderRadius: 8,
   },
   chartXLabels: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginTop: 4,
   },
   xLabel: {
-    fontSize: 9,
-    color: "#9CA3AF",
+    fontSize: 10,
+    color: TEXT_MUTED,
   },
-
-  // Service performance
   serviceCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
     padding: 14,
-    marginBottom: 18,
+    marginBottom: 14,
   },
   serviceBy: {
-    fontSize: 12,
+    fontSize: 11,
     color: TEXT_MUTED,
     marginBottom: 10,
   },
@@ -796,17 +786,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   serviceIcon: {
-    width: 26,
-    height: 26,
+    width: 28,
+    height: 28,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
   serviceName: {
-    width: 90,
+    width: 80,
     fontSize: 12,
     color: TEXT_DARK,
-    fontWeight: "500",
   },
   serviceBarTrack: {
     flex: 1,
@@ -820,40 +809,38 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   servicePct: {
-    width: 55,
+    width: 50,
     fontSize: 11,
     color: TEXT_MUTED,
     textAlign: "right",
   },
   viewAllLink: {
     fontSize: 12,
+    color: PRIMARY,
     fontWeight: "600",
-    color: "#7C3AED",
   },
-
-  // Tools
   toolsHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "800",
+    fontSize: 15,
+    fontWeight: "700",
     color: TEXT_DARK,
   },
   toolsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginBottom: 18,
+    marginBottom: 14,
   },
   toolCard: {
     width: (SCREEN_WIDTH - 32 - 10) / 2,
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
-    padding: 14,
+    padding: 12,
   },
   toolIcon: {
     width: 36,
@@ -861,7 +848,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   toolTitle: {
     fontSize: 13,
@@ -873,32 +860,28 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: TEXT_MUTED,
     lineHeight: 15,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   toolLink: {
     fontSize: 12,
     fontWeight: "600",
   },
-
-  // Bottom row
   bottomRow: {
-    gap: 12,
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 14,
   },
   aiCard: {
-    backgroundColor: "#F5F3FF",
-    borderRadius: 16,
-    padding: 16,
-    position: "relative",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 14,
   },
   aiBadge: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    backgroundColor: "#DDD6FE",
+    alignSelf: "flex-start",
+    backgroundColor: "#EDE9FE",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
+    marginBottom: 6,
   },
   aiBadgeText: {
     fontSize: 10,

@@ -13,7 +13,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { getProfessionalById } from "@/services/professionals";
-import { MOCK_USER } from "@/services/savedProviders";
+import { MOCK_USER, isCurrentUserPro } from "@/services/savedProviders";
 
 // =====================================================
 // COLORS
@@ -113,8 +113,8 @@ export default function Profile() {
   const role = MOCK_ROLE;
   const pro = getProfessionalById(MOCK_LOGGED_IN_PRO_ID);
 
-  // Single source of truth for Pro status
-  const isPro = MOCK_USER.subscribed;
+  // Single source of truth for Pro status (from professional mock data)
+  const isPro = isCurrentUserPro();
 
   if (!pro) {
     return (
