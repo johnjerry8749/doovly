@@ -13,6 +13,8 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { getProfessionalById } from "@/services/professionals";
+import { MOCK_USER } from "@/services/savedProviders";
+
 
 // =====================================================
 // COLORS
@@ -321,7 +323,7 @@ export default function Profile() {
             title="Subscription"
             rightText={pro.subscribed ? "Active" : "Upgrade"}
             rightColor={pro.subscribed ? PRIMARY : "#7C3AED"}
-            onPress={() => router.push("/profile/subscription/subscription")}
+            onPress={() => router.push(`/profile/subscription/[id]`)}
           />
 
           <MenuItem
