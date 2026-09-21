@@ -5,9 +5,17 @@
  * Pro (subscribed): unlimited
  *
  * Later: swap bodies for API / AsyncStorage.
+ *
+ * Single source of truth while on mock data:
+ * - subscribed / verified come from the logged-in professional in
+ *   src/data/professionals.ts (via professionalId).
  */
 
-import { getProfessionalById, type Professional } from "@/services/professionals";
+import {
+  getProfessionalById,
+  type Professional,
+} from "@/services/professionals";
+import { PROFESSIONALS } from "@/data/professionals";
 
 // =====================================================
 // MOCK LOGGED-IN USER (replace with auth later)
@@ -16,7 +24,7 @@ import { getProfessionalById, type Professional } from "@/services/professionals
 export type AppUser = {
   id: string;
   name: string;
-  /** true = Doovly Pro → unlimited saves */
+  /** true = Doovly Pro → unlimited saves + Pro dashboard */
   subscribed: boolean;
   /**
    * Professional profile id that belongs to this user (if they offer services).
@@ -26,13 +34,22 @@ export type AppUser = {
   professionalId: string | null;
 };
 
-/** Change subscribed to true to test unlimited saves */
+/** Must match MOCK_LOGGED_IN_PRO_ID used in profile tab ("1" = John Chukwuemeka) */
+const MOCK_LOGGED_IN_PRO_ID = "1";
+
+const loggedInPro = getProfessionalById(MOCK_LOGGED_IN_PRO_ID);
+
+/**
+ * MOCK_USER is derived from the professional record so
+ * verified + subscribed stay in sync with src/data/professionals.ts.
+ * Change subscribed/verified on the professional to control Pro UI.
+ */
 export const MOCK_USER: AppUser = {
   id: "u1",
-  name: "John Jerry",
-  subscribed: true, // Pro user → unlimited saves
-  // Matches MOCK_LOGGED_IN_PRO_ID in profile tab ("1" = John Chukwuemeka)
-  professionalId: "1",
+  name: loggedInPro?.name ?? "John Jerry",
+  // Driven by professional mock data
+  subscribed: loggedInPro?.subscribed ?? false,
+  professionalId: MOCK_LOGGED_IN_PRO_ID,
 };
 
 /**
@@ -52,6 +69,21 @@ export function isOwnProfessionalProfile(professionalId: string): boolean {
   const mine = getLoggedInProfessionalId();
   if (!mine) return false;
   return String(mine) === String(professionalId);
+}
+
+/** Current user is on Doovly Pro (from professional data). */
+export function isCurrentUserPro(): boolean {
+  const proId = getLoggedInProfessionalId();
+  if (!proId) return MOCK_USER.subscribed;
+  const pro = getProfessionalById(proId);
+  return pro?.subscribed ?? MOCK_USER.subscribed;
+}
+
+/** Current user has a verified professional badge. */
+export function isCurrentUserVerified(): boolean {
+  const proId = getLoggedInProfessionalId();
+  if (!proId) return false;
+  return getProfessionalById(proId)?.verified ?? false;
 }
 
 export const FREE_SAVE_LIMIT = 5;
@@ -78,7 +110,7 @@ export function isSaved(providerId: string): boolean {
 
 /** null = unlimited (Pro) */
 export function getSaveLimit(): number | null {
-  if (MOCK_USER.subscribed) return null;
+  if (isCurrentUserPro()) return null;
   return FREE_SAVE_LIMIT;
 }
 
@@ -118,6 +150,18 @@ export function toggleSave(providerId: string): SaveResult {
   return { ok: true, saved: true };
 }
 
+/**
+ * Toggle Pro status for testing.
+ * Keeps MOCK_USER and the professional record in sync.
+ */
 export function setMockSubscribed(subscribed: boolean) {
   MOCK_USER.subscribed = subscribed;
+
+  const proId = MOCK_USER.professionalId;
+  if (!proId) return;
+
+  const pro = PROFESSIONALS.find((p) => p.id === String(proId));
+  if (pro) {
+    pro.subscribed = subscribed;
+  }
 }
