@@ -746,13 +746,19 @@ const styles = StyleSheet.create({
   profileImage: { width: "100%", height: "100%", borderRadius: 38 },
   verifiedBadge: {
     position: "absolute",
-    right: -5,
-    bottom: -2,
-    width: 27,
-    height: 27,
-    borderRadius: 14,
-    justifyContent: "center",
+    right: -1,
+    bottom: -1,
+    width: 19,
+    height: 19,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
+    justifyContent: "center",
+  },
+
+  verifiedBadgeImage: {
+    width: 17,
+    height: 17,
   },
   checkmark: { width: 39, height: 39 },
   professionalName: {

@@ -621,15 +621,21 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   profileImage: { width: "100%", height: "100%", borderRadius: 35 },
-  verifiedBadge: {
+ verifiedBadge: {
     position: "absolute",
-    right: -3,
-    bottom: 0,
-    width: 20,
-    height: 20,
+    right: -1,
+    bottom: -1,
+    width: 19,
+    height: 19,
     borderRadius: 10,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  verifiedBadgeImage: {
+    width: 17,
+    height: 17,
   },
   professionalName: {
     fontSize: 13,
