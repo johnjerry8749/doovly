@@ -1,10 +1,6 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+import { Redirect } from "expo-router";
 
-export default function my_bookings() {
-  return (
-    <View>
-      <Text>my_bookings</Text>
-    </View>
-  )
+/** Profile "My Bookings" goes to the main Bookings tab. */
+export default function MyBookingsRedirect() {
+  return <Redirect href="/(tab)/bookings" />;
 }
