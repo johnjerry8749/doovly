@@ -13,9 +13,24 @@ import {
   SERVICE_REQUESTS,
   getServiceRequestById as getFromData,
   type ServiceRequest,
+  type ServiceRequestIcon,
 } from "@/data/serviceRequests";
+import { getCurrentUserId } from "@/services/inAppNotifications";
 
 export type { ServiceRequest };
+
+export type CreateServiceRequestInput = {
+  category: string;
+  title: string;
+  description: string;
+  price?: string;
+  location: string;
+  city: string;
+  preferredDate: string;
+  images: string[];
+  icon: ServiceRequestIcon;
+  iconBackground: string;
+};
 
 /** List all service requests. */
 export function listServiceRequests(): ServiceRequest[] {
@@ -45,6 +60,34 @@ export function getServiceRequestById(
 ): ServiceRequest | undefined {
   // TODO backend: return apiRequest<ServiceRequest>(`/service-requests/${id}`)
   return getFromData(id);
+}
+
+/** Add a request to the mock list. Later: POST /service-requests. */
+export function createServiceRequest(
+  input: CreateServiceRequestInput,
+): ServiceRequest {
+  const request: ServiceRequest = {
+    id: `local-${Date.now()}`,
+    title: input.title.trim(),
+    category: input.category,
+    profession: input.category,
+    location: input.location.trim(),
+    city: input.city.trim(),
+    date: input.preferredDate,
+    price: input.price?.trim() || "Price on request",
+    timeAgo: "Just now",
+    icon: input.icon,
+    iconBackground: input.iconBackground,
+    images: input.images,
+    description: input.description.trim(),
+    preferredDate: input.preferredDate,
+    isNew: true,
+    createdByUserId: getCurrentUserId(),
+  };
+
+  // TODO backend: return apiRequest("/service-requests", { method: "POST", body })
+  SERVICE_REQUESTS.unshift(request);
+  return request;
 }
 
 /** Recent requests (limit for home / services header). */

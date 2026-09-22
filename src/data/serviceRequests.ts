@@ -30,6 +30,8 @@ export type ServiceRequest = {
   description: string;
   preferredDate: string;
   isNew: boolean;
+  /** User who posted the request. Later: from auth. */
+  createdByUserId: string;
 };
 
 // =========================
@@ -59,6 +61,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       "Bathroom pipe is leaking under the sink. Need someone experienced who can fix it today if possible.",
     preferredDate: "ASAP",
     isNew: true,
+    createdByUserId: "u2",
   },
   {
     id: "2",
@@ -81,6 +84,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       "Power keeps tripping in the living room. Looking for a licensed electrician to diagnose and fix.",
     preferredDate: "Tomorrow, 2:00 PM",
     isNew: true,
+    createdByUserId: "u3",
   },
   {
     id: "3",
@@ -103,6 +107,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       "Engine warning light is on and the car is making a strange noise. Need a reliable mechanic ASAP.",
     preferredDate: "Today, 4:30 PM",
     isNew: true,
+    createdByUserId: "u4",
   },
   {
     id: "4",
@@ -125,6 +130,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       "Looking for a clean haircut and beard trim. Prefer someone who can come to my location.",
     preferredDate: "Today, 11:00 AM",
     isNew: false,
+    createdByUserId: "u5",
   },
   {
     id: "5",
@@ -147,6 +153,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       "Need gel nails and a full manicure. Looking for a neat and experienced nail tech.",
     preferredDate: "Tomorrow, 1:00 PM",
     isNew: false,
+    createdByUserId: "u6",
   },
   {
     id: "6",
@@ -169,6 +176,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       "Need a full house wiring safety check. Some outlets are warm and lights flicker.",
     preferredDate: "This week",
     isNew: false,
+    createdByUserId: "u7",
   },
   {
     id: "7",
@@ -191,6 +199,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       "Kitchen sink is fully blocked. Need a plumber who can clear it and check the pipes.",
     preferredDate: "ASAP",
     isNew: true,
+    createdByUserId: "u1",
   },
   {
     id: "8",
@@ -213,6 +222,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       "Looking for a professional full body massage at home. Prefer a verified and experienced therapist.",
     preferredDate: "Tomorrow, 10:00 AM",
     isNew: false,
+    createdByUserId: "u8",
   },
   {
     id: "9",
@@ -235,6 +245,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       "Car AC is not cooling at all. Need a mechanic who specializes in AC systems.",
     preferredDate: "ASAP",
     isNew: false,
+    createdByUserId: "u9",
   },
   {
     id: "10",
@@ -257,6 +268,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       "Broken tiles and a leaking pipe in the bathroom. Need both plumbing and minor tiling work.",
     preferredDate: "Tomorrow, 9:00 AM",
     isNew: false,
+    createdByUserId: "u10",
   },
   {
     id: "11",
@@ -281,6 +293,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       "Looking for a reliable cleaner to help with a 2-bedroom apartment. Must be experienced, trustworthy and able to bring cleaning supplies. Flexible with time.",
     preferredDate: "ASAP",
     isNew: true,
+    createdByUserId: "u11",
   },
 ];
 

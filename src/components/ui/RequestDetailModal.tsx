@@ -12,6 +12,10 @@ import {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import type { ServiceRequest } from "@/services/serviceRequests";
+import {
+  addInAppNotification,
+  getCurrentUserId,
+} from "@/services/inAppNotifications";
 
 const GREEN = "#159447";
 
@@ -190,7 +194,20 @@ export default function RequestDetailModal({
                 <TouchableOpacity
                   style={styles.ctaButton}
                   activeOpacity={0.85}
-                  onPress={onClose}
+                  onPress={() => {
+                    const recipientId =
+                      request.createdByUserId &&
+                      request.createdByUserId !== getCurrentUserId()
+                        ? request.createdByUserId
+                        : getCurrentUserId();
+                    addInAppNotification({
+                      userId: recipientId,
+                      type: "general",
+                      title: "New Offer",
+                      body: `Someone sent an offer on "${request.title}".`,
+                    });
+                    onClose();
+                  }}
                 >
                   <Ionicons name="paper-plane-outline" size={20} color="#fff" />
                   <Text style={styles.ctaText}>Send Offer</Text>
