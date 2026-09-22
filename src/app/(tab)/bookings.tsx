@@ -31,10 +31,7 @@ import {
   type Booking,
 } from "@/data/booking";
 
-import {
-  DISPUTE_REASONS,
-  type DisputeReason,
-} from "@/data/disputes";
+import { DISPUTE_REASONS, type DisputeReason } from "@/data/disputes";
 
 import { getCurrentUserId } from "@/services/inAppNotifications";
 
@@ -100,10 +97,7 @@ const openBookingLocation = async (item: Booking) => {
   } catch (error) {
     console.error("Unable to open booking location:", error);
 
-    Alert.alert(
-      "Map Error",
-      "We could not open the customer's location.",
-    );
+    Alert.alert("Map Error", "We could not open the customer's location.");
   }
 };
 
@@ -144,9 +138,7 @@ const handleOpenMap = (item: Booking) => {
    *
    * Always allow map.
    */
-  if (
-    item.status === "Pending"
-  ) {
+  if (item.status === "Pending") {
     openBookingLocation(item);
     return;
   }
@@ -173,25 +165,21 @@ const handleOpenMap = (item: Booking) => {
  * ============================================
  */
 export default function Bookings() {
-  const [mainTab, setMainTab] =
-    useState<"booked" | "received">("booked");
+  const [mainTab, setMainTab] = useState<"booked" | "received">("booked");
 
   const [filter, setFilter] = useState<string>("All");
 
-  const [showReportModal, setShowReportModal] =
-    useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
-  const [reportBooking, setReportBooking] =
-    useState<Booking | null>(null);
+  const [reportBooking, setReportBooking] = useState<Booking | null>(null);
 
-  const [selectedReason, setSelectedReason] =
-    useState<DisputeReason | null>(null);
+  const [selectedReason, setSelectedReason] = useState<DisputeReason | null>(
+    null,
+  );
 
-  const [reportDescription, setReportDescription] =
-    useState("");
+  const [reportDescription, setReportDescription] = useState("");
 
-  const [reportPhotos, setReportPhotos] =
-    useState<string[]>([]);
+  const [reportPhotos, setReportPhotos] = useState<string[]>([]);
 
   /**
    * ============================================
@@ -199,9 +187,7 @@ export default function Bookings() {
    * ============================================
    */
   const data = useMemo<Booking[]>(() => {
-    return mainTab === "booked"
-      ? listBookedJobs()
-      : listReceivedJobs();
+    return mainTab === "booked" ? listBookedJobs() : listReceivedJobs();
   }, [mainTab]);
 
   const filteredData = useMemo<Booking[]>(() => {
@@ -209,22 +195,15 @@ export default function Bookings() {
       return data;
     }
 
-    return data.filter(
-      (item) => item.status === filter,
-    );
+    return data.filter((item) => item.status === filter);
   }, [data, filter]);
 
-  const handleMainTabChange = (
-    tab: "booked" | "received",
-  ) => {
+  const handleMainTabChange = (tab: "booked" | "received") => {
     setMainTab(tab);
     setFilter("All");
   };
 
-  const filters =
-    mainTab === "booked"
-      ? BOOKED_FILTERS
-      : RECEIVED_FILTERS;
+  const filters = mainTab === "booked" ? BOOKED_FILTERS : RECEIVED_FILTERS;
 
   /**
    * ============================================
@@ -250,30 +229,22 @@ export default function Bookings() {
         return;
       }
 
-      const result =
-        await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["images"],
-          allowsMultipleSelection: true,
-          selectionLimit: remaining,
-          quality: 0.7,
-        });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: true,
+        selectionLimit: remaining,
+        quality: 0.7,
+      });
 
       if (result.canceled) {
         return;
       }
 
-      const uris = result.assets
-        .map((asset) => asset.uri)
-        .filter(Boolean);
+      const uris = result.assets.map((asset) => asset.uri).filter(Boolean);
 
-      setReportPhotos((previous) =>
-        [...previous, ...uris].slice(0, 3),
-      );
+      setReportPhotos((previous) => [...previous, ...uris].slice(0, 3));
     } catch (error) {
-      Alert.alert(
-        "Could not open photos",
-        "Please try again.",
-      );
+      Alert.alert("Could not open photos", "Please try again.");
     }
   };
 
@@ -290,80 +261,44 @@ export default function Bookings() {
      *
      * MAP IS ALWAYS UNLOCKED HERE.
      */
-    if (
-      mainTab === "received" &&
-      item.status === "Pending"
-    ) {
+    if (mainTab === "received" && item.status === "Pending") {
       return (
         <View style={styles.actionRow}>
           {/* UNLOCKED MAP */}
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.mapButton,
-            ]}
+            style={[styles.actionButton, styles.mapButton]}
             activeOpacity={0.8}
             onPress={() => handleOpenMap(item)}
           >
-            <Ionicons
-              name="map-outline"
-              size={16}
-              color={GREEN}
-            />
+            <Ionicons name="map-outline" size={16} color={GREEN} />
 
-            <Text style={styles.mapButtonText}>
-              Map
-            </Text>
+            <Text style={styles.mapButtonText}>Map</Text>
           </TouchableOpacity>
 
           {/* ACCEPT */}
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.acceptButton,
-            ]}
+            style={[styles.actionButton, styles.acceptButton]}
             activeOpacity={0.8}
             onPress={() =>
-              Alert.alert(
-                "Accept Job",
-                "This job will be marked as Accepted.",
-              )
+              Alert.alert("Accept Job", "This job will be marked as Accepted.")
             }
           >
-            <Ionicons
-              name="checkmark"
-              size={16}
-              color="#FFFFFF"
-            />
+            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
 
-            <Text style={styles.acceptButtonText}>
-              Accept
-            </Text>
+            <Text style={styles.acceptButtonText}>Accept</Text>
           </TouchableOpacity>
 
           {/* DECLINE */}
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.declineButton,
-            ]}
+            style={[styles.actionButton, styles.declineButton]}
             activeOpacity={0.8}
             onPress={() =>
-              Alert.alert(
-                "Decline Job",
-                "This job will be declined.",
-              )
+              Alert.alert("Decline Job", "This job will be declined.")
             }
           >
-            <Ionicons
-              name="close"
-              size={16}
-              color="#DC2626"
-            />
+            <Ionicons name="close" size={16} color="#DC2626" />
 
-            <Text style={styles.declineButtonText}>
-              Decline
-            </Text>
+            <Text style={styles.declineButtonText}>Decline</Text>
           </TouchableOpacity>
         </View>
       );
@@ -376,13 +311,9 @@ export default function Bookings() {
      */
     if (
       mainTab === "received" &&
-      (
-        item.status === "Accepted" ||
-        item.status === "Ongoing"
-      )
+      (item.status === "Accepted" || item.status === "Ongoing")
     ) {
-      const locationAvailable =
-        canViewJobLocation(item);
+      const locationAvailable = canViewJobLocation(item);
 
       return (
         <View style={styles.actionRow}>
@@ -391,31 +322,21 @@ export default function Bookings() {
             style={[
               styles.actionButton,
               styles.mapButton,
-              !locationAvailable &&
-                styles.lockedMapButton,
+              !locationAvailable && styles.lockedMapButton,
             ]}
             activeOpacity={0.8}
             onPress={() => handleOpenMap(item)}
           >
             <Ionicons
-              name={
-                locationAvailable
-                  ? "map-outline"
-                  : "lock-closed-outline"
-              }
+              name={locationAvailable ? "map-outline" : "lock-closed-outline"}
               size={16}
-              color={
-                locationAvailable
-                  ? GREEN
-                  : "#9CA3AF"
-              }
+              color={locationAvailable ? GREEN : "#9CA3AF"}
             />
 
             <Text
               style={[
                 styles.mapButtonText,
-                !locationAvailable &&
-                  styles.lockedMapButtonText,
+                !locationAvailable && styles.lockedMapButtonText,
               ]}
             >
               Map
@@ -424,35 +345,20 @@ export default function Bookings() {
 
           {/* CANCEL */}
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.cancelButton,
-            ]}
+            style={[styles.actionButton, styles.cancelButton]}
             activeOpacity={0.8}
             onPress={() =>
-              Alert.alert(
-                "Cancel Job",
-                "This job will be cancelled.",
-              )
+              Alert.alert("Cancel Job", "This job will be cancelled.")
             }
           >
-            <Ionicons
-              name="close-circle-outline"
-              size={16}
-              color="#DC2626"
-            />
+            <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
 
-            <Text style={styles.cancelButtonText}>
-              Cancel
-            </Text>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
 
           {/* COMPLETE */}
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.completeButton,
-            ]}
+            style={[styles.actionButton, styles.completeButton]}
             activeOpacity={0.8}
             onPress={() =>
               Alert.alert(
@@ -461,15 +367,9 @@ export default function Bookings() {
               )
             }
           >
-            <Ionicons
-              name="checkmark-circle-outline"
-              size={16}
-              color={GREEN}
-            />
+            <Ionicons name="checkmark-circle-outline" size={16} color={GREEN} />
 
-            <Text style={styles.completeButtonText}>
-              Mark as Completed
-            </Text>
+            <Text style={styles.completeButtonText}>Mark as Completed</Text>
           </TouchableOpacity>
         </View>
       );
@@ -480,10 +380,7 @@ export default function Bookings() {
      * RECEIVED - AWAITING APPROVAL
      * ==========================================
      */
-    if (
-      mainTab === "received" &&
-      item.status === "Awaiting Approval"
-    ) {
+    if (mainTab === "received" && item.status === "Awaiting Approval") {
       return null;
     }
 
@@ -494,36 +391,22 @@ export default function Bookings() {
      */
     if (
       mainTab === "booked" &&
-      (
-        item.status === "Upcoming" ||
+      (item.status === "Upcoming" ||
         item.status === "Accepted" ||
-        item.status === "Ongoing"
-      )
+        item.status === "Ongoing")
     ) {
       return (
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.cancelButton,
-            ]}
+            style={[styles.actionButton, styles.cancelButton]}
             activeOpacity={0.8}
             onPress={() =>
-              Alert.alert(
-                "Cancel Booking",
-                "This booking will be cancelled.",
-              )
+              Alert.alert("Cancel Booking", "This booking will be cancelled.")
             }
           >
-            <Ionicons
-              name="close-circle-outline"
-              size={16}
-              color="#DC2626"
-            />
+            <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
 
-            <Text style={styles.cancelButtonText}>
-              Cancel
-            </Text>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
         </View>
       );
@@ -534,18 +417,12 @@ export default function Bookings() {
      * BOOKED - AWAITING APPROVAL
      * ==========================================
      */
-    if (
-      mainTab === "booked" &&
-      item.status === "Awaiting Approval"
-    ) {
+    if (mainTab === "booked" && item.status === "Awaiting Approval") {
       return (
         <View style={styles.actionRow}>
           {/* APPROVE */}
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.acceptButton,
-            ]}
+            style={[styles.actionButton, styles.acceptButton]}
             activeOpacity={0.8}
             onPress={() =>
               Alert.alert(
@@ -554,23 +431,14 @@ export default function Bookings() {
               )
             }
           >
-            <Ionicons
-              name="checkmark"
-              size={16}
-              color="#FFFFFF"
-            />
+            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
 
-            <Text style={styles.acceptButtonText}>
-              Approve
-            </Text>
+            <Text style={styles.acceptButtonText}>Approve</Text>
           </TouchableOpacity>
 
           {/* REPORT */}
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.declineButton,
-            ]}
+            style={[styles.actionButton, styles.declineButton]}
             activeOpacity={0.8}
             onPress={() => {
               setReportBooking(item);
@@ -580,15 +448,9 @@ export default function Bookings() {
               setShowReportModal(true);
             }}
           >
-            <Ionicons
-              name="close"
-              size={16}
-              color="#DC2626"
-            />
+            <Ionicons name="close" size={16} color="#DC2626" />
 
-            <Text style={styles.declineButtonText}>
-              Report Issue
-            </Text>
+            <Text style={styles.declineButtonText}>Report Issue</Text>
           </TouchableOpacity>
         </View>
       );
@@ -608,28 +470,16 @@ export default function Bookings() {
      * CANCELLED / DECLINED
      * ==========================================
      */
-    if (
-      item.status === "Cancelled" ||
-      item.status === "Declined"
-    ) {
+    if (item.status === "Cancelled" || item.status === "Declined") {
       return (
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.secondaryActionButton,
-            ]}
+            style={[styles.actionButton, styles.secondaryActionButton]}
             activeOpacity={0.8}
           >
-            <Ionicons
-              name="document-text-outline"
-              size={16}
-              color={GREEN}
-            />
+            <Ionicons name="document-text-outline" size={16} color={GREEN} />
 
-            <Text style={styles.secondaryActionText}>
-              View Details
-            </Text>
+            <Text style={styles.secondaryActionText}>View Details</Text>
           </TouchableOpacity>
         </View>
       );
@@ -643,11 +493,7 @@ export default function Bookings() {
    * BOOKING CARD
    * ============================================
    */
-  const renderBooking = ({
-    item,
-  }: {
-    item: Booking;
-  }) => {
+  const renderBooking = ({ item }: { item: Booking }) => {
     const statusStyle = statusColors[item.status];
 
     /**
@@ -658,9 +504,7 @@ export default function Bookings() {
      *
      * All other statuses = show Chat
      */
-    const showChat =
-      item.status !== "Completed" ||
-      IS_PRO_USER;
+    const showChat = item.status !== "Completed" || IS_PRO_USER;
 
     return (
       <View style={styles.card}>
@@ -686,27 +530,16 @@ export default function Bookings() {
           </View>
 
           <View style={styles.providerInfo}>
-            <Text
-              style={styles.providerName}
-              numberOfLines={1}
-            >
+            <Text style={styles.providerName} numberOfLines={1}>
               {item.providerName}
             </Text>
 
             <View style={styles.ratingRow}>
-              <Ionicons
-                name="star"
-                size={14}
-                color="#F59E0B"
-              />
+              <Ionicons name="star" size={14} color="#F59E0B" />
 
-              <Text style={styles.ratingText}>
-                {item.rating.toFixed(1)}
-              </Text>
+              <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
 
-              <Text style={styles.reviewText}>
-                ({item.reviews} reviews)
-              </Text>
+              <Text style={styles.reviewText}>({item.reviews} reviews)</Text>
             </View>
           </View>
 
@@ -733,35 +566,20 @@ export default function Bookings() {
         </View>
 
         {/* JOB TITLE */}
-        <Text style={styles.jobTitle}>
-          {item.title}
-        </Text>
+        <Text style={styles.jobTitle}>{item.title}</Text>
 
         {/* INFO */}
         <View style={styles.infoContainer}>
           <View style={styles.infoItem}>
-            <Ionicons
-              name="calendar-outline"
-              size={17}
-              color="#6B7280"
-            />
+            <Ionicons name="calendar-outline" size={17} color="#6B7280" />
 
-            <Text style={styles.infoText}>
-              {item.date}
-            </Text>
+            <Text style={styles.infoText}>{item.date}</Text>
           </View>
 
           <View style={styles.infoItem}>
-            <Ionicons
-              name="location-outline"
-              size={17}
-              color="#6B7280"
-            />
+            <Ionicons name="location-outline" size={17} color="#6B7280" />
 
-            <Text
-              style={styles.infoText}
-              numberOfLines={1}
-            >
+            <Text style={styles.infoText} numberOfLines={1}>
               {item.location}
             </Text>
           </View>
@@ -770,35 +588,17 @@ export default function Bookings() {
         {/* CONTACT BUTTONS */}
         <View style={styles.contactRow}>
           {showChat && (
-            <TouchableOpacity
-              style={styles.contactButton}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name="chatbubble-outline"
-                size={17}
-                color={GREEN}
-              />
+            <TouchableOpacity style={styles.contactButton} activeOpacity={0.8}>
+              <Ionicons name="chatbubble-outline" size={17} color={GREEN} />
 
-              <Text style={styles.contactText}>
-                Chat
-              </Text>
+              <Text style={styles.contactText}>Chat</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity
-            style={styles.contactButton}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="call-outline"
-              size={17}
-              color={GREEN}
-            />
+          <TouchableOpacity style={styles.contactButton} activeOpacity={0.8}>
+            <Ionicons name="call-outline" size={17} color={GREEN} />
 
-            <Text style={styles.contactText}>
-              Call
-            </Text>
+            <Text style={styles.contactText}>Call</Text>
           </TouchableOpacity>
         </View>
 
@@ -815,17 +615,12 @@ export default function Bookings() {
    */
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#FFFFFF"
-      />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* HEADER */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>
-            Bookings
-          </Text>
+          <Text style={styles.headerTitle}>Bookings</Text>
 
           <Text style={styles.headerSubtitle}>
             Manage your bookings and jobs
@@ -844,11 +639,7 @@ export default function Bookings() {
             })
           }
         >
-          <Ionicons
-            name="notifications-outline"
-            size={28}
-            color="#111"
-          />
+          <Ionicons name="notifications-outline" size={28} color="#111" />
 
           <View style={styles.notificationDot} />
         </TouchableOpacity>
@@ -857,21 +648,14 @@ export default function Bookings() {
       {/* MAIN TABS */}
       <View style={styles.mainTabsContainer}>
         <TouchableOpacity
-          style={[
-            styles.mainTab,
-            mainTab === "booked" &&
-              styles.activeMainTab,
-          ]}
-          onPress={() =>
-            handleMainTabChange("booked")
-          }
+          style={[styles.mainTab, mainTab === "booked" && styles.activeMainTab]}
+          onPress={() => handleMainTabChange("booked")}
           activeOpacity={0.8}
         >
           <Text
             style={[
               styles.mainTabText,
-              mainTab === "booked" &&
-                styles.activeMainTabText,
+              mainTab === "booked" && styles.activeMainTabText,
             ]}
           >
             My Bookings
@@ -881,19 +665,15 @@ export default function Bookings() {
         <TouchableOpacity
           style={[
             styles.mainTab,
-            mainTab === "received" &&
-              styles.activeMainTab,
+            mainTab === "received" && styles.activeMainTab,
           ]}
-          onPress={() =>
-            handleMainTabChange("received")
-          }
+          onPress={() => handleMainTabChange("received")}
           activeOpacity={0.8}
         >
           <Text
             style={[
               styles.mainTabText,
-              mainTab === "received" &&
-                styles.activeMainTabText,
+              mainTab === "received" && styles.activeMainTabText,
             ]}
           >
             Received Jobs
@@ -906,32 +686,25 @@ export default function Bookings() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={
-            styles.filterContainer
-          }
+          contentContainerStyle={styles.filterContainer}
         >
           {filters.map((itemFilter) => {
-            const isActive =
-              filter === itemFilter;
+            const isActive = filter === itemFilter;
 
             return (
               <TouchableOpacity
                 key={itemFilter}
                 style={[
                   styles.filterButton,
-                  isActive &&
-                    styles.activeFilterButton,
+                  isActive && styles.activeFilterButton,
                 ]}
-                onPress={() =>
-                  setFilter(itemFilter)
-                }
+                onPress={() => setFilter(itemFilter)}
                 activeOpacity={0.8}
               >
                 <Text
                   style={[
                     styles.filterText,
-                    isActive &&
-                      styles.activeFilterText,
+                    isActive && styles.activeFilterText,
                   ]}
                 >
                   {itemFilter}
@@ -953,16 +726,10 @@ export default function Bookings() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIcon}>
-              <Ionicons
-                name="calendar-outline"
-                size={32}
-                color="#9CA3AF"
-              />
+              <Ionicons name="calendar-outline" size={32} color="#9CA3AF" />
             </View>
 
-            <Text style={styles.emptyTitle}>
-              No bookings found
-            </Text>
+            <Text style={styles.emptyTitle}>No bookings found</Text>
 
             <Text style={styles.emptyText}>
               There are no bookings under this category.
@@ -983,11 +750,7 @@ export default function Bookings() {
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={
-            Platform.OS === "ios"
-              ? "padding"
-              : undefined
-          }
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <View style={styles.modalOverlayInner}>
             <Pressable
@@ -1001,71 +764,49 @@ export default function Bookings() {
             <View style={styles.modalSheet}>
               <View style={styles.modalHandle} />
 
-              <Text style={styles.modalTitle}>
-                Report Issue
-              </Text>
+              <Text style={styles.modalTitle}>Report Issue</Text>
 
               {reportBooking ? (
                 <Text style={styles.modalSubtitle}>
-                  {reportBooking.title} ·{" "}
-                  {reportBooking.providerName}
+                  {reportBooking.title} · {reportBooking.providerName}
                 </Text>
               ) : null}
 
               <ScrollView
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={
-                  styles.modalScrollContent
-                }
+                contentContainerStyle={styles.modalScrollContent}
               >
-                <Text style={styles.modalLabel}>
-                  What went wrong?
-                </Text>
+                <Text style={styles.modalLabel}>What went wrong?</Text>
 
                 {DISPUTE_REASONS.map((reason) => {
-                  const isSelected =
-                    selectedReason === reason;
+                  const isSelected = selectedReason === reason;
 
                   return (
                     <TouchableOpacity
                       key={reason}
                       style={[
                         styles.reasonRow,
-                        isSelected &&
-                          styles.reasonRowSelected,
+                        isSelected && styles.reasonRowSelected,
                       ]}
-                      onPress={() =>
-                        setSelectedReason(reason)
-                      }
+                      onPress={() => setSelectedReason(reason)}
                     >
                       <View
                         style={[
                           styles.reasonRadio,
-                          isSelected &&
-                            styles.reasonRadioSelected,
+                          isSelected && styles.reasonRadioSelected,
                         ]}
                       >
                         {isSelected ? (
-                          <View
-                            style={
-                              styles.reasonRadioDot
-                            }
-                          />
+                          <View style={styles.reasonRadioDot} />
                         ) : null}
                       </View>
 
-                      <Text
-                        style={styles.reasonText}
-                      >
-                        {reason}
-                      </Text>
+                      <Text style={styles.reasonText}>{reason}</Text>
                     </TouchableOpacity>
                   );
                 })}
 
-                <Text style={styles.modalLabel}>
-                  Description
-                </Text>
+                <Text style={styles.modalLabel}>Description</Text>
 
                 <TextInput
                   style={styles.descriptionInput}
@@ -1073,62 +814,37 @@ export default function Bookings() {
                   placeholderTextColor="#9CA3AF"
                   multiline
                   value={reportDescription}
-                  onChangeText={
-                    setReportDescription
-                  }
+                  onChangeText={setReportDescription}
                 />
 
-                <Text style={styles.modalLabel}>
-                  Photos (optional)
-                </Text>
+                <Text style={styles.modalLabel}>Photos (optional)</Text>
 
                 <View style={styles.photoRow}>
-                  {reportPhotos.map(
-                    (uri, index) => (
-                      <View key={uri}>
-                        <Image
-                          source={{ uri }}
-                          style={styles.photoThumb}
-                        />
+                  {reportPhotos.map((uri, index) => (
+                    <View key={uri}>
+                      <Image source={{ uri }} style={styles.photoThumb} />
 
-                        <TouchableOpacity
-                          style={styles.photoRemove}
-                          onPress={() =>
-                            setReportPhotos(
-                              (previous) =>
-                                previous.filter(
-                                  (_, i) =>
-                                    i !== index,
-                                ),
-                            )
-                          }
-                        >
-                          <Ionicons
-                            name="close"
-                            size={12}
-                            color="#fff"
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    ),
-                  )}
+                      <TouchableOpacity
+                        style={styles.photoRemove}
+                        onPress={() =>
+                          setReportPhotos((previous) =>
+                            previous.filter((_, i) => i !== index),
+                          )
+                        }
+                      >
+                        <Ionicons name="close" size={12} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
 
                   {reportPhotos.length < 3 && (
                     <TouchableOpacity
                       style={styles.addPhotoBtn}
                       onPress={pickReportPhotos}
                     >
-                      <Ionicons
-                        name="camera-outline"
-                        size={22}
-                        color={GREEN}
-                      />
+                      <Ionicons name="camera-outline" size={22} color={GREEN} />
 
-                      <Text
-                        style={styles.addPhotoText}
-                      >
-                        Add
-                      </Text>
+                      <Text style={styles.addPhotoText}>Add</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1159,13 +875,7 @@ export default function Bookings() {
                     setShowReportModal(false);
                   }}
                 >
-                  <Text
-                    style={
-                      styles.acceptButtonText
-                    }
-                  >
-                    Submit Report
-                  </Text>
+                  <Text style={styles.acceptButtonText}>Submit Report</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
@@ -1552,7 +1262,7 @@ const styles = StyleSheet.create({
   },
 
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.4)",
   },
 
@@ -1699,4 +1409,3 @@ const styles = StyleSheet.create({
     color: GREEN,
   },
 });
-
