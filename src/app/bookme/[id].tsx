@@ -36,6 +36,10 @@ export default function BookMeScreen() {
 
   const pro = useMemo(() => getProfessionalById(id ?? ""), [id]);
 
+  // Use professional's subscription status from mock data
+  // Later: this will come from Supabase (pro.subscribed)
+  const isProSubscribed = pro?.subscribed === true;
+
   // =========================================================
   // SERVICE
   // =========================================================
@@ -331,11 +335,6 @@ export default function BookMeScreen() {
   // CONFIRM BOOKING
   // =========================================================
 
-  // Mock: subscription status of the PERSON BOOKING (current user), not the professional.
-  // Change this to true to test Pro user, false to test free user.
-  // Later: replace with real auth user subscription from Supabase.
-  const isProUser = false; // mock current user is free
-
   const handleConfirmBooking = (paymentMethod: "pay_now" | "pay_on_site") => {
     if (!selectedService) {
       Alert.alert("Select Service", "Please select a service.");
@@ -347,11 +346,11 @@ export default function BookMeScreen() {
       return;
     }
 
-    // Lock Pay on Site for free users
-    if (paymentMethod === "pay_on_site" && !isProUser) {
+    // Lock Pay on Site if the professional is NOT subscribed
+    if (paymentMethod === "pay_on_site" && !isProSubscribed) {
       Alert.alert(
-        "Pro Feature",
-        "Pay on Site is only available for Pro users. Upgrade to unlock this option.",
+        "Not Available",
+        "Pay on Site is only available for subscribed professionals.",
       );
       return;
     }
@@ -603,25 +602,25 @@ export default function BookMeScreen() {
             <Ionicons name="arrow-forward" size={18} color="#fff" />
           </TouchableOpacity>
 
-          {/* Pay on Site - locked for free users (person booking) */}
+          {/* Pay on Site - only available if professional is subscribed */}
           <TouchableOpacity
             style={[
               styles.payBtn,
               {
                 flex: 1,
                 marginTop: 0,
-                backgroundColor: isProUser ? "#16A34A" : "#9CA3AF",
-                opacity: isProUser ? 1 : 0.7,
+                backgroundColor: isProSubscribed ? "#16A34A" : "#9CA3AF",
+                opacity: isProSubscribed ? 1 : 0.7,
               },
             ]}
             onPress={() => handleConfirmBooking("pay_on_site")}
-            activeOpacity={isProUser ? 0.85 : 1}
-            disabled={!isProUser}
+            activeOpacity={isProSubscribed ? 0.85 : 1}
+            disabled={!isProSubscribed}
           >
             <Text style={[styles.payBtnText, { fontSize: 15 }]}>
-              {isProUser ? "Pay on Site" : "Pay on Site"}
+              Pay on Site
             </Text>
-            {isProUser ? (
+            {isProSubscribed ? (
               <Ionicons name="location-outline" size={18} color="#fff" />
             ) : (
               <Ionicons name="lock-closed" size={16} color="#fff" />
@@ -629,17 +628,17 @@ export default function BookMeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Message for free users — edit this text as you like */}
-        {!isProUser && (
+        {/* Message when professional is not subscribed */}
+        {!isProSubscribed && (
           <Text
             style={{
               marginTop: 10,
               fontSize: 13,
-              color: "#6B7280",
+              color: "#fe4343",
               textAlign: "center",
             }}
           >
-            Upgrade to Pro to unlock Pay on Site
+            This professional does not support Pay on Site
           </Text>
         )}
 
