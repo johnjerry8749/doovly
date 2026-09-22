@@ -331,8 +331,10 @@ export default function BookMeScreen() {
   // CONFIRM BOOKING
   // =========================================================
 
-  // Mock: pro users have subscribed === true in src/data/professionals.ts
-  const isProUser = pro?.subscribed === true;
+  // Mock: subscription status of the PERSON BOOKING (current user), not the professional.
+  // Change this to true to test Pro user, false to test free user.
+  // Later: replace with real auth user subscription from Supabase.
+  const isProUser = false; // mock current user is free
 
   const handleConfirmBooking = (paymentMethod: "pay_now" | "pay_on_site") => {
     if (!selectedService) {
@@ -349,7 +351,7 @@ export default function BookMeScreen() {
     if (paymentMethod === "pay_on_site" && !isProUser) {
       Alert.alert(
         "Pro Feature",
-        "Pay on Site is only available for Pro professionals. Upgrade to unlock this option.",
+        "Pay on Site is only available for Pro users. Upgrade to unlock this option.",
       );
       return;
     }
@@ -587,43 +589,45 @@ export default function BookMeScreen() {
         </View>
 
         {/* ===================================================
-            PAYMENT OPTIONS
+            PAYMENT OPTIONS (side by side)
         =================================================== */}
 
-        {/* Pay Now - always available */}
-        <TouchableOpacity
-          style={styles.payBtn}
-          onPress={() => handleConfirmBooking("pay_now")}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.payBtnText}>Pay Now</Text>
+        <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
+          {/* Pay Now - always available */}
+          <TouchableOpacity
+            style={[styles.payBtn, { flex: 1, marginTop: 0 }]}
+            onPress={() => handleConfirmBooking("pay_now")}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.payBtnText}>Pay Now</Text>
+            <Ionicons name="arrow-forward" size={18} color="#fff" />
+          </TouchableOpacity>
 
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
-        </TouchableOpacity>
-
-        {/* Pay on Site - locked for free users (mock: pro.subscribed) */}
-        <TouchableOpacity
-          style={[
-            styles.payBtn,
-            {
-              marginTop: 12,
-              backgroundColor: isProUser ? "#16A34A" : "#9CA3AF",
-              opacity: isProUser ? 1 : 0.7,
-            },
-          ]}
-          onPress={() => handleConfirmBooking("pay_on_site")}
-          activeOpacity={isProUser ? 0.85 : 1}
-          disabled={!isProUser}
-        >
-          <Text style={styles.payBtnText}>
-            {isProUser ? "Pay on Site" : "Pay on Site (Pro only)"}
-          </Text>
-          {isProUser ? (
-            <Ionicons name="location-outline" size={20} color="#fff" />
-          ) : (
-            <Ionicons name="lock-closed" size={18} color="#fff" />
-          )}
-        </TouchableOpacity>
+          {/* Pay on Site - locked for free users (person booking) */}
+          <TouchableOpacity
+            style={[
+              styles.payBtn,
+              {
+                flex: 1,
+                marginTop: 0,
+                backgroundColor: isProUser ? "#16A34A" : "#9CA3AF",
+                opacity: isProUser ? 1 : 0.7,
+              },
+            ]}
+            onPress={() => handleConfirmBooking("pay_on_site")}
+            activeOpacity={isProUser ? 0.85 : 1}
+            disabled={!isProUser}
+          >
+            <Text style={[styles.payBtnText, { fontSize: 15 }]}>
+              {isProUser ? "Pay on Site" : "Pay on Site"}
+            </Text>
+            {isProUser ? (
+              <Ionicons name="location-outline" size={18} color="#fff" />
+            ) : (
+              <Ionicons name="lock-closed" size={16} color="#fff" />
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* ===================================================
             SECURE PAYMENT
