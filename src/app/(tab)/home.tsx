@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   profileImage: { width: "100%", height: "100%", borderRadius: 35 },
- verifiedBadge: {
+  verifiedBadge: {
     position: "absolute",
     right: -1,
     bottom: -1,
