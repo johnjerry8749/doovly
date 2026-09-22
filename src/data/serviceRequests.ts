@@ -3,9 +3,13 @@
  * Later: replace listServiceRequests / getServiceRequestById with API or DB.
  */
 
+import type { MaterialCommunityIcons } from "@expo/vector-icons";
+
 // =========================
 // TYPES
 // =========================
+
+export type ServiceRequestIcon = keyof typeof MaterialCommunityIcons.glyphMap;
 
 export type ServiceRequest = {
   id: string;
@@ -17,7 +21,7 @@ export type ServiceRequest = {
   date: string;
   price: string;
   timeAgo: string;
-  icon: string;
+  icon: ServiceRequestIcon;
   iconBackground: string;
   latitude?: number;
   longitude?: number;
@@ -25,7 +29,6 @@ export type ServiceRequest = {
   images: string[];
   description: string;
   preferredDate: string;
-  serviceType: string;
   isNew: boolean;
 };
 
@@ -55,7 +58,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     description:
       "Bathroom pipe is leaking under the sink. Need someone experienced who can fix it today if possible.",
     preferredDate: "ASAP",
-    serviceType: "Plumbing",
     isNew: true,
   },
   {
@@ -78,7 +80,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     description:
       "Power keeps tripping in the living room. Looking for a licensed electrician to diagnose and fix.",
     preferredDate: "Tomorrow, 2:00 PM",
-    serviceType: "Electrical",
     isNew: true,
   },
   {
@@ -101,7 +102,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     description:
       "Engine warning light is on and the car is making a strange noise. Need a reliable mechanic ASAP.",
     preferredDate: "Today, 4:30 PM",
-    serviceType: "Mechanic",
     isNew: true,
   },
   {
@@ -124,7 +124,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     description:
       "Looking for a clean haircut and beard trim. Prefer someone who can come to my location.",
     preferredDate: "Today, 11:00 AM",
-    serviceType: "Barber",
     isNew: false,
   },
   {
@@ -147,7 +146,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     description:
       "Need gel nails and a full manicure. Looking for a neat and experienced nail tech.",
     preferredDate: "Tomorrow, 1:00 PM",
-    serviceType: "Nail Tech",
     isNew: false,
   },
   {
@@ -170,7 +168,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     description:
       "Need a full house wiring safety check. Some outlets are warm and lights flicker.",
     preferredDate: "This week",
-    serviceType: "Electrical",
     isNew: false,
   },
   {
@@ -193,7 +190,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     description:
       "Kitchen sink is fully blocked. Need a plumber who can clear it and check the pipes.",
     preferredDate: "ASAP",
-    serviceType: "Plumbing",
     isNew: true,
   },
   {
@@ -216,7 +212,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     description:
       "Looking for a professional full body massage at home. Prefer a verified and experienced therapist.",
     preferredDate: "Tomorrow, 10:00 AM",
-    serviceType: "Spa",
     isNew: false,
   },
   {
@@ -239,7 +234,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     description:
       "Car AC is not cooling at all. Need a mechanic who specializes in AC systems.",
     preferredDate: "ASAP",
-    serviceType: "Mechanic",
     isNew: false,
   },
   {
@@ -262,13 +256,12 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     description:
       "Broken tiles and a leaking pipe in the bathroom. Need both plumbing and minor tiling work.",
     preferredDate: "Tomorrow, 9:00 AM",
-    serviceType: "Plumbing",
     isNew: false,
   },
   {
     id: "11",
     title: "Home Cleaning Needed",
-    category: "Cleaning",
+    category: "Home cleaning",
     profession: "Cleaner",
     location: "Lekki",
     city: "Lagos",
@@ -287,7 +280,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     description:
       "Looking for a reliable cleaner to help with a 2-bedroom apartment. Must be experienced, trustworthy and able to bring cleaning supplies. Flexible with time.",
     preferredDate: "ASAP",
-    serviceType: "Home cleaning",
     isNew: true,
   },
 ];

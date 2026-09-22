@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+﻿import React, { useMemo, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -6,15 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Modal,
-  Image,
-  ScrollView,
-  Dimensions,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import RequestDetailModal from "@/components/ui/RequestDetailModal";
 import {
   listServiceRequests,
   type ServiceRequest,
@@ -23,26 +20,17 @@ import { useLocation } from "@/context/LocationContext";
 
 const GREEN = "#159447";
 
-const { width } = Dimensions.get("window");
-
 export default function AllRequests() {
-  const { locationName } = useLocation();
+  const { locationName, loadingLocation, showAllNigeria } = useLocation();
   const [search, setSearch] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(
     null,
   );
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const allRequests = listServiceRequests();
 
   const matchesLocationCity = (itemCity: string, itemArea?: string) => {
-    if (
-      !locationName ||
-      locationName === "All Nigeria" ||
-      locationName.toLowerCase().includes("unavailable") ||
-      locationName.toLowerCase().includes("click here") ||
-      locationName.toLowerCase().includes("getting")
-    ) {
+    if (loadingLocation || showAllNigeria || !locationName) {
       return true;
     }
 
@@ -69,7 +57,7 @@ export default function AllRequests() {
 
       return matchesSearch && matchesLocation;
     });
-  }, [allRequests, search, locationName]);
+  }, [allRequests, search, locationName, loadingLocation, showAllNigeria]);
 
   const renderRequest = ({ item }: { item: ServiceRequest }) => {
     return (
@@ -82,7 +70,7 @@ export default function AllRequests() {
             ]}
           >
             <MaterialCommunityIcons
-              name={item.icon as any}
+              name={item.icon}
               size={28}
               color="#333"
             />
@@ -100,7 +88,7 @@ export default function AllRequests() {
           </Text>
 
           <Text style={styles.requestDetails} numberOfLines={1}>
-            {item.category} • {item.location}
+            {item.category} â€¢ {item.location}
           </Text>
 
           <Text style={styles.price}> {item.price}</Text>
@@ -111,10 +99,7 @@ export default function AllRequests() {
           <TouchableOpacity
             style={styles.viewRequestButton}
             activeOpacity={0.8}
-            onPress={() => {
-              setSelectedRequest(item);
-              setActiveImageIndex(0);
-            }}
+            onPress={() => setSelectedRequest(item)}
           >
             <Text style={styles.viewRequestText}>View Request</Text>
           </TouchableOpacity>
@@ -122,14 +107,6 @@ export default function AllRequests() {
       </View>
     );
   };
-
-  // All detail fields from mock only — no fallbacks
-  const requestGallery = selectedRequest?.images ?? [];
-  const requestDescription = selectedRequest?.description ?? "";
-  const preferredDate = selectedRequest?.preferredDate ?? "";
-  const serviceType =
-    selectedRequest?.serviceType ?? selectedRequest?.category ?? "";
-  const showNewBadge = selectedRequest?.isNew === true;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -178,192 +155,10 @@ export default function AllRequests() {
         ListFooterComponent={<View style={{ height: 24 }} />}
       />
 
-      <Modal
-        visible={!!selectedRequest}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSelectedRequest(null)}
-      >
-        <View style={modalStyles.overlay}>
-          <View style={modalStyles.sheet}>
-            {selectedRequest && (
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                bounces={false}
-                contentContainerStyle={modalStyles.scrollContent}
-              >
-                <View style={modalStyles.imageContainer}>
-                  <ScrollView
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    onMomentumScrollEnd={(event) => {
-                      const currentIndex = Math.round(
-                        event.nativeEvent.contentOffset.x / width,
-                      );
-                      setActiveImageIndex(currentIndex);
-                    }}
-                  >
-                    {requestGallery.map((imageSource, index) => (
-                      <Image
-                        key={`${selectedRequest.id}-image-${index}`}
-                        source={{
-                          uri: imageSource,
-                        }}
-                        style={modalStyles.image}
-                        resizeMode="cover"
-                      />
-                    ))}
-                  </ScrollView>
-
-                  <TouchableOpacity
-                    style={modalStyles.closeButton}
-                    onPress={() => setSelectedRequest(null)}
-                    activeOpacity={0.85}
-                  >
-                    <Ionicons name="close" size={22} color="#111827" />
-                  </TouchableOpacity>
-
-                  <View style={modalStyles.dotsContainer}>
-                    {requestGallery.map((_, index) => (
-                      <View
-                        key={`dot-${index}`}
-                        style={[
-                          modalStyles.dot,
-                          index === activeImageIndex && modalStyles.dotActive,
-                        ]}
-                      />
-                    ))}
-                  </View>
-                </View>
-
-                <View style={modalStyles.contentWrap}>
-                  <View style={modalStyles.headerRow}>
-                    <View
-                      style={[
-                        modalStyles.headerIcon,
-                        { backgroundColor: selectedRequest.iconBackground },
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name={selectedRequest.icon as any}
-                        size={26}
-                        color={GREEN}
-                      />
-                    </View>
-
-                    <View style={modalStyles.titleBlock}>
-                      <View style={modalStyles.titleRow}>
-                        <Text style={modalStyles.title} numberOfLines={2}>
-                          {selectedRequest.title}
-                        </Text>
-                        {showNewBadge && (
-                          <View style={modalStyles.badge}>
-                            <Text style={modalStyles.badgeText}>NEW</Text>
-                          </View>
-                        )}
-                      </View>
-
-                      <View style={modalStyles.locationRow}>
-                        <Ionicons
-                          name="location-outline"
-                          size={15}
-                          color="#6B7280"
-                        />
-                        <Text style={modalStyles.locationText}>
-                          {selectedRequest.location}, {selectedRequest.city}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <Text style={modalStyles.price}>
-                    {selectedRequest.price}
-                  </Text>
-
-                  <View style={modalStyles.metaGrid}>
-                    <View style={modalStyles.metaItem}>
-                      <Ionicons
-                        name="time-outline"
-                        size={18}
-                        color="#6B7280"
-                      />
-                      <View style={modalStyles.metaTextWrap}>
-                        <Text style={modalStyles.metaLabel}>Posted</Text>
-                        <Text style={modalStyles.metaValue}>
-                          {selectedRequest.timeAgo}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={modalStyles.metaItem}>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={18}
-                        color="#6B7280"
-                      />
-                      <View style={modalStyles.metaTextWrap}>
-                        <Text style={modalStyles.metaLabel}>
-                          Preferred date
-                        </Text>
-                        <Text style={modalStyles.metaValue}>
-                          {preferredDate}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={modalStyles.metaItem}>
-                      <Ionicons
-                        name="radio-button-on-outline"
-                        size={18}
-                        color="#6B7280"
-                      />
-                      <View style={modalStyles.metaTextWrap}>
-                        <Text style={modalStyles.metaLabel}>Service type</Text>
-                        <Text style={modalStyles.metaValue} numberOfLines={1}>
-                          {serviceType}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <Text style={modalStyles.sectionTitle}>Description</Text>
-                  <Text style={modalStyles.description}>
-                    {requestDescription}
-                  </Text>
-
-                  <Text style={modalStyles.sectionTitle}>
-                    Photos ({requestGallery.length})
-                  </Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={modalStyles.thumbRow}
-                  >
-                    {requestGallery.map((imageSource, index) => (
-                      <Image
-                        key={`thumb-${index}`}
-                        source={{ uri: imageSource }}
-                        style={modalStyles.thumb}
-                        resizeMode="cover"
-                      />
-                    ))}
-                  </ScrollView>
-
-                  <TouchableOpacity
-                    style={modalStyles.ctaButton}
-                    activeOpacity={0.85}
-                    onPress={() => setSelectedRequest(null)}
-                  >
-                    <Ionicons name="paper-plane-outline" size={20} color="#fff" />
-                    <Text style={modalStyles.ctaText}>Send Offer</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
+      <RequestDetailModal
+        request={selectedRequest}
+        onClose={() => setSelectedRequest(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -514,187 +309,3 @@ const styles = StyleSheet.create({
   },
 });
 
-const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "#000",
-  },
-  sheet: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  scrollContent: {
-    paddingBottom: 32,
-  },
-  imageContainer: {
-    width: "100%",
-    height: 280,
-    backgroundColor: "#E5E7EB",
-  },
-  image: {
-    width,
-    height: 280,
-  },
-  closeButton: {
-    position: "absolute",
-    top: 54,
-    left: 16,
-    zIndex: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
-  },
-  dotsContainer: {
-    position: "absolute",
-    bottom: 28,
-    alignSelf: "center",
-    flexDirection: "row",
-    gap: 6,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.55)",
-  },
-  dotActive: {
-    backgroundColor: "#FFFFFF",
-  },
-  contentWrap: {
-    marginTop: -20,
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 22,
-    paddingBottom: 8,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 14,
-  },
-  headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#D1FAE5",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titleBlock: {
-    flex: 1,
-    minWidth: 0,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-  },
-  title: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#111827",
-    lineHeight: 22,
-  },
-  badge: {
-    backgroundColor: "#F59E0B",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 4,
-  },
-  locationText: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  price: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: GREEN,
-    marginBottom: 18,
-  },
-  metaGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 22,
-    paddingBottom: 4,
-  },
-  metaItem: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 6,
-  },
-  metaTextWrap: {
-    flex: 1,
-  },
-  metaLabel: {
-    fontSize: 11,
-    color: "#9CA3AF",
-  },
-  metaValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#374151",
-    marginTop: 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: "#4B5563",
-    marginBottom: 20,
-  },
-  thumbRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 24,
-  },
-  thumb: {
-    width: 88,
-    height: 72,
-    borderRadius: 12,
-    backgroundColor: "#F3F4F6",
-  },
-  ctaButton: {
-    backgroundColor: GREEN,
-    borderRadius: 28,
-    paddingVertical: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  ctaText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-});
