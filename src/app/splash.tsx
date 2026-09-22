@@ -207,7 +207,7 @@ export default function Splash() {
           },
         ]}
       >
-        <Text style={styles.brandName}>DOOVLY</Text>
+        <Text style={styles.brandName}>Doovly</Text>
 
         <Text
           style={styles.tagline}
