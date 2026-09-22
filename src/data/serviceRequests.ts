@@ -4,33 +4,29 @@
  */
 
 // =========================
-// TYPES....................
+// TYPES
 // =========================
 
 export type ServiceRequest = {
   id: string;
   title: string;
-  /** Display category e.g. "Plumbing", "Electrical" */
   category: string;
-  /** Profession key used for filters e.g. "Plumber", "Electrician" */
   profession: string;
-  /** Neighbourhood / area shown on card */
   location: string;
-  /** City used for location filtering (same idea as Professional.city) */
   city: string;
   date: string;
   price: string;
   timeAgo: string;
-  /** MaterialCommunityIcons name */
   icon: string;
   iconBackground: string;
-  /** Mock gallery for the request detail modal. Replace later with API response. */
-  images?: string[];
-  description?: string;
-  preferredDate?: string;
-  /** Optional: for future map / distance */
   latitude?: number;
   longitude?: number;
+  /** Gallery images (URLs) — required for detail modal */
+  images: string[];
+  description: string;
+  preferredDate: string;
+  serviceType: string;
+  isNew: boolean;
 };
 
 // =========================
@@ -50,16 +46,17 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     timeAgo: "2 min ago",
     icon: "water-pump",
     iconBackground: "#FFF1D5",
-    images: [
-      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80",
-    ],
-    description:
-      "Looking for a reliable cleaner to help with a 2-bedroom apartment. Must be experienced, trustworthy and able to bring cleaning supplies. Flexible with time.",
-    preferredDate: "ASAP",
     latitude: 6.4281,
     longitude: 3.4219,
+    images: [
+      "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Bathroom pipe is leaking under the sink. Need someone experienced who can fix it today if possible.",
+    preferredDate: "ASAP",
+    serviceType: "Plumbing",
+    isNew: true,
   },
   {
     id: "2",
@@ -75,6 +72,14 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#DDF2FF",
     latitude: 6.4474,
     longitude: 3.4722,
+    images: [
+      "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Power keeps tripping in the living room. Looking for a licensed electrician to diagnose and fix.",
+    preferredDate: "Tomorrow, 2:00 PM",
+    serviceType: "Electrical",
+    isNew: true,
   },
   {
     id: "3",
@@ -90,6 +95,14 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#E9E1FF",
     latitude: 6.4541,
     longitude: 3.4316,
+    images: [
+      "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Engine warning light is on and the car is making a strange noise. Need a reliable mechanic ASAP.",
+    preferredDate: "Today, 4:30 PM",
+    serviceType: "Mechanic",
+    isNew: true,
   },
   {
     id: "4",
@@ -105,6 +118,14 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#E8F5E9",
     latitude: 9.0579,
     longitude: 7.4951,
+    images: [
+      "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Looking for a clean haircut and beard trim. Prefer someone who can come to my location.",
+    preferredDate: "Today, 11:00 AM",
+    serviceType: "Barber",
+    isNew: false,
   },
   {
     id: "5",
@@ -120,6 +141,14 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#FCE4EC",
     latitude: 6.4969,
     longitude: 3.3481,
+    images: [
+      "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Need gel nails and a full manicure. Looking for a neat and experienced nail tech.",
+    preferredDate: "Tomorrow, 1:00 PM",
+    serviceType: "Nail Tech",
+    isNew: false,
   },
   {
     id: "6",
@@ -135,6 +164,14 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#DDF2FF",
     latitude: 4.8156,
     longitude: 7.0498,
+    images: [
+      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Need a full house wiring safety check. Some outlets are warm and lights flicker.",
+    preferredDate: "This week",
+    serviceType: "Electrical",
+    isNew: false,
   },
   {
     id: "7",
@@ -150,6 +187,14 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#FFF1D5",
     latitude: 9.0765,
     longitude: 7.3986,
+    images: [
+      "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Kitchen sink is fully blocked. Need a plumber who can clear it and check the pipes.",
+    preferredDate: "ASAP",
+    serviceType: "Plumbing",
+    isNew: true,
   },
   {
     id: "8",
@@ -165,6 +210,14 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#E0F2F1",
     latitude: 6.6018,
     longitude: 3.3515,
+    images: [
+      "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Looking for a professional full body massage at home. Prefer a verified and experienced therapist.",
+    preferredDate: "Tomorrow, 10:00 AM",
+    serviceType: "Spa",
+    isNew: false,
   },
   {
     id: "9",
@@ -180,6 +233,14 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#E9E1FF",
     latitude: 6.4584,
     longitude: 7.5464,
+    images: [
+      "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Car AC is not cooling at all. Need a mechanic who specializes in AC systems.",
+    preferredDate: "ASAP",
+    serviceType: "Mechanic",
+    isNew: false,
   },
   {
     id: "10",
@@ -195,11 +256,44 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#FFF1D5",
     latitude: 5.4836,
     longitude: 7.0333,
+    images: [
+      "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Broken tiles and a leaking pipe in the bathroom. Need both plumbing and minor tiling work.",
+    preferredDate: "Tomorrow, 9:00 AM",
+    serviceType: "Plumbing",
+    isNew: false,
+  },
+  {
+    id: "11",
+    title: "Home Cleaning Needed",
+    category: "Cleaning",
+    profession: "Cleaner",
+    location: "Lekki",
+    city: "Lagos",
+    date: "ASAP",
+    price: "₦25,000",
+    timeAgo: "2 hours ago",
+    icon: "broom",
+    iconBackground: "#D1FAE5",
+    latitude: 6.4474,
+    longitude: 3.4722,
+    images: [
+      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1563453392212-326f5e854473?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Looking for a reliable cleaner to help with a 2-bedroom apartment. Must be experienced, trustworthy and able to bring cleaning supplies. Flexible with time.",
+    preferredDate: "ASAP",
+    serviceType: "Home cleaning",
+    isNew: true,
   },
 ];
 
 // =========================
-// HELPERS (data layer)
+// HELPERS
 // =========================
 
 export function getServiceRequestById(
