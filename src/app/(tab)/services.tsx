@@ -27,6 +27,7 @@ import { isSaved, toggleSave } from "@/services/savedProviders";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { useLocation } from "@/context/LocationContext";
+import RequestDetailModal from "@/components/ui/RequestDetailModal";
 
 const GREEN = "#159447";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -37,6 +38,9 @@ export default function Services() {
   const [search, setSearch] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [favTick, setFavTick] = useState(0);
+  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(
+    null,
+  );
 
   const onToggleFavorite = useCallback((proId: string) => {
     const result = toggleSave(proId);
@@ -230,14 +234,16 @@ export default function Services() {
             ]}
           >
             <MaterialCommunityIcons
-              name={item.icon as any}
+              name={item.icon}
               size={28}
               color="#333"
             />
           </View>
-          <View style={styles.newBadge}>
-            <Text style={styles.newBadgeText}>NEW</Text>
-          </View>
+          {item.isNew && (
+            <View style={styles.newBadge}>
+              <Text style={styles.newBadgeText}>NEW</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.requestContent}>
@@ -262,6 +268,7 @@ export default function Services() {
           <TouchableOpacity
             style={styles.viewRequestButton}
             activeOpacity={0.8}
+            onPress={() => setSelectedRequest(item)}
           >
             <Text style={styles.viewRequestText}>View Request</Text>
           </TouchableOpacity>
@@ -423,6 +430,11 @@ export default function Services() {
           </View>
         }
         ListFooterComponent={<View style={{ height: 30 }} />}
+      />
+
+      <RequestDetailModal
+        request={selectedRequest}
+        onClose={() => setSelectedRequest(null)}
       />
 
       <Modal
