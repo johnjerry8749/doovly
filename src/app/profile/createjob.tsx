@@ -15,9 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -58,6 +55,14 @@ function formatPreferredDate(date: Date): string {
   });
 }
 
+function startOfDay(date: Date): Date {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 export default function CreateJob() {
   const router = useRouter();
   const [category, setCategory] = useState<RequestCategory>(REQUEST_CATEGORIES[0]);
@@ -70,6 +75,9 @@ export default function CreateJob() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [showCategories, setShowCategories] = useState(false);
   const [showDate, setShowDate] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  );
   const [gettingLocation, setGettingLocation] = useState(false);
 
   const photoSlots = useMemo(
@@ -98,10 +106,36 @@ export default function CreateJob() {
     setPhotos((current) => [...current, ...next].slice(0, MAX_PHOTOS));
   };
 
-  const onDateChange = (event: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS !== "ios") setShowDate(false);
-    if (event.type === "dismissed" || !date) return;
-    setPreferredDate(date);
+  const openDatePicker = () => {
+    const base = preferredDate ?? new Date();
+    setCalendarMonth(new Date(base.getFullYear(), base.getMonth(), 1));
+    setShowDate(true);
+  };
+
+  const changeMonth = (direction: number) => {
+    const next = new Date(
+      calendarMonth.getFullYear(),
+      calendarMonth.getMonth() + direction,
+      1,
+    );
+    const currentMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1,
+    );
+    if (next < currentMonth) return;
+    setCalendarMonth(next);
+  };
+
+  const selectCalendarDate = (day: number) => {
+    const selected = new Date(
+      calendarMonth.getFullYear(),
+      calendarMonth.getMonth(),
+      day,
+    );
+    if (startOfDay(selected) < startOfDay(new Date())) return;
+    setPreferredDate(selected);
+    setShowDate(false);
   };
 
   const useCurrentLocation = async () => {
@@ -299,22 +333,12 @@ export default function CreateJob() {
           </TouchableOpacity>
 
           <Text style={styles.label}>Preferred date</Text>
-          <Pressable style={styles.field} onPress={() => setShowDate(true)}>
+          <Pressable style={styles.field} onPress={openDatePicker}>
             <Ionicons name="calendar-outline" size={18} color={GREEN} />
             <Text style={preferredDate ? styles.fieldValue : styles.placeholder}>
               {preferredDate ? formatPreferredDate(preferredDate) : "Select date"}
             </Text>
           </Pressable>
-
-          {showDate ? (
-            <DateTimePicker
-              value={preferredDate ?? new Date()}
-              mode="date"
-              minimumDate={new Date()}
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={onDateChange}
-            />
-          ) : null}
 
           <Text style={styles.label}>Upload photos (1–4)</Text>
           <View style={styles.photoRow}>
@@ -384,6 +408,102 @@ export default function CreateJob() {
                 );
               })}
             </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={showDate}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDate(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowDate(false)}>
+          <Pressable style={styles.calendarSheet}>
+            <View style={styles.calendarHeader}>
+              <Text style={styles.sheetTitle}>Select date</Text>
+              <TouchableOpacity onPress={() => setShowDate(false)}>
+                <Ionicons name="close" size={22} color={MUTED} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.monthRow}>
+              <TouchableOpacity style={styles.monthArrow} onPress={() => changeMonth(-1)}>
+                <Ionicons name="chevron-back" size={18} color={TEXT} />
+              </TouchableOpacity>
+              <Text style={styles.monthTitle}>
+                {calendarMonth.toLocaleDateString("en-NG", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </Text>
+              <TouchableOpacity style={styles.monthArrow} onPress={() => changeMonth(1)}>
+                <Ionicons name="chevron-forward" size={18} color={TEXT} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.weekRow}>
+              {WEEK_DAYS.map((day) => (
+                <Text key={day} style={styles.weekDay}>
+                  {day}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>
+              {Array.from({
+                length: new Date(
+                  calendarMonth.getFullYear(),
+                  calendarMonth.getMonth(),
+                  1,
+                ).getDay(),
+              }).map((_, index) => (
+                <View key={`empty-${index}`} style={styles.calendarDay} />
+              ))}
+              {Array.from({
+                length: new Date(
+                  calendarMonth.getFullYear(),
+                  calendarMonth.getMonth() + 1,
+                  0,
+                ).getDate(),
+              }).map((_, index) => {
+                const day = index + 1;
+                const date = new Date(
+                  calendarMonth.getFullYear(),
+                  calendarMonth.getMonth(),
+                  day,
+                );
+                const isPast = startOfDay(date) < startOfDay(new Date());
+                const isSelected =
+                  preferredDate != null &&
+                  startOfDay(preferredDate).getTime() === startOfDay(date).getTime();
+                return (
+                  <TouchableOpacity
+                    key={day}
+                    disabled={isPast}
+                    style={styles.calendarDay}
+                    onPress={() => selectCalendarDate(day)}
+                  >
+                    <View
+                      style={[
+                        styles.dayBubble,
+                        isSelected && styles.dayBubbleSelected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.dayText,
+                          isPast && styles.dayTextPast,
+                          isSelected && styles.dayTextSelected,
+                        ]}
+                      >
+                        {day}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
@@ -506,4 +626,58 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   optionText: { fontSize: 15, color: TEXT },
+  calendarSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    paddingBottom: 28,
+  },
+  calendarHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  monthRow: {
+    marginTop: 8,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  monthArrow: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  monthTitle: { fontSize: 16, fontWeight: "700", color: TEXT },
+  weekRow: { flexDirection: "row", marginBottom: 6 },
+  weekDay: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "600",
+    color: MUTED,
+  },
+  calendarGrid: { flexDirection: "row", flexWrap: "wrap" },
+  calendarDay: {
+    width: "14.2857%",
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dayBubble: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dayBubbleSelected: { backgroundColor: GREEN },
+  dayText: { fontSize: 14, color: TEXT, fontWeight: "500" },
+  dayTextPast: { color: "#D1D5DB" },
+  dayTextSelected: { color: "#fff", fontWeight: "700" },
 });
