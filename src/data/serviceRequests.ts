@@ -24,6 +24,10 @@ export type ServiceRequest = {
   /** MaterialCommunityIcons name */
   icon: string;
   iconBackground: string;
+  /** Mock gallery for the request detail modal. Replace later with API response. */
+  images?: string[];
+  description?: string;
+  preferredDate?: string;
   /** Optional: for future map / distance */
   latitude?: number;
   longitude?: number;
@@ -46,6 +50,14 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     timeAgo: "2 min ago",
     icon: "water-pump",
     iconBackground: "#FFF1D5",
+    images: [
+      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80",
+    ],
+    description:
+      "Looking for a reliable cleaner to help with a 2-bedroom apartment. Must be experienced, trustworthy and able to bring cleaning supplies. Flexible with time.",
+    preferredDate: "ASAP",
     latitude: 6.4281,
     longitude: 3.4219,
   },
