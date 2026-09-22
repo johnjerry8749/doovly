@@ -88,7 +88,7 @@ export default function AllRequests() {
           </Text>
 
           <Text style={styles.requestDetails} numberOfLines={1}>
-            {item.category} {" "} {item.location}
+            {item.category} {"@"} {item.location}
           </Text>
 
           <Text style={styles.price}> {item.price}</Text>
