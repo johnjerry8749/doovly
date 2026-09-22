@@ -1,10 +1,14 @@
 import React, { useState } from "react";
 import {
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -30,7 +34,34 @@ export default function RequestDetailModal({
 }: RequestDetailModalProps) {
   const { width } = useWindowDimensions();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [showOffer, setShowOffer] = useState(false);
+  const [offerPrice, setOfferPrice] = useState("");
   const images = request?.images ?? [];
+
+  const closeOffer = () => {
+    setShowOffer(false);
+    setOfferPrice("");
+  };
+
+  const sendOffer = () => {
+    if (!request) return;
+    const amount = offerPrice.replace(/[^\d]/g, "");
+    if (!amount) return;
+
+    const recipientId =
+      request.createdByUserId &&
+      request.createdByUserId !== getCurrentUserId()
+        ? request.createdByUserId
+        : getCurrentUserId();
+    addInAppNotification({
+      userId: recipientId,
+      type: "general",
+      title: "New Offer",
+      body: `Someone sent an offer of \u20a6${Number(amount).toLocaleString()} on "${request.title}".`,
+    });
+    closeOffer();
+    onClose();
+  };
 
   return (
     <Modal
@@ -38,7 +69,10 @@ export default function RequestDetailModal({
       transparent
       animationType="slide"
       onRequestClose={onClose}
-      onShow={() => setActiveImageIndex(0)}
+      onShow={() => {
+        setActiveImageIndex(0);
+        closeOffer();
+      }}
     >
       <View style={styles.overlay}>
         <View style={styles.sheet}>
@@ -132,8 +166,6 @@ export default function RequestDetailModal({
                   </View>
                 </View>
 
-                <Text style={styles.price}>{request.price}</Text>
-
                 <View style={styles.metaGrid}>
                   <View style={styles.metaItem}>
                     <Ionicons name="time-outline" size={18} color="#6B7280" />
@@ -194,20 +226,7 @@ export default function RequestDetailModal({
                 <TouchableOpacity
                   style={styles.ctaButton}
                   activeOpacity={0.85}
-                  onPress={() => {
-                    const recipientId =
-                      request.createdByUserId &&
-                      request.createdByUserId !== getCurrentUserId()
-                        ? request.createdByUserId
-                        : getCurrentUserId();
-                    addInAppNotification({
-                      userId: recipientId,
-                      type: "general",
-                      title: "New Offer",
-                      body: `Someone sent an offer on "${request.title}".`,
-                    });
-                    onClose();
-                  }}
+                  onPress={() => setShowOffer(true)}
                 >
                   <Ionicons name="paper-plane-outline" size={20} color="#fff" />
                   <Text style={styles.ctaText}>Send Offer</Text>
@@ -215,6 +234,60 @@ export default function RequestDetailModal({
               </View>
             </ScrollView>
           )}
+
+          <Modal
+            visible={showOffer}
+            transparent
+            animationType="slide"
+            onRequestClose={closeOffer}
+          >
+            <KeyboardAvoidingView
+              style={styles.offerBackdrop}
+              behavior={Platform.OS === "ios" ? "padding" : undefined}
+            >
+              <Pressable style={styles.offerBackdrop} onPress={closeOffer}>
+                <Pressable style={styles.offerSheet}>
+                  <View style={styles.offerHeader}>
+                    <TouchableOpacity
+                      style={styles.offerBack}
+                      onPress={closeOffer}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="chevron-back" size={22} color="#111827" />
+                    </TouchableOpacity>
+                    <Text style={styles.offerTitle}>Send Offer</Text>
+                    <View style={styles.offerBack} />
+                  </View>
+
+                  <Text style={styles.offerLabel}>Your price</Text>
+                  <View style={styles.offerField}>
+                    <Text style={styles.offerNaira}>₦</Text>
+                    <TextInput
+                      value={offerPrice}
+                      onChangeText={setOfferPrice}
+                      placeholder="Enter amount"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="numeric"
+                      style={styles.offerInput}
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.ctaButton,
+                      !offerPrice.replace(/[^\d]/g, "") && styles.ctaDisabled,
+                    ]}
+                    activeOpacity={0.85}
+                    disabled={!offerPrice.replace(/[^\d]/g, "")}
+                    onPress={sendOffer}
+                  >
+                    <Ionicons name="paper-plane-outline" size={20} color="#fff" />
+                    <Text style={styles.ctaText}>Send Offer</Text>
+                  </TouchableOpacity>
+                </Pressable>
+              </Pressable>
+            </KeyboardAvoidingView>
+          </Modal>
         </View>
       </View>
     </Modal>
@@ -336,12 +409,6 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontWeight: "500",
   },
-  price: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: GREEN,
-    marginBottom: 18,
-  },
   metaGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -403,5 +470,67 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+  },
+  ctaDisabled: {
+    opacity: 0.45,
+  },
+  offerBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  offerSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 28,
+  },
+  offerHeader: {
+    height: 48,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  offerBack: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  offerTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  offerLabel: {
+    marginTop: 8,
+    marginBottom: 8,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  offerField: {
+    minHeight: 52,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    marginBottom: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  offerNaira: {
+    fontSize: 16,
+    color: "#9CA3AF",
+  },
+  offerInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#111827",
+    paddingVertical: 12,
   },
 });

@@ -68,7 +68,6 @@ export default function CreateJob() {
   const [category, setCategory] = useState<RequestCategory>(REQUEST_CATEGORIES[0]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
   const [address, setAddress] = useState("");
   const [areaCity, setAreaCity] = useState("");
   const [preferredDate, setPreferredDate] = useState<Date | null>(null);
@@ -200,14 +199,10 @@ export default function CreateJob() {
     }
 
     const dateLabel = formatPreferredDate(preferredDate);
-    const priceLabel = price.trim()
-      ? `₦${price.replace(/[^\d,]/g, "")}`
-      : undefined;
     const request = createServiceRequest({
       category: category.name,
       title,
       description,
-      price: priceLabel,
       location: address.trim(),
       city: areaCity || address.trim(),
       preferredDate: dateLabel,
@@ -289,18 +284,6 @@ export default function CreateJob() {
             textAlignVertical="top"
           />
 
-          <Text style={styles.label}>Price (optional)</Text>
-          <View style={styles.field}>
-            <Text style={styles.naira}>₦</Text>
-            <TextInput
-              value={price}
-              onChangeText={setPrice}
-              placeholder="Enter amount"
-              placeholderTextColor={MUTED}
-              keyboardType="numeric"
-              style={styles.inlineInput}
-            />
-          </View>
 
           <Text style={styles.label}>Location</Text>
           <View style={styles.field}>
@@ -571,7 +554,6 @@ const styles = StyleSheet.create({
     color: TEXT,
   },
   textArea: { minHeight: 110, paddingTop: 14 },
-  naira: { fontSize: 16, color: MUTED },
   inlineInput: { flex: 1, fontSize: 14, color: TEXT, paddingVertical: 12 },
   photoRow: { flexDirection: "row", gap: 10 },
   photoSlot: {
