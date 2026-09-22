@@ -24,15 +24,13 @@ import {
   listServiceCategories,
   type ProService,
 } from "@/services/professionals";
+import { getLoggedInProfessionalId } from "@/services/savedProviders";
 
 const PRIMARY = "#16A34A";
 const LIGHT_GREEN = "#EAF8F0";
 const BORDER = "#E5E7EB";
 const TEXT = "#111827";
 const SECONDARY = "#6B7280";
-
-// Same mock logged-in pro as Profile — later replace with auth context / token
-const MOCK_LOGGED_IN_PRO_ID = "1";
 
 /** Free users can add at most this many services. Pro (subscribed) = unlimited. */
 const FREE_SERVICE_LIMIT = 5;
@@ -48,7 +46,8 @@ function formatPrice(value: string): string {
 }
 
 export default function AddService() {
-  const pro = getProfessionalById(MOCK_LOGGED_IN_PRO_ID);
+  const proId = getLoggedInProfessionalId();
+  const pro = proId ? getProfessionalById(proId) : undefined;
   const isPro = !!pro?.subscribed;
   const categories = listServiceCategories();
 
@@ -66,11 +65,15 @@ export default function AddService() {
   const [price, setPrice] = useState("");
 
   const loadServices = useCallback(() => {
-    // TODO auth: use real user id from auth context
-    const list = listMyServices(MOCK_LOGGED_IN_PRO_ID);
+    if (!proId) {
+      setServices([]);
+      setLoading(false);
+      return;
+    }
+    const list = listMyServices(proId);
     setServices(list);
     setLoading(false);
-  }, []);
+  }, [proId]);
 
   useEffect(() => {
     loadServices();
@@ -161,8 +164,9 @@ export default function AddService() {
         "briefcase-outline";
 
       if (editingServiceId) {
+        if (!proId) return;
         const updated = await updateMyService(
-          MOCK_LOGGED_IN_PRO_ID,
+          proId,
           editingServiceId,
           {
             name: serviceName.trim(),
@@ -178,7 +182,8 @@ export default function AddService() {
           Alert.alert("Service Updated", "Your service has been updated.");
         }
       } else {
-        const created = await createMyService(MOCK_LOGGED_IN_PRO_ID, {
+        if (!proId) return;
+        const created = await createMyService(proId, {
           name: serviceName.trim(),
           description: description.trim(),
           price: price.trim(),
@@ -205,7 +210,8 @@ export default function AddService() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            const ok = await deleteMyService(MOCK_LOGGED_IN_PRO_ID, id);
+            if (!proId) return;
+            const ok = await deleteMyService(proId, id);
             if (ok) {
               setServices((prev) => prev.filter((s) => s.id !== id));
               if (editingServiceId === id) closeModal();

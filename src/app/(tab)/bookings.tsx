@@ -29,9 +29,9 @@ import {
   RECEIVED_FILTERS,
   statusColors,
   type Booking,
-} from "@/data/booking";
+} from "@/services/bookings";
 
-import { DISPUTE_REASONS, type DisputeReason } from "@/data/disputes";
+import { DISPUTE_REASONS, type DisputeReason } from "@/services/disputes";
 
 import { getCurrentUserId } from "@/services/inAppNotifications";
 

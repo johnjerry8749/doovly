@@ -13,7 +13,12 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { getProfessionalById } from "@/services/professionals";
-import { MOCK_USER, isCurrentUserPro } from "@/services/savedProviders";
+import {
+  getCurrentUser,
+  getCurrentUserRole,
+  getLoggedInProfessionalId,
+  isCurrentUserPro,
+} from "@/services/savedProviders";
 
 // =====================================================
 // COLORS
@@ -22,13 +27,6 @@ import { MOCK_USER, isCurrentUserPro } from "@/services/savedProviders";
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#E8F5E9";
 const GOLD = "#D4AF37";
-
-// =====================================================
-// MOCK DATA — later replace with auth / API
-// =====================================================
-
-const MOCK_LOGGED_IN_PRO_ID = "1";
-const MOCK_ROLE: "user" | "admin" = "admin"; // set to "user" to hide Admin Login
 
 // =====================================================
 // MENU ITEM
@@ -109,9 +107,10 @@ function MenuIcon({
 export default function Profile() {
   const [isAvailable, setIsAvailable] = useState(true);
 
-  // Mock role + professional — later: from auth context / API
-  const role = MOCK_ROLE;
-  const pro = getProfessionalById(MOCK_LOGGED_IN_PRO_ID);
+  // Role + professional — later: same getters, bodies swap to auth / API
+  const role = getCurrentUserRole();
+  const proId = getLoggedInProfessionalId();
+  const pro = proId ? getProfessionalById(proId) : undefined;
 
   // Single source of truth for Pro status (from professional mock data)
   const isPro = isCurrentUserPro();
@@ -129,7 +128,7 @@ export default function Profile() {
   const goToSubscription = () => {
     router.push({
       pathname: "/profile/subscription/[id]",
-      params: { id: MOCK_USER.id },
+      params: { id: getCurrentUser().id },
     });
   };
 

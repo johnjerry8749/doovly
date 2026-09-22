@@ -62,6 +62,27 @@ export function getLoggedInProfessionalId(): string | null {
 }
 
 /**
+ * Current logged-in user.
+ * NOW  → mock MOCK_USER
+ * LATER → from auth / GET /me. Keep this name.
+ */
+export function getCurrentUser(): AppUser {
+  return MOCK_USER;
+}
+
+/**
+ * Role used by the profile tab (Admin Login visibility).
+ * NOW  → professional.role on the logged-in pro ("admin" | "user")
+ * LATER → from auth / GET /me
+ */
+export function getCurrentUserRole(): "user" | "admin" {
+  const proId = getLoggedInProfessionalId();
+  if (!proId) return "user";
+  const role = getProfessionalById(proId)?.role;
+  return role === "admin" ? "admin" : "user";
+}
+
+/**
  * True when the given professional profile belongs to the current auth user.
  * Use this to disable Book Now / Add Review on own profile.
  */
