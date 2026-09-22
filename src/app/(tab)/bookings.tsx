@@ -34,18 +34,9 @@ import {
 import { DISPUTE_REASONS, type DisputeReason } from "@/services/disputes";
 
 import { getCurrentUserId } from "@/services/inAppNotifications";
+import { isCurrentUserPro } from "@/services/savedProviders";
 
 const GREEN = "#16A34A";
-
-/**
- * ============================================
- * SUBSCRIPTION
- * ============================================
- *
- * true  = Doovly Pro user
- * false = Free user
- */
-const IS_PRO_USER = false;
 
 /**
  * ============================================
@@ -503,8 +494,9 @@ export default function Bookings() {
      * Completed + Pro user  = show Chat
      *
      * All other statuses = show Chat
+     * Pro status comes from the logged-in user, not a local flag.
      */
-    const showChat = item.status !== "Completed" || IS_PRO_USER;
+    const showChat = item.status !== "Completed" || isCurrentUserPro();
 
     return (
       <View style={styles.card}>
