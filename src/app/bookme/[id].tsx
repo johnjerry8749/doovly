@@ -629,6 +629,20 @@ export default function BookMeScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Message for free users — edit this text as you like */}
+        {!isProUser && (
+          <Text
+            style={{
+              marginTop: 10,
+              fontSize: 13,
+              color: "#6B7280",
+              textAlign: "center",
+            }}
+          >
+            Upgrade to Pro to unlock Pay on Site
+          </Text>
+        )}
+
         {/* ===================================================
             SECURE PAYMENT
         =================================================== */}
