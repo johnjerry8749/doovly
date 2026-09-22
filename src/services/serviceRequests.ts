@@ -23,7 +23,6 @@ export type CreateServiceRequestInput = {
   category: string;
   title: string;
   description: string;
-  price?: string;
   location: string;
   city: string;
   preferredDate: string;
@@ -74,7 +73,6 @@ export function createServiceRequest(
     location: input.location.trim(),
     city: input.city.trim(),
     date: input.preferredDate,
-    price: input.price?.trim() || "Price on request",
     timeAgo: "Just now",
     icon: input.icon,
     iconBackground: input.iconBackground,

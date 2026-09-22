@@ -259,8 +259,6 @@ export default function Services() {
             <Ionicons name="calendar-outline" size={14} color="#666" />
             <Text style={styles.requestDate}>{item.date}</Text>
           </View>
-
-          <Text style={styles.price}> {item.price}</Text>
         </View>
 
         <View style={styles.requestRight}>

@@ -90,8 +90,6 @@ export default function AllRequests() {
           <Text style={styles.requestDetails} numberOfLines={1}>
             {item.category} {"@"} {item.location}
           </Text>
-
-          <Text style={styles.price}> {item.price}</Text>
         </View>
 
         <View style={styles.requestRight}>
@@ -267,9 +265,7 @@ const styles = StyleSheet.create({
   requestDetails: {
     fontSize: 12,
     color: "#666",
-    marginBottom: 5,
   },
-  price: { fontSize: 12, fontWeight: "800", color: "#159447" },
   requestRight: {
     alignItems: "flex-end",
     justifyContent: "space-between",

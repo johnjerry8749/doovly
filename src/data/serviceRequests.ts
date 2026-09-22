@@ -19,7 +19,7 @@ export type ServiceRequest = {
   location: string;
   city: string;
   date: string;
-  price: string;
+  price?: string;
   timeAgo: string;
   icon: ServiceRequestIcon;
   iconBackground: string;
