@@ -2,7 +2,6 @@ import React, { useMemo, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   FlatList,
   Image,
   Modal,
@@ -18,19 +17,13 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { listProfessionals, type Professional } from "@/services/professionals";
-import {
-  listServiceRequests,
-  type ServiceRequest,
-} from "@/services/serviceRequests";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { useLocation } from "@/context/LocationContext";
-import RequestDetailModal from "@/components/ui/RequestDetailModal";
 
 const GREEN = "#159447";
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const SERVICE_FILTERS = [{ name: "All", icon: "apps" }, ...SERVICE_CATEGORIES];
 
@@ -38,9 +31,6 @@ export default function Services() {
   const [search, setSearch] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [favTick, setFavTick] = useState(0);
-  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(
-    null,
-  );
 
   const onToggleFavorite = useCallback((proId: string) => {
     const result = toggleSave(proId);
@@ -78,7 +68,6 @@ export default function Services() {
   } = useLocation();
 
   const professionals = listProfessionals();
-  const allRequests = listServiceRequests();
 
   const filteredCities = useMemo(() => {
     const query = citySearch.trim().toLowerCase();
@@ -86,7 +75,7 @@ export default function Services() {
     return NIGERIA_CITIES.filter((city) => city.toLowerCase().includes(query));
   }, [citySearch]);
 
-  const matchesLocationCity = (itemCity: string, itemArea?: string) => {
+  const matchesLocationCity = (itemCity: string) => {
     if (
       showAllNigeria ||
       !locationName ||
@@ -102,8 +91,7 @@ export default function Services() {
     if (!city || city === "nigeria") return true;
 
     const c = itemCity.toLowerCase();
-    const area = (itemArea || "").toLowerCase();
-    return c.includes(city) || city.includes(c) || area.includes(city);
+    return c.includes(city) || city.includes(c);
   };
 
   const filteredProfessionals = useMemo(() => {
@@ -130,34 +118,6 @@ export default function Services() {
       return matchesSearch && matchesFilter && matchesLocation;
     });
   }, [professionals, search, selectedFilter, locationName, showAllNigeria]);
-
-  const filteredRequests = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return allRequests.filter((req) => {
-      const matchesSearch =
-        !query ||
-        req.title.toLowerCase().includes(query) ||
-        req.category.toLowerCase().includes(query) ||
-        req.location.toLowerCase().includes(query) ||
-        req.city.toLowerCase().includes(query);
-
-      const matchesFilter =
-        selectedFilter === "All" ||
-        req.profession.toLowerCase() === selectedFilter.toLowerCase() ||
-        req.category.toLowerCase().includes(selectedFilter.toLowerCase()) ||
-        selectedFilter.toLowerCase().includes(req.profession.toLowerCase());
-
-      const matchesLocation = matchesLocationCity(req.city, req.location);
-
-      return matchesSearch && matchesFilter && matchesLocation;
-    });
-  }, [allRequests, search, selectedFilter, locationName, showAllNigeria]);
-
-  const topRequests = useMemo(
-    () => filteredRequests.slice(0, 10),
-    [filteredRequests],
-  );
 
   const renderProfessional = ({ item }: { item: Professional }) => {
     return (
@@ -223,58 +183,6 @@ export default function Services() {
     );
   };
 
-  const renderRequest = ({ item }: { item: ServiceRequest }) => {
-    return (
-      <View style={styles.requestCard}>
-        <View style={styles.requestIconWrapper}>
-          <View
-            style={[
-              styles.requestIcon,
-              { backgroundColor: item.iconBackground },
-            ]}
-          >
-            <MaterialCommunityIcons
-              name={item.icon}
-              size={28}
-              color="#333"
-            />
-          </View>
-          {item.isNew && (
-            <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>NEW</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.requestContent}>
-          <Text style={styles.requestTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-
-          <Text style={styles.requestDetails} numberOfLines={1}>
-            {item.category} • {item.location}
-          </Text>
-
-          <View style={styles.dateRow}>
-            <Ionicons name="calendar-outline" size={14} color="#666" />
-            <Text style={styles.requestDate}>{item.date}</Text>
-          </View>
-        </View>
-
-        <View style={styles.requestRight}>
-          <Text style={styles.timeAgo}>{item.timeAgo}</Text>
-          <TouchableOpacity
-            style={styles.viewRequestButton}
-            activeOpacity={0.8}
-            onPress={() => setSelectedRequest(item)}
-          >
-            <Text style={styles.viewRequestText}>View Request</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.stickyHeader}>
@@ -306,9 +214,7 @@ export default function Services() {
             onPress={() =>
               router.push({
                 pathname: "/notification/[id]",
-                params: {
-                  id: String(getCurrentUserId()),
-                },
+                params: { id: String(getCurrentUserId()) },
               })
             }
           >
@@ -384,33 +290,6 @@ export default function Services() {
             />
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent service requests</Text>
-              <TouchableOpacity
-                onPress={() => router.push("/(tab)/all-requests")}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.seeAll}>See all</Text>
-              </TouchableOpacity>
-            </View>
-
-            {topRequests.length === 0 ? (
-              <View style={styles.emptyRequests}>
-                <Text style={styles.emptyRequestsText}>
-                  No requests in this location. Try another city or All Nigeria.
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                horizontal
-                data={topRequests}
-                keyExtractor={(item) => item.id}
-                renderItem={renderRequest}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.requestList}
-              />
-            )}
-
-            <View style={[styles.sectionHeader, styles.professionalHeader]}>
               <Text style={styles.sectionTitle}>All professionals</Text>
               <Text style={styles.resultCount}>
                 {filteredProfessionals.length} found
@@ -428,11 +307,6 @@ export default function Services() {
           </View>
         }
         ListFooterComponent={<View style={{ height: 30 }} />}
-      />
-
-      <RequestDetailModal
-        request={selectedRequest}
-        onClose={() => setSelectedRequest(null)}
       />
 
       <Modal
@@ -553,7 +427,6 @@ export default function Services() {
                 >
                   <Ionicons name="location-outline" size={20} color={GREEN} />
                   <Text style={styles.cityItemText}>{item}</Text>
-                  <Ionicons name="chevron-forward" size={18} color="#ccc" />
                 </TouchableOpacity>
               )}
             />
@@ -663,114 +536,46 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 12,
   },
-  professionalHeader: { marginTop: 22 },
   sectionTitle: { fontSize: 17, fontWeight: "800", color: "#111" },
-  seeAll: { color: GREEN, fontWeight: "700", fontSize: 13 },
   resultCount: { color: "#888", fontSize: 12 },
-  requestList: { paddingRight: 10 },
-  emptyRequests: { paddingVertical: 16, paddingHorizontal: 8 },
-  emptyRequestsText: { fontSize: 13, color: "#888", textAlign: "center" },
-  requestCard: {
-    width: SCREEN_WIDTH * 0.85,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E8E8E8",
-    borderRadius: 16,
-    padding: 12,
-    marginRight: 12,
-    backgroundColor: "#fff",
-  },
-  requestIconWrapper: { position: "relative", marginRight: 12 },
-  requestIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  newBadge: {
-    position: "absolute",
-    top: -6,
-    right: -8,
-    backgroundColor: "#F39C12",
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  newBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
-  requestContent: { flex: 1, minWidth: 0, marginRight: 8 },
-  requestTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#111",
-    marginBottom: 3,
-  },
-  requestDetails: { fontSize: 12, color: "#666", marginBottom: 5 },
-  dateRow: { flexDirection: "row", alignItems: "center" },
-  requestDate: { marginLeft: 4, fontSize: 11, color: "#555" },
-  requestRight: {
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    height: 54,
-  },
-  price: { fontSize: 12, fontWeight: "800", color: "#159447" },
-  timeAgo: { fontSize: 11, color: "#888" },
-  viewRequestButton: {
-    borderWidth: 1.5,
-    borderColor: GREEN,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  viewRequestText: { color: GREEN, fontSize: 12, fontWeight: "700" },
-  columnWrapper: { justifyContent: "space-between" },
+  columnWrapper: { gap: 10, marginBottom: 12 },
   professionalCard: {
-    width: "31.5%",
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    borderRadius: 15,
-    padding: 8,
-    marginBottom: 12,
+    flex: 1,
+    maxWidth: "32%",
     backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+    position: "relative",
   },
   heartButton: {
     position: "absolute",
-    right: 7,
-    top: 7,
+    top: 6,
+    right: 6,
     zIndex: 5,
-    width: 25,
-    height: 25,
-    justifyContent: "center",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.9)",
     alignItems: "center",
+    justifyContent: "center",
   },
   profileImageWrapper: {
-    width: 75,
-    height: 75,
-    borderRadius: 38,
-    alignSelf: "center",
-    marginTop: 7,
-    marginBottom: 8,
-    position: "relative",
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 10,
+    overflow: "hidden",
+    marginBottom: 6,
+    backgroundColor: "#F3F4F6",
   },
-  profileImage: { width: "100%", height: "100%", borderRadius: 38 },
+  profileImage: { width: "100%", height: "100%" },
   verifiedBadge: {
     position: "absolute",
-    right: -1,
-    bottom: -1,
-    width: 19,
-    height: 19,
-    borderRadius: 10,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
+    bottom: -4,
+    right: -4,
   },
-
-  verifiedBadgeImage: {
-    width: 17,
-    height: 17,
-  },
-  checkmark: { width: 39, height: 39 },
+  checkmark: { width: 28, height: 28 },
   professionalName: {
     fontSize: 12,
     fontWeight: "800",
@@ -782,6 +587,7 @@ const styles = StyleSheet.create({
   reviewCount: { fontSize: 9, color: "#777", marginLeft: 2 },
   profession: { fontSize: 10, color: "#555", marginBottom: 3 },
   city: { fontSize: 10, color: "#777", marginBottom: 5 },
+  price: { fontSize: 11, fontWeight: "700", color: GREEN },
   emptyContainer: { alignItems: "center", paddingVertical: 60 },
   emptyTitle: { fontSize: 17, fontWeight: "700", marginTop: 12, color: "#111" },
   emptyText: { color: "#888", marginTop: 5, fontSize: 13, textAlign: "center" },
