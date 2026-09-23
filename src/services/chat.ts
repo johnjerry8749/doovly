@@ -26,6 +26,14 @@ export type ChatMessage = {
   createdAt: string;
   /** true = current user */
   isMine: boolean;
+  /** Optional location payload (only usable while sharing is active) */
+  location?: {
+    label: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  /** System-style: share started / stopped */
+  kind?: "text" | "location" | "location_stopped";
 };
 
 export type Conversation = {
@@ -185,6 +193,36 @@ const messagesByConv: Record<string, ChatMessage[]> = {
   ],
 };
 
+/** Per-conversation: is the current user actively sharing location? */
+const locationSharingByConv: Record<string, boolean> = {};
+
+/** Last shared location label (for open-in-maps while active) */
+const lastSharedLocationByConv: Record<
+  string,
+  { label: string; latitude?: number; longitude?: number }
+> = {};
+
+function nowLabel() {
+  return new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function pushMessage(conversationId: string, msg: ChatMessage) {
+  if (!messagesByConv[conversationId]) {
+    messagesByConv[conversationId] = [];
+  }
+  messagesByConv[conversationId].push(msg);
+
+  const conv = conversations.find((c) => c.id === conversationId);
+  if (conv) {
+    conv.lastMessage = msg.text;
+    conv.lastMessageAt = msg.createdAt;
+    conv.unreadCount = 0;
+  }
+}
+
 // =====================================================
 // API-SHAPED FUNCTIONS
 // =====================================================
@@ -224,25 +262,12 @@ export async function sendMessage(
     conversationId,
     senderId: CURRENT_USER_ID,
     text: text.trim(),
-    createdAt: new Date().toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    }),
+    createdAt: nowLabel(),
     isMine: true,
+    kind: "text",
   };
 
-  if (!messagesByConv[conversationId]) {
-    messagesByConv[conversationId] = [];
-  }
-  messagesByConv[conversationId].push(msg);
-
-  const conv = conversations.find((c) => c.id === conversationId);
-  if (conv) {
-    conv.lastMessage = msg.text;
-    conv.lastMessageAt = msg.createdAt;
-    conv.unreadCount = 0;
-  }
-
+  pushMessage(conversationId, msg);
   return msg;
 }
 
@@ -254,13 +279,89 @@ export function markConversationRead(conversationId: string) {
 }
 
 // =====================================================
+// LOCATION SHARING (privacy: share only in chat, stop anytime)
+// =====================================================
+
+export function isSharingLocation(conversationId: string): boolean {
+  return !!locationSharingByConv[conversationId];
+}
+
+export function getActiveSharedLocation(conversationId: string) {
+  if (!locationSharingByConv[conversationId]) return null;
+  return lastSharedLocationByConv[conversationId] ?? null;
+}
+
+/**
+ * Share location in this chat. Opens as a location bubble; recipient can open maps
+ * only while sharing remains active.
+ */
+export async function shareLocation(
+  conversationId: string,
+  location: { label: string; latitude?: number; longitude?: number },
+): Promise<ChatMessage> {
+  await new Promise((r) => setTimeout(r, 150));
+
+  locationSharingByConv[conversationId] = true;
+  lastSharedLocationByConv[conversationId] = location;
+
+  const msg: ChatMessage = {
+    id: `loc-${Date.now()}`,
+    conversationId,
+    senderId: CURRENT_USER_ID,
+    text: `📍 Shared location: ${location.label}`,
+    createdAt: nowLabel(),
+    isMine: true,
+    kind: "location",
+    location,
+  };
+
+  pushMessage(conversationId, msg);
+  return msg;
+}
+
+/**
+ * Stop sharing location for privacy. After this, old location bubbles cannot open maps.
+ */
+export async function stopSharingLocation(
+  conversationId: string,
+): Promise<ChatMessage | null> {
+  if (!locationSharingByConv[conversationId]) return null;
+
+  await new Promise((r) => setTimeout(r, 100));
+
+  locationSharingByConv[conversationId] = false;
+  delete lastSharedLocationByConv[conversationId];
+
+  const msg: ChatMessage = {
+    id: `loc-stop-${Date.now()}`,
+    conversationId,
+    senderId: CURRENT_USER_ID,
+    text: "Location sharing stopped",
+    createdAt: nowLabel(),
+    isMine: true,
+    kind: "location_stopped",
+  };
+
+  pushMessage(conversationId, msg);
+  return msg;
+}
+
+/** Whether a location message can still open maps (sharing still active). */
+export function canOpenSharedLocation(
+  conversationId: string,
+  message: ChatMessage,
+): boolean {
+  if (message.kind !== "location" || !message.location) return false;
+  return isSharingLocation(conversationId);
+}
+
+// =====================================================
 // BOOKING → CHAT HELPERS
 // =====================================================
 
 /**
  * Build a prefilled message with booking id + details.
- * NOW  → plain text template
- * LATER → same string, or structured booking card from API
+ * Location is NOT included by default (privacy — share only via Share Location).
  */
 export function formatBookingChatMessage(booking: Booking): string {
   const payment =
@@ -279,7 +380,6 @@ export function formatBookingChatMessage(booking: Booking): string {
     `• Booking ID: ${booking.id}`,
     `• Service: ${booking.title}`,
     `• Date: ${booking.date}`,
-    `• Location: ${booking.location}`,
     `• Status: ${booking.status}`,
     `• Payment: ${payment}`,
     ``,

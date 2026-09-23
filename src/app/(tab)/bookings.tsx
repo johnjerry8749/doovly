@@ -8,7 +8,6 @@ import {
   FlatList,
   ScrollView,
   StatusBar,
-  Linking,
   Alert,
   Platform,
   Modal,
@@ -40,83 +39,6 @@ import { isCurrentUserPro } from "@/services/savedProviders";
 import { BookingCard } from "@/components/BookingCard";
 
 const GREEN = "#16A34A";
-
-const openBookingLocation = async (item: Booking) => {
-  try {
-    let url = "";
-
-    if (
-      typeof (item as any).latitude === "number" &&
-      typeof (item as any).longitude === "number"
-    ) {
-      const { latitude, longitude } = item as any;
-
-      if (Platform.OS === "ios") {
-        url = `http://maps.apple.com/?ll=${latitude},${longitude}&q=Customer%20Location`;
-      } else {
-        url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
-      }
-    } else if (item.location) {
-      const encodedLocation = encodeURIComponent(item.location);
-
-      if (Platform.OS === "ios") {
-        url = `http://maps.apple.com/?q=${encodedLocation}`;
-      } else {
-        url = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
-      }
-    } else {
-      Alert.alert(
-        "Location unavailable",
-        "This booking does not have a location yet.",
-      );
-      return;
-    }
-
-    const supported = await Linking.canOpenURL(url);
-
-    if (!supported) {
-      Alert.alert(
-        "Unable to open map",
-        "No map application is available on this device.",
-      );
-      return;
-    }
-
-    await Linking.openURL(url);
-  } catch (error) {
-    console.error("Unable to open booking location:", error);
-    Alert.alert(
-      "Map Error",
-      "We could not open the customer's location.",
-    );
-  }
-};
-
-function canViewJobLocation(item: Booking): boolean {
-  return (
-    item.paymentStatus === "released" ||
-    item.paymentStatus === "pay_on_site" ||
-    item.paymentMethod === "pay_on_site"
-  );
-}
-
-const handleOpenMap = (item: Booking) => {
-  // Pending received jobs can view the map.
-  if (item.status === "Pending") {
-    openBookingLocation(item);
-    return;
-  }
-
-  if (!canViewJobLocation(item)) {
-    Alert.alert(
-      "Location locked",
-      "The exact location is only available after payment is completed or when the customer selected Pay on site.",
-    );
-    return;
-  }
-
-  openBookingLocation(item);
-};
 
 export default function Bookings() {
   const [mainTab, setMainTab] = useState<"booked" | "received">("booked");
@@ -377,7 +299,6 @@ export default function Bookings() {
           <BookingCard
             item={item}
             mainTab={mainTab}
-            onOpenMap={handleOpenMap}
             onReport={openReport}
           />
         )}
