@@ -18,9 +18,12 @@ import {
   type ProService,
   type ProReview,
 } from "@/data/professionals";
-import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
+import {
+  SERVICE_CATEGORIES,
+  type ServiceCategory,
+} from "@/data/serviceCategories";
 
-export type { Professional, ProService, ProReview };
+export type { Professional, ProService, ProReview, ServiceCategory };
 export { getDistanceKm, starsFromReviewCount };
 
 /** List all professionals (Home, Search). */
@@ -51,10 +54,13 @@ export function getProfessionalById(
   return getFromData(id);
 }
 
-/** Home category chips. */
-export function listServiceCategories() {
-  // TODO backend: return apiRequest("/categories") if they become dynamic
-  return SERVICE_CATEGORIES;
+/**
+ * Category chips for Home + Services.
+ * Includes "All" first. Screens should only call this — do not hardcode chips.
+ * TODO backend: return apiRequest("/categories")
+ */
+export function listServiceCategories(): ServiceCategory[] {
+  return [{ name: "All", icon: "apps" }, ...SERVICE_CATEGORIES];
 }
 
 /**
@@ -86,16 +92,6 @@ export async function addReview(
 // =====================================================
 // AUTH USER SERVICES (My Services screen)
 // =====================================================
-//
-// NOW  → read/write mock data on the professional object
-// LATER → replace each body with apiRequest to your auth user's services API
-//
-// Example later:
-//   GET    /me/services
-//   POST   /me/services
-//   PATCH  /me/services/:id
-//   DELETE /me/services/:id
-//
 
 export type ServiceInput = {
   name: string;
@@ -116,11 +112,7 @@ export async function createMyService(
   professionalId: string,
   input: ServiceInput,
 ): Promise<ProService> {
-  // TODO backend:
-  // return apiRequest<ProService>("/me/services", {
-  //   method: "POST",
-  //   body: JSON.stringify(input),
-  // })
+  // TODO backend: return apiRequest<ProService>("/me/services", { method: "POST", body: JSON.stringify(input) })
   await new Promise((r) => setTimeout(r, 200));
 
   const priceValue = Number(String(input.price).replace(/[^0-9.]/g, "")) || 0;
@@ -149,11 +141,7 @@ export async function updateMyService(
   serviceId: string,
   input: ServiceInput,
 ): Promise<ProService | null> {
-  // TODO backend:
-  // return apiRequest<ProService>(`/me/services/${serviceId}`, {
-  //   method: "PATCH",
-  //   body: JSON.stringify(input),
-  // })
+  // TODO backend: return apiRequest<ProService>(`/me/services/${serviceId}`, { method: "PATCH", body: JSON.stringify(input) })
   await new Promise((r) => setTimeout(r, 200));
 
   const pro = PROFESSIONALS.find((p) => p.id === String(professionalId));
@@ -183,9 +171,7 @@ export async function deleteMyService(
   professionalId: string,
   serviceId: string,
 ): Promise<boolean> {
-  // TODO backend:
-  // await apiRequest(`/me/services/${serviceId}`, { method: "DELETE" })
-  // return true
+  // TODO backend: await apiRequest(`/me/services/${serviceId}`, { method: "DELETE" }); return true
   await new Promise((r) => setTimeout(r, 150));
 
   const pro = PROFESSIONALS.find((p) => p.id === String(professionalId));
