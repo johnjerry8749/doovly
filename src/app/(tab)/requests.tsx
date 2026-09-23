@@ -901,7 +901,7 @@ const styles = StyleSheet.create({
   },
   cmBackdrop: { flex: 1, justifyContent: "flex-end" },
   cmDim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
   cmSheet: {
