@@ -79,7 +79,7 @@ export const PROFESSIONALS: Professional[] = [
     city: "Lagos",
     priceFrom: "₦8,000",
     image: require("@/assets/profile_1.jpg"),
-    verified: true,
+    verified: false,
     subscribed: false,
     latitude: 6.5244,
     longitude: 3.3792,

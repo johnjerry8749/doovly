@@ -348,12 +348,6 @@ export default function Profile() {
 
         <View style={styles.card}>
           <MenuItem
-            icon={<MenuIcon name="time-outline" />}
-            title="Availability"
-            onPress={() => {}}
-          />
-
-          <MenuItem
             icon={<MenuIcon name="settings-outline" />}
             title="Settings"
             onPress={() => router.push("/profile/settings")}
