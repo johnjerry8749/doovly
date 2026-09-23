@@ -27,15 +27,22 @@ import {
   addInAppNotification,
   getCurrentUserId,
 } from "@/services/inAppNotifications";
-import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { useLocation } from "@/context/LocationContext";
 import { NIGERIA_CITIES } from "@/data/cities";
 
 const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
 
-const CATEGORY_FILTERS = ["All", ...SERVICE_CATEGORIES];
-
+const CATEGORY_FILTERS = [
+  "All",
+  "Cleaning",
+  "Plumbing",
+  "Electrical",
+  "Mechanic",
+  "Barber",
+  "Nail Tech",
+  "Painting",
+];
 
 export default function RequestsScreen() {
   const {
@@ -400,8 +407,7 @@ export default function RequestsScreen() {
                 </Text>
               </TouchableOpacity>
             );
-          })} 
-
+          })}
         </ScrollView>
       </View>
 
