@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Image,
   ScrollView,
   StatusBar,
   Linking,
@@ -17,6 +16,7 @@ import {
   Pressable,
   Keyboard,
   KeyboardAvoidingView,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,22 +27,16 @@ import {
   listReceivedJobs,
   BOOKED_FILTERS,
   RECEIVED_FILTERS,
-  statusColors,
   type Booking,
 } from "@/services/bookings";
 
 import { DISPUTE_REASONS, type DisputeReason } from "@/services/disputes";
 
 import { getCurrentUserId } from "@/services/inAppNotifications";
-import { isCurrentUserPro } from "@/services/savedProviders";
+import { BookingCard } from "@/components/BookingCard";
 
 const GREEN = "#16A34A";
 
-/**
- * ============================================
- * OPEN BOOKING LOCATION
- * ============================================
- */
 const openBookingLocation = async (item: Booking) => {
   try {
     let url = "";
@@ -87,21 +81,10 @@ const openBookingLocation = async (item: Booking) => {
     await Linking.openURL(url);
   } catch (error) {
     console.error("Unable to open booking location:", error);
-
     Alert.alert("Map Error", "We could not open the customer's location.");
   }
 };
 
-/**
- * ============================================
- * JOB LOCATION ACCESS
- * ============================================
- *
- * Used for Accepted / Ongoing jobs.
- *
- * Released payment OR Pay on site
- * = location available.
- */
 function canViewJobLocation(item: Booking): boolean {
   return (
     item.paymentStatus === "released" ||
@@ -110,35 +93,12 @@ function canViewJobLocation(item: Booking): boolean {
   );
 }
 
-/**
- * ============================================
- * HANDLE MAP
- * ============================================
- *
- * IMPORTANT:
- *
- * Pending Received Jobs:
- * - Map is ALWAYS unlocked.
- *
- * Accepted / Ongoing:
- * - Map follows payment / Pay on site rule.
- */
 const handleOpenMap = (item: Booking) => {
-  /**
-   * PENDING RECEIVED JOB
-   *
-   * Always allow map.
-   */
   if (item.status === "Pending") {
     openBookingLocation(item);
     return;
   }
 
-  /**
-   * OTHER JOBS
-   *
-   * Keep existing payment/location protection.
-   */
   if (!canViewJobLocation(item)) {
     Alert.alert(
       "Location locked",
@@ -150,33 +110,17 @@ const handleOpenMap = (item: Booking) => {
   openBookingLocation(item);
 };
 
-/**
- * ============================================
- * BOOKINGS SCREEN
- * ============================================
- */
 export default function Bookings() {
   const [mainTab, setMainTab] = useState<"booked" | "received">("booked");
-
   const [filter, setFilter] = useState<string>("All");
-
   const [showReportModal, setShowReportModal] = useState(false);
-
   const [reportBooking, setReportBooking] = useState<Booking | null>(null);
-
   const [selectedReason, setSelectedReason] = useState<DisputeReason | null>(
     null,
   );
-
   const [reportDescription, setReportDescription] = useState("");
-
   const [reportPhotos, setReportPhotos] = useState<string[]>([]);
 
-  /**
-   * ============================================
-   * DATA
-   * ============================================
-   */
   const data = useMemo<Booking[]>(() => {
     return mainTab === "booked" ? listBookedJobs() : listReceivedJobs();
   }, [mainTab]);
@@ -185,7 +129,6 @@ export default function Bookings() {
     if (filter === "All") {
       return data;
     }
-
     return data.filter((item) => item.status === filter);
   }, [data, filter]);
 
@@ -196,18 +139,10 @@ export default function Bookings() {
 
   const filters = mainTab === "booked" ? BOOKED_FILTERS : RECEIVED_FILTERS;
 
-  /**
-   * ============================================
-   * REPORT PHOTOS
-   * ============================================
-   */
   const pickReportPhotos = async () => {
     try {
       const remaining = 3 - reportPhotos.length;
-
-      if (remaining <= 0) {
-        return;
-      }
+      if (remaining <= 0) return;
 
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -227,393 +162,30 @@ export default function Bookings() {
         quality: 0.7,
       });
 
-      if (result.canceled) {
-        return;
-      }
+      if (result.canceled) return;
 
       const uris = result.assets.map((asset) => asset.uri).filter(Boolean);
-
       setReportPhotos((previous) => [...previous, ...uris].slice(0, 3));
     } catch (error) {
       Alert.alert("Could not open photos", "Please try again.");
     }
   };
 
-  /**
-   * ============================================
-   * STATUS ACTIONS
-   * ============================================
-   */
-  const renderStatusActions = (item: Booking) => {
-    /**
-     * ==========================================
-     * RECEIVED - PENDING
-     * ==========================================
-     *
-     * MAP IS ALWAYS UNLOCKED HERE.
-     */
-    if (mainTab === "received" && item.status === "Pending") {
-      return (
-        <View style={styles.actionRow}>
-          {/* UNLOCKED MAP */}
-          <TouchableOpacity
-            style={[styles.actionButton, styles.mapButton]}
-            activeOpacity={0.8}
-            onPress={() => handleOpenMap(item)}
-          >
-            <Ionicons name="map-outline" size={16} color={GREEN} />
-
-            <Text style={styles.mapButtonText}>Map</Text>
-          </TouchableOpacity>
-
-          {/* ACCEPT */}
-          <TouchableOpacity
-            style={[styles.actionButton, styles.acceptButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert("Accept Job", "This job will be marked as Accepted.")
-            }
-          >
-            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-
-            <Text style={styles.acceptButtonText}>Accept</Text>
-          </TouchableOpacity>
-
-          {/* DECLINE */}
-          <TouchableOpacity
-            style={[styles.actionButton, styles.declineButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert("Decline Job", "This job will be declined.")
-            }
-          >
-            <Ionicons name="close" size={16} color="#DC2626" />
-
-            <Text style={styles.declineButtonText}>Decline</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    /**
-     * ==========================================
-     * RECEIVED - ACCEPTED / ONGOING
-     * ==========================================
-     */
-    if (
-      mainTab === "received" &&
-      (item.status === "Accepted" || item.status === "Ongoing")
-    ) {
-      const locationAvailable = canViewJobLocation(item);
-
-      return (
-        <View style={styles.actionRow}>
-          {/* MAP */}
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.mapButton,
-              !locationAvailable && styles.lockedMapButton,
-            ]}
-            activeOpacity={0.8}
-            onPress={() => handleOpenMap(item)}
-          >
-            <Ionicons
-              name={locationAvailable ? "map-outline" : "lock-closed-outline"}
-              size={16}
-              color={locationAvailable ? GREEN : "#9CA3AF"}
-            />
-
-            <Text
-              style={[
-                styles.mapButtonText,
-                !locationAvailable && styles.lockedMapButtonText,
-              ]}
-            >
-              Map
-            </Text>
-          </TouchableOpacity>
-
-          {/* CANCEL */}
-          <TouchableOpacity
-            style={[styles.actionButton, styles.cancelButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert("Cancel Job", "This job will be cancelled.")
-            }
-          >
-            <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
-
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-
-          {/* COMPLETE */}
-          <TouchableOpacity
-            style={[styles.actionButton, styles.completeButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert(
-                "Mark as Completed",
-                "Customer will be asked to Approve the job before payment is released.",
-              )
-            }
-          >
-            <Ionicons name="checkmark-circle-outline" size={16} color={GREEN} />
-
-            <Text style={styles.completeButtonText}>Mark as Completed</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    /**
-     * ==========================================
-     * RECEIVED - AWAITING APPROVAL
-     * ==========================================
-     */
-    if (mainTab === "received" && item.status === "Awaiting Approval") {
-      return null;
-    }
-
-    /**
-     * ==========================================
-     * BOOKED - UPCOMING / ACCEPTED / ONGOING
-     * ==========================================
-     */
-    if (
-      mainTab === "booked" &&
-      (item.status === "Upcoming" ||
-        item.status === "Accepted" ||
-        item.status === "Ongoing")
-    ) {
-      return (
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.cancelButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert("Cancel Booking", "This booking will be cancelled.")
-            }
-          >
-            <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
-
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    /**
-     * ==========================================
-     * BOOKED - AWAITING APPROVAL
-     * ==========================================
-     */
-    if (mainTab === "booked" && item.status === "Awaiting Approval") {
-      return (
-        <View style={styles.actionRow}>
-          {/* APPROVE */}
-          <TouchableOpacity
-            style={[styles.actionButton, styles.acceptButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert(
-                "Approve Job",
-                "Job approved. Payment will be released to the professional.",
-              )
-            }
-          >
-            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-
-            <Text style={styles.acceptButtonText}>Approve</Text>
-          </TouchableOpacity>
-
-          {/* REPORT */}
-          <TouchableOpacity
-            style={[styles.actionButton, styles.declineButton]}
-            activeOpacity={0.8}
-            onPress={() => {
-              setReportBooking(item);
-              setSelectedReason(null);
-              setReportDescription("");
-              setReportPhotos([]);
-              setShowReportModal(true);
-            }}
-          >
-            <Ionicons name="close" size={16} color="#DC2626" />
-
-            <Text style={styles.declineButtonText}>Report Issue</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    /**
-     * ==========================================
-     * COMPLETED
-     * ==========================================
-     */
-    if (item.status === "Completed") {
-      return null;
-    }
-
-    /**
-     * ==========================================
-     * CANCELLED / DECLINED
-     * ==========================================
-     */
-    if (item.status === "Cancelled" || item.status === "Declined") {
-      return (
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.secondaryActionButton]}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="document-text-outline" size={16} color={GREEN} />
-
-            <Text style={styles.secondaryActionText}>View Details</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return null;
+  const openReport = (item: Booking) => {
+    setReportBooking(item);
+    setSelectedReason(null);
+    setReportDescription("");
+    setReportPhotos([]);
+    setShowReportModal(true);
   };
 
-  /**
-   * ============================================
-   * BOOKING CARD
-   * ============================================
-   */
-  const renderBooking = ({ item }: { item: Booking }) => {
-    const statusStyle = statusColors[item.status];
-
-    /**
-     * Chat rule:
-     *
-     * Completed + Free user = hide Chat
-     * Completed + Pro user  = show Chat
-     *
-     * All other statuses = show Chat
-     * Pro status comes from the logged-in user, not a local flag.
-     */
-    const showChat = item.status !== "Completed" || isCurrentUserPro();
-
-    return (
-      <View style={styles.card}>
-        {/* TOP SECTION */}
-        <View style={styles.topSection}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={item.image}
-              style={styles.avatar}
-              resizeMode="cover"
-            />
-
-            {/* VERIFIED BADGE */}
-            {item.verified === true && (
-              <View style={styles.verifiedBadge}>
-                <Image
-                  source={require("@/assets/premium/checkmark.png")}
-                  style={styles.verifiedBadgeImage}
-                  resizeMode="contain"
-                />
-              </View>
-            )}
-          </View>
-
-          <View style={styles.providerInfo}>
-            <Text style={styles.providerName} numberOfLines={1}>
-              {item.providerName}
-            </Text>
-
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color="#F59E0B" />
-
-              <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
-
-              <Text style={styles.reviewText}>({item.reviews} reviews)</Text>
-            </View>
-          </View>
-
-          {/* STATUS */}
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: statusStyle.bg,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusText,
-                {
-                  color: statusStyle.text,
-                },
-              ]}
-            >
-              {item.status}
-            </Text>
-          </View>
-        </View>
-
-        {/* JOB TITLE */}
-        <Text style={styles.jobTitle}>{item.title}</Text>
-
-        {/* INFO */}
-        <View style={styles.infoContainer}>
-          <View style={styles.infoItem}>
-            <Ionicons name="calendar-outline" size={17} color="#6B7280" />
-
-            <Text style={styles.infoText}>{item.date}</Text>
-          </View>
-
-          <View style={styles.infoItem}>
-            <Ionicons name="location-outline" size={17} color="#6B7280" />
-
-            <Text style={styles.infoText} numberOfLines={1}>
-              {item.location}
-            </Text>
-          </View>
-        </View>
-
-        {/* CONTACT BUTTONS */}
-        <View style={styles.contactRow}>
-          {showChat && (
-            <TouchableOpacity style={styles.contactButton} activeOpacity={0.8}>
-              <Ionicons name="chatbubble-outline" size={17} color={GREEN} />
-
-              <Text style={styles.contactText}>Chat</Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity style={styles.contactButton} activeOpacity={0.8}>
-            <Ionicons name="call-outline" size={17} color={GREEN} />
-
-            <Text style={styles.contactText}>Call</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* STATUS ACTIONS */}
-        {renderStatusActions(item)}
-      </View>
-    );
-  };
-
-  /**
-   * ============================================
-   * UI
-   * ============================================
-   */
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* HEADER */}
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Bookings</Text>
-
           <Text style={styles.headerSubtitle}>
             Manage your bookings and jobs
           </Text>
@@ -632,32 +204,30 @@ export default function Bookings() {
           }
         >
           <Ionicons name="notifications-outline" size={28} color="#111" />
-
           <View style={styles.notificationDot} />
         </TouchableOpacity>
       </View>
 
-      {/* MAIN TABS */}
       <View style={styles.mainTabsContainer}>
         <TouchableOpacity
-          style={[styles.mainTab, mainTab === "booked" && styles.activeMainTab]}
+          style={[styles.mainTab, mainTab === "booked" && styles.mainTabActive]}
           onPress={() => handleMainTabChange("booked")}
           activeOpacity={0.8}
         >
           <Text
             style={[
               styles.mainTabText,
-              mainTab === "booked" && styles.activeMainTabText,
+              mainTab === "booked" && styles.mainTabTextActive,
             ]}
           >
-            My Bookings
+            Booked
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[
             styles.mainTab,
-            mainTab === "received" && styles.activeMainTab,
+            mainTab === "received" && styles.mainTabActive,
           ]}
           onPress={() => handleMainTabChange("received")}
           activeOpacity={0.8}
@@ -665,141 +235,126 @@ export default function Bookings() {
           <Text
             style={[
               styles.mainTabText,
-              mainTab === "received" && styles.activeMainTabText,
+              mainTab === "received" && styles.mainTabTextActive,
             ]}
           >
-            Received Jobs
+            Received
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* FILTERS */}
-      <View style={styles.filterWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContainer}
-        >
-          {filters.map((itemFilter) => {
-            const isActive = filter === itemFilter;
-
-            return (
-              <TouchableOpacity
-                key={itemFilter}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersContainer}
+      >
+        {filters.map((item) => {
+          const active = filter === item;
+          return (
+            <TouchableOpacity
+              key={item}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+              onPress={() => setFilter(item)}
+              activeOpacity={0.8}
+            >
+              <Text
                 style={[
-                  styles.filterButton,
-                  isActive && styles.activeFilterButton,
+                  styles.filterChipText,
+                  active && styles.filterChipTextActive,
                 ]}
-                onPress={() => setFilter(itemFilter)}
-                activeOpacity={0.8}
               >
-                <Text
-                  style={[
-                    styles.filterText,
-                    isActive && styles.activeFilterText,
-                  ]}
-                >
-                  {itemFilter}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+                {item}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
-      {/* BOOKINGS */}
       <FlatList
-        style={{ flex: 1 }}
         data={filteredData}
-        keyExtractor={(item) => item.id}
-        renderItem={renderBooking}
-        showsVerticalScrollIndicator={false}
+        keyExtractor={(item) => `${mainTab}-${item.id}`}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIcon}>
-              <Ionicons name="calendar-outline" size={32} color="#9CA3AF" />
+              <Ionicons name="calendar-outline" size={28} color="#9CA3AF" />
             </View>
-
             <Text style={styles.emptyTitle}>No bookings found</Text>
-
             <Text style={styles.emptyText}>
-              There are no bookings under this category.
+              Try another filter or check back later.
             </Text>
           </View>
         }
+        renderItem={({ item }) => (
+          <BookingCard
+            item={item}
+            mainTab={mainTab}
+            onOpenMap={handleOpenMap}
+            onReport={openReport}
+          />
+        )}
       />
 
-      {/* REPORT MODAL */}
       <Modal
         visible={showReportModal}
         transparent
         animationType="slide"
-        onRequestClose={() => {
-          Keyboard.dismiss();
-          setShowReportModal(false);
-        }}
+        onRequestClose={() => setShowReportModal(false)}
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <View style={styles.modalOverlayInner}>
+          <Pressable
+            style={styles.modalOverlayInner}
+            onPress={() => Keyboard.dismiss()}
+          >
             <Pressable
               style={styles.modalBackdrop}
-              onPress={() => {
-                Keyboard.dismiss();
-                setShowReportModal(false);
-              }}
+              onPress={() => setShowReportModal(false)}
             />
-
             <View style={styles.modalSheet}>
               <View style={styles.modalHandle} />
-
-              <Text style={styles.modalTitle}>Report Issue</Text>
-
-              {reportBooking ? (
-                <Text style={styles.modalSubtitle}>
-                  {reportBooking.title} · {reportBooking.providerName}
-                </Text>
-              ) : null}
+              <Text style={styles.modalTitle}>Report an issue</Text>
+              <Text style={styles.modalSubtitle}>
+                {reportBooking
+                  ? `${reportBooking.title} · Booking #${reportBooking.id}`
+                  : "Tell us what went wrong"}
+              </Text>
 
               <ScrollView
-                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.modalScrollContent}
+                keyboardShouldPersistTaps="handled"
               >
-                <Text style={styles.modalLabel}>What went wrong?</Text>
-
+                <Text style={styles.modalLabel}>Reason</Text>
                 {DISPUTE_REASONS.map((reason) => {
-                  const isSelected = selectedReason === reason;
-
+                  const selected = selectedReason === reason;
                   return (
                     <TouchableOpacity
                       key={reason}
                       style={[
                         styles.reasonRow,
-                        isSelected && styles.reasonRowSelected,
+                        selected && styles.reasonRowSelected,
                       ]}
                       onPress={() => setSelectedReason(reason)}
+                      activeOpacity={0.8}
                     >
                       <View
                         style={[
                           styles.reasonRadio,
-                          isSelected && styles.reasonRadioSelected,
+                          selected && styles.reasonRadioSelected,
                         ]}
                       >
-                        {isSelected ? (
-                          <View style={styles.reasonRadioDot} />
-                        ) : null}
+                        {selected && <View style={styles.reasonRadioDot} />}
                       </View>
-
                       <Text style={styles.reasonText}>{reason}</Text>
                     </TouchableOpacity>
                   );
                 })}
 
                 <Text style={styles.modalLabel}>Description</Text>
-
                 <TextInput
                   style={styles.descriptionInput}
                   placeholder="Describe the issue..."
@@ -810,85 +365,67 @@ export default function Bookings() {
                 />
 
                 <Text style={styles.modalLabel}>Photos (optional)</Text>
-
                 <View style={styles.photoRow}>
-                  {reportPhotos.map((uri, index) => (
+                  {reportPhotos.map((uri) => (
                     <View key={uri}>
                       <Image source={{ uri }} style={styles.photoThumb} />
-
                       <TouchableOpacity
                         style={styles.photoRemove}
                         onPress={() =>
-                          setReportPhotos((previous) =>
-                            previous.filter((_, i) => i !== index),
+                          setReportPhotos((prev) =>
+                            prev.filter((p) => p !== uri),
                           )
                         }
                       >
-                        <Ionicons name="close" size={12} color="#fff" />
+                        <Ionicons name="close" size={12} color="#FFF" />
                       </TouchableOpacity>
                     </View>
                   ))}
-
                   {reportPhotos.length < 3 && (
                     <TouchableOpacity
                       style={styles.addPhotoBtn}
                       onPress={pickReportPhotos}
+                      activeOpacity={0.8}
                     >
-                      <Ionicons name="camera-outline" size={22} color={GREEN} />
-
+                      <Ionicons name="camera-outline" size={20} color={GREEN} />
                       <Text style={styles.addPhotoText}>Add</Text>
                     </TouchableOpacity>
                   )}
                 </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    styles.acceptButton,
-                    {
-                      marginTop: 16,
-                      justifyContent: "center",
-                    },
-                  ]}
-                  onPress={() => {
-                    if (!selectedReason) {
-                      Alert.alert(
-                        "Select a reason",
-                        "Please choose what went wrong.",
-                      );
-                      return;
-                    }
-
-                    Alert.alert(
-                      "Report submitted",
-                      "We will review your report shortly.",
-                    );
-
-                    setShowReportModal(false);
-                  }}
-                >
-                  <Text style={styles.acceptButtonText}>Submit Report</Text>
-                </TouchableOpacity>
               </ScrollView>
+
+              <TouchableOpacity
+                style={[
+                  styles.submitReportBtn,
+                  (!selectedReason || !reportDescription.trim()) && {
+                    opacity: 0.5,
+                  },
+                ]}
+                activeOpacity={0.85}
+                disabled={!selectedReason || !reportDescription.trim()}
+                onPress={() => {
+                  Alert.alert(
+                    "Report submitted",
+                    "We will review this dispute shortly.",
+                  );
+                  setShowReportModal(false);
+                }}
+              >
+                <Text style={styles.submitReportText}>Submit Report</Text>
+              </TouchableOpacity>
             </View>
-          </View>
+          </Pressable>
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
 }
 
-/**
- * ============================================
- * STYLES
- * ============================================
- */
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -897,330 +434,87 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
-
   headerTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
     color: "#111827",
   },
-
   headerSubtitle: {
     fontSize: 13,
     color: "#6B7280",
     marginTop: 2,
   },
-
   notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
+    width: 40,
+    height: 40,
     justifyContent: "center",
+    alignItems: "center",
   },
-
   notificationDot: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#EF4444",
+    top: 6,
+    right: 6,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: GREEN,
   },
-
   mainTabsContainer: {
     flexDirection: "row",
     marginHorizontal: 16,
-    marginBottom: 12,
     backgroundColor: "#F3F4F6",
     borderRadius: 12,
     padding: 4,
+    marginBottom: 12,
   },
-
   mainTab: {
     flex: 1,
     paddingVertical: 10,
     borderRadius: 10,
     alignItems: "center",
   },
-
-  activeMainTab: {
+  mainTabActive: {
     backgroundColor: "#FFFFFF",
   },
-
   mainTabText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#6B7280",
   },
-
-  activeMainTabText: {
+  mainTabTextActive: {
     color: GREEN,
   },
-
-  filterWrapper: {
-    marginBottom: 8,
-  },
-
-  filterContainer: {
+  filtersContainer: {
     paddingHorizontal: 16,
     gap: 8,
+    paddingBottom: 12,
   },
-
-  filterButton: {
+  filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: "#F3F4F6",
     marginRight: 8,
   },
-
-  activeFilterButton: {
-    backgroundColor: "#E8F8EF",
+  filterChipActive: {
+    backgroundColor: "#DCFCE7",
   },
-
-  filterText: {
+  filterChipText: {
     fontSize: 13,
     fontWeight: "600",
     color: "#6B7280",
   },
-
-  activeFilterText: {
+  filterChipTextActive: {
     color: GREEN,
   },
-
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 24,
-    gap: 12,
   },
-
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    padding: 14,
-  },
-
-  topSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-
-  avatarContainer: {
-    position: "relative",
-    marginRight: 12,
-  },
-
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-
-  verifiedBadge: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    width: 15,
-    height: 15,
-    borderRadius: 8,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  verifiedBadgeImage: {
-    width: 13,
-    height: 13,
-  },
-
-  checkmark: {
-    width: 39,
-    height: 39,
-  },
-
-  providerInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-
-  providerName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
-    gap: 4,
-  },
-
-  ratingText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#111827",
-  },
-
-  reviewText: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-
-  statusText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-
-  jobTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
-  },
-
-  infoContainer: {
-    gap: 6,
-    marginBottom: 12,
-  },
-
-  infoItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  infoText: {
-    fontSize: 13,
-    color: "#6B7280",
-    flex: 1,
-  },
-
-  contactRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 10,
-  },
-
-  contactButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: "#F0FDF4",
-  },
-
-  contactText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: GREEN,
-  },
-
-  actionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-
-  mapButton: {
-    backgroundColor: "#F0FDF4",
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-  },
-
-  mapButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: GREEN,
-  },
-
-  lockedMapButton: {
-    backgroundColor: "#F9FAFB",
-    borderColor: "#E5E7EB",
-  },
-
-  lockedMapButtonText: {
-    color: "#9CA3AF",
-  },
-
-  acceptButton: {
-    backgroundColor: GREEN,
-  },
-
-  acceptButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-
-  declineButton: {
-    backgroundColor: "#FEE2E2",
-  },
-
-  declineButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#DC2626",
-  },
-
-  cancelButton: {
-    backgroundColor: "#FEE2E2",
-  },
-
-  cancelButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#DC2626",
-  },
-
-  completeButton: {
-    backgroundColor: "#F0FDF4",
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-  },
-
-  completeButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: GREEN,
-  },
-
-  secondaryActionButton: {
-    backgroundColor: "#F3F4F6",
-  },
-
-  secondaryActionText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: GREEN,
-  },
-
   emptyContainer: {
     alignItems: "center",
     paddingVertical: 60,
   },
-
   emptyIcon: {
     width: 64,
     height: 64,
@@ -1230,34 +524,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
-
   emptyTitle: {
     fontSize: 17,
     fontWeight: "700",
     color: "#111827",
   },
-
   emptyText: {
     fontSize: 13,
     color: "#9CA3AF",
     marginTop: 4,
     textAlign: "center",
   },
-
   modalOverlay: {
     flex: 1,
   },
-
   modalOverlayInner: {
     flex: 1,
     justifyContent: "flex-end",
   },
-
   modalBackdrop: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.4)",
   },
-
   modalSheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
@@ -1266,7 +554,6 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     maxHeight: "90%",
   },
-
   modalHandle: {
     width: 40,
     height: 4,
@@ -1276,24 +563,20 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 12,
   },
-
   modalTitle: {
     fontSize: 18,
     fontWeight: "800",
     color: "#111827",
   },
-
   modalSubtitle: {
     fontSize: 13,
     color: "#6B7280",
     marginTop: 4,
     marginBottom: 12,
   },
-
   modalScrollContent: {
     paddingBottom: 16,
   },
-
   modalLabel: {
     fontSize: 14,
     fontWeight: "700",
@@ -1301,7 +584,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 8,
   },
-
   reasonRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1312,12 +594,10 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
     marginBottom: 8,
   },
-
   reasonRowSelected: {
     borderColor: GREEN,
     backgroundColor: "#F0FDF4",
   },
-
   reasonRadio: {
     width: 20,
     height: 20,
@@ -1328,24 +608,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 10,
   },
-
   reasonRadioSelected: {
     borderColor: GREEN,
   },
-
   reasonRadioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: GREEN,
   },
-
   reasonText: {
     fontSize: 14,
     color: "#111827",
     flex: 1,
   },
-
   descriptionInput: {
     borderWidth: 1,
     borderColor: "#E5E7EB",
@@ -1356,20 +632,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111827",
   },
-
   photoRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
     marginTop: 8,
   },
-
   photoThumb: {
     width: 72,
     height: 72,
     borderRadius: 10,
   },
-
   photoRemove: {
     position: "absolute",
     top: 4,
@@ -1381,7 +654,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   addPhotoBtn: {
     width: 72,
     height: 72,
@@ -1393,11 +665,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#F0FDF4",
   },
-
   addPhotoText: {
     marginTop: 2,
     fontSize: 11,
     fontWeight: "600",
     color: GREEN,
+  },
+  submitReportBtn: {
+    marginTop: 12,
+    backgroundColor: GREEN,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  submitReportText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
