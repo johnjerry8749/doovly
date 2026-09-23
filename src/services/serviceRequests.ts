@@ -2,11 +2,6 @@
  * Service requests service
  * -----------------------
  * Screens import ONLY from here.
- *
- * NOW  → reads mock data from src/data/serviceRequests.ts
- * LATER → swap the body of each function to call apiRequest("/service-requests...")
- *
- * Do not change function names when you add the backend — only the insides.
  */
 
 import {
@@ -33,13 +28,11 @@ export type CreateServiceRequestInput = {
 
 /** List all service requests. */
 export function listServiceRequests(): ServiceRequest[] {
-  // TODO backend: return apiRequest<ServiceRequest[]>("/service-requests")
   return SERVICE_REQUESTS;
 }
 
-/** Filter by city name (case-insensitive). Same pattern as listProfessionalsByCity. */
+/** Filter by city name (case-insensitive). */
 export function listServiceRequestsByCity(city: string): ServiceRequest[] {
-  // TODO backend: return apiRequest(`/service-requests?city=${encodeURIComponent(city)}`)
   const key = city.trim().toLowerCase();
   if (!key || key === "all nigeria" || key === "nigeria") {
     return SERVICE_REQUESTS;
@@ -57,7 +50,6 @@ export function listServiceRequestsByCity(city: string): ServiceRequest[] {
 export function getServiceRequestById(
   id: string,
 ): ServiceRequest | undefined {
-  // TODO backend: return apiRequest<ServiceRequest>(`/service-requests/${id}`)
   return getFromData(id);
 }
 
@@ -81,15 +73,18 @@ export function createServiceRequest(
     preferredDate: input.preferredDate,
     isNew: true,
     createdByUserId: getCurrentUserId(),
+    posterName: "You",
+    posterAvatar:
+      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+    likesCount: 0,
+    comments: [],
   };
 
-  // TODO backend: return apiRequest("/service-requests", { method: "POST", body })
   SERVICE_REQUESTS.unshift(request);
   return request;
 }
 
 /** Recent requests (limit for home / services header). */
 export function listRecentServiceRequests(limit = 5): ServiceRequest[] {
-  // TODO backend: return apiRequest(`/service-requests?limit=${limit}&sort=recent`)
   return SERVICE_REQUESTS.slice(0, limit);
 }

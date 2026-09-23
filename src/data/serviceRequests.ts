@@ -11,6 +11,14 @@ import type { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export type ServiceRequestIcon = keyof typeof MaterialCommunityIcons.glyphMap;
 
+export type ServiceRequestComment = {
+  id: string;
+  userName: string;
+  userAvatar: string;
+  text: string;
+  timeAgo: string;
+};
+
 export type ServiceRequest = {
   id: string;
   title: string;
@@ -19,19 +27,23 @@ export type ServiceRequest = {
   location: string;
   city: string;
   date: string;
+  /** Budget is optional; offers set price via Send Offer modal */
   price?: string;
   timeAgo: string;
   icon: ServiceRequestIcon;
   iconBackground: string;
   latitude?: number;
   longitude?: number;
-  /** Gallery images (URLs) — required for detail modal */
   images: string[];
   description: string;
   preferredDate: string;
   isNew: boolean;
-  /** User who posted the request. Later: from auth. */
   createdByUserId: string;
+  /** Poster display info for feed cards */
+  posterName: string;
+  posterAvatar: string;
+  likesCount: number;
+  comments: ServiceRequestComment[];
 };
 
 // =========================
@@ -47,7 +59,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Victoria Island",
     city: "Lagos",
     date: "Today, 10:00 AM",
-    price: "₦20,000",
     timeAgo: "2 min ago",
     icon: "water-pump",
     iconBackground: "#FFF1D5",
@@ -62,6 +73,20 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     preferredDate: "ASAP",
     isNew: true,
     createdByUserId: "u2",
+    posterName: "Amaka O.",
+    posterAvatar:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
+    likesCount: 14,
+    comments: [
+      {
+        id: "c1",
+        userName: "Chidi P.",
+        userAvatar:
+          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+        text: "I can come today after 3pm. DM me.",
+        timeAgo: "1 min ago",
+      },
+    ],
   },
   {
     id: "2",
@@ -71,7 +96,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Lekki Phase 1",
     city: "Lagos",
     date: "Tomorrow, 2:00 PM",
-    price: "₦10,000",
     timeAgo: "5 min ago",
     icon: "flash",
     iconBackground: "#DDF2FF",
@@ -85,6 +109,11 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     preferredDate: "Tomorrow, 2:00 PM",
     isNew: true,
     createdByUserId: "u3",
+    posterName: "Emeka B.",
+    posterAvatar:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
+    likesCount: 9,
+    comments: [],
   },
   {
     id: "3",
@@ -94,7 +123,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Ikoyi",
     city: "Lagos",
     date: "Today, 4:30 PM",
-    price: "₦30,000",
     timeAgo: "8 min ago",
     icon: "car-wrench",
     iconBackground: "#E9E1FF",
@@ -108,6 +136,20 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     preferredDate: "Today, 4:30 PM",
     isNew: true,
     createdByUserId: "u4",
+    posterName: "Tunde A.",
+    posterAvatar:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80",
+    likesCount: 31,
+    comments: [
+      {
+        id: "c2",
+        userName: "AutoFix Lagos",
+        userAvatar:
+          "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80",
+        text: "We can tow and diagnose same day.",
+        timeAgo: "3 min ago",
+      },
+    ],
   },
   {
     id: "4",
@@ -117,7 +159,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Garki",
     city: "Abuja",
     date: "Today, 11:00 AM",
-    price: "₦5,000",
     timeAgo: "12 min ago",
     icon: "content-cut",
     iconBackground: "#E8F5E9",
@@ -131,6 +172,11 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     preferredDate: "Today, 11:00 AM",
     isNew: false,
     createdByUserId: "u5",
+    posterName: "Ibrahim K.",
+    posterAvatar:
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80",
+    likesCount: 6,
+    comments: [],
   },
   {
     id: "5",
@@ -140,7 +186,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Surulere",
     city: "Lagos",
     date: "Tomorrow, 1:00 PM",
-    price: "₦15,000",
     timeAgo: "20 min ago",
     icon: "nail",
     iconBackground: "#FCE4EC",
@@ -154,6 +199,20 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     preferredDate: "Tomorrow, 1:00 PM",
     isNew: false,
     createdByUserId: "u6",
+    posterName: "Blessing M.",
+    posterAvatar:
+      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80",
+    likesCount: 18,
+    comments: [
+      {
+        id: "c3",
+        userName: "NailsBySola",
+        userAvatar:
+          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
+        text: "I have slots tomorrow afternoon!",
+        timeAgo: "10 min ago",
+      },
+    ],
   },
   {
     id: "6",
@@ -163,7 +222,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "GRA",
     city: "Port Harcourt",
     date: "Today, 3:00 PM",
-    price: "₦25,000",
     timeAgo: "25 min ago",
     icon: "flash",
     iconBackground: "#DDF2FF",
@@ -177,6 +235,11 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     preferredDate: "This week",
     isNew: false,
     createdByUserId: "u7",
+    posterName: "Grace E.",
+    posterAvatar:
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+    likesCount: 4,
+    comments: [],
   },
   {
     id: "7",
@@ -186,7 +249,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     location: "Wuse 2",
     city: "Abuja",
     date: "Today, 5:00 PM",
-    price: "₦30,000",
     timeAgo: "30 min ago",
     icon: "water-pump",
     iconBackground: "#FFF1D5",
@@ -200,86 +262,21 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     preferredDate: "ASAP",
     isNew: true,
     createdByUserId: "u1",
-  },
-  {
-    id: "8",
-    title: "Full body massage booking",
-    category: "Spa",
-    profession: "Spa",
-    location: "Ikeja",
-    city: "Lagos",
-    date: "Tomorrow, 10:00 AM",
-    price: "₦100,000",
-    timeAgo: "45 min ago",
-    icon: "spa",
-    iconBackground: "#E0F2F1",
-    latitude: 6.6018,
-    longitude: 3.3515,
-    images: [
-      "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=1200&q=80",
-    ],
-    description:
-      "Looking for a professional full body massage at home. Prefer a verified and experienced therapist.",
-    preferredDate: "Tomorrow, 10:00 AM",
-    isNew: false,
-    createdByUserId: "u8",
-  },
-  {
-    id: "9",
-    title: "AC not cooling – need mechanic",
-    category: "Mechanic",
-    profession: "Mechanic",
-    location: "New Haven",
-    city: "Enugu",
-    date: "Today, 12:00 PM",
-    price: "₦20,000",
-    timeAgo: "1 hr ago",
-    icon: "car-wrench",
-    iconBackground: "#E9E1FF",
-    latitude: 6.4584,
-    longitude: 7.5464,
-    images: [
-      "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=1200&q=80",
-    ],
-    description:
-      "Car AC is not cooling at all. Need a mechanic who specializes in AC systems.",
-    preferredDate: "ASAP",
-    isNew: false,
-    createdByUserId: "u9",
-  },
-  {
-    id: "10",
-    title: "Bathroom tile and pipe fix",
-    category: "Plumbing",
-    profession: "Plumber",
-    location: "Owerri Municipal",
-    city: "Owerri",
-    date: "Tomorrow, 9:00 AM",
-    price: "₦23,200",
-    timeAgo: "1 hr ago",
-    icon: "water-pump",
-    iconBackground: "#FFF1D5",
-    latitude: 5.4836,
-    longitude: 7.0333,
-    images: [
-      "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80",
-    ],
-    description:
-      "Broken tiles and a leaking pipe in the bathroom. Need both plumbing and minor tiling work.",
-    preferredDate: "Tomorrow, 9:00 AM",
-    isNew: false,
-    createdByUserId: "u10",
+    posterName: "You",
+    posterAvatar:
+      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+    likesCount: 11,
+    comments: [],
   },
   {
     id: "11",
     title: "Home Cleaning Needed",
-    category: "Home cleaning",
+    category: "Cleaning",
     profession: "Cleaner",
-    location: "Lekki",
+    location: "Lekki Phase 1",
     city: "Lagos",
     date: "ASAP",
-    price: "₦25,000",
-    timeAgo: "2 hours ago",
+    timeAgo: "2h ago",
     icon: "broom",
     iconBackground: "#D1FAE5",
     latitude: 6.4474,
@@ -287,13 +284,34 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     images: [
       "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1200&q=80",
       "https://images.unsplash.com/photo-1563453392212-326f5e854473?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=1200&q=80",
     ],
     description:
-      "Looking for a reliable cleaner to help with a 2-bedroom apartment. Must be experienced, trustworthy and able to bring cleaning supplies. Flexible with time.",
+      "Looking for a reliable cleaner to deep clean my 2 bedroom apartment. Must bring own equipment.",
     preferredDate: "ASAP",
     isNew: true,
     createdByUserId: "u11",
+    posterName: "Tunde A.",
+    posterAvatar:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80",
+    likesCount: 22,
+    comments: [
+      {
+        id: "c4",
+        userName: "Chioma K.",
+        userAvatar:
+          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
+        text: "I'm available for this. I have 4 years experience in home cleaning.",
+        timeAgo: "1h ago",
+      },
+      {
+        id: "c5",
+        userName: "Adaobi N.",
+        userAvatar:
+          "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80",
+        text: "Can do this weekend if still open.",
+        timeAgo: "45 min ago",
+      },
+    ],
   },
 ];
 
