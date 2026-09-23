@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -57,6 +57,8 @@ export default function RequestsScreen() {
   const [offerPrice, setOfferPrice] = useState("");
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
   const [chatText, setChatText] = useState("");
+  const [replyTo, setReplyTo] = useState<ServiceRequestComment | null>(null);
+  const commentListRef = useRef<FlatList>(null);
 
   const allRequests = useMemo(() => listServiceRequests(), []);
 
@@ -126,11 +128,13 @@ export default function RequestsScreen() {
   const openChat = (item: ServiceRequest) => {
     setChatRequest(item);
     setChatText("");
+    setReplyTo(null);
   };
 
   const closeChat = () => {
     setChatRequest(null);
     setChatText("");
+    setReplyTo(null);
   };
 
   const sendChatMessage = () => {
@@ -138,11 +142,15 @@ export default function RequestsScreen() {
     const text = chatText.trim();
     if (!text) return;
 
+    const body = replyTo
+      ? `@${replyTo.userName} ${text}`
+      : text;
+
     const newComment: ServiceRequestComment = {
       id: `local-${Date.now()}`,
       userName: "You",
       userAvatar: MY_AVATAR,
-      text,
+      text: body,
       timeAgo: "Just now",
     };
 
@@ -151,6 +159,11 @@ export default function RequestsScreen() {
       [chatRequest.id]: [...(prev[chatRequest.id] || []), newComment],
     }));
     setChatText("");
+    setReplyTo(null);
+
+    setTimeout(() => {
+      commentListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   };
 
   const closeOffer = () => {
@@ -315,6 +328,29 @@ export default function RequestsScreen() {
 
   const chatComments = chatRequest ? getComments(chatRequest) : [];
 
+  const renderCommentItem = ({
+    item: c,
+  }: {
+    item: ServiceRequestComment;
+  }) => (
+    <View style={styles.cmRow}>
+      <Image source={{ uri: c.userAvatar }} style={styles.cmAvatar} />
+      <View style={styles.cmContent}>
+        <Text style={styles.cmMeta}>
+          <Text style={styles.cmName}>{c.userName}</Text>
+          <Text style={styles.cmTime}>  {c.timeAgo}</Text>
+        </Text>
+        <Text style={styles.cmText}>{c.text}</Text>
+        <TouchableOpacity
+          onPress={() => setReplyTo(c)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.cmReply}>Reply</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.header}>
@@ -349,7 +385,6 @@ export default function RequestsScreen() {
         />
       </View>
 
-      {/* Category filters — fixed height so chips never stretch */}
       <View style={styles.filtersWrap}>
         <ScrollView
           horizontal
@@ -397,80 +432,99 @@ export default function RequestsScreen() {
         ListFooterComponent={<View style={{ height: 28 }} />}
       />
 
-      {/* Comments modal */}
-      <Modal visible={!!chatRequest} animationType="slide" onRequestClose={closeChat}>
-        <SafeAreaView style={styles.chatSafe} edges={["top", "bottom"]}>
-          <View style={styles.chatHeader}>
-            <TouchableOpacity style={styles.iconBtn} onPress={closeChat}>
-              <Ionicons name="arrow-back" size={24} color="#111" />
-            </TouchableOpacity>
-            <View style={styles.chatHeaderText}>
-              <Text style={styles.chatHeaderTitle} numberOfLines={1}>
-                {chatRequest?.title || "Comments"}
-              </Text>
-              <Text style={styles.chatHeaderSub}>
-                {chatComments.length} comment
-                {chatComments.length === 1 ? "" : "s"}
-              </Text>
-            </View>
-          </View>
+      {/* Comments bottom sheet — Instagram style, no likes */}
+      <Modal
+        visible={!!chatRequest}
+        transparent
+        animationType="slide"
+        onRequestClose={closeChat}
+      >
+        <KeyboardAvoidingView
+          style={styles.cmBackdrop}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <Pressable style={styles.cmDim} onPress={closeChat} />
 
-          <KeyboardAvoidingView
-            style={styles.chatBody}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-          >
-            <ScrollView
-              style={styles.chatScroll}
-              contentContainerStyle={styles.chatScrollContent}
+          <View style={styles.cmSheet}>
+            <View style={styles.cmHandle} />
+
+            <View style={styles.cmHeader}>
+              <Text style={styles.cmHeaderTitle}>Comments</Text>
+              <TouchableOpacity
+                style={styles.cmCloseBtn}
+                onPress={closeChat}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={22} color="#111" />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              ref={commentListRef}
+              data={chatComments}
+              keyExtractor={(item) => item.id}
+              renderItem={renderCommentItem}
+              style={styles.cmList}
+              contentContainerStyle={
+                chatComments.length === 0
+                  ? styles.cmListEmptyContent
+                  : styles.cmListContent
+              }
+              showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-            >
-              {chatComments.length === 0 ? (
-                <View style={styles.chatEmpty}>
-                  <Ionicons name="chatbubbles-outline" size={40} color="#D1D5DB" />
-                  <Text style={styles.chatEmptyTitle}>No comments yet</Text>
-                  <Text style={styles.chatEmptyText}>
-                    Be the first to reply to this request.
+              ListEmptyComponent={
+                <View style={styles.cmEmpty}>
+                  <Ionicons
+                    name="chatbubbles-outline"
+                    size={40}
+                    color="#D1D5DB"
+                  />
+                  <Text style={styles.cmEmptyTitle}>No comments yet</Text>
+                  <Text style={styles.cmEmptyText}>
+                    Be the first to share your thoughts.
                   </Text>
                 </View>
-              ) : (
-                chatComments.map((c) => (
-                  <View key={c.id} style={styles.chatBubbleRow}>
-                    <Image source={{ uri: c.userAvatar }} style={styles.chatAvatar} />
-                    <View style={styles.chatBubble}>
-                      <View style={styles.chatBubbleTop}>
-                        <Text style={styles.chatName}>{c.userName}</Text>
-                        <Text style={styles.chatTime}>{c.timeAgo}</Text>
-                      </View>
-                      <Text style={styles.chatMessage}>{c.text}</Text>
-                    </View>
-                  </View>
-                ))
-              )}
-            </ScrollView>
+              }
+            />
 
-            <View style={styles.chatInputRow}>
+            {replyTo ? (
+              <View style={styles.cmReplyBar}>
+                <Text style={styles.cmReplyBarText} numberOfLines={1}>
+                  Replying to <Text style={styles.cmReplyBarName}>{replyTo.userName}</Text>
+                </Text>
+                <TouchableOpacity onPress={() => setReplyTo(null)}>
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            <View style={styles.cmInputRow}>
+              <Image source={{ uri: MY_AVATAR }} style={styles.cmInputAvatar} />
               <TextInput
-                style={styles.chatInput}
-                placeholder="Type a message…"
+                style={styles.cmInput}
+                placeholder={
+                  replyTo
+                    ? `Reply to ${replyTo.userName}…`
+                    : "What do you think of this?"
+                }
                 placeholderTextColor="#9CA3AF"
                 value={chatText}
                 onChangeText={setChatText}
                 multiline
                 maxLength={500}
               />
-              <TouchableOpacity
-                style={[
-                  styles.chatSendBtn,
-                  !chatText.trim() && styles.chatSendDisabled,
-                ]}
-                disabled={!chatText.trim()}
-                onPress={sendChatMessage}
-              >
-                <Ionicons name="send" size={18} color="#fff" />
-              </TouchableOpacity>
+              {chatText.trim() ? (
+                <TouchableOpacity
+                  style={styles.cmPostBtn}
+                  onPress={sendChatMessage}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.cmPostText}>Post</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Offer modal */}
@@ -573,12 +627,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     paddingVertical: 0,
   },
-
-  // Filters — constrained height so chips stay pill-shaped
-  filtersWrap: {
-    height: 44,
-    marginBottom: 8,
-  },
+  filtersWrap: { height: 44, marginBottom: 8 },
   filtersContent: {
     paddingHorizontal: 16,
     alignItems: "center",
@@ -593,18 +642,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 4,
   },
-  filterChipActive: {
-    backgroundColor: GREEN,
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-  filterChipTextActive: {
-    color: "#fff",
-  },
-
+  filterChipActive: { backgroundColor: GREEN },
+  filterChipText: { fontSize: 13, fontWeight: "600", color: "#6B7280" },
+  filterChipTextActive: { color: "#fff" },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
@@ -705,7 +745,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
-  commentName: { fontSize: 12, fontWeight: "700", color: "#111", marginBottom: 2 },
+  commentName: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#111",
+    marginBottom: 2,
+  },
   commentText: { fontSize: 12, color: "#4B5563", lineHeight: 17 },
   viewMoreComments: {
     fontSize: 12,
@@ -732,97 +777,191 @@ const styles = StyleSheet.create({
   },
   sendOfferText: { color: "#fff", fontSize: 15, fontWeight: "700" },
   emptyContainer: { alignItems: "center", paddingVertical: 60 },
-  emptyTitle: { fontSize: 17, fontWeight: "700", marginTop: 12, color: "#111" },
-  emptyText: { color: "#888", marginTop: 5, fontSize: 13, textAlign: "center" },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    marginTop: 12,
+    color: "#111",
+  },
+  emptyText: {
+    color: "#888",
+    marginTop: 5,
+    fontSize: 13,
+    textAlign: "center",
+  },
 
-  iconBtn: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chatSafe: { flex: 1, backgroundColor: "#fff" },
-  chatHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  chatHeaderText: { flex: 1, minWidth: 0 },
-  chatHeaderTitle: { fontSize: 16, fontWeight: "700", color: "#111" },
-  chatHeaderSub: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
-  chatBody: { flex: 1 },
-  chatScroll: { flex: 1 },
-  chatScrollContent: { padding: 16, flexGrow: 1 },
-  chatEmpty: {
+  // —— Comments bottom sheet (no likes) ——
+  cmBackdrop: {
     flex: 1,
+    justifyContent: "flex-end",
+  },
+  cmDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  cmSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: "78%",
+    minHeight: "55%",
+    paddingBottom: Platform.OS === "ios" ? 28 : 12,
+  },
+  cmHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D1D5DB",
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  cmHeader: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#E5E7EB",
   },
-  chatEmptyTitle: { fontSize: 16, fontWeight: "700", color: "#111", marginTop: 12 },
-  chatEmptyText: { fontSize: 13, color: "#9CA3AF", marginTop: 4 },
-  chatBubbleRow: {
+  cmHeaderTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111",
+  },
+  cmCloseBtn: {
+    position: "absolute",
+    right: 14,
+    top: 8,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cmList: {
+    flexGrow: 1,
+  },
+  cmListContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  cmListEmptyContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  cmEmpty: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  cmEmptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111",
+    marginTop: 12,
+  },
+  cmEmptyText: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    marginTop: 4,
+  },
+  cmRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
-    marginBottom: 14,
+    marginBottom: 18,
   },
-  chatAvatar: {
+  cmAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: "#E5E7EB",
+    marginRight: 12,
   },
-  chatBubble: {
+  cmContent: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 14,
-    borderTopLeftRadius: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    minWidth: 0,
   },
-  chatBubbleTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
+  cmMeta: {
+    marginBottom: 2,
   },
-  chatName: { fontSize: 13, fontWeight: "700", color: "#111" },
-  chatTime: { fontSize: 11, color: "#9CA3AF" },
-  chatMessage: { fontSize: 14, color: "#374151", lineHeight: 20 },
-  chatInputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
-  },
-  chatInput: {
-    flex: 1,
-    minHeight: 44,
-    maxHeight: 110,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
+  cmName: {
+    fontSize: 13,
+    fontWeight: "700",
     color: "#111",
   },
-  chatSendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: GREEN,
-    alignItems: "center",
-    justifyContent: "center",
+  cmTime: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontWeight: "400",
   },
-  chatSendDisabled: { opacity: 0.4 },
+  cmText: {
+    fontSize: 14,
+    color: "#1F2937",
+    lineHeight: 20,
+  },
+  cmReply: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#9CA3AF",
+    marginTop: 6,
+  },
+  cmReplyBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#F9FAFB",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#E5E7EB",
+  },
+  cmReplyBarText: {
+    fontSize: 13,
+    color: "#6B7280",
+    flex: 1,
+  },
+  cmReplyBarName: {
+    fontWeight: "700",
+    color: "#111",
+  },
+  cmInputRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#E5E7EB",
+    gap: 10,
+  },
+  cmInputAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#E5E7EB",
+    marginBottom: 4,
+  },
+  cmInput: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 100,
+    fontSize: 15,
+    color: "#111",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  cmPostBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    marginBottom: 2,
+  },
+  cmPostText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: GREEN,
+  },
 
+  // Offer
   offerBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
