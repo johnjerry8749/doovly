@@ -77,15 +77,23 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
     }
 
     // RECEIVED — Accepted / Ongoing
-    // After the pro accepts, only the client can cancel — pro has no Cancel button.
+    // Only the provider can cancel once accepted (including pay on site).
     if (
       mainTab === "received" &&
       (item.status === "Accepted" || item.status === "Ongoing")
     ) {
-      // No Map on booking cards — location is shared only in chat (privacy).
-      // No Cancel — only the client can cancel after acceptance.
       return (
         <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.cancelButton]}
+            activeOpacity={0.8}
+            onPress={() =>
+              Alert.alert("Cancel Job", "This job will be cancelled.")
+            }
+          >
+            <Ionicons name="close" size={16} color="#DC2626" />
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
           {item.status === "Accepted" ? (
             <TouchableOpacity
               style={[styles.actionButton, styles.onMyWayButton]}
@@ -128,13 +136,10 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
       return null;
     }
 
-    // BOOKED — Upcoming / Accepted / Ongoing (client can still cancel)
-    if (
-      mainTab === "booked" &&
-      (item.status === "Upcoming" ||
-        item.status === "Accepted" ||
-        item.status === "Ongoing")
-    ) {
+    // BOOKED — not yet accepted (Upcoming only)
+    // Client can cancel only before the provider accepts.
+    // Same rule for pay on site and Paystack.
+    if (mainTab === "booked" && item.status === "Upcoming") {
       return (
         <View style={styles.actionRow}>
           <TouchableOpacity
@@ -149,6 +154,14 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
           </TouchableOpacity>
         </View>
       );
+    }
+
+    // BOOKED — Accepted / Ongoing: client cannot cancel (only provider)
+    if (
+      mainTab === "booked" &&
+      (item.status === "Accepted" || item.status === "Ongoing")
+    ) {
+      return null;
     }
 
     // BOOKED — Awaiting Approval (customer must approve)
