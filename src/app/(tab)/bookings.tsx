@@ -468,34 +468,42 @@ export default function Bookings() {
                 </View>
               </ScrollView>
 
-              <TouchableOpacity
-                style={[
-                  styles.submitReportBtn,
-                  (!selectedReason ||
-                    !reportDescription.trim()) && {
-                    opacity: 0.5,
-                  },
-                ]}
-                activeOpacity={0.85}
-                disabled={
-                  !selectedReason ||
-                  !reportDescription.trim()
-                }
-                onPress={() => {
-                  Alert.alert(
-                    "Report submitted",
-                    "We will review this dispute shortly.",
-                  );
-
-                  setShowReportModal(false);
-                }}
-              >
-                <Text
-                  style={styles.submitReportText}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelReportBtn}
+                  activeOpacity={0.85}
+                  onPress={() => setShowReportModal(false)}
                 >
-                  Submit Report
-                </Text>
-              </TouchableOpacity>
+                  <Text style={styles.cancelReportText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.submitReportBtn,
+                    (!selectedReason ||
+                      !reportDescription.trim()) && {
+                      opacity: 0.5,
+                    },
+                  ]}
+                  activeOpacity={0.85}
+                  disabled={
+                    !selectedReason ||
+                    !reportDescription.trim()
+                  }
+                  onPress={() => {
+                    Alert.alert(
+                      "Report submitted",
+                      "We will review this dispute shortly.",
+                    );
+
+                    setShowReportModal(false);
+                  }}
+                >
+                  <Text style={styles.submitReportText}>
+                    Submit Report
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </Pressable>
         </KeyboardAvoidingView>
@@ -818,8 +826,28 @@ const styles = StyleSheet.create({
     color: GREEN,
   },
 
-  submitReportBtn: {
+  modalActions: {
+    flexDirection: "row",
+    gap: 10,
     marginTop: 12,
+  },
+
+  cancelReportBtn: {
+    flex: 1,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+
+  cancelReportText: {
+    color: "#374151",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  submitReportBtn: {
+    flex: 1,
     backgroundColor: GREEN,
     borderRadius: 14,
     paddingVertical: 14,
