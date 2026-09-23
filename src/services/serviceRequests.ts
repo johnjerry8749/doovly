@@ -1,11 +1,9 @@
 /**
- * Service requests service
- * Screens import ONLY from here.
- *
- * NOW  → mock data
- * LATER → swap bodies to apiRequest(...) — keep names & types identical
+ * Service requests service — screens import ONLY from here.
+ * Mock data uses local @/assets/profile_*.jpg (same as professionals).
  */
 
+import type { ImageSourcePropType } from "react-native";
 import {
   SERVICE_REQUESTS,
   getServiceRequestById as getFromData,
@@ -24,7 +22,7 @@ export type CreateServiceRequestInput = {
   location: string;
   city: string;
   preferredDate: string;
-  images: string[];
+  images: ImageSourcePropType[];
   icon: ServiceRequestIcon;
   iconBackground: string;
 };
@@ -39,13 +37,11 @@ export type AddCommentInput = {
   requestId: string;
   text: string;
   userName?: string;
-  userAvatar?: string;
+  userAvatar?: ImageSourcePropType;
 };
 
-const DEFAULT_AVATAR =
-  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80";
+const DEFAULT_AVATAR = require("@/assets/profile_1.jpg");
 
-/** Unique by id — prevents duplicate cards if mock was pushed twice. */
 function uniqueById(list: ServiceRequest[]): ServiceRequest[] {
   const seen = new Set<string>();
   const out: ServiceRequest[] = [];
@@ -85,7 +81,6 @@ export function getServiceRequestById(
 }
 
 export function listRecentServiceRequests(limit = 5): ServiceRequest[] {
-  // TODO backend: return apiRequest(`/service-requests?limit=${limit}`)
   return uniqueById(SERVICE_REQUESTS).slice(0, limit);
 }
 
@@ -104,13 +99,14 @@ export function createServiceRequest(
     timeAgo: "Just now",
     icon: input.icon,
     iconBackground: input.iconBackground,
-    images: input.images,
+    images: input.images.length ? input.images : [DEFAULT_AVATAR],
     description: input.description.trim(),
     preferredDate: input.preferredDate,
     isNew: true,
     createdByUserId: getCurrentUserId(),
     posterName: "You",
     posterAvatar: DEFAULT_AVATAR,
+    posterVerified: false,
     likesCount: 0,
     comments: [],
   };

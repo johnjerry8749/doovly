@@ -1,20 +1,21 @@
 /**
  * Shared service-request mock data.
- * Later: replace listServiceRequests / getServiceRequestById with API or DB.
+ * Avatars & comment faces use the same local assets as professionals
+ * (@/assets/profile_*.jpg) — no external image URLs.
+ *
+ * Later: replace with API / DB responses (image URLs or asset ids).
  */
 
 import type { MaterialCommunityIcons } from "@expo/vector-icons";
-
-// =========================
-// TYPES
-// =========================
+import type { ImageSourcePropType } from "react-native";
 
 export type ServiceRequestIcon = keyof typeof MaterialCommunityIcons.glyphMap;
 
 export type ServiceRequestComment = {
   id: string;
   userName: string;
-  userAvatar: string;
+  /** Local require() asset or remote URI once API is live */
+  userAvatar: ImageSourcePropType;
   text: string;
   timeAgo: string;
 };
@@ -27,28 +28,30 @@ export type ServiceRequest = {
   location: string;
   city: string;
   date: string;
-  /** Budget is optional; offers set price via Send Offer modal */
   price?: string;
   timeAgo: string;
   icon: ServiceRequestIcon;
   iconBackground: string;
   latitude?: number;
   longitude?: number;
-  images: string[];
+  /** Local require() assets or remote URIs */
+  images: ImageSourcePropType[];
   description: string;
   preferredDate: string;
   isNew: boolean;
   createdByUserId: string;
-  /** Poster display info for feed cards */
   posterName: string;
-  posterAvatar: string;
+  posterAvatar: ImageSourcePropType;
+  posterVerified?: boolean;
   likesCount: number;
   comments: ServiceRequestComment[];
 };
 
-// =========================
-// MOCK DATA
-// =========================
+// Local faces shared with professionals mock (src/data/professionals.ts)
+const AVATAR_1 = require("@/assets/profile_1.jpg");
+const AVATAR_2 = require("@/assets/profile_2.jpg");
+const AVATAR_3 = require("@/assets/profile_3.jpg");
+const AVATAR_4 = require("@/assets/profile_4.jpg");
 
 export const SERVICE_REQUESTS: ServiceRequest[] = [
   {
@@ -64,25 +67,21 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#FFF1D5",
     latitude: 6.4281,
     longitude: 3.4219,
-    images: [
-      "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
-    ],
+    images: [AVATAR_1, AVATAR_3],
     description:
       "Bathroom pipe is leaking under the sink. Need someone experienced who can fix it today if possible.",
     preferredDate: "ASAP",
     isNew: true,
     createdByUserId: "u2",
     posterName: "Amaka O.",
-    posterAvatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
+    posterAvatar: AVATAR_2,
+    posterVerified: true,
     likesCount: 14,
     comments: [
       {
         id: "c1",
-        userName: "Chidi P.",
-        userAvatar:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+        userName: "John Chukwuemeka",
+        userAvatar: AVATAR_1,
         text: "I can come today after 3pm. DM me.",
         timeAgo: "1 min ago",
       },
@@ -101,17 +100,15 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#DDF2FF",
     latitude: 6.4474,
     longitude: 3.4722,
-    images: [
-      "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=1200&q=80",
-    ],
+    images: [AVATAR_3],
     description:
       "Power keeps tripping in the living room. Looking for a licensed electrician to diagnose and fix.",
     preferredDate: "Tomorrow, 2:00 PM",
     isNew: true,
     createdByUserId: "u3",
-    posterName: "Emeka B.",
-    posterAvatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80",
+    posterName: "Emeka Okoro",
+    posterAvatar: AVATAR_1,
+    posterVerified: false,
     likesCount: 9,
     comments: [],
   },
@@ -128,24 +125,21 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#E9E1FF",
     latitude: 6.4541,
     longitude: 3.4316,
-    images: [
-      "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=1200&q=80",
-    ],
+    images: [AVATAR_3, AVATAR_4],
     description:
       "Engine warning light is on and the car is making a strange noise. Need a reliable mechanic ASAP.",
     preferredDate: "Today, 4:30 PM",
     isNew: true,
     createdByUserId: "u4",
-    posterName: "Tunde A.",
-    posterAvatar:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80",
+    posterName: "Ikechukwu Obi",
+    posterAvatar: AVATAR_3,
+    posterVerified: false,
     likesCount: 31,
     comments: [
       {
         id: "c2",
-        userName: "AutoFix Lagos",
-        userAvatar:
-          "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80",
+        userName: "Emeka Okoro",
+        userAvatar: AVATAR_1,
         text: "We can tow and diagnose same day.",
         timeAgo: "3 min ago",
       },
@@ -164,17 +158,15 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#E8F5E9",
     latitude: 9.0579,
     longitude: 7.4951,
-    images: [
-      "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1200&q=80",
-    ],
+    images: [AVATAR_2],
     description:
       "Looking for a clean haircut and beard trim. Prefer someone who can come to my location.",
     preferredDate: "Today, 11:00 AM",
     isNew: false,
     createdByUserId: "u5",
-    posterName: "Ibrahim K.",
-    posterAvatar:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80",
+    posterName: "Aisha Bello",
+    posterAvatar: AVATAR_2,
+    posterVerified: true,
     likesCount: 6,
     comments: [],
   },
@@ -191,24 +183,21 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#FCE4EC",
     latitude: 6.4969,
     longitude: 3.3481,
-    images: [
-      "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=1200&q=80",
-    ],
+    images: [AVATAR_2, AVATAR_4],
     description:
       "Need gel nails and a full manicure. Looking for a neat and experienced nail tech.",
     preferredDate: "Tomorrow, 1:00 PM",
     isNew: false,
     createdByUserId: "u6",
-    posterName: "Blessing M.",
-    posterAvatar:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80",
+    posterName: "Chioma Eze",
+    posterAvatar: AVATAR_2,
+    posterVerified: true,
     likesCount: 18,
     comments: [
       {
         id: "c3",
-        userName: "NailsBySola",
-        userAvatar:
-          "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80",
+        userName: "Blessing Joy",
+        userAvatar: AVATAR_4,
         text: "I have slots tomorrow afternoon!",
         timeAgo: "10 min ago",
       },
@@ -227,17 +216,15 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#DDF2FF",
     latitude: 4.8156,
     longitude: 7.0498,
-    images: [
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80",
-    ],
+    images: [AVATAR_1],
     description:
       "Need a full house wiring safety check. Some outlets are warm and lights flicker.",
     preferredDate: "This week",
     isNew: false,
     createdByUserId: "u7",
-    posterName: "Grace E.",
-    posterAvatar:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+    posterName: "Emeka Okoro",
+    posterAvatar: AVATAR_1,
+    posterVerified: false,
     likesCount: 4,
     comments: [],
   },
@@ -254,17 +241,15 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#FFF1D5",
     latitude: 9.0765,
     longitude: 7.3986,
-    images: [
-      "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1200&q=80",
-    ],
+    images: [AVATAR_1, AVATAR_3],
     description:
       "Kitchen sink is fully blocked. Need a plumber who can clear it and check the pipes.",
     preferredDate: "ASAP",
     isNew: true,
     createdByUserId: "u1",
-    posterName: "You",
-    posterAvatar:
-      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+    posterName: "John Chukwuemeka",
+    posterAvatar: AVATAR_1,
+    posterVerified: false,
     likesCount: 11,
     comments: [],
   },
@@ -281,43 +266,34 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#D1FAE5",
     latitude: 6.4474,
     longitude: 3.4722,
-    images: [
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1563453392212-326f5e854473?auto=format&fit=crop&w=1200&q=80",
-    ],
+    images: [AVATAR_4, AVATAR_2],
     description:
       "Looking for a reliable cleaner to deep clean my 2 bedroom apartment. Must bring own equipment.",
     preferredDate: "ASAP",
     isNew: true,
     createdByUserId: "u11",
-    posterName: "Tunde A.",
-    posterAvatar:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80",
+    posterName: "Blessing Joy",
+    posterAvatar: AVATAR_4,
+    posterVerified: true,
     likesCount: 22,
     comments: [
       {
         id: "c4",
-        userName: "Chioma K.",
-        userAvatar:
-          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
+        userName: "Chioma Eze",
+        userAvatar: AVATAR_2,
         text: "I'm available for this. I have 4 years experience in home cleaning.",
         timeAgo: "1h ago",
       },
       {
         id: "c5",
-        userName: "Adaobi N.",
-        userAvatar:
-          "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80",
+        userName: "Aisha Bello",
+        userAvatar: AVATAR_2,
         text: "Can do this weekend if still open.",
         timeAgo: "45 min ago",
       },
     ],
   },
 ];
-
-// =========================
-// HELPERS
-// =========================
 
 export function getServiceRequestById(
   id: string,
