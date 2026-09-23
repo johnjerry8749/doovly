@@ -31,7 +31,7 @@ export type BookingStatus =
 export type PaymentMethod = "pay_now" | "pay_on_site";
 
 export type PaymentStatus =
-  | "held" // money is in Paystack escrow
+  | "held" // money is secured in Paystack until job is completed
   | "released" // money has been paid to the professional
   | "pay_on_site" // no online payment
   | "refunded"; // money returned to customer
@@ -66,7 +66,7 @@ export type Booking = {
 
   /**
    * How the customer chose to pay.
-   * - pay_now: paid online, money held by Paystack until job is completed
+   * - pay_now: paid online, money secured by Paystack until job is completed
    * - pay_on_site: Pro subscribers only, pay the professional directly
    */
   paymentMethod: PaymentMethod;
@@ -75,6 +75,11 @@ export type Booking = {
    * Current state of the payment.
    */
   paymentStatus: PaymentStatus;
+
+  /**
+   * Amount in Naira (optional for display on cards).
+   */
+  amount?: number;
 };
 
 // =========================
@@ -117,8 +122,8 @@ export const statusColors: Record<
   },
 
   Ongoing: {
-    bg: "#FFF4E5",
-    text: "#D97706",
+    bg: "#E8F8EF",
+    text: "#16A34A",
   },
 
   Completed: {
@@ -132,8 +137,8 @@ export const statusColors: Record<
   },
 
   Pending: {
-    bg: "#FFF4E5",
-    text: "#D97706",
+    bg: "#E8F8EF",
+    text: "#16A34A",
   },
 
   Accepted: {
@@ -187,6 +192,7 @@ function createBooking(booking: {
   status: BookingStatus;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
+  amount?: number;
 }): Booking {
   const professional = getProfessional(booking.professionalId);
 
@@ -214,6 +220,7 @@ function createBooking(booking: {
 
     paymentMethod: booking.paymentMethod,
     paymentStatus: booking.paymentStatus,
+    amount: booking.amount,
   };
 }
 
@@ -238,6 +245,7 @@ export const BOOKED_JOBS: Booking[] = [
     status: "Upcoming",
     paymentMethod: "pay_now",
     paymentStatus: "held",
+    amount: 15400,
   }),
 
   // ---------------------------------------
@@ -255,6 +263,7 @@ export const BOOKED_JOBS: Booking[] = [
     status: "Ongoing",
     paymentMethod: "pay_now",
     paymentStatus: "held",
+    amount: 12500,
   }),
 
   // ---------------------------------------
@@ -272,6 +281,7 @@ export const BOOKED_JOBS: Booking[] = [
     status: "Completed",
     paymentMethod: "pay_now",
     paymentStatus: "released",
+    amount: 28000,
   }),
 
   // ---------------------------------------
@@ -289,6 +299,7 @@ export const BOOKED_JOBS: Booking[] = [
     status: "Upcoming",
     paymentMethod: "pay_on_site",
     paymentStatus: "pay_on_site",
+    amount: 18000,
   }),
 
   // ---------------------------------------
@@ -306,6 +317,7 @@ export const BOOKED_JOBS: Booking[] = [
     status: "Accepted",
     paymentMethod: "pay_now",
     paymentStatus: "held",
+    amount: 8500,
   }),
 
   // ---------------------------------------
@@ -322,6 +334,7 @@ export const BOOKED_JOBS: Booking[] = [
     status: "Awaiting Approval",
     paymentMethod: "pay_now",
     paymentStatus: "held",
+    amount: 15400,
   }),
 ];
 
@@ -354,6 +367,7 @@ export const RECEIVED_JOBS: Booking[] = [
     status: "Pending",
     paymentMethod: "pay_now",
     paymentStatus: "held",
+    amount: 15400,
   }),
 
   // ---------------------------------------
@@ -371,6 +385,7 @@ export const RECEIVED_JOBS: Booking[] = [
     status: "Ongoing",
     paymentMethod: "pay_on_site",
     paymentStatus: "pay_on_site",
+    amount: 22000,
   }),
 
   // ---------------------------------------
@@ -388,6 +403,7 @@ export const RECEIVED_JOBS: Booking[] = [
     status: "Completed",
     paymentMethod: "pay_now",
     paymentStatus: "released",
+    amount: 12000,
   }),
 
   // ---------------------------------------
@@ -404,6 +420,7 @@ export const RECEIVED_JOBS: Booking[] = [
     status: "Awaiting Approval",
     paymentMethod: "pay_now",
     paymentStatus: "held",
+    amount: 15400,
   }),
 ];
 

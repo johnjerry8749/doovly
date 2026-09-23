@@ -269,7 +269,7 @@ export function formatBookingChatMessage(booking: Booking): string {
       : booking.paymentStatus === "released"
         ? "Paid (released)"
         : booking.paymentStatus === "held"
-          ? "Paid (held in escrow)"
+          ? "Payment secured in Paystack"
           : booking.paymentStatus;
 
   return [

@@ -25,11 +25,27 @@ type Props = {
   onReport: (item: Booking) => void;
 };
 
+function formatAmount(amount?: number) {
+  if (amount == null) return null;
+  return `₦${amount.toLocaleString()}`;
+}
+
 export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
   const statusStyle = statusColors[item.status];
   const showChat = item.status !== "Completed" || isCurrentUserPro();
+  const amountText = formatAmount(item.amount);
+
+  const showPaymentBanner =
+    item.paymentMethod === "pay_now" &&
+    (item.paymentStatus === "held" || item.paymentStatus === "released");
+
+  const paymentLabel =
+    item.paymentStatus === "released"
+      ? "Payment released"
+      : "Payment secured in Paystack";
 
   const renderStatusActions = () => {
+    // RECEIVED — Pending (pro can accept/decline)
     if (mainTab === "received" && item.status === "Pending") {
       return (
         <View style={styles.actionRow}>
@@ -48,7 +64,6 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
               Alert.alert("Accept Job", "This job will be marked as Accepted.")
             }
           >
-            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
             <Text style={styles.acceptButtonText}>Accept</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -65,6 +80,7 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
       );
     }
 
+    // RECEIVED — Accepted / Ongoing
     if (
       mainTab === "received" &&
       (item.status === "Accepted" || item.status === "Ongoing")
@@ -106,30 +122,48 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
               Alert.alert("Cancel Job", "This job will be cancelled.")
             }
           >
-            <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
+            <Ionicons name="close" size={16} color="#DC2626" />
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.completeButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert(
-                "Mark as Completed",
-                "Customer will be asked to Approve the job before payment is released.",
-              )
-            }
-          >
-            <Ionicons name="checkmark-circle-outline" size={16} color={GREEN} />
-            <Text style={styles.completeButtonText}>Mark as Completed</Text>
-          </TouchableOpacity>
+          {item.status === "Accepted" ? (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.onMyWayButton]}
+              activeOpacity={0.8}
+              onPress={() =>
+                Alert.alert(
+                  "On My Way",
+                  "Customer will be notified that you are on your way.",
+                )
+              }
+            >
+              <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
+              <Text style={styles.onMyWayButtonText}>I'm On My Way</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.completeButton]}
+              activeOpacity={0.8}
+              onPress={() =>
+                Alert.alert(
+                  "Mark as Completed",
+                  "Customer will be asked to Approve the job before payment is released.",
+                )
+              }
+            >
+              <Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />
+              <Text style={styles.completeButtonText}>Mark as Completed</Text>
+            </TouchableOpacity>
+          )}
         </View>
       );
     }
 
+    // RECEIVED — Awaiting Approval (pro already marked complete)
     if (mainTab === "received" && item.status === "Awaiting Approval") {
       return null;
     }
 
+    // BOOKED — Upcoming / Accepted / Ongoing
     if (
       mainTab === "booked" &&
       (item.status === "Upcoming" ||
@@ -145,18 +179,19 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
               Alert.alert("Cancel Booking", "This booking will be cancelled.")
             }
           >
-            <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
+            <Ionicons name="close" size={16} color="#DC2626" />
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
+    // BOOKED — Awaiting Approval (customer must approve)
     if (mainTab === "booked" && item.status === "Awaiting Approval") {
       return (
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.acceptButton]}
+            style={[styles.actionButton, styles.approveButton]}
             activeOpacity={0.8}
             onPress={() =>
               Alert.alert(
@@ -165,16 +200,18 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
               )
             }
           >
-            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-            <Text style={styles.acceptButtonText}>Approve</Text>
+            <Ionicons name="shield-checkmark-outline" size={16} color="#FFFFFF" />
+            <Text style={styles.approveButtonText}>
+              Approve & Release{amountText ? ` ${amountText}` : ""}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionButton, styles.declineButton]}
+            style={[styles.actionButton, styles.reportButton]}
             activeOpacity={0.8}
             onPress={() => onReport(item)}
           >
-            <Ionicons name="close" size={16} color="#DC2626" />
-            <Text style={styles.declineButtonText}>Report Issue</Text>
+            <Ionicons name="flag-outline" size={16} color="#DC2626" />
+            <Text style={styles.reportButtonText}>Report Issue</Text>
           </TouchableOpacity>
         </View>
       );
@@ -203,6 +240,7 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
 
   return (
     <View style={styles.card}>
+      {/* Top: avatar + name + rating + status */}
       <View style={styles.topSection}>
         <View style={styles.avatarContainer}>
           <Image source={item.image} style={styles.avatar} resizeMode="cover" />
@@ -224,34 +262,53 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={14} color="#F59E0B" />
             <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
-            <Text style={styles.reviewText}>({item.reviews} reviews)</Text>
+            <Text style={styles.reviewText}>• Reviews</Text>
           </View>
         </View>
 
         <View
           style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}
         >
+          <View style={[styles.statusDot, { backgroundColor: statusStyle.text }]} />
           <Text style={[styles.statusText, { color: statusStyle.text }]}>
             {item.status}
           </Text>
         </View>
       </View>
 
+      {/* Service title */}
       <Text style={styles.jobTitle}>{item.title}</Text>
 
+      {/* Date + Location */}
       <View style={styles.infoContainer}>
         <View style={styles.infoItem}>
-          <Ionicons name="calendar-outline" size={17} color="#6B7280" />
+          <Ionicons name="calendar-outline" size={17} color={GREEN} />
           <Text style={styles.infoText}>{item.date}</Text>
         </View>
         <View style={styles.infoItem}>
-          <Ionicons name="location-outline" size={17} color="#6B7280" />
+          <Ionicons name="location-outline" size={17} color={GREEN} />
           <Text style={styles.infoText} numberOfLines={1}>
             {item.location}
           </Text>
         </View>
       </View>
 
+      {/* Payment banner (Paystack) */}
+      {showPaymentBanner && (
+        <View style={styles.paymentBanner}>
+          <View style={styles.paymentIconWrap}>
+            <Ionicons name="lock-closed" size={16} color="#FFFFFF" />
+          </View>
+          <View style={styles.paymentTextWrap}>
+            <Text style={styles.paymentLabel}>{paymentLabel}</Text>
+            {amountText ? (
+              <Text style={styles.paymentAmount}>{amountText}</Text>
+            ) : null}
+          </View>
+        </View>
+      )}
+
+      {/* Chat / Call */}
       <View style={styles.contactRow}>
         {showChat && (
           <TouchableOpacity
@@ -348,22 +405,30 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
   },
   statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 20,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusText: {
     fontSize: 11,
     fontWeight: "700",
   },
   jobTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
     color: "#111827",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   infoContainer: {
-    gap: 6,
+    gap: 8,
     marginBottom: 12,
   },
   infoItem: {
@@ -373,8 +438,40 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: "#6B7280",
+    color: "#4B5563",
     flex: 1,
+  },
+  paymentBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ECFDF5",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    gap: 10,
+  },
+  paymentIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: GREEN,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  paymentTextWrap: {
+    flex: 1,
+  },
+  paymentLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#166534",
+  },
+  paymentAmount: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: GREEN,
+    marginTop: 1,
   },
   contactRow: {
     flexDirection: "row",
@@ -385,10 +482,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderRadius: 10,
     backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
   },
   contactText: {
     fontSize: 13,
@@ -405,12 +504,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 10,
   },
   mapButton: {
-    backgroundColor: "#F0FDF4",
+    backgroundColor: "#ECFDF5",
   },
   mapButtonText: {
     fontSize: 13,
@@ -425,10 +524,12 @@ const styles = StyleSheet.create({
   },
   acceptButton: {
     backgroundColor: GREEN,
+    flex: 1,
+    justifyContent: "center",
   },
   acceptButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "700",
     color: "#FFFFFF",
   },
   declineButton: {
@@ -447,13 +548,45 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#DC2626",
   },
+  onMyWayButton: {
+    backgroundColor: GREEN,
+    flex: 1,
+    justifyContent: "center",
+  },
+  onMyWayButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
   completeButton: {
-    backgroundColor: "#F0FDF4",
+    backgroundColor: GREEN,
+    flex: 1,
+    justifyContent: "center",
   },
   completeButtonText: {
     fontSize: 13,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  approveButton: {
+    backgroundColor: GREEN,
+    flex: 1,
+    justifyContent: "center",
+  },
+  approveButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  reportButton: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  reportButtonText: {
+    fontSize: 13,
     fontWeight: "600",
-    color: GREEN,
+    color: "#DC2626",
   },
   secondaryActionButton: {
     backgroundColor: "#F3F4F6",
