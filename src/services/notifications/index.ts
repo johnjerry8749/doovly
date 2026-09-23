@@ -1,20 +1,21 @@
 /**
  * Notification Service Entry Point
  *
- * Currently using MOCK implementation (works offline).
- * Later, just change this one line to switch to the real service.
+ * Uses the production-ready notification service implementation.
+ * On Android Expo Go, remote push is skipped safely; development builds
+ * and production builds get real Expo push tokens.
  */
 
 import { mockNotificationService } from './mockNotificationService';
-// import { realNotificationService } from './realNotificationService';  // ← future
+// import { realNotificationService } from './realNotificationService';  // ← optional future split
 
 import { NotificationPayload } from './types';
 
 // ======================
-// SWITCH HERE LATER
+// ACTIVE SERVICE
 // ======================
 const notificationService = mockNotificationService;
-// const notificationService = realNotificationService; // ← uncomment this later
+// const notificationService = realNotificationService; // ← if you split later
 
 /**
  * Public API – use these functions everywhere in the app
@@ -24,7 +25,9 @@ export async function registerForNotifications(): Promise<string | null> {
   return notificationService.register();
 }
 
-export async function sendNotification(payload: NotificationPayload): Promise<void> {
+export async function sendNotification(
+  payload: NotificationPayload,
+): Promise<void> {
   return notificationService.send(payload);
 }
 

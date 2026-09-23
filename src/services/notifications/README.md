@@ -1,35 +1,43 @@
 # Notifications System
 
-This folder contains a clean notification system that currently works with **mock data** (local notifications).
+Doovly uses `expo-notifications` for local + remote push notifications.
 
-## How to use (right now)
+## Important (Android + Expo Go)
+
+Starting with Expo SDK 53, **Android remote push notifications are not available in Expo Go**.
+
+- On **Android Expo Go**: the service only uses local notifications and does **not** call `getExpoPushTokenAsync` (this prevents the crash).
+- On **iOS**, development builds, and production: real Expo push tokens are requested normally.
+
+For real Android push during development, use an **Android development build** (see commands below).
+
+## How to use
 
 ```ts
 import { Notifications, registerForNotifications } from '@/services/notifications';
 
-// Request permission + get token (mock)
+// Request permission + get token (safe on Expo Go Android)
 await registerForNotifications();
 
-// Send test notifications
+// Local test notifications
 Notifications.newBooking();
 Notifications.bookingAccepted();
 Notifications.newMessage();
 ```
 
-## How to switch to real Push Notifications later
+## Android development build (required for real Android push)
 
-1. Create `realNotificationService.ts` (we will do this together)
-2. Open `index.ts`
-3. Change this line:
-
-```ts
-const notificationService = mockNotificationService;
+```bash
+npx eas-cli login
+npx eas build --profile development --platform android
 ```
 
-to:
+Install the resulting APK on your device, then:
 
-```ts
-const notificationService = realNotificationService;
+```bash
+npx expo start --dev-client
 ```
 
-That’s it. All screens that use `Notifications.xxx()` will automatically start using real push.
+## Switching implementation later
+
+If you split a separate `realNotificationService.ts`, change the active service in `index.ts` only.
