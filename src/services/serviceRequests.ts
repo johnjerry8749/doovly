@@ -1,12 +1,9 @@
 /**
  * Service requests service
- * -----------------------
- * Screens import ONLY from here — never from @/data/serviceRequests directly
- * (except types if needed).
+ * Screens import ONLY from here.
  *
- * NOW  → mock data from src/data/serviceRequests.ts
- * LATER → swap each function body to apiRequest("/service-requests...")
- *         Keep function names + return types the same so screens need zero changes.
+ * NOW  → mock data
+ * LATER → swap bodies to apiRequest(...) — keep names & types identical
  */
 
 import {
@@ -17,7 +14,6 @@ import {
   type ServiceRequestIcon,
 } from "@/data/serviceRequests";
 import { getCurrentUserId } from "@/services/inAppNotifications";
-// import { apiRequest } from "@/services/api"; // ← uncomment when backend is ready
 
 export type { ServiceRequest, ServiceRequestComment, ServiceRequestIcon };
 
@@ -49,18 +45,28 @@ export type AddCommentInput = {
 const DEFAULT_AVATAR =
   "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80";
 
-/** List all service requests. */
-export function listServiceRequests(): ServiceRequest[] {
-  // TODO backend: return apiRequest<ServiceRequest[]>("/service-requests")
-  return SERVICE_REQUESTS;
+/** Unique by id — prevents duplicate cards if mock was pushed twice. */
+function uniqueById(list: ServiceRequest[]): ServiceRequest[] {
+  const seen = new Set<string>();
+  const out: ServiceRequest[] = [];
+  for (const item of list) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    out.push(item);
+  }
+  return out;
 }
 
-/** Filter by city name (case-insensitive). */
+export function listServiceRequests(): ServiceRequest[] {
+  // TODO backend: return apiRequest<ServiceRequest[]>("/service-requests")
+  return uniqueById(SERVICE_REQUESTS);
+}
+
 export function listServiceRequestsByCity(city: string): ServiceRequest[] {
-  // TODO backend: return apiRequest(`/service-requests?city=${encodeURIComponent(city)}`)
+  // TODO backend: return apiRequest(`/service-requests?city=...`)
   const key = city.trim().toLowerCase();
   if (!key || key === "all nigeria" || key === "nigeria") {
-    return SERVICE_REQUESTS;
+    return uniqueById(SERVICE_REQUESTS);
   }
   const filtered = SERVICE_REQUESTS.filter(
     (r) =>
@@ -68,33 +74,25 @@ export function listServiceRequestsByCity(city: string): ServiceRequest[] {
       key.includes(r.city.toLowerCase()) ||
       r.location.toLowerCase().includes(key),
   );
-  return filtered.length > 0 ? filtered : SERVICE_REQUESTS;
+  return uniqueById(filtered.length > 0 ? filtered : SERVICE_REQUESTS);
 }
 
-/** Single request by id. */
 export function getServiceRequestById(
   id: string,
 ): ServiceRequest | undefined {
-  // TODO backend: return apiRequest<ServiceRequest>(`/service-requests/${id}`)
+  // TODO backend: return apiRequest(`/service-requests/${id}`)
   return getFromData(id);
 }
 
-/** Recent requests (home / services). */
 export function listRecentServiceRequests(limit = 5): ServiceRequest[] {
-  // TODO backend: return apiRequest(`/service-requests?limit=${limit}&sort=recent`)
-  return SERVICE_REQUESTS.slice(0, limit);
+  // TODO backend: return apiRequest(`/service-requests?limit=${limit}`)
+  return uniqueById(SERVICE_REQUESTS).slice(0, limit);
 }
 
-/** Create a new service request. */
 export function createServiceRequest(
   input: CreateServiceRequestInput,
 ): ServiceRequest {
-  // TODO backend:
-  // return apiRequest<ServiceRequest>("/service-requests", {
-  //   method: "POST",
-  //   body: JSON.stringify(input),
-  // });
-
+  // TODO backend: POST /service-requests
   const request: ServiceRequest = {
     id: `local-${Date.now()}`,
     title: input.title.trim(),
@@ -116,24 +114,16 @@ export function createServiceRequest(
     likesCount: 0,
     comments: [],
   };
-
   SERVICE_REQUESTS.unshift(request);
   return request;
 }
 
-/** Add a comment on a request. Returns the new comment. */
 export function addServiceRequestComment(
   input: AddCommentInput,
 ): ServiceRequestComment | null {
-  // TODO backend:
-  // return apiRequest<ServiceRequestComment>(
-  //   `/service-requests/${input.requestId}/comments`,
-  //   { method: "POST", body: JSON.stringify({ text: input.text }) },
-  // );
-
+  // TODO backend: POST /service-requests/:id/comments
   const request = getFromData(input.requestId);
   if (!request) return null;
-
   const comment: ServiceRequestComment = {
     id: `c-${Date.now()}`,
     userName: input.userName?.trim() || "You",
@@ -141,55 +131,33 @@ export function addServiceRequestComment(
     text: input.text.trim(),
     timeAgo: "Just now",
   };
-
   request.comments = [...(request.comments || []), comment];
   return comment;
 }
 
-/** Toggle / set like. Returns new likes count. */
 export function likeServiceRequest(requestId: string, liked: boolean): number {
-  // TODO backend:
-  // return apiRequest<{ likesCount: number }>(
-  //   `/service-requests/${requestId}/like`,
-  //   { method: liked ? "POST" : "DELETE" },
-  // ).then((r) => r.likesCount);
-
+  // TODO backend: POST|DELETE /service-requests/:id/like
   const request = getFromData(requestId);
   if (!request) return 0;
-
-  if (liked) {
-    request.likesCount = (request.likesCount || 0) + 1;
-  } else {
-    request.likesCount = Math.max(0, (request.likesCount || 0) - 1);
-  }
+  if (liked) request.likesCount = (request.likesCount || 0) + 1;
+  else request.likesCount = Math.max(0, (request.likesCount || 0) - 1);
   return request.likesCount;
 }
 
-/**
- * Submit a price offer on a request.
- * Returns a simple result object for the UI / notifications.
- */
 export function submitServiceRequestOffer(input: SubmitOfferInput): {
   ok: boolean;
   requestId: string;
   amount: number;
   recipientUserId: string;
 } | null {
-  // TODO backend:
-  // return apiRequest(`/service-requests/${input.requestId}/offers`, {
-  //   method: "POST",
-  //   body: JSON.stringify({ amount: input.amount, message: input.message }),
-  // });
-
+  // TODO backend: POST /service-requests/:id/offers
   const request = getFromData(input.requestId);
   if (!request || !input.amount || input.amount <= 0) return null;
-
   const recipientUserId =
     request.createdByUserId &&
     request.createdByUserId !== getCurrentUserId()
       ? request.createdByUserId
       : getCurrentUserId();
-
   return {
     ok: true,
     requestId: request.id,
