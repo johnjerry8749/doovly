@@ -19,19 +19,24 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Doovly needs your location to show nearby service professionals.",
         "NSPhotoLibraryUsageDescription": "Doovly needs access to your photos so you can attach images when reporting an issue.",
         "NSCameraUsageDescription": "Doovly needs camera access so you can take photos when reporting an issue.",
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
       "package": "com.johnjerry.doovly",
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "READ_MEDIA_IMAGES",
-        "CAMERA",
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE",
-        "POST_NOTIFICATIONS"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.CAMERA",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -76,6 +81,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8c730012-8237-4f60-83af-53a64e6beaf8"
+      }
     }
   }
 }
