@@ -1,34 +1,68 @@
 /**
  * Notification Service Entry Point
  *
- * Uses the production-ready notification service implementation.
- * On Android Expo Go, remote push is skipped safely; development builds
- * and production builds get real Expo push tokens.
+ * CRITICAL (Android Expo Go / SDK 53+):
+ * Simply importing `expo-notifications` crashes the app because of a side-effect
+ * in DevicePushTokenAutoRegistration. We must NOT load that module at all on
+ * Android Expo Go. Development builds and production still get full push support.
  */
 
-import { mockNotificationService } from './mockNotificationService';
-// import { realNotificationService } from './realNotificationService';  // ← optional future split
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+import type { NotificationPayload, NotificationService } from './types';
 
-import { NotificationPayload } from './types';
+function isAndroidExpoGo(): boolean {
+  return Platform.OS === 'android' && Constants.appOwnership === 'expo';
+}
 
-// ======================
-// ACTIVE SERVICE
-// ======================
-const notificationService = mockNotificationService;
-// const notificationService = realNotificationService; // ← if you split later
+/** No-op service used only on Android Expo Go (never loads expo-notifications). */
+const expoGoAndroidStub: NotificationService = {
+  async register(): Promise<string | null> {
+    console.log(
+      '[Notifications] Android Expo Go detected — expo-notifications is not loaded. ' +
+        'Remote push and native local notifications require a development build.',
+    );
+    return null;
+  },
+
+  async send(payload: NotificationPayload): Promise<void> {
+    console.log(
+      '[Notifications] Android Expo Go — notification not shown (no native module):',
+      payload.title,
+    );
+  },
+};
+
+let cachedService: NotificationService | null = null;
+
+function getNotificationService(): NotificationService {
+  if (cachedService) return cachedService;
+
+  if (isAndroidExpoGo()) {
+    cachedService = expoGoAndroidStub;
+    return cachedService;
+  }
+
+  // Lazy require — only evaluated outside Android Expo Go, so the import side-effect
+  // that throws never runs in Expo Go on Android.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { mockNotificationService } = require('./mockNotificationService');
+  cachedService = mockNotificationService as NotificationService;
+  return cachedService;
+}
 
 /**
  * Public API – use these functions everywhere in the app
  */
 
 export async function registerForNotifications(): Promise<string | null> {
-  return notificationService.register();
+  return getNotificationService().register();
 }
 
 export async function sendNotification(
   payload: NotificationPayload,
 ): Promise<void> {
-  return notificationService.send(payload);
+  return getNotificationService().send(payload);
 }
 
 /**
