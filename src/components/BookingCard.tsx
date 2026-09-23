@@ -21,7 +21,6 @@ const GREEN = "#16A34A";
 type Props = {
   item: Booking;
   mainTab: "booked" | "received";
-  onOpenMap: (item: Booking) => void;
   onReport: (item: Booking) => void;
 };
 
@@ -30,7 +29,7 @@ function formatAmount(amount?: number) {
   return `₦${amount.toLocaleString()}`;
 }
 
-export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
+export function BookingCard({ item, mainTab, onReport }: Props) {
   const statusStyle = statusColors[item.status];
   const showChat = item.status !== "Completed" || isCurrentUserPro();
   const amountText = formatAmount(item.amount);
@@ -54,14 +53,6 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
     if (mainTab === "received" && item.status === "Pending") {
       return (
         <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.mapButton]}
-            activeOpacity={0.8}
-            onPress={() => onOpenMap(item)}
-          >
-            <Ionicons name="map-outline" size={16} color={GREEN} />
-            <Text style={styles.mapButtonText}>Map</Text>
-          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.acceptButton]}
             activeOpacity={0.8}
@@ -91,79 +82,10 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
       mainTab === "received" &&
       (item.status === "Accepted" || item.status === "Ongoing")
     ) {
-      const locationAvailable =
-        item.paymentStatus === "released" ||
-        item.paymentStatus === "pay_on_site" ||
-        item.paymentMethod === "pay_on_site";
-
-      // Pay on site (Pro): single simplified card actions — Map only here;
-      // Chat/Call/Map already shown in contact row. Keep progress actions.
-      if (isPayOnSite) {
-        return (
-          <View style={styles.actionRow}>
-            {item.status === "Accepted" ? (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.onMyWayButton]}
-                activeOpacity={0.8}
-                onPress={() =>
-                  Alert.alert(
-                    "On My Way",
-                    "Customer will be notified that you are on your way.",
-                  )
-                }
-              >
-                <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.onMyWayButtonText}>I'm On My Way</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.completeButton]}
-                activeOpacity={0.8}
-                onPress={() =>
-                  Alert.alert(
-                    "Mark as Completed",
-                    "Customer will be asked to Approve the job before payment is released.",
-                  )
-                }
-              >
-                <Ionicons
-                  name="checkmark-circle-outline"
-                  size={16}
-                  color="#FFFFFF"
-                />
-                <Text style={styles.completeButtonText}>Mark as Completed</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        );
-      }
-
+      // No Map on booking cards — location is shared only in chat (privacy).
+      // No Cancel — only the client can cancel after acceptance.
       return (
         <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.mapButton,
-              !locationAvailable && styles.lockedMapButton,
-            ]}
-            activeOpacity={0.8}
-            onPress={() => onOpenMap(item)}
-          >
-            <Ionicons
-              name={locationAvailable ? "map-outline" : "lock-closed-outline"}
-              size={16}
-              color={locationAvailable ? GREEN : "#9CA3AF"}
-            />
-            <Text
-              style={[
-                styles.mapButtonText,
-                !locationAvailable && styles.lockedMapButtonText,
-              ]}
-            >
-              Map
-            </Text>
-          </TouchableOpacity>
-          {/* No Cancel — only the client can cancel after acceptance */}
           {item.status === "Accepted" ? (
             <TouchableOpacity
               style={[styles.actionButton, styles.onMyWayButton]}
@@ -213,7 +135,6 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
         item.status === "Accepted" ||
         item.status === "Ongoing")
     ) {
-      // Pay on site: contact row already has Chat / Call / Map — only Cancel here
       return (
         <View style={styles.actionRow}>
           <TouchableOpacity
@@ -329,7 +250,7 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
       {/* Service title */}
       <Text style={styles.jobTitle}>{item.title}</Text>
 
-      {/* Date + Location */}
+      {/* Date + Location (city text only — no map open from card) */}
       <View style={styles.infoContainer}>
         <View style={styles.infoItem}>
           <Ionicons name="calendar-outline" size={17} color={GREEN} />
@@ -386,7 +307,7 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
         </View>
       )}
 
-      {/* Chat / Call / Map (Map always for pay on site) */}
+      {/* Chat / Call — location shared only inside chat for privacy */}
       <View style={styles.contactRow}>
         {showChat && (
           <TouchableOpacity
@@ -414,16 +335,6 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
           <Ionicons name="call-outline" size={17} color={GREEN} />
           <Text style={styles.contactText}>Call</Text>
         </TouchableOpacity>
-        {isPayOnSite && (
-          <TouchableOpacity
-            style={styles.contactButton}
-            activeOpacity={0.8}
-            onPress={() => onOpenMap(item)}
-          >
-            <Ionicons name="map-outline" size={17} color={GREEN} />
-            <Text style={styles.contactText}>Map</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {renderStatusActions()}
@@ -607,20 +518,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
-  },
-  mapButton: {
-    backgroundColor: "#ECFDF5",
-  },
-  mapButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: GREEN,
-  },
-  lockedMapButton: {
-    backgroundColor: "#F3F4F6",
-  },
-  lockedMapButtonText: {
-    color: "#9CA3AF",
   },
   acceptButton: {
     backgroundColor: GREEN,
