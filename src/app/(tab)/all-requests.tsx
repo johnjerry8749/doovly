@@ -7,6 +7,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -21,6 +22,7 @@ import {
   listServiceRequests,
   type ServiceRequest,
 } from "@/services/serviceRequests";
+import type { ServiceRequestComment } from "@/data/serviceRequests";
 import {
   addInAppNotification,
   getCurrentUserId,
@@ -28,6 +30,9 @@ import {
 import { useLocation } from "@/context/LocationContext";
 
 const GREEN = "#159447";
+
+const MY_AVATAR =
+  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80";
 
 const CATEGORY_FILTERS = [
   "All",
@@ -46,10 +51,19 @@ export default function AllRequests() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
+  const [extraComments, setExtraComments] = useState<
+    Record<string, ServiceRequestComment[]>
+  >({});
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
   const [offerPrice, setOfferPrice] = useState("");
+  const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
+  const [chatText, setChatText] = useState("");
 
   const allRequests = listServiceRequests();
+
+  const getComments = (item: ServiceRequest): ServiceRequestComment[] => {
+    return [...(item.comments || []), ...(extraComments[item.id] || [])];
+  };
 
   const matchesLocationCity = (itemCity: string, itemArea?: string) => {
     if (loadingLocation || showAllNigeria || !locationName) {
@@ -101,6 +115,47 @@ export default function AllRequests() {
     setLikedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const shareRequest = async (item: ServiceRequest) => {
+    try {
+      await Share.share({
+        title: item.title,
+        message: `${item.title}\n${item.category} @ ${item.location}, ${item.city}\n\n${item.description}\n\n— Shared from Doovly`,
+      });
+    } catch {
+      // user cancelled or share failed — ignore
+    }
+  };
+
+  const openChat = (item: ServiceRequest) => {
+    setChatRequest(item);
+    setChatText("");
+  };
+
+  const closeChat = () => {
+    setChatRequest(null);
+    setChatText("");
+  };
+
+  const sendChatMessage = () => {
+    if (!chatRequest) return;
+    const text = chatText.trim();
+    if (!text) return;
+
+    const newComment: ServiceRequestComment = {
+      id: `local-${Date.now()}`,
+      userName: "You",
+      userAvatar: MY_AVATAR,
+      text,
+      timeAgo: "Just now",
+    };
+
+    setExtraComments((prev) => ({
+      ...prev,
+      [chatRequest.id]: [...(prev[chatRequest.id] || []), newComment],
+    }));
+    setChatText("");
+  };
+
   const closeOffer = () => {
     setOfferRequest(null);
     setOfferPrice("");
@@ -130,13 +185,13 @@ export default function AllRequests() {
   const renderRequest = ({ item }: { item: ServiceRequest }) => {
     const liked = !!likedIds[item.id];
     const likesDisplay = item.likesCount + (liked ? 1 : 0);
-    const commentCount = item.comments?.length ?? 0;
-    const firstComment = item.comments?.[0];
+    const comments = getComments(item);
+    const commentCount = comments.length;
+    const firstComment = comments[0];
     const coverImage = item.images?.[0];
 
     return (
       <View style={styles.card}>
-        {/* Poster row */}
         <View style={styles.posterRow}>
           <Image
             source={{ uri: item.posterAvatar }}
@@ -154,7 +209,6 @@ export default function AllRequests() {
           <Text style={styles.timeAgo}>{item.timeAgo}</Text>
         </View>
 
-        {/* Title + NEW */}
         <View style={styles.titleRow}>
           <Text style={styles.cardTitle} numberOfLines={2}>
             {item.title}
@@ -166,7 +220,6 @@ export default function AllRequests() {
           )}
         </View>
 
-        {/* Photo */}
         {coverImage ? (
           <Image
             source={{ uri: coverImage }}
@@ -175,19 +228,16 @@ export default function AllRequests() {
           />
         ) : null}
 
-        {/* Category chip (no price on card) */}
         <View style={styles.metaRow}>
           <View style={styles.categoryChip}>
             <Text style={styles.categoryChipText}>{item.category}</Text>
           </View>
         </View>
 
-        {/* Description */}
         <Text style={styles.description} numberOfLines={3}>
           {item.description}
         </Text>
 
-        {/* Likes / comments / share */}
         <View style={styles.engagementRow}>
           <TouchableOpacity
             style={styles.engagementBtn}
@@ -202,20 +252,31 @@ export default function AllRequests() {
             <Text style={styles.engagementText}>{likesDisplay}</Text>
           </TouchableOpacity>
 
-          <View style={styles.engagementBtn}>
+          <TouchableOpacity
+            style={styles.engagementBtn}
+            onPress={() => openChat(item)}
+            activeOpacity={0.7}
+          >
             <Ionicons name="chatbubble-outline" size={18} color="#6B7280" />
             <Text style={styles.engagementText}>{commentCount}</Text>
-          </View>
+          </TouchableOpacity>
 
-          <TouchableOpacity style={styles.engagementBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.engagementBtn}
+            onPress={() => shareRequest(item)}
+            activeOpacity={0.7}
+          >
             <Ionicons name="share-outline" size={18} color="#6B7280" />
             <Text style={styles.engagementText}>Share</Text>
           </TouchableOpacity>
         </View>
 
-        {/* First comment preview */}
         {firstComment ? (
-          <View style={styles.commentPreview}>
+          <TouchableOpacity
+            style={styles.commentPreview}
+            activeOpacity={0.8}
+            onPress={() => openChat(item)}
+          >
             <Image
               source={{ uri: firstComment.userAvatar }}
               style={styles.commentAvatar}
@@ -226,16 +287,29 @@ export default function AllRequests() {
                 {firstComment.text}
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
         ) : null}
 
         {commentCount > 1 ? (
-          <Text style={styles.viewMoreComments}>
-            View {commentCount - 1} more comment{commentCount - 1 === 1 ? "" : "s"}
-          </Text>
+          <TouchableOpacity onPress={() => openChat(item)} activeOpacity={0.7}>
+            <Text style={styles.viewMoreComments}>
+              View {commentCount - 1} more comment
+              {commentCount - 1 === 1 ? "" : "s"}
+            </Text>
+          </TouchableOpacity>
         ) : null}
 
-        {/* Send Offer */}
+        {!firstComment ? (
+          <TouchableOpacity
+            style={styles.writeCommentHint}
+            onPress={() => openChat(item)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={16} color={GREEN} />
+            <Text style={styles.writeCommentHintText}>Write a comment…</Text>
+          </TouchableOpacity>
+        ) : null}
+
         <TouchableOpacity
           style={styles.sendOfferBtn}
           activeOpacity={0.85}
@@ -248,9 +322,10 @@ export default function AllRequests() {
     );
   };
 
+  const chatComments = chatRequest ? getComments(chatRequest) : [];
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -280,7 +355,6 @@ export default function AllRequests() {
         </TouchableOpacity>
       </View>
 
-      {/* Search */}
       <View style={styles.searchContainer}>
         <Ionicons name="search-outline" size={20} color="#777" />
         <TextInput
@@ -292,7 +366,6 @@ export default function AllRequests() {
         />
       </View>
 
-      {/* Category chips */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -339,6 +412,99 @@ export default function AllRequests() {
         ListFooterComponent={<View style={{ height: 28 }} />}
       />
 
+      {/* Comments / Chat modal */}
+      <Modal
+        visible={!!chatRequest}
+        animationType="slide"
+        onRequestClose={closeChat}
+      >
+        <SafeAreaView style={styles.chatSafe} edges={["top", "bottom"]}>
+          <View style={styles.chatHeader}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={closeChat}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-back" size={24} color="#111" />
+            </TouchableOpacity>
+            <View style={styles.chatHeaderText}>
+              <Text style={styles.chatHeaderTitle} numberOfLines={1}>
+                {chatRequest?.title || "Comments"}
+              </Text>
+              <Text style={styles.chatHeaderSub}>
+                {chatComments.length} comment
+                {chatComments.length === 1 ? "" : "s"}
+              </Text>
+            </View>
+          </View>
+
+          <KeyboardAvoidingView
+            style={styles.chatBody}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
+          >
+            <ScrollView
+              style={styles.chatScroll}
+              contentContainerStyle={styles.chatScrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              {chatComments.length === 0 ? (
+                <View style={styles.chatEmpty}>
+                  <Ionicons
+                    name="chatbubbles-outline"
+                    size={40}
+                    color="#D1D5DB"
+                  />
+                  <Text style={styles.chatEmptyTitle}>No comments yet</Text>
+                  <Text style={styles.chatEmptyText}>
+                    Be the first to reply to this request.
+                  </Text>
+                </View>
+              ) : (
+                chatComments.map((c) => (
+                  <View key={c.id} style={styles.chatBubbleRow}>
+                    <Image
+                      source={{ uri: c.userAvatar }}
+                      style={styles.chatAvatar}
+                    />
+                    <View style={styles.chatBubble}>
+                      <View style={styles.chatBubbleTop}>
+                        <Text style={styles.chatName}>{c.userName}</Text>
+                        <Text style={styles.chatTime}>{c.timeAgo}</Text>
+                      </View>
+                      <Text style={styles.chatMessage}>{c.text}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+
+            <View style={styles.chatInputRow}>
+              <TextInput
+                style={styles.chatInput}
+                placeholder="Type a message…"
+                placeholderTextColor="#9CA3AF"
+                value={chatText}
+                onChangeText={setChatText}
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.chatSendBtn,
+                  !chatText.trim() && styles.chatSendDisabled,
+                ]}
+                activeOpacity={0.85}
+                disabled={!chatText.trim()}
+                onPress={sendChatMessage}
+              >
+                <Ionicons name="send" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
+
       {/* Send Offer modal */}
       <Modal
         visible={!!offerRequest}
@@ -351,7 +517,10 @@ export default function AllRequests() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <Pressable style={styles.offerBackdrop} onPress={closeOffer}>
-            <Pressable style={styles.offerSheet} onPress={(e) => e.stopPropagation()}>
+            <Pressable
+              style={styles.offerSheet}
+              onPress={(e) => e.stopPropagation()}
+            >
               <View style={styles.offerHandle} />
               <Text style={styles.offerTitle}>Send Offer</Text>
               {offerRequest ? (
@@ -376,7 +545,8 @@ export default function AllRequests() {
               <TouchableOpacity
                 style={[
                   styles.offerSubmitBtn,
-                  !offerPrice.replace(/[^\d]/g, "") && styles.offerSubmitDisabled,
+                  !offerPrice.replace(/[^\d]/g, "") &&
+                    styles.offerSubmitDisabled,
                 ]}
                 activeOpacity={0.85}
                 disabled={!offerPrice.replace(/[^\d]/g, "")}
@@ -651,6 +821,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginLeft: 36,
   },
+  writeCommentHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 12,
+  },
+  writeCommentHintText: {
+    fontSize: 13,
+    color: GREEN,
+    fontWeight: "600",
+  },
   sendOfferBtn: {
     backgroundColor: GREEN,
     borderRadius: 24,
@@ -681,6 +862,137 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
   },
+
+  // Chat modal
+  chatSafe: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  chatHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  chatHeaderText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  chatHeaderTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111",
+  },
+  chatHeaderSub: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginTop: 2,
+  },
+  chatBody: {
+    flex: 1,
+  },
+  chatScroll: {
+    flex: 1,
+  },
+  chatScrollContent: {
+    padding: 16,
+    paddingBottom: 24,
+    flexGrow: 1,
+  },
+  chatEmpty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  chatEmptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111",
+    marginTop: 12,
+  },
+  chatEmptyText: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    marginTop: 4,
+  },
+  chatBubbleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 14,
+  },
+  chatAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#E5E7EB",
+  },
+  chatBubble: {
+    flex: 1,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 14,
+    borderTopLeftRadius: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  chatBubbleTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  chatName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111",
+  },
+  chatTime: {
+    fontSize: 11,
+    color: "#9CA3AF",
+  },
+  chatMessage: {
+    fontSize: 14,
+    color: "#374151",
+    lineHeight: 20,
+  },
+  chatInputRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    backgroundColor: "#fff",
+  },
+  chatInput: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 110,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: "#111",
+  },
+  chatSendBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: GREEN,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatSendDisabled: {
+    opacity: 0.4,
+  },
+
+  // Offer modal
   offerBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
