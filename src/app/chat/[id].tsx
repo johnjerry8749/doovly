@@ -29,12 +29,21 @@ const TEXT_DARK = "#111827";
 const TEXT_MUTED = "#6B7280";
 
 export default function ChatConversation() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, initialMessage } = useLocalSearchParams<{
+    id: string;
+    initialMessage?: string;
+  }>();
   const conversationId = String(id ?? "");
+  const draftFromRoute =
+    typeof initialMessage === "string"
+      ? initialMessage
+      : Array.isArray(initialMessage)
+        ? initialMessage[0]
+        : "";
 
   const [conversation, setConversation] = useState<Conversation | undefined>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(draftFromRoute || "");
   const [sending, setSending] = useState(false);
   const listRef = useRef<FlatList>(null);
 

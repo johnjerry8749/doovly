@@ -8,6 +8,7 @@
  */
 
 import { getProfessionalById } from "@/services/professionals";
+import type { Booking } from "@/services/bookings";
 
 export type ChatParticipant = {
   id: string;
@@ -250,4 +251,74 @@ export function markConversationRead(conversationId: string) {
   // TODO backend: POST /conversations/:id/read
   const conv = conversations.find((c) => c.id === conversationId);
   if (conv) conv.unreadCount = 0;
+}
+
+// =====================================================
+// BOOKING → CHAT HELPERS
+// =====================================================
+
+/**
+ * Build a prefilled message with booking id + details.
+ * NOW  → plain text template
+ * LATER → same string, or structured booking card from API
+ */
+export function formatBookingChatMessage(booking: Booking): string {
+  const payment =
+    booking.paymentMethod === "pay_on_site"
+      ? "Pay on site"
+      : booking.paymentStatus === "released"
+        ? "Paid (released)"
+        : booking.paymentStatus === "held"
+          ? "Paid (held in escrow)"
+          : booking.paymentStatus;
+
+  return [
+    `Hi ${booking.providerName},`,
+    ``,
+    `This is about my booking:`,
+    `• Booking ID: ${booking.id}`,
+    `• Service: ${booking.title}`,
+    `• Date: ${booking.date}`,
+    `• Location: ${booking.location}`,
+    `• Status: ${booking.status}`,
+    `• Payment: ${payment}`,
+    ``,
+    `Looking forward to your reply.`,
+  ].join("\n");
+}
+
+/**
+ * Find existing conversation with a professional, or create one (mock).
+ * NOW  → in-memory
+ * LATER → GET /conversations?participantId= or POST /conversations
+ */
+export function getOrCreateConversationForProfessional(
+  professionalId: string,
+): Conversation {
+  // TODO backend: return apiRequest(`/conversations?with=${professionalId}`) or create
+  const existing = conversations.find(
+    (c) => String(c.participant.id) === String(professionalId),
+  );
+  if (existing) return existing;
+
+  const pro = getProfessionalById(professionalId);
+  const id = `c-pro-${professionalId}`;
+
+  const conv: Conversation = {
+    id,
+    participant: {
+      id: String(professionalId),
+      name: pro?.name ?? "Professional",
+      image: pro?.image ?? 0,
+      verified: pro?.verified,
+      online: false,
+    },
+    lastMessage: "",
+    lastMessageAt: "Now",
+    unreadCount: 0,
+  };
+
+  conversations = [conv, ...conversations];
+  if (!messagesByConv[id]) messagesByConv[id] = [];
+  return conv;
 }
