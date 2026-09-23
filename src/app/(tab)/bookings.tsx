@@ -35,7 +35,6 @@ import {
 } from "@/services/disputes";
 
 import { getCurrentUserId } from "@/services/inAppNotifications";
-import { isCurrentUserPro } from "@/services/savedProviders";
 import { BookingCard } from "@/components/BookingCard";
 
 const GREEN = "#16A34A";
@@ -53,9 +52,6 @@ export default function Bookings() {
   const [reportDescription, setReportDescription] = useState("");
   const [reportPhotos, setReportPhotos] = useState<string[]>([]);
 
-  // Pro users see a simpler list: no status filter chips
-  const isProUser = isCurrentUserPro();
-
   const data = useMemo<Booking[]>(() => {
     return mainTab === "booked"
       ? listBookedJobs()
@@ -63,13 +59,12 @@ export default function Bookings() {
   }, [mainTab]);
 
   const filteredData = useMemo<Booking[]>(() => {
-    // Pro: no filters — always show full list
-    if (isProUser || filter === "All") {
+    if (filter === "All") {
       return data;
     }
 
     return data.filter((item) => item.status === filter);
-  }, [data, filter, isProUser]);
+  }, [data, filter]);
 
   const handleMainTabChange = (
     tab: "booked" | "received",
@@ -225,46 +220,44 @@ export default function Bookings() {
         </TouchableOpacity>
       </View>
 
-      {/* FILTER CARD — hidden for Pro users */}
-      {!isProUser && (
-        <View style={styles.filterCard}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={
-              styles.filtersContainer
-            }
-            keyboardShouldPersistTaps="handled"
-          >
-            {filters.map((item) => {
-              const active = filter === item;
+      {/* FILTER CARD */}
+      <View style={styles.filterCard}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={
+            styles.filtersContainer
+          }
+          keyboardShouldPersistTaps="handled"
+        >
+          {filters.map((item) => {
+            const active = filter === item;
 
-              return (
-                <TouchableOpacity
-                  key={item}
+            return (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.filterChip,
+                  active &&
+                    styles.filterChipActive,
+                ]}
+                onPress={() => setFilter(item)}
+                activeOpacity={0.8}
+              >
+                <Text
                   style={[
-                    styles.filterChip,
+                    styles.filterChipText,
                     active &&
-                      styles.filterChipActive,
+                      styles.filterChipTextActive,
                   ]}
-                  onPress={() => setFilter(item)}
-                  activeOpacity={0.8}
                 >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      active &&
-                        styles.filterChipTextActive,
-                    ]}
-                  >
-                    {item}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* BOOKINGS LIST */}
       <FlatList
