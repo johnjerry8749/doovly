@@ -19,18 +19,10 @@ import {
   getLoggedInProfessionalId,
   isCurrentUserPro,
 } from "@/services/savedProviders";
-
-// =====================================================
-// COLORS
-// =====================================================
+import { listServiceRequests } from "@/services/serviceRequests";
 
 const PRIMARY = "#159447";
-const LIGHT_GREEN = "#E8F5E9";
 const GOLD = "#D4AF37";
-
-// =====================================================
-// MENU ITEM
-// =====================================================
 
 type MenuItemProps = {
   icon: React.ReactNode;
@@ -100,20 +92,14 @@ function MenuIcon({
   );
 }
 
-// =====================================================
-// PROFILE SCREEN
-// =====================================================
-
 export default function Profile() {
   const [isAvailable, setIsAvailable] = useState(true);
 
-  // Role + professional — later: same getters, bodies swap to auth / API
   const role = getCurrentUserRole();
   const proId = getLoggedInProfessionalId();
   const pro = proId ? getProfessionalById(proId) : undefined;
-
-  // Single source of truth for Pro status (from professional mock data)
   const isPro = isCurrentUserPro();
+  const requestCount = listServiceRequests().length;
 
   if (!pro) {
     return (
@@ -140,7 +126,6 @@ export default function Profile() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.container}
       >
-        {/* ========== HEADER ========== */}
         <View style={styles.header}>
           <View style={styles.profileHeaderContent}>
             <View style={styles.avatarWrapper}>
@@ -194,7 +179,6 @@ export default function Profile() {
           </TouchableOpacity>
         </View>
 
-        {/* ========== DOOVLY PRO (only if not subscribed) ========== */}
         {!isPro && (
           <View style={styles.proBanner}>
             <View style={styles.proLeft}>
@@ -225,7 +209,6 @@ export default function Profile() {
           </View>
         )}
 
-        {/* ========== SERVICES & JOBS ========== */}
         <Text style={styles.sectionTitle}>Services & Jobs</Text>
 
         <View style={styles.card}>
@@ -243,6 +226,13 @@ export default function Profile() {
             icon={<MenuIcon name="document-text-outline" />}
             title="Create Job Request"
             onPress={() => router.push("/profile/createjob")}
+          />
+
+          <MenuItem
+            icon={<MenuIcon name="list-outline" />}
+            title="Service Requests"
+            badge={requestCount > 0 ? requestCount : undefined}
+            onPress={() => router.push("/(tab)/requests")}
           />
 
           <MenuItem
@@ -264,13 +254,11 @@ export default function Profile() {
 
           <MenuItem
             icon={<MenuIcon name="briefcase-outline" />}
-            title="Job Request"
-            badge={15}
+            title="Job Offers"
             onPress={() => router.push("/profile/alljoboffers")}
           />
         </View>
 
-        {/* ========== GROW & CONNECT ========== */}
         <Text style={styles.sectionTitle}>Grow & Connect</Text>
 
         <View style={styles.card}>
@@ -308,7 +296,6 @@ export default function Profile() {
           />
         </View>
 
-        {/* ========== ACCOUNT & SUBSCRIPTION ========== */}
         <Text style={styles.sectionTitle}>Account & Subscription</Text>
 
         <View style={styles.card}>
@@ -343,7 +330,6 @@ export default function Profile() {
           />
         </View>
 
-        {/* ========== PREFERENCES & SUPPORT ========== */}
         <Text style={styles.sectionTitle}>Preferences & Support</Text>
 
         <View style={styles.card}>
@@ -360,13 +346,11 @@ export default function Profile() {
           />
         </View>
 
-        {/* ========== LOG OUT ========== */}
         <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8}>
           <Ionicons name="log-out-outline" size={20} color="#EF4444" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
-        {/* ========== ADMIN LOGIN (only if role is admin) ========== */}
         {role === "admin" && (
           <TouchableOpacity
             style={styles.adminloginButton}
@@ -383,10 +367,6 @@ export default function Profile() {
     </SafeAreaView>
   );
 }
-
-// =====================================================
-// STYLES
-// =====================================================
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -406,8 +386,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#6B7280",
   },
-
-  // Header
   header: {
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
@@ -485,7 +463,6 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     flexShrink: 1,
   },
-
   editButton: {
     marginTop: 14,
     alignSelf: "flex-start",
@@ -503,8 +480,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-
-  // Pro banner
   proBanner: {
     marginHorizontal: 16,
     marginTop: 16,
@@ -559,8 +534,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 13,
   },
-
-  // Sections
   sectionTitle: {
     fontSize: 14,
     fontWeight: "600",
@@ -575,8 +548,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
   },
-
-  // Menu
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -639,8 +610,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
-
-  // Logout
   logoutButton: {
     marginHorizontal: 16,
     marginTop: 24,
@@ -657,8 +626,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
   },
-
-  // Admin
   adminloginButton: {
     marginHorizontal: 16,
     marginTop: 16,

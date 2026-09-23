@@ -32,7 +32,7 @@ export default function TabLayout() {
         }}
       />
 
-       <Tabs.Screen
+      <Tabs.Screen
         name="services"
         options={{
           title: "Services",
@@ -45,9 +45,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="requests"
         options={{
-          title: "Services",
+          title: "Requests",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="briefcase-outline" size={size} color={color} />
+            <Ionicons name="document-text-outline" size={size} color={color} />
           ),
         }}
       />
@@ -73,39 +73,8 @@ export default function TabLayout() {
       />
 
       {/* Hidden from tab bar */}
-      <Tabs.Screen
-        name="how-it-works"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="all-requests"
-        options={{
-          href: null,
-        }}
-      />
-      {/* <Tabs.Screen
-        name="professional"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="bookme"
-        options={{
-          href: null,
-        }}
-      /> */}
-
-      {/* <Tabs.Screen
-        name="myprofile"
-        options={{
-          href: null,
-        }}
-      /> */}
+      <Tabs.Screen name="how-it-works" options={{ href: null }} />
+      <Tabs.Screen name="all-requests" options={{ href: null }} />
     </Tabs>
   );
 }
