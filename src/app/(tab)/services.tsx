@@ -34,10 +34,8 @@ export default function Services() {
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [favTick, setFavTick] = useState(0);
 
-  const categories = useMemo(
-    () => [{ name: "All", icon: "apps" }, ...listServiceCategories()],
-    [],
-  );
+  // Single source: listServiceCategories() already includes "All"
+  const categories = useMemo(() => listServiceCategories(), []);
 
   const onToggleFavorite = useCallback((proId: string) => {
     const result = toggleSave(proId);
@@ -104,11 +102,9 @@ export default function Services() {
     const cat = filter.toLowerCase();
     const prof = profession.toLowerCase();
     if (prof === cat || prof.includes(cat)) return true;
-    // Spa chip → Massage Therapist
     if (cat === "spa" && (prof.includes("massage") || prof.includes("spa"))) {
       return true;
     }
-    // Nail Tech / Barber exact-ish
     if (cat === "nail tech" && prof.includes("nail")) return true;
     return false;
   };
@@ -261,7 +257,6 @@ export default function Services() {
         renderItem={renderProfessional}
         ListHeaderComponent={
           <>
-            {/* Same pattern as Home: horizontal ScrollView + map (not nested FlatList) */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
