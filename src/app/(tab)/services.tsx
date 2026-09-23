@@ -6,6 +6,7 @@ import {
   Image,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,21 +17,27 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { listProfessionals, type Professional } from "@/services/professionals";
+import {
+  listProfessionals,
+  listServiceCategories,
+  type Professional,
+} from "@/services/professionals";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
 import { NIGERIA_CITIES } from "@/data/cities";
-import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { useLocation } from "@/context/LocationContext";
 
 const GREEN = "#159447";
-
-const SERVICE_FILTERS = [{ name: "All", icon: "apps" }, ...SERVICE_CATEGORIES];
 
 export default function Services() {
   const [search, setSearch] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [favTick, setFavTick] = useState(0);
+
+  const categories = useMemo(
+    () => [{ name: "All", icon: "apps" }, ...listServiceCategories()],
+    [],
+  );
 
   const onToggleFavorite = useCallback((proId: string) => {
     const result = toggleSave(proId);
@@ -92,6 +99,20 @@ export default function Services() {
     return c.includes(city) || city.includes(c);
   };
 
+  const matchesCategory = (profession: string, filter: string) => {
+    if (filter === "All") return true;
+    const cat = filter.toLowerCase();
+    const prof = profession.toLowerCase();
+    if (prof === cat || prof.includes(cat)) return true;
+    // Spa chip → Massage Therapist
+    if (cat === "spa" && (prof.includes("massage") || prof.includes("spa"))) {
+      return true;
+    }
+    // Nail Tech / Barber exact-ish
+    if (cat === "nail tech" && prof.includes("nail")) return true;
+    return false;
+  };
+
   const filteredProfessionals = useMemo(() => {
     const query = search.trim().toLowerCase();
     return professionals.filter((person) => {
@@ -100,13 +121,10 @@ export default function Services() {
         person.name.toLowerCase().includes(query) ||
         person.profession.toLowerCase().includes(query) ||
         person.city.toLowerCase().includes(query);
-      const matchesFilter =
-        selectedFilter === "All" ||
-        person.profession.toLowerCase() === selectedFilter.toLowerCase() ||
-        person.profession.toLowerCase().includes(selectedFilter.toLowerCase()) ||
-        (selectedFilter.toLowerCase() === "spa" &&
-          person.profession.toLowerCase().includes("massage"));
+
+      const matchesFilter = matchesCategory(person.profession, selectedFilter);
       const matchesLocation = matchesLocationCity(person.city);
+
       return matchesSearch && matchesFilter && matchesLocation;
     });
   }, [professionals, search, selectedFilter, locationName, showAllNigeria]);
@@ -190,7 +208,9 @@ export default function Services() {
             {loadingLocation ? (
               <View style={styles.locationLoading}>
                 <ActivityIndicator size="small" color={GREEN} />
-                <Text style={styles.locationLoadingText}>Getting location...</Text>
+                <Text style={styles.locationLoadingText}>
+                  Getting location...
+                </Text>
               </View>
             ) : (
               <Text style={styles.locationText} numberOfLines={1}>
@@ -232,7 +252,7 @@ export default function Services() {
 
       <FlatList
         data={filteredProfessionals}
-        extraData={favTick}
+        extraData={`${favTick}-${selectedFilter}`}
         keyExtractor={(item) => item.id}
         numColumns={3}
         showsVerticalScrollIndicator={false}
@@ -241,16 +261,17 @@ export default function Services() {
         renderItem={renderProfessional}
         ListHeaderComponent={
           <>
-            <FlatList
+            {/* Same pattern as Home: horizontal ScrollView + map (not nested FlatList) */}
+            <ScrollView
               horizontal
-              data={SERVICE_FILTERS}
-              keyExtractor={(item) => item.name}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.filterContainer}
-              renderItem={({ item: filter }) => {
+            >
+              {categories.map((filter, index) => {
                 const active = selectedFilter === filter.name;
                 return (
                   <TouchableOpacity
+                    key={`${filter.name}-${index}`}
                     style={styles.filterItem}
                     onPress={() => setSelectedFilter(filter.name)}
                     activeOpacity={0.7}
@@ -278,8 +299,8 @@ export default function Services() {
                     </Text>
                   </TouchableOpacity>
                 );
-              }}
-            />
+              })}
+            </ScrollView>
 
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>All professionals</Text>
@@ -314,11 +335,19 @@ export default function Services() {
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Choose location</Text>
-            <TouchableOpacity style={styles.modalOption} onPress={getUserLocation} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={getUserLocation}
+              activeOpacity={0.7}
+            >
               <Ionicons name="navigate" size={24} color={GREEN} />
               <View style={styles.modalOptionText}>
-                <Text style={styles.modalOptionTitle}>Use current location</Text>
-                <Text style={styles.modalOptionSub}>Allow access to detect your position</Text>
+                <Text style={styles.modalOptionTitle}>
+                  Use current location
+                </Text>
+                <Text style={styles.modalOptionSub}>
+                  Allow access to detect your position
+                </Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity
@@ -332,17 +361,28 @@ export default function Services() {
               <Ionicons name="list-outline" size={24} color={GREEN} />
               <View style={styles.modalOptionText}>
                 <Text style={styles.modalOptionTitle}>Select a city</Text>
-                <Text style={styles.modalOptionSub}>Pick from popular cities in Nigeria</Text>
+                <Text style={styles.modalOptionSub}>
+                  Pick from popular cities in Nigeria
+                </Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalOption} onPress={viewAllInNigeria} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={viewAllInNigeria}
+              activeOpacity={0.7}
+            >
               <Ionicons name="globe-outline" size={24} color={GREEN} />
               <View style={styles.modalOptionText}>
                 <Text style={styles.modalOptionTitle}>View all in Nigeria</Text>
-                <Text style={styles.modalOptionSub}>See professionals from every city</Text>
+                <Text style={styles.modalOptionSub}>
+                  See professionals from every city
+                </Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalCancel} onPress={() => setShowLocationModal(false)}>
+            <TouchableOpacity
+              style={styles.modalCancel}
+              onPress={() => setShowLocationModal(false)}
+            >
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -382,7 +422,9 @@ export default function Services() {
               keyboardShouldPersistTaps="handled"
               style={styles.cityList}
               ListEmptyComponent={
-                <Text style={styles.emptyCitiesText}>No city found. Try another spelling.</Text>
+                <Text style={styles.emptyCitiesText}>
+                  No city found. Try another spelling.
+                </Text>
               }
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -471,8 +513,16 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 15, color: "#111", marginHorizontal: 8 },
   container: { paddingHorizontal: 14, paddingBottom: 20, paddingTop: 12 },
-  filterContainer: { paddingBottom: 8, gap: 14, paddingRight: 8 },
-  filterItem: { alignItems: "center", width: 72 },
+  filterContainer: {
+    paddingBottom: 4,
+    paddingRight: 8,
+    alignItems: "center",
+    gap: 14,
+  },
+  filterItem: {
+    alignItems: "center",
+    width: 72,
+  },
   filterCircle: {
     width: 58,
     height: 58,
