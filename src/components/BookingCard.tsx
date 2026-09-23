@@ -34,13 +34,18 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
   const statusStyle = statusColors[item.status];
   const showChat = item.status !== "Completed" || isCurrentUserPro();
   const amountText = formatAmount(item.amount);
+  const isPayOnSite =
+    item.paymentMethod === "pay_on_site" ||
+    item.paymentStatus === "pay_on_site";
 
   const showPaymentBanner =
-    item.paymentMethod === "pay_now" &&
-    (item.paymentStatus === "held" || item.paymentStatus === "released");
+    (item.paymentMethod === "pay_now" &&
+      (item.paymentStatus === "held" || item.paymentStatus === "released")) ||
+    isPayOnSite;
 
-  const paymentLabel =
-    item.paymentStatus === "released"
+  const paymentLabel = isPayOnSite
+    ? "Payment will be on site"
+    : item.paymentStatus === "released"
       ? "Payment released"
       : "Payment secured in Paystack";
 
@@ -81,6 +86,7 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
     }
 
     // RECEIVED — Accepted / Ongoing
+    // After the pro accepts, only the client can cancel — pro has no Cancel button.
     if (
       mainTab === "received" &&
       (item.status === "Accepted" || item.status === "Ongoing")
@@ -89,6 +95,48 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
         item.paymentStatus === "released" ||
         item.paymentStatus === "pay_on_site" ||
         item.paymentMethod === "pay_on_site";
+
+      // Pay on site (Pro): single simplified card actions — Map only here;
+      // Chat/Call/Map already shown in contact row. Keep progress actions.
+      if (isPayOnSite) {
+        return (
+          <View style={styles.actionRow}>
+            {item.status === "Accepted" ? (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.onMyWayButton]}
+                activeOpacity={0.8}
+                onPress={() =>
+                  Alert.alert(
+                    "On My Way",
+                    "Customer will be notified that you are on your way.",
+                  )
+                }
+              >
+                <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.onMyWayButtonText}>I'm On My Way</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.completeButton]}
+                activeOpacity={0.8}
+                onPress={() =>
+                  Alert.alert(
+                    "Mark as Completed",
+                    "Customer will be asked to Approve the job before payment is released.",
+                  )
+                }
+              >
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={16}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.completeButtonText}>Mark as Completed</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+      }
 
       return (
         <View style={styles.actionRow}>
@@ -115,16 +163,7 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
               Map
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.cancelButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert("Cancel Job", "This job will be cancelled.")
-            }
-          >
-            <Ionicons name="close" size={16} color="#DC2626" />
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+          {/* No Cancel — only the client can cancel after acceptance */}
           {item.status === "Accepted" ? (
             <TouchableOpacity
               style={[styles.actionButton, styles.onMyWayButton]}
@@ -150,7 +189,11 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
                 )
               }
             >
-              <Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={16}
+                color="#FFFFFF"
+              />
               <Text style={styles.completeButtonText}>Mark as Completed</Text>
             </TouchableOpacity>
           )}
@@ -163,13 +206,14 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
       return null;
     }
 
-    // BOOKED — Upcoming / Accepted / Ongoing
+    // BOOKED — Upcoming / Accepted / Ongoing (client can still cancel)
     if (
       mainTab === "booked" &&
       (item.status === "Upcoming" ||
         item.status === "Accepted" ||
         item.status === "Ongoing")
     ) {
+      // Pay on site: contact row already has Chat / Call / Map — only Cancel here
       return (
         <View style={styles.actionRow}>
           <TouchableOpacity
@@ -200,7 +244,11 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
               )
             }
           >
-            <Ionicons name="shield-checkmark-outline" size={16} color="#FFFFFF" />
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={16}
+              color="#FFFFFF"
+            />
             <Text style={styles.approveButtonText}>
               Approve & Release{amountText ? ` ${amountText}` : ""}
             </Text>
@@ -269,7 +317,9 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
         <View
           style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}
         >
-          <View style={[styles.statusDot, { backgroundColor: statusStyle.text }]} />
+          <View
+            style={[styles.statusDot, { backgroundColor: statusStyle.text }]}
+          />
           <Text style={[styles.statusText, { color: statusStyle.text }]}>
             {item.status}
           </Text>
@@ -293,22 +343,50 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
         </View>
       </View>
 
-      {/* Payment banner (Paystack) */}
+      {/* Payment banner (Paystack or Pay on site) */}
       {showPaymentBanner && (
-        <View style={styles.paymentBanner}>
-          <View style={styles.paymentIconWrap}>
-            <Ionicons name="lock-closed" size={16} color="#FFFFFF" />
+        <View
+          style={[
+            styles.paymentBanner,
+            isPayOnSite && styles.paymentBannerOnSite,
+          ]}
+        >
+          <View
+            style={[
+              styles.paymentIconWrap,
+              isPayOnSite && styles.paymentIconWrapOnSite,
+            ]}
+          >
+            <Ionicons
+              name={isPayOnSite ? "cash-outline" : "lock-closed"}
+              size={16}
+              color="#FFFFFF"
+            />
           </View>
           <View style={styles.paymentTextWrap}>
-            <Text style={styles.paymentLabel}>{paymentLabel}</Text>
+            <Text
+              style={[
+                styles.paymentLabel,
+                isPayOnSite && styles.paymentLabelOnSite,
+              ]}
+            >
+              {paymentLabel}
+            </Text>
             {amountText ? (
-              <Text style={styles.paymentAmount}>{amountText}</Text>
+              <Text
+                style={[
+                  styles.paymentAmount,
+                  isPayOnSite && styles.paymentAmountOnSite,
+                ]}
+              >
+                {amountText}
+              </Text>
             ) : null}
           </View>
         </View>
       )}
 
-      {/* Chat / Call */}
+      {/* Chat / Call / Map (Map always for pay on site) */}
       <View style={styles.contactRow}>
         {showChat && (
           <TouchableOpacity
@@ -336,6 +414,16 @@ export function BookingCard({ item, mainTab, onOpenMap, onReport }: Props) {
           <Ionicons name="call-outline" size={17} color={GREEN} />
           <Text style={styles.contactText}>Call</Text>
         </TouchableOpacity>
+        {isPayOnSite && (
+          <TouchableOpacity
+            style={styles.contactButton}
+            activeOpacity={0.8}
+            onPress={() => onOpenMap(item)}
+          >
+            <Ionicons name="map-outline" size={17} color={GREEN} />
+            <Text style={styles.contactText}>Map</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {renderStatusActions()}
@@ -451,6 +539,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 10,
   },
+  paymentBannerOnSite: {
+    backgroundColor: "#FFF7ED",
+  },
   paymentIconWrap: {
     width: 32,
     height: 32,
@@ -458,6 +549,9 @@ const styles = StyleSheet.create({
     backgroundColor: GREEN,
     alignItems: "center",
     justifyContent: "center",
+  },
+  paymentIconWrapOnSite: {
+    backgroundColor: "#EA580C",
   },
   paymentTextWrap: {
     flex: 1,
@@ -467,11 +561,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#166534",
   },
+  paymentLabelOnSite: {
+    color: "#9A3412",
+  },
   paymentAmount: {
     fontSize: 15,
     fontWeight: "700",
     color: GREEN,
     marginTop: 1,
+  },
+  paymentAmountOnSite: {
+    color: "#C2410C",
   },
   contactRow: {
     flexDirection: "row",

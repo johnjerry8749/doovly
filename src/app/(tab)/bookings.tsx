@@ -36,6 +36,7 @@ import {
 } from "@/services/disputes";
 
 import { getCurrentUserId } from "@/services/inAppNotifications";
+import { isCurrentUserPro } from "@/services/savedProviders";
 import { BookingCard } from "@/components/BookingCard";
 
 const GREEN = "#16A34A";
@@ -130,6 +131,9 @@ export default function Bookings() {
   const [reportDescription, setReportDescription] = useState("");
   const [reportPhotos, setReportPhotos] = useState<string[]>([]);
 
+  // Pro users see a simpler list: no status filter chips
+  const isProUser = isCurrentUserPro();
+
   const data = useMemo<Booking[]>(() => {
     return mainTab === "booked"
       ? listBookedJobs()
@@ -137,12 +141,13 @@ export default function Bookings() {
   }, [mainTab]);
 
   const filteredData = useMemo<Booking[]>(() => {
-    if (filter === "All") {
+    // Pro: no filters — always show full list
+    if (isProUser || filter === "All") {
       return data;
     }
 
     return data.filter((item) => item.status === filter);
-  }, [data, filter]);
+  }, [data, filter, isProUser]);
 
   const handleMainTabChange = (
     tab: "booked" | "received",
@@ -298,44 +303,46 @@ export default function Bookings() {
         </TouchableOpacity>
       </View>
 
-      {/* FILTER CARD */}
-      <View style={styles.filterCard}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={
-            styles.filtersContainer
-          }
-          keyboardShouldPersistTaps="handled"
-        >
-          {filters.map((item) => {
-            const active = filter === item;
+      {/* FILTER CARD — hidden for Pro users */}
+      {!isProUser && (
+        <View style={styles.filterCard}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={
+              styles.filtersContainer
+            }
+            keyboardShouldPersistTaps="handled"
+          >
+            {filters.map((item) => {
+              const active = filter === item;
 
-            return (
-              <TouchableOpacity
-                key={item}
-                style={[
-                  styles.filterChip,
-                  active &&
-                    styles.filterChipActive,
-                ]}
-                onPress={() => setFilter(item)}
-                activeOpacity={0.8}
-              >
-                <Text
+              return (
+                <TouchableOpacity
+                  key={item}
                   style={[
-                    styles.filterChipText,
+                    styles.filterChip,
                     active &&
-                      styles.filterChipTextActive,
+                      styles.filterChipActive,
                   ]}
+                  onPress={() => setFilter(item)}
+                  activeOpacity={0.8}
                 >
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      active &&
+                        styles.filterChipTextActive,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {/* BOOKINGS LIST */}
       <FlatList
@@ -746,7 +753,7 @@ const styles = StyleSheet.create({
   },
 
   modalBackdrop: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.4)",
   },
 
@@ -783,42 +790,40 @@ const styles = StyleSheet.create({
   },
 
   modalScrollContent: {
-    paddingBottom: 16,
+    paddingBottom: 8,
   },
 
   modalLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
-    color: "#111827",
+    color: "#374151",
+    marginTop: 10,
     marginBottom: 8,
-    marginTop: 8,
   },
 
   reasonRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    marginBottom: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 6,
+    backgroundColor: "#F9FAFB",
   },
 
   reasonRowSelected: {
-    borderColor: GREEN,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: "#ECFDF5",
   },
 
   reasonRadio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     borderWidth: 2,
     borderColor: "#D1D5DB",
+    marginRight: 10,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 10,
   },
 
   reasonRadioSelected: {
@@ -826,9 +831,9 @@ const styles = StyleSheet.create({
   },
 
   reasonRadioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: GREEN,
   },
 
@@ -839,44 +844,43 @@ const styles = StyleSheet.create({
   },
 
   descriptionInput: {
+    minHeight: 90,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 12,
     padding: 12,
-    minHeight: 100,
-    textAlignVertical: "top",
     fontSize: 14,
     color: "#111827",
+    textAlignVertical: "top",
   },
 
   photoRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginTop: 8,
+    gap: 10,
   },
 
   photoThumb: {
-    width: 72,
-    height: 72,
+    width: 64,
+    height: 64,
     borderRadius: 10,
   },
 
   photoRemove: {
     position: "absolute",
-    top: 4,
-    right: 4,
+    top: -6,
+    right: -6,
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "#DC2626",
     alignItems: "center",
     justifyContent: "center",
   },
 
   addPhotoBtn: {
-    width: 72,
-    height: 72,
+    width: 64,
+    height: 64,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: GREEN,
@@ -907,4 +911,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
