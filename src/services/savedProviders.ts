@@ -186,3 +186,5 @@ export function setMockSubscribed(subscribed: boolean) {
     pro.subscribed = subscribed;
   }
 }
+
+export { getProfessionalById };

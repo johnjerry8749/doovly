@@ -112,10 +112,6 @@ export default function ChatConversation() {
             ) : null}
           </Text>
         </View>
-
-        <TouchableOpacity style={styles.headerIcon} activeOpacity={0.7}>
-          <Ionicons name="ellipsis-vertical" size={20} color={TEXT_MUTED} />
-        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
