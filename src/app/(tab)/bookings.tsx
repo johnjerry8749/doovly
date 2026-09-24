@@ -508,6 +508,7 @@ export default function Bookings() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    marginBottom: 35,
     backgroundColor: "#FFFFFF",
   },
 

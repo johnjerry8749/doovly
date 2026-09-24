@@ -1309,6 +1309,7 @@ export default function RequestsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    marginBottom: 35,
     backgroundColor: "#fff",
   },
 
@@ -2070,5 +2071,6 @@ const styles = StyleSheet.create({
     color: "#888",
     marginTop: 30,
     fontSize: 14,
+    marginBottom: 55,
   },
 });

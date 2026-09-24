@@ -95,6 +95,7 @@ export default function HowItWorks() {
 
 const styles = StyleSheet.create({
   safeArea: {
+    marginBottom: 35,
     flex: 1,
     backgroundColor: "#fff",
   },

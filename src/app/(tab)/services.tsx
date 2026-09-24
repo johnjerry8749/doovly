@@ -6,7 +6,6 @@ import {
   Image,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -213,7 +212,7 @@ export default function Services() {
           router.push(`/professional/${item.id}`)
         }
       >
-        {/* Favorite */}
+        {/* FAVORITE */}
         <TouchableOpacity
           style={styles.heartButton}
           activeOpacity={0.7}
@@ -229,7 +228,7 @@ export default function Services() {
           />
         </TouchableOpacity>
 
-        {/* Profile image + verification */}
+        {/* PROFILE IMAGE */}
         <View style={styles.profileImageContainer}>
           <Image
             source={item.image}
@@ -238,7 +237,7 @@ export default function Services() {
           />
         </View>
 
-        {/* Name */}
+        {/* NAME */}
         <Text
           style={styles.professionalName}
           numberOfLines={1}
@@ -246,7 +245,7 @@ export default function Services() {
           {item.name}
         </Text>
 
-        {/* Rating */}
+        {/* RATING */}
         <View style={styles.ratingRow}>
           <Ionicons
             name="star"
@@ -263,7 +262,7 @@ export default function Services() {
           </Text>
         </View>
 
-        {/* Profession */}
+        {/* PROFESSION */}
         <Text
           style={styles.profession}
           numberOfLines={1}
@@ -271,7 +270,7 @@ export default function Services() {
           {item.profession}
         </Text>
 
-        {/* City */}
+        {/* CITY */}
         <Text
           style={styles.city}
           numberOfLines={1}
@@ -279,7 +278,7 @@ export default function Services() {
           {item.city}
         </Text>
 
-        {/* Price */}
+        {/* PRICE */}
         <Text
           style={styles.price}
           numberOfLines={1}
@@ -295,9 +294,11 @@ export default function Services() {
       style={styles.safeArea}
       edges={["top"]}
     >
-      {/* HEADER */}
+      {/* =========================
+          FIXED HEADER
+      ========================== */}
       <View style={styles.stickyHeader}>
-        {/* Location + notification */}
+        {/* LOCATION + NOTIFICATION */}
         <View style={styles.locationRow}>
           <TouchableOpacity
             style={styles.locationContainer}
@@ -363,7 +364,7 @@ export default function Services() {
           </TouchableOpacity>
         </View>
 
-        {/* Search */}
+        {/* SEARCH */}
         <View style={styles.searchContainer}>
           <Ionicons
             name="search-outline"
@@ -389,84 +390,88 @@ export default function Services() {
         </View>
       </View>
 
-      {/* PROFESSIONALS */}
+      {/* =========================
+          FIXED CATEGORY SECTION
+      ========================== */}
+      <View style={styles.fixedCategorySection}>
+        <FlatList
+          horizontal
+          data={categories}
+          keyExtractor={(item, index) =>
+            `${item.name}-${index}`
+          }
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContainer}
+          renderItem={({ item: filter, index }) => {
+            const active =
+              selectedFilter === filter.name;
+
+            return (
+              <TouchableOpacity
+                key={`${filter.name}-${index}`}
+                style={styles.filterItem}
+                onPress={() =>
+                  setSelectedFilter(filter.name)
+                }
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.filterCircle,
+                    active &&
+                      styles.activeFilterCircle,
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name={filter.icon as any}
+                    size={26}
+                    color={
+                      active
+                        ? "#fff"
+                        : "#087A38"
+                    }
+                  />
+                </View>
+
+                <Text
+                  style={[
+                    styles.filterName,
+                    active &&
+                      styles.activeFilterName,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {filter.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+
+        {/* SECTION HEADER */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            All professionals
+          </Text>
+
+          <Text style={styles.resultCount}>
+            {filteredProfessionals.length} found
+          </Text>
+        </View>
+      </View>
+
+      {/* =========================
+          ONLY THIS AREA SCROLLS
+      ========================== */}
       <FlatList
         data={filteredProfessionals}
         extraData={`${favTick}-${selectedFilter}`}
         keyExtractor={(item) => item.id}
         numColumns={3}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={styles.professionalList}
         columnWrapperStyle={styles.columnWrapper}
         renderItem={renderProfessional}
-        ListHeaderComponent={
-          <>
-            {/* CATEGORY FILTERS */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={
-                styles.filterContainer
-              }
-            >
-              {categories.map((filter, index) => {
-                const active =
-                  selectedFilter === filter.name;
-
-                return (
-                  <TouchableOpacity
-                    key={`${filter.name}-${index}`}
-                    style={styles.filterItem}
-                    onPress={() =>
-                      setSelectedFilter(filter.name)
-                    }
-                    activeOpacity={0.7}
-                  >
-                    <View
-                      style={[
-                        styles.filterCircle,
-                        active &&
-                          styles.activeFilterCircle,
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name={filter.icon as any}
-                        size={26}
-                        color={
-                          active
-                            ? "#fff"
-                            : "#087A38"
-                        }
-                      />
-                    </View>
-
-                    <Text
-                      style={[
-                        styles.filterName,
-                        active &&
-                          styles.activeFilterName,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {filter.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            {/* SECTION HEADER */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                All professionals
-              </Text>
-
-              <Text style={styles.resultCount}>
-                {filteredProfessionals.length} found
-              </Text>
-            </View>
-          </>
-        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons
@@ -486,11 +491,13 @@ export default function Services() {
           </View>
         }
         ListFooterComponent={
-          <View style={{ height: 30 }} />
+          <View style={styles.listBottomSpace} />
         }
       />
 
-      {/* LOCATION MODAL */}
+      {/* =========================
+          LOCATION MODAL
+      ========================== */}
       <Modal
         visible={showLocationModal}
         transparent
@@ -512,7 +519,7 @@ export default function Services() {
               Choose location
             </Text>
 
-            {/* Current location */}
+            {/* CURRENT LOCATION */}
             <TouchableOpacity
               style={styles.modalOption}
               onPress={getUserLocation}
@@ -540,7 +547,7 @@ export default function Services() {
               </View>
             </TouchableOpacity>
 
-            {/* Select city */}
+            {/* SELECT CITY */}
             <TouchableOpacity
               style={styles.modalOption}
               onPress={() => {
@@ -570,7 +577,7 @@ export default function Services() {
               </View>
             </TouchableOpacity>
 
-            {/* All Nigeria */}
+            {/* ALL NIGERIA */}
             <TouchableOpacity
               style={styles.modalOption}
               onPress={viewAllInNigeria}
@@ -597,7 +604,7 @@ export default function Services() {
               </View>
             </TouchableOpacity>
 
-            {/* Cancel */}
+            {/* CANCEL */}
             <TouchableOpacity
               style={styles.modalCancel}
               onPress={() =>
@@ -612,7 +619,9 @@ export default function Services() {
         </Pressable>
       </Modal>
 
-      {/* CITY PICKER */}
+      {/* =========================
+          CITY PICKER MODAL
+      ========================== */}
       <Modal
         visible={showCityPicker}
         transparent
@@ -632,7 +641,7 @@ export default function Services() {
               Select a city
             </Text>
 
-            {/* City search */}
+            {/* CITY SEARCH */}
             <View style={styles.citySearchBox}>
               <Ionicons
                 name="search-outline"
@@ -662,7 +671,7 @@ export default function Services() {
               )}
             </View>
 
-            {/* Cities */}
+            {/* CITIES */}
             <FlatList
               data={filteredCities}
               keyExtractor={(item) => item}
@@ -697,7 +706,7 @@ export default function Services() {
               )}
             />
 
-            {/* Cancel */}
+            {/* CANCEL */}
             <TouchableOpacity
               style={styles.modalCancel}
               onPress={closeCityPicker}
@@ -719,7 +728,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  /* HEADER */
+  /* =========================
+     HEADER
+  ========================== */
+
   stickyHeader: {
     backgroundColor: "#fff",
     paddingHorizontal: 14,
@@ -802,30 +814,29 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
 
-  /* LIST */
-  container: {
-    paddingHorizontal: 14,
-    paddingBottom: 20,
-    paddingTop: 12,
+  /* =========================
+     FIXED CATEGORY SECTION
+  ========================== */
+
+  fixedCategorySection: {
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F2F2F2",
+    zIndex: 5,
   },
 
-  columnWrapper: {
-    gap: 8,
-    marginBottom: 12,
-  },
-
-  /* CATEGORY FILTERS */
   filterContainer: {
     flexDirection: "row",
-    paddingBottom: 22,
-    paddingRight: 8,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
     alignItems: "center",
-    gap: 14,
   },
 
   filterItem: {
     alignItems: "center",
     width: 72,
+    marginRight: 14,
   },
 
   filterCircle: {
@@ -854,13 +865,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* SECTION */
+  /* =========================
+     SECTION HEADER
+  ========================== */
+
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 16,
-    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
   },
 
   sectionTitle: {
@@ -874,7 +888,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  /* PROFESSIONAL CARD */
+  /* =========================
+     PROFESSIONAL LIST
+  ========================== */
+
+  professionalList: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+
+    // Space for the floating bottom tab.
+    paddingBottom: 120,
+  },
+
+  columnWrapper: {
+    gap: 8,
+    marginBottom: 12,
+  },
+
+  listBottomSpace: {
+    height: 20,
+  },
+
+  /* =========================
+     PROFESSIONAL CARD
+  ========================== */
+
   professionalCard: {
     flex: 1,
     maxWidth: "32%",
@@ -912,6 +950,7 @@ const styles = StyleSheet.create({
   },
 
   /* VERIFIED BADGE */
+
   verifiedBadge: {
     position: "absolute",
     right: 3,
@@ -980,7 +1019,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  /* EMPTY */
+  /* =========================
+     EMPTY
+  ========================== */
+
   emptyContainer: {
     alignItems: "center",
     paddingVertical: 60,
@@ -1000,7 +1042,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  /* MODALS */
+  /* =========================
+     MODALS
+  ========================== */
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -1073,7 +1118,10 @@ const styles = StyleSheet.create({
     color: "#888",
   },
 
-  /* CITY SEARCH */
+  /* =========================
+     CITY SEARCH
+  ========================== */
+
   citySearchBox: {
     flexDirection: "row",
     alignItems: "center",

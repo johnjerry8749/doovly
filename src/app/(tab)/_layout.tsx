@@ -237,6 +237,7 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   wrapper: {
+  marginTop: 8,
   position: "absolute",
   left: 0,
   right: 0,
