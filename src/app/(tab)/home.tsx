@@ -45,7 +45,6 @@ export default function Home() {
     closeCityPicker,
   } = useLocation();
 
-  // Single source — already includes All
   const services = listServiceCategories();
   const professionals = listProfessionals();
 
@@ -632,7 +631,6 @@ const styles = StyleSheet.create({
   profession: { fontSize: 11, color: "#555", marginBottom: 2 },
   cityText: { fontSize: 10, color: "#777", marginBottom: 5 },
   price: { fontSize: 12, fontWeight: "800", color: "#159447" },
-
   emptyProsContainer: {
     alignItems: "center",
     paddingVertical: 30,
@@ -660,28 +658,56 @@ const styles = StyleSheet.create({
   },
   emptyProsButtonText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   verifiedContainer: {
-    backgroundColor: "#F0FDF4",
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  shieldContainer: { marginBottom: 10 },
-  verifiedTextContainer: { marginBottom: 12 },
-  verifiedTitle: { fontSize: 16, fontWeight: "800", color: "#111" },
-  verifiedSubtitle: { fontSize: 13, color: "#555", marginTop: 4 },
-  howButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#159447",
-    alignSelf: "flex-start",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 6,
+    width: "100%",
+    marginTop: 8,
+    backgroundColor: "#F0F9F4",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
   },
-  howButtonText: { color: "#fff", fontWeight: "700", fontSize: 13 },
-  bottomSpacing: { height: 24 },
+  shieldContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+    flexShrink: 0,
+  },
+  verifiedTextContainer: {
+    flex: 2,
+    minWidth: 0,
+    marginRight: 8,
+  },
+  verifiedTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#111",
+    marginBottom: 3,
+  },
+  verifiedSubtitle: {
+    fontSize: 11,
+    color: "#555",
+    lineHeight: 16,
+  },
+  howButton: {
+    backgroundColor: "#159447",
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    maxWidth: 105,
+  },
+  howButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 11,
+  },
+  bottomSpacing: { height: 30 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
