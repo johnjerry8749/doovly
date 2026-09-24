@@ -236,16 +236,6 @@ export default function Services() {
             style={styles.profileImage}
             resizeMode="cover"
           />
-
-          {item.verified ? (
-            <View style={styles.verifiedBadge}>
-              <Image
-                source={require("@/assets/premium/checkmark.png")}
-                style={styles.verifiedBadgeImage}
-                resizeMode="contain"
-              />
-            </View>
-          ) : null}
         </View>
 
         {/* Name */}

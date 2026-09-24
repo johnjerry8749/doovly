@@ -528,22 +528,7 @@ export default function RequestsScreen() {
               source={item.posterAvatar}
               style={styles.posterAvatar}
             />
-
-            {item.posterVerified ? (
-              <View
-                style={
-                  styles.posterVerifiedBadge
-                }
-              >
-                <Image
-                  source={require("@/assets/premium/checkmark.png")}
-                  style={
-                    styles.posterCheckmark
-                  }
-                  resizeMode="contain"
-                />
-              </View>
-            ) : null}
+            
           </View>
 
           <View

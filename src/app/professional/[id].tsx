@@ -260,16 +260,6 @@ export default function ProfessionalProfile() {
               style={styles.avatar}
               resizeMode="cover"
             />
-
-            {pro.verified && (
-              <View style={styles.verifiedBadge}>
-                <Image
-                  source={require("@/assets/premium/checkmark.png")}
-                  style={{ width: 50, height: 50, marginLeft: -4 }}
-                  resizeMode="contain"
-                />
-              </View>
-            )}
           </View>
 
           <View style={styles.nameRow}>

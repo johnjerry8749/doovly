@@ -134,16 +134,6 @@ export default function Profile() {
                 style={styles.avatar}
                 resizeMode="cover"
               />
-
-              {pro.verified && (
-                <View style={styles.verifiedBadge}>
-                  <Image
-                    source={require("@/assets/premium/checkmark.png")}
-                    style={styles.checkmarkImage}
-                    resizeMode="contain"
-                  />
-                </View>
-              )}
             </View>
 
             <View style={styles.profileInfo}>

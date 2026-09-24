@@ -226,15 +226,6 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
       <View style={styles.topSection}>
         <View style={styles.avatarContainer}>
           <Image source={item.image} style={styles.avatar} resizeMode="cover" />
-          {item.verified === true && (
-            <View style={styles.verifiedBadge}>
-              <Image
-                source={require("@/assets/premium/checkmark.png")}
-                style={styles.verifiedBadgeImage}
-                resizeMode="contain"
-              />
-            </View>
-          )}
         </View>
 
         <View style={styles.providerInfo}>

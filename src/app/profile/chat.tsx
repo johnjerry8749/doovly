@@ -174,16 +174,6 @@ export default function ChatList() {
                 style={styles.avatar}
                 resizeMode="cover"
               />
-
-              {item.participant.verified && (
-                <View style={styles.verifiedBadge}>
-                  <Image
-                    source={require("@/assets/premium/checkmark.png")}
-                    style={styles.verifiedImage}
-                    resizeMode="contain"
-                  />
-                </View>
-              )}
             </View>
 
             {/* Message Content */}
