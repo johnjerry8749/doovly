@@ -132,7 +132,7 @@ const openUserProfile = (
   }
 
   router.push({
-    pathname: "/user/[id]",
+    pathname: "/professional/[id]",
     params: {
       id: String(userId),
     },
