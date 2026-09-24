@@ -708,12 +708,19 @@ const styles = StyleSheet.create({
   serviceName: { fontSize: 14, fontWeight: "700", color: "#111827" },
   serviceDescription: { fontSize: 12, color: "#6B7280", marginTop: 2 },
   servicePrice: { fontSize: 14, fontWeight: "700", color: "#16A34A" },
-  portfolioGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  portfolioItem: { width: "48%" },
+  portfolioGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  portfolioItem: {
+    width: "48%",
+    marginBottom: 12,
+  },
   projectImage: {
     width: "100%",
-    aspectRatio: 1,
-    borderRadius: 12,
+    height: 130,
+    borderRadius: 14,
     backgroundColor: "#E5E7EB",
   },
   projectTitle: { fontSize: 12, color: "#374151", marginTop: 6 },
