@@ -1,7 +1,8 @@
 /**
  * Shared bookings mock data.
  *
- * Bookings are connected to professionals using professionalId.
+ * Bookings are connected to professionals using professionalId
+ * and to customers using customerId.
  *
  * This keeps PROFESSIONALS as the main source of truth for:
  * - Professional name
@@ -41,11 +42,14 @@ export type Booking = {
 
   /**
    * ID of the professional this booking belongs to.
-   *
-   * This is the connection between Booking
-   * and Professional.
    */
   professionalId: string;
+
+  /**
+   * ID of the customer who made the booking.
+   * (Added for full DB schema readiness)
+   */
+  customerId: string;
 
   title: string;
 
@@ -184,6 +188,7 @@ function getProfessional(professionalId: string) {
 function createBooking(booking: {
   id: string;
   professionalId: string;
+  customerId: string;
   title: string;
   rating: number;
   reviews: number;
@@ -205,6 +210,7 @@ function createBooking(booking: {
   return {
     id: booking.id,
     professionalId: booking.professionalId,
+    customerId: booking.customerId,
     title: booking.title,
 
     providerName: professional.name,
@@ -226,7 +232,7 @@ function createBooking(booking: {
 
 // =========================
 // JOBS I BOOKED
-// CUSTOMER
+// CUSTOMER (current user = u1)
 // =========================
 
 export const BOOKED_JOBS: Booking[] = [
@@ -237,6 +243,7 @@ export const BOOKED_JOBS: Booking[] = [
   createBooking({
     id: "1",
     professionalId: "1",
+    customerId: "u1",
     title: "Plumbing Installation",
     rating: 4.8,
     reviews: 126,
@@ -255,6 +262,7 @@ export const BOOKED_JOBS: Booking[] = [
   createBooking({
     id: "2",
     professionalId: "2",
+    customerId: "u1",
     title: "Nail Extension",
     rating: 4.9,
     reviews: 89,
@@ -273,6 +281,7 @@ export const BOOKED_JOBS: Booking[] = [
   createBooking({
     id: "3",
     professionalId: "3",
+    customerId: "u1",
     title: "Car Repair",
     rating: 4.7,
     reviews: 64,
@@ -291,6 +300,7 @@ export const BOOKED_JOBS: Booking[] = [
   createBooking({
     id: "4",
     professionalId: "4",
+    customerId: "u1",
     title: "Full Body Massage",
     rating: 4.9,
     reviews: 32,
@@ -309,6 +319,7 @@ export const BOOKED_JOBS: Booking[] = [
   createBooking({
     id: "5",
     professionalId: "6",
+    customerId: "u1",
     title: "Haircut",
     rating: 4.8,
     reviews: 25,
@@ -326,6 +337,7 @@ export const BOOKED_JOBS: Booking[] = [
   createBooking({
     id: "6",
     professionalId: "2",
+    customerId: "u1",
     title: "Nail Art Design",
     rating: 4.9,
     reviews: 89,
@@ -346,9 +358,6 @@ export const BOOKED_JOBS: Booking[] = [
 // These are customers booking services.
 // The professional associated with the job
 // is still connected through professionalId.
-//
-// You can change the professional IDs later
-// when your real booking API is ready.
 // =========================
 
 export const RECEIVED_JOBS: Booking[] = [
@@ -359,6 +368,7 @@ export const RECEIVED_JOBS: Booking[] = [
   createBooking({
     id: "1",
     professionalId: "2",
+    customerId: "u2",
     title: "House Cleaning",
     rating: 5.0,
     reviews: 12,
@@ -377,6 +387,7 @@ export const RECEIVED_JOBS: Booking[] = [
   createBooking({
     id: "2",
     professionalId: "4",
+    customerId: "u3",
     title: "AC Repair",
     rating: 4.8,
     reviews: 20,
@@ -395,6 +406,7 @@ export const RECEIVED_JOBS: Booking[] = [
   createBooking({
     id: "3",
     professionalId: "6",
+    customerId: "u4",
     title: "Furniture Assembly",
     rating: 4.9,
     reviews: 8,
@@ -412,6 +424,7 @@ export const RECEIVED_JOBS: Booking[] = [
   createBooking({
     id: "4",
     professionalId: "2",
+    customerId: "u5",
     title: "Deep Cleaning",
     rating: 5.0,
     reviews: 12,

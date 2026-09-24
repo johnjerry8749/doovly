@@ -13,6 +13,8 @@ export type ServiceRequestIcon = keyof typeof MaterialCommunityIcons.glyphMap;
 
 export type ServiceRequestComment = {
   id: string;
+  /** Optional user id for full DB schema readiness */
+  userId?: string;
   userName: string;
   /** Local require() asset or remote URI once API is live */
   userAvatar: ImageSourcePropType;
@@ -76,6 +78,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     comments: [
       {
         id: "c1",
+        userId: "u1",
         userName: "John Chukwuemeka",
         userAvatar: AVATAR_1,
         text: "I can come today after 3pm. DM me.",
@@ -130,6 +133,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     comments: [
       {
         id: "c2",
+        userId: "u5",
         userName: "Emeka Okoro",
         userAvatar: AVATAR_1,
         text: "We can tow and diagnose same day.",
@@ -184,6 +188,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     comments: [
       {
         id: "c3",
+        userId: "u4",
         userName: "Blessing Joy",
         userAvatar: AVATAR_4,
         text: "I have slots tomorrow afternoon!",
@@ -264,6 +269,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     comments: [
       {
         id: "c4",
+        userId: "u2",
         userName: "Chioma Eze",
         userAvatar: AVATAR_2,
         text: "I'm available for this. I have 4 years experience in home cleaning.",
@@ -271,6 +277,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
       },
       {
         id: "c5",
+        userId: "u6",
         userName: "Aisha Bello",
         userAvatar: AVATAR_2,
         text: "Can do this weekend if still open.",

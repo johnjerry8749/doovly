@@ -24,6 +24,8 @@ export type ProService = {
 
 export type ProReview = {
   id: string;
+  /** Optional user id for full DB readiness (mock may not always have it) */
+  userId?: string;
   userName: string;
   comment: string;
   date: string;
@@ -47,7 +49,6 @@ export type Professional = {
   latitude: number;
   longitude: number;
   role: string;
-
 
   services: ProService[];
 
@@ -145,6 +146,7 @@ export const PROFESSIONALS: Professional[] = [
     reviews: [
       {
         id: "r1",
+        userId: "u2",
         userName: "Ada O.",
         comment:
           "Very professional and on time. Fixed my kitchen sink perfectly.",
@@ -152,6 +154,7 @@ export const PROFESSIONALS: Professional[] = [
       },
       {
         id: "r2",
+        userId: "u3",
         userName: "Tunde A.",
         comment:
           "Honest pricing and clean work. Highly recommended.",
@@ -159,6 +162,7 @@ export const PROFESSIONALS: Professional[] = [
       },
       {
         id: "r3",
+        userId: "u4",
         userName: "Chioma N.",
         comment:
           "Good job overall. The quality of the work was excellent.",
@@ -243,6 +247,7 @@ export const PROFESSIONALS: Professional[] = [
     reviews: [
       {
         id: "r1",
+        userId: "u5",
         userName: "Blessing K.",
         comment:
           "Beautiful nails and very careful. Will book again.",
@@ -250,6 +255,7 @@ export const PROFESSIONALS: Professional[] = [
       },
       {
         id: "r2",
+        userId: "u6",
         userName: "Amaka R.",
         comment:
           "Very neat work and friendly service.",
@@ -334,6 +340,7 @@ export const PROFESSIONALS: Professional[] = [
     reviews: [
       {
         id: "r1",
+        userId: "u7",
         userName: "Emeka P.",
         comment:
           "Fixed my car the same day. Fair price.",
@@ -341,6 +348,7 @@ export const PROFESSIONALS: Professional[] = [
       },
       {
         id: "r2",
+        userId: "u2",
         userName: "David O.",
         comment:
           "Explained the problem clearly and completed the repair.",
@@ -416,6 +424,7 @@ export const PROFESSIONALS: Professional[] = [
     reviews: [
       {
         id: "r1",
+        userId: "u3",
         userName: "Ngozi M.",
         comment:
           "Very relaxing. Professional and respectful.",
@@ -423,6 +432,7 @@ export const PROFESSIONALS: Professional[] = [
       },
       {
         id: "r2",
+        userId: "u4",
         userName: "Sarah A.",
         comment:
           "Great experience and very comfortable environment.",
@@ -507,6 +517,7 @@ export const PROFESSIONALS: Professional[] = [
     reviews: [
       {
         id: "r1",
+        userId: "u5",
         userName: "Ifeanyi D.",
         comment:
           "Quick and safe. Explained everything clearly.",
@@ -514,6 +525,7 @@ export const PROFESSIONALS: Professional[] = [
       },
       {
         id: "r2",
+        userId: "u6",
         userName: "Chinedu K.",
         comment:
           "Very neat electrical work and fair pricing.",
@@ -599,6 +611,7 @@ export const PROFESSIONALS: Professional[] = [
     reviews: [
       {
         id: "r1",
+        userId: "u7",
         userName: "Yusuf H.",
         comment:
           "Clean cut every time. Very professional.",
@@ -606,6 +619,7 @@ export const PROFESSIONALS: Professional[] = [
       },
       {
         id: "r2",
+        userId: "u2",
         userName: "Ibrahim S.",
         comment:
           "Great attention to detail and excellent service.",

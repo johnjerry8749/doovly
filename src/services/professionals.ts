@@ -69,7 +69,7 @@ export function listServiceCategories(): ServiceCategory[] {
  */
 export async function addReview(
   professionalId: string,
-  payload: { userName: string; comment: string },
+  payload: { userName: string; comment: string; userId?: string },
 ): Promise<ProReview> {
   // TODO backend:
   // return apiRequest(`/professionals/${professionalId}/reviews`, {
@@ -79,6 +79,7 @@ export async function addReview(
   await new Promise((r) => setTimeout(r, 300));
   return {
     id: `local-${Date.now()}`,
+    userId: payload.userId,
     userName: payload.userName.trim() || "Anonymous",
     comment: payload.comment.trim(),
     date: new Date().toLocaleDateString("en-US", {
