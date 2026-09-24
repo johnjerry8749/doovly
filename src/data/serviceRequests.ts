@@ -27,7 +27,6 @@ export type ServiceRequest = {
   profession: string;
   location: string;
   city: string;
-  date: string;
   price?: string;
   timeAgo: string;
   icon: ServiceRequestIcon;
@@ -37,7 +36,6 @@ export type ServiceRequest = {
   /** Local require() assets or remote URIs */
   images: ImageSourcePropType[];
   description: string;
-  preferredDate: string;
   isNew: boolean;
   createdByUserId: string;
   posterName: string;
@@ -61,7 +59,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     profession: "Plumber",
     location: "Victoria Island",
     city: "Lagos",
-    date: "Today, 10:00 AM",
     timeAgo: "2 min ago",
     icon: "water-pump",
     iconBackground: "#FFF1D5",
@@ -70,7 +67,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     images: [AVATAR_1, AVATAR_3],
     description:
       "Bathroom pipe is leaking under the sink. Need someone experienced who can fix it today if possible.",
-    preferredDate: "ASAP",
     isNew: true,
     createdByUserId: "u2",
     posterName: "Amaka O.",
@@ -94,7 +90,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     profession: "Electrician",
     location: "Lekki Phase 1",
     city: "Lagos",
-    date: "Tomorrow, 2:00 PM",
     timeAgo: "5 min ago",
     icon: "flash",
     iconBackground: "#DDF2FF",
@@ -103,7 +98,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     images: [AVATAR_3],
     description:
       "Power keeps tripping in the living room. Looking for a licensed electrician to diagnose and fix.",
-    preferredDate: "Tomorrow, 2:00 PM",
     isNew: true,
     createdByUserId: "u3",
     posterName: "Emeka Okoro",
@@ -119,7 +113,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     profession: "Mechanic",
     location: "Ikoyi",
     city: "Lagos",
-    date: "Today, 4:30 PM",
     timeAgo: "8 min ago",
     icon: "car-wrench",
     iconBackground: "#E9E1FF",
@@ -128,7 +121,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     images: [AVATAR_3, AVATAR_4],
     description:
       "Engine warning light is on and the car is making a strange noise. Need a reliable mechanic ASAP.",
-    preferredDate: "Today, 4:30 PM",
     isNew: true,
     createdByUserId: "u4",
     posterName: "Ikechukwu Obi",
@@ -152,7 +144,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     profession: "Barber",
     location: "Garki",
     city: "Abuja",
-    date: "Today, 11:00 AM",
     timeAgo: "12 min ago",
     icon: "content-cut",
     iconBackground: "#E8F5E9",
@@ -161,7 +152,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     images: [AVATAR_2],
     description:
       "Looking for a clean haircut and beard trim. Prefer someone who can come to my location.",
-    preferredDate: "Today, 11:00 AM",
     isNew: false,
     createdByUserId: "u5",
     posterName: "Aisha Bello",
@@ -177,7 +167,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     profession: "Nail Tech",
     location: "Surulere",
     city: "Lagos",
-    date: "Tomorrow, 1:00 PM",
     timeAgo: "20 min ago",
     icon: "nail",
     iconBackground: "#FCE4EC",
@@ -186,7 +175,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     images: [AVATAR_2, AVATAR_4],
     description:
       "Need gel nails and a full manicure. Looking for a neat and experienced nail tech.",
-    preferredDate: "Tomorrow, 1:00 PM",
     isNew: false,
     createdByUserId: "u6",
     posterName: "Chioma Eze",
@@ -210,7 +198,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     profession: "Electrician",
     location: "GRA",
     city: "Port Harcourt",
-    date: "Today, 3:00 PM",
     timeAgo: "25 min ago",
     icon: "flash",
     iconBackground: "#DDF2FF",
@@ -219,7 +206,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     images: [AVATAR_1],
     description:
       "Need a full house wiring safety check. Some outlets are warm and lights flicker.",
-    preferredDate: "This week",
+
     isNew: false,
     createdByUserId: "u7",
     posterName: "Emeka Okoro",
@@ -235,7 +222,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     profession: "Plumber",
     location: "Wuse 2",
     city: "Abuja",
-    date: "Today, 5:00 PM",
     timeAgo: "30 min ago",
     icon: "water-pump",
     iconBackground: "#FFF1D5",
@@ -244,7 +230,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     images: [AVATAR_1, AVATAR_3],
     description:
       "Kitchen sink is fully blocked. Need a plumber who can clear it and check the pipes.",
-    preferredDate: "ASAP",
+
     isNew: true,
     createdByUserId: "u1",
     posterName: "John Chukwuemeka",
@@ -260,7 +246,6 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     profession: "Cleaner",
     location: "Lekki Phase 1",
     city: "Lagos",
-    date: "ASAP",
     timeAgo: "2h ago",
     icon: "broom",
     iconBackground: "#D1FAE5",
@@ -269,7 +254,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     images: [AVATAR_4, AVATAR_2],
     description:
       "Looking for a reliable cleaner to deep clean my 2 bedroom apartment. Must bring own equipment.",
-    preferredDate: "ASAP",
+
     isNew: true,
     createdByUserId: "u11",
     posterName: "Blessing Joy",

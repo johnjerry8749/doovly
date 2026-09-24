@@ -24,7 +24,6 @@ export type CreateServiceRequestInput = {
   description: string;
   location: string;
   city: string;
-  preferredDate: string;
   images: ImageSourcePropType[];
   icon: ServiceRequestIcon;
   iconBackground: string;
@@ -36,7 +35,6 @@ export type UpdateServiceRequestInput = {
   category?: string;
   location?: string;
   city?: string;
-  preferredDate?: string;
   images?: ImageSourcePropType[];
   icon?: ServiceRequestIcon;
   iconBackground?: string;
@@ -128,13 +126,11 @@ export function createServiceRequest(
     profession: input.category,
     location: input.location.trim(),
     city: input.city.trim(),
-    date: input.preferredDate,
     timeAgo: "Just now",
     icon: input.icon,
     iconBackground: input.iconBackground,
     images: input.images.length ? input.images : [DEFAULT_AVATAR],
     description: input.description.trim(),
-    preferredDate: input.preferredDate,
     isNew: true,
     createdByUserId: getCurrentUserId(),
     posterName: "You",
@@ -169,10 +165,6 @@ export function updateServiceRequest(
   }
   if (input.location !== undefined) request.location = input.location.trim();
   if (input.city !== undefined) request.city = input.city.trim();
-  if (input.preferredDate !== undefined) {
-    request.preferredDate = input.preferredDate;
-    request.date = input.preferredDate;
-  }
   if (input.images !== undefined && input.images.length > 0) {
     request.images = input.images;
   }

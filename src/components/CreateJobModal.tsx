@@ -55,7 +55,6 @@ export default function CreateJobModal({
   const [category, setCategory] = useState("");
   const [city, setCity] = useState("");
   const [location, setLocation] = useState("");
-  const [preferredDate, setPreferredDate] = useState("");
   const [images, setImages] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
@@ -76,7 +75,6 @@ export default function CreateJobModal({
       setCategory(request.category || request.profession || "");
       setCity(request.city || "");
       setLocation(request.location || "");
-      setPreferredDate(request.preferredDate || request.date || "");
       setImages(request.images?.length ? [...request.images] : []);
       return;
     }
@@ -86,7 +84,6 @@ export default function CreateJobModal({
     setCategory("");
     setCity("");
     setLocation("");
-    setPreferredDate("");
     setImages([]);
   }, [visible, request]);
 
@@ -96,9 +93,8 @@ export default function CreateJobModal({
       description.trim().length > 0 &&
       category.trim().length > 0 &&
       city.trim().length > 0 &&
-      location.trim().length > 0 &&
-      preferredDate.trim().length > 0,
-    [title, description, category, city, location, preferredDate],
+      location.trim().length > 0,
+    [title, description, category, city, location],
   );
 
   const pickImages = async () => {
@@ -108,8 +104,7 @@ export default function CreateJobModal({
       return;
     }
 
-    const permission =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
       Alert.alert(
@@ -150,7 +145,9 @@ export default function CreateJobModal({
         selectedCategory.trim().toLowerCase(),
     ) as any;
 
-    return (found?.icon ?? found?.iconName ?? DEFAULT_ICON) as ServiceRequestIcon;
+    return (found?.icon ??
+      found?.iconName ??
+      DEFAULT_ICON) as ServiceRequestIcon;
   };
 
   const getCategoryBackground = (selectedCategory: string): string => {
@@ -180,7 +177,6 @@ export default function CreateJobModal({
         category: category.trim(),
         city: city.trim(),
         location: location.trim(),
-        preferredDate: preferredDate.trim(),
         images,
         icon: getCategoryIcon(category),
         iconBackground: getCategoryBackground(category),
@@ -315,7 +311,9 @@ export default function CreateJobModal({
               const name =
                 typeof item === "string"
                   ? item
-                  : String(item?.name ?? item?.city ?? item?.label ?? "").trim();
+                  : String(
+                      item?.name ?? item?.city ?? item?.label ?? "",
+                    ).trim();
               if (!name) return null;
               const selected = city.toLowerCase() === name.toLowerCase();
 
@@ -428,18 +426,6 @@ export default function CreateJobModal({
                 placeholderTextColor="#9CA3AF"
                 style={styles.input}
                 maxLength={150}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Preferred date</Text>
-              <TextInput
-                value={preferredDate}
-                onChangeText={setPreferredDate}
-                placeholder="e.g. 25 September 2026"
-                placeholderTextColor="#9CA3AF"
-                style={styles.input}
-                maxLength={50}
               />
             </View>
 
