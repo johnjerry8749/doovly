@@ -831,7 +831,7 @@ const styles = StyleSheet.create({
   /* BANNER */
   bannerContainer: {
     width: "100%",
-    height: 150,
+    height: 120,
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 22,
