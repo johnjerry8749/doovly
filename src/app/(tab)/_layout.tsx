@@ -20,6 +20,7 @@ export default function TabLayout() {
           fontSize: 12,
           fontWeight: "600",
         },
+        tabBarHideOnKeyboard: true,
       }}
     >
       <Tabs.Screen
@@ -43,21 +44,26 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="requests"
-        options={{
-          title: "Requests",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text-outline" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
         name="bookings"
         options={{
           title: "Bookings",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+     
+      <Tabs.Screen
+        name="requests"
+        options={{
+          title: "Requests",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="document-text-outline"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
@@ -72,9 +78,16 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Hidden from tab bar */}
-      <Tabs.Screen name="how-it-works" options={{ href: null }} />
-      <Tabs.Screen name="all-requests" options={{ href: null }} />
+      {/* Hidden routes */}
+      <Tabs.Screen
+        name="how-it-works"
+        options={{ href: null }}
+      />
+
+      <Tabs.Screen
+        name="all-requests"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
