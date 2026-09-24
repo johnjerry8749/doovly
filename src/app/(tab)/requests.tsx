@@ -25,9 +25,11 @@ import {
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
 
+import { listProfessionals } from "@/services/professionals";
+
 import {
-  addInAppNotification,
   getCurrentUserId,
+  addInAppNotification,
 } from "@/services/inAppNotifications";
 
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
@@ -67,8 +69,8 @@ type CommentWithUser = ServiceRequestComment & {
    HELPERS
 ============================================================ */
 
-const normalize = (value?: string | null) =>
-  String(value || "")
+const normalize = (value?: string | number | null) =>
+  String(value ?? "")
     .trim()
     .toLowerCase();
 
@@ -111,11 +113,11 @@ const getRequestUserId = (
   const item = request as RequestWithUser;
 
   return (
+    item.professionalId ??
     item.posterUserId ??
     item.posterId ??
     item.createdByUserId ??
-    item.userId ??
-    item.professionalId
+    item.userId
   );
 };
 
@@ -129,35 +131,133 @@ const getCommentUserId = (
   const item = comment as CommentWithUser;
 
   return (
+    item.professionalId ??
     item.userId ??
     item.createdByUserId ??
     item.authorId ??
-    item.posterUserId ??
-    item.professionalId
+    item.posterUserId
   );
 };
 
 /* ============================================================
-   USER / PROFESSIONAL PROFILE NAVIGATION
+   FIND PROFESSIONAL FROM MOCK DATA
 ============================================================ */
 
-const openUserProfile = (
+const findProfessionalForUser = (
   userId?: string | number | null,
+  userName?: string | null,
 ) => {
-  if (
-    userId === undefined ||
-    userId === null ||
-    String(userId).trim() === ""
-  ) {
+  const professionals = listProfessionals();
+
+  if (!professionals || professionals.length === 0) {
+    return undefined;
+  }
+
+  const normalizedUserId = normalize(userId);
+  const normalizedUserName = normalize(userName);
+
+  /*
+   * ----------------------------------------------------------
+   * 1. Try professional.id
+   * ----------------------------------------------------------
+   *
+   * This is the most reliable match when the request already
+   * contains the professional's ID.
+   */
+  if (normalizedUserId) {
+    const byProfessionalId = professionals.find(
+      (professional) =>
+        normalize(professional.id) === normalizedUserId,
+    );
+
+    if (byProfessionalId) {
+      return byProfessionalId;
+    }
+  }
+
+  /*
+   * ----------------------------------------------------------
+   * 2. Try userId / profileId
+   * ----------------------------------------------------------
+   *
+   * Some mock/API data may have a separate userId.
+   */
+  if (normalizedUserId) {
+    const byUserId = professionals.find((professional) => {
+      const person = professional as typeof professional & {
+        userId?: string | number;
+        profileId?: string | number;
+      };
+
+      return (
+        normalize(person.userId) === normalizedUserId ||
+        normalize(person.profileId) === normalizedUserId
+      );
+    });
+
+    if (byUserId) {
+      return byUserId;
+    }
+  }
+
+  /*
+   * ----------------------------------------------------------
+   * 3. Exact professional name
+   * ----------------------------------------------------------
+   *
+   * This is especially useful with the current mock data.
+   */
+  if (normalizedUserName) {
+    const byName = professionals.find(
+      (professional) =>
+        normalize(professional.name) === normalizedUserName,
+    );
+
+    if (byName) {
+      return byName;
+    }
+  }
+
+  return undefined;
+};
+
+/* ============================================================
+   OPEN PROFESSIONAL PROFILE
+============================================================ */
+
+const openUserProfile = ({
+  userId,
+  userName,
+}: {
+  userId?: string | number | null;
+  userName?: string | null;
+}) => {
+  const professional = findProfessionalForUser(
+    userId,
+    userName,
+  );
+
+  if (!professional) {
+    console.log("[Doovly] No professional found", {
+      userId,
+      userName,
+    });
+
     return;
   }
 
-  const id = String(userId).trim();
-
+  /*
+   * IMPORTANT:
+   *
+   * Do NOT navigate using the raw userId.
+   *
+   * The professional mock data is the source of truth.
+   * We navigate using the actual professional.id.
+   */
   router.push({
     pathname: "/professional/[id]",
     params: {
-      id,
+      id: String(professional.id),
       from: "requests",
     },
   });
@@ -205,6 +305,7 @@ export default function RequestsScreen() {
   ============================================================ */
 
   const [search, setSearch] = useState("");
+
   const [categoryFilter, setCategoryFilter] =
     useState("All");
 
@@ -267,15 +368,9 @@ export default function RequestsScreen() {
       showAllNigeria ||
       !locationName ||
       locationName === "All Nigeria" ||
-      locationName
-        .toLowerCase()
-        .includes("unavailable") ||
-      locationName
-        .toLowerCase()
-        .includes("click here") ||
-      locationName
-        .toLowerCase()
-        .includes("getting")
+      locationName.toLowerCase().includes("unavailable") ||
+      locationName.toLowerCase().includes("click here") ||
+      locationName.toLowerCase().includes("getting")
     ) {
       return true;
     }
@@ -331,17 +426,15 @@ export default function RequestsScreen() {
         normalize(req.description).includes(query) ||
         normalize(req.posterName).includes(query);
 
-      const matchesCategory =
-        categoryMatches(
-          req,
-          categoryFilter,
-        );
+      const matchesCategory = categoryMatches(
+        req,
+        categoryFilter,
+      );
 
-      const matchesLocation =
-        matchesLocationCity(
-          req.city,
-          req.location,
-        );
+      const matchesLocation = matchesLocationCity(
+        req.city,
+        req.location,
+      );
 
       return (
         matchesSearch &&
@@ -394,9 +487,7 @@ export default function RequestsScreen() {
      COMMENTS
   ============================================================ */
 
-  const openChat = (
-    item: ServiceRequest,
-  ) => {
+  const openChat = (item: ServiceRequest) => {
     setChatRequest(item);
     setChatText("");
     setReplyTo(null);
@@ -419,24 +510,40 @@ export default function RequestsScreen() {
       return;
     }
 
-    const currentUserId =
-      getCurrentUserId();
+    const currentUserId = getCurrentUserId();
 
     const body = replyTo
       ? `@${replyTo.userName} ${text}`
       : text;
 
+    const currentProfessional =
+      findProfessionalForUser(currentUserId);
+
     const newComment: CommentWithUser = {
       id: `local-${Date.now()}`,
-      userName: "You",
-      userAvatar: MY_AVATAR,
+
+      /*
+       * Use professional mock data when available.
+       * Otherwise keep "You".
+       */
+      userName:
+        currentProfessional?.name || "You",
+
+      userAvatar:
+        currentProfessional?.image || MY_AVATAR,
+
       text: body,
+
       timeAgo: "Just now",
-      userId: currentUserId,
+
+      userId:
+        currentProfessional?.id ??
+        currentUserId,
     };
 
     setExtraComments((previous) => ({
       ...previous,
+
       [chatRequest.id]: [
         ...(previous[chatRequest.id] || []),
         newComment,
@@ -467,8 +574,10 @@ export default function RequestsScreen() {
       return;
     }
 
-    const amount =
-      offerPrice.replace(/[^\d]/g, "");
+    const amount = offerPrice.replace(
+      /[^\d]/g,
+      "",
+    );
 
     if (!amount) {
       return;
@@ -509,36 +618,53 @@ export default function RequestsScreen() {
   }: {
     item: ServiceRequest;
   }) => {
-    const liked =
-      !!likedIds[item.id];
+    const liked = !!likedIds[item.id];
 
     const likesDisplay =
       (item.likesCount || 0) +
       (liked ? 1 : 0);
 
-    const comments =
-      getComments(item);
+    const comments = getComments(item);
 
-    const commentCount =
-      comments.length;
+    const commentCount = comments.length;
 
-    const firstComment =
-      comments[0];
+    const firstComment = comments[0];
 
-    const coverImage =
-      item.images?.[0];
+    const coverImage = item.images?.[0];
 
     const posterUserId =
       getRequestUserId(item);
 
+    /*
+     * ----------------------------------------------------------
+     * POSTER PROFILE
+     * ----------------------------------------------------------
+     */
+
     const openPosterProfile = () => {
-      if (!posterUserId) {
+      openUserProfile({
+        userId: posterUserId,
+        userName: item.posterName,
+      });
+    };
+
+    /*
+     * ----------------------------------------------------------
+     * FIRST COMMENT PROFILE
+     * ----------------------------------------------------------
+     */
+
+    const openFirstCommentProfile = () => {
+      if (!firstComment) {
         return;
       }
 
-      openUserProfile(
-        posterUserId,
-      );
+      openUserProfile({
+        userId:
+          getCommentUserId(firstComment),
+        userName:
+          firstComment.userName,
+      });
     };
 
     return (
@@ -552,18 +678,14 @@ export default function RequestsScreen() {
           activeOpacity={0.75}
           onPress={openPosterProfile}
         >
-          <View
-            style={styles.posterAvatarWrap}
-          >
+          <View style={styles.posterAvatarWrap}>
             <Image
               source={item.posterAvatar}
               style={styles.posterAvatar}
             />
           </View>
 
-          <View
-            style={styles.posterInfo}
-          >
+          <View style={styles.posterInfo}>
             <Text
               style={styles.posterName}
               numberOfLines={1}
@@ -571,9 +693,7 @@ export default function RequestsScreen() {
               {item.posterName}
             </Text>
 
-            <View
-              style={styles.locationRow}
-            >
+            <View style={styles.locationRow}>
               <Ionicons
                 name="location-outline"
                 size={13}
@@ -584,15 +704,12 @@ export default function RequestsScreen() {
                 style={styles.locationText}
                 numberOfLines={1}
               >
-                {item.location},{" "}
-                {item.city}
+                {item.location}, {item.city}
               </Text>
             </View>
           </View>
 
-          <Text
-            style={styles.timeAgo}
-          >
+          <Text style={styles.timeAgo}>
             {item.timeAgo}
           </Text>
         </TouchableOpacity>
@@ -601,9 +718,7 @@ export default function RequestsScreen() {
             TITLE
         ================================================= */}
 
-        <View
-          style={styles.titleRow}
-        >
+        <View style={styles.titleRow}>
           <Text
             style={styles.cardTitle}
             numberOfLines={2}
@@ -612,13 +727,9 @@ export default function RequestsScreen() {
           </Text>
 
           {item.isNew ? (
-            <View
-              style={styles.newBadge}
-            >
+            <View style={styles.newBadge}>
               <Text
-                style={
-                  styles.newBadgeText
-                }
+                style={styles.newBadgeText}
               >
                 NEW
               </Text>
@@ -642,16 +753,10 @@ export default function RequestsScreen() {
             CATEGORY
         ================================================= */}
 
-        <View
-          style={styles.metaRow}
-        >
-          <View
-            style={styles.categoryChip}
-          >
+        <View style={styles.metaRow}>
+          <View style={styles.categoryChip}>
             <Text
-              style={
-                styles.categoryChipText
-              }
+              style={styles.categoryChipText}
             >
               {item.category}
             </Text>
@@ -673,13 +778,9 @@ export default function RequestsScreen() {
             ENGAGEMENT
         ================================================= */}
 
-        <View
-          style={styles.engagementRow}
-        >
+        <View style={styles.engagementRow}>
           <TouchableOpacity
-            style={
-              styles.engagementBtn
-            }
+            style={styles.engagementBtn}
             onPress={() =>
               toggleLike(item.id)
             }
@@ -709,9 +810,7 @@ export default function RequestsScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={
-              styles.engagementBtn
-            }
+            style={styles.engagementBtn}
             onPress={() =>
               openChat(item)
             }
@@ -733,9 +832,7 @@ export default function RequestsScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={
-              styles.engagementBtn
-            }
+            style={styles.engagementBtn}
             onPress={() =>
               shareRequest(item)
             }
@@ -767,18 +864,9 @@ export default function RequestsScreen() {
           >
             <TouchableOpacity
               activeOpacity={0.75}
-              onPress={() => {
-                const userId =
-                  getCommentUserId(
-                    firstComment,
-                  );
-
-                if (userId) {
-                  openUserProfile(
-                    userId,
-                  );
-                }
-              }}
+              onPress={
+                openFirstCommentProfile
+              }
             >
               <Image
                 source={
@@ -795,27 +883,16 @@ export default function RequestsScreen() {
             >
               <TouchableOpacity
                 activeOpacity={0.75}
-                onPress={() => {
-                  const userId =
-                    getCommentUserId(
-                      firstComment,
-                    );
-
-                  if (userId) {
-                    openUserProfile(
-                      userId,
-                    );
-                  }
-                }}
+                onPress={
+                  openFirstCommentProfile
+                }
               >
                 <Text
                   style={
                     styles.commentName
                   }
                 >
-                  {
-                    firstComment.userName
-                  }
+                  {firstComment.userName}
                 </Text>
               </TouchableOpacity>
 
@@ -878,11 +955,9 @@ export default function RequestsScreen() {
                 styles.viewMoreComments
               }
             >
-              View{" "}
-              {commentCount - 1} more
+              View {commentCount - 1} more
               comment
-              {commentCount - 1 ===
-              1
+              {commentCount - 1 === 1
                 ? ""
                 : "s"}
             </Text>
@@ -894,9 +969,7 @@ export default function RequestsScreen() {
         ================================================= */}
 
         <TouchableOpacity
-          style={
-            styles.sendOfferBtn
-          }
+          style={styles.sendOfferBtn}
           onPress={() =>
             setOfferRequest(item)
           }
@@ -924,10 +997,9 @@ export default function RequestsScreen() {
      COMMENTS MODAL DATA
   ============================================================ */
 
-  const chatComments =
-    chatRequest
-      ? getComments(chatRequest)
-      : [];
+  const chatComments = chatRequest
+    ? getComments(chatRequest)
+    : [];
 
   /* ============================================================
      UI
@@ -957,9 +1029,7 @@ export default function RequestsScreen() {
               styles.headerLocationRow
             }
             onPress={() =>
-              setShowLocationModal(
-                true,
-              )
+              setShowLocationModal(true)
             }
             activeOpacity={0.7}
           >
@@ -1016,9 +1086,7 @@ export default function RequestsScreen() {
           />
 
           <Text
-            style={
-              styles.createBtnText
-            }
+            style={styles.createBtnText}
           >
             Create
           </Text>
@@ -1239,13 +1307,11 @@ export default function RequestsScreen() {
 
                 const goToCommenterProfile =
                   () => {
-                    if (!userId) {
-                      return;
-                    }
-
-                    openUserProfile(
+                    openUserProfile({
                       userId,
-                    );
+                      userName:
+                        comment.userName,
+                    });
                   };
 
                 return (
@@ -1814,8 +1880,7 @@ export default function RequestsScreen() {
                 autoCorrect={false}
               />
 
-              {citySearch.length >
-              0 ? (
+              {citySearch.length > 0 ? (
                 <TouchableOpacity
                   onPress={() =>
                     setCitySearch("")
@@ -2263,9 +2328,8 @@ const styles = StyleSheet.create({
   },
 
   cmDim: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor:
-      "rgba(0,0,0,0.45)",
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
 
   cmSheet: {
@@ -2275,9 +2339,7 @@ const styles = StyleSheet.create({
     maxHeight: "78%",
     minHeight: "55%",
     paddingBottom:
-      Platform.OS === "ios"
-        ? 28
-        : 12,
+      Platform.OS === "ios" ? 28 : 12,
   },
 
   cmHandle: {
@@ -2466,8 +2528,7 @@ const styles = StyleSheet.create({
   offerBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor:
-      "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.4)",
   },
 
   offerSheet: {
@@ -2561,8 +2622,7 @@ const styles = StyleSheet.create({
 
   locOverlay: {
     flex: 1,
-    backgroundColor:
-      "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
 
