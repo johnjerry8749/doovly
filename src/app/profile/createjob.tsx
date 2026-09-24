@@ -38,14 +38,44 @@ type RequestCategory = {
 };
 
 const REQUEST_CATEGORIES: RequestCategory[] = [
-  { name: "Cleaning", icon: "broom", iconBackground: "#D1FAE5" },
-  { name: "Plumber", icon: "water-pump", iconBackground: "#FFF1D5" },
-  { name: "Electrician", icon: "flash", iconBackground: "#DDF2FF" },
-  { name: "Barber", icon: "content-cut", iconBackground: "#E8F5E9" },
-  { name: "Nail Tech", icon: "nail", iconBackground: "#FCE4EC" },
-  { name: "Mechanic", icon: "car-wrench", iconBackground: "#E9E1FF" },
-  { name: "Spa", icon: "spa", iconBackground: "#E0F2F1" },
+  {
+    name: "Cleaning",
+    icon: "broom",
+    iconBackground: "#D1FAE5",
+  },
+  {
+    name: "Plumber",
+    icon: "water-pump",
+    iconBackground: "#FFF1D5",
+  },
+  {
+    name: "Electrician",
+    icon: "flash",
+    iconBackground: "#DDF2FF",
+  },
+  {
+    name: "Barber",
+    icon: "content-cut",
+    iconBackground: "#E8F5E9",
+  },
+  {
+    name: "Nail Tech",
+    icon: "nail",
+    iconBackground: "#FCE4EC",
+  },
+  {
+    name: "Mechanic",
+    icon: "car-wrench",
+    iconBackground: "#E9E1FF",
+  },
+  {
+    name: "Spa",
+    icon: "spa",
+    iconBackground: "#E0F2F1",
+  },
 ];
+
+const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function formatPreferredDate(date: Date): string {
   return date.toLocaleDateString("en-NG", {
@@ -61,86 +91,148 @@ function startOfDay(date: Date): Date {
   return next;
 }
 
-const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 export default function CreateJob() {
   const router = useRouter();
-  const [category, setCategory] = useState<RequestCategory>(REQUEST_CATEGORIES[0]);
+
+  const [category, setCategory] = useState<RequestCategory>(
+    REQUEST_CATEGORIES[0],
+  );
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
   const [areaCity, setAreaCity] = useState("");
+
   const [preferredDate, setPreferredDate] = useState<Date | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
+
   const [showCategories, setShowCategories] = useState(false);
   const [showDate, setShowDate] = useState(false);
+
   const [calendarMonth, setCalendarMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
+
   const [gettingLocation, setGettingLocation] = useState(false);
 
   const photoSlots = useMemo(
-    () => Array.from({ length: MAX_PHOTOS }, (_, index) => photos[index]),
+    () =>
+      Array.from(
+        { length: MAX_PHOTOS },
+        (_, index) => photos[index],
+      ),
     [photos],
   );
 
-  const pickPhoto = async () => {
-    if (photos.length >= MAX_PHOTOS) return;
+  // =========================
+  // PHOTO PICKER
+  // =========================
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Photos", "Allow photo access to upload request images.");
+  const pickPhoto = async () => {
+    if (photos.length >= MAX_PHOTOS) {
       return;
     }
+
+    const permission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        "Photos",
+        "Allow photo access to upload request images.",
+      );
+      return;
+    }
+
+    const remainingSlots = MAX_PHOTOS - photos.length;
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.8,
       allowsMultipleSelection: true,
-      selectionLimit: MAX_PHOTOS - photos.length,
+      selectionLimit: remainingSlots,
     });
 
-    if (result.canceled) return;
-    const next = result.assets.map((asset) => asset.uri).filter(Boolean);
-    setPhotos((current) => [...current, ...next].slice(0, MAX_PHOTOS));
+    if (result.canceled) {
+      return;
+    }
+
+    const selectedPhotos = result.assets
+      .map((asset) => asset.uri)
+      .filter(Boolean);
+
+    setPhotos((current) =>
+      [...current, ...selectedPhotos].slice(0, MAX_PHOTOS),
+    );
   };
 
+  // =========================
+  // DATE PICKER
+  // =========================
+
   const openDatePicker = () => {
-    const base = preferredDate ?? new Date();
-    setCalendarMonth(new Date(base.getFullYear(), base.getMonth(), 1));
+    const baseDate = preferredDate ?? new Date();
+
+    setCalendarMonth(
+      new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        1,
+      ),
+    );
+
     setShowDate(true);
   };
 
   const changeMonth = (direction: number) => {
-    const next = new Date(
+    const nextMonth = new Date(
       calendarMonth.getFullYear(),
       calendarMonth.getMonth() + direction,
       1,
     );
+
     const currentMonth = new Date(
       new Date().getFullYear(),
       new Date().getMonth(),
       1,
     );
-    if (next < currentMonth) return;
-    setCalendarMonth(next);
+
+    if (nextMonth < currentMonth) {
+      return;
+    }
+
+    setCalendarMonth(nextMonth);
   };
 
   const selectCalendarDate = (day: number) => {
-    const selected = new Date(
+    const selectedDate = new Date(
       calendarMonth.getFullYear(),
       calendarMonth.getMonth(),
       day,
     );
-    if (startOfDay(selected) < startOfDay(new Date())) return;
-    setPreferredDate(selected);
+
+    if (
+      startOfDay(selectedDate) <
+      startOfDay(new Date())
+    ) {
+      return;
+    }
+
+    setPreferredDate(selectedDate);
     setShowDate(false);
   };
+
+  // =========================
+  // LOCATION
+  // =========================
 
   const useCurrentLocation = async () => {
     try {
       setGettingLocation(true);
-      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      const { status } =
+        await Location.requestForegroundPermissionsAsync();
+
       if (status !== "granted") {
         Alert.alert(
           "Location",
@@ -149,17 +241,22 @@ export default function CreateJob() {
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      const location =
+        await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+
       const { latitude, longitude } = location.coords;
-      const result = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
+
+      const result =
+        await Location.reverseGeocodeAsync({
+          latitude,
+          longitude,
+        });
 
       if (result.length > 0) {
         const place = result[0];
+
         const formattedAddress = [
           place.name,
           place.street,
@@ -169,10 +266,23 @@ export default function CreateJob() {
         ]
           .filter(Boolean)
           .join(", ");
-        setAddress(formattedAddress || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
-        setAreaCity(place.city || place.subregion || place.region || "");
+
+        setAddress(
+          formattedAddress ||
+            `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
+        );
+
+        setAreaCity(
+          place.city ||
+            place.subregion ||
+            place.region ||
+            "",
+        );
       } else {
-        setAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+        setAddress(
+          `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
+        );
+
         setAreaCity("");
       }
     } catch {
@@ -185,24 +295,39 @@ export default function CreateJob() {
     }
   };
 
+  // =========================
+  // POST REQUEST
+  // =========================
+
   const postRequest = () => {
-    if (!title.trim() || !description.trim() || !address.trim() || !preferredDate) {
+    if (
+      !title.trim() ||
+      !description.trim() ||
+      !address.trim() ||
+      !preferredDate
+    ) {
       Alert.alert(
         "Missing details",
         "Add a title, description, location, and preferred date.",
       );
       return;
     }
+
     if (photos.length < 1) {
-      Alert.alert("Photos", "Upload at least 1 photo.");
+      Alert.alert(
+        "Photos",
+        "Upload at least 1 photo.",
+      );
       return;
     }
 
-    const dateLabel = formatPreferredDate(preferredDate);
+    const dateLabel =
+      formatPreferredDate(preferredDate);
+
     const request = createServiceRequest({
       category: category.name,
-      title,
-      description,
+      title: title.trim(),
+      description: description.trim(),
       location: address.trim(),
       city: areaCity || address.trim(),
       preferredDate: dateLabel,
@@ -217,46 +342,81 @@ export default function CreateJob() {
       body: `${request.title} in ${request.city}.`,
     });
 
-   Alert.alert(
-  "Request posted",
-  "Your service request has been posted successfully.",
-  [
-    {
-      text: "OK",
-      onPress: () => router.back(),
-    },
-  ]
-);
+    Alert.alert(
+      "Request posted",
+      "Your service request has been posted successfully.",
+      [
+        {
+          text: "OK",
+          onPress: () => router.back(),
+        },
+      ],
+    );
+  };
+
+  // =========================
+  // RENDER
+  // =========================
+
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView
+      style={styles.safe}
+      edges={["top"]}
+    >
       <StatusBar barStyle="dark-content" />
+
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="chevron-back" size={22} color={TEXT} />
+          <Ionicons
+            name="chevron-back"
+            size={22}
+            color={TEXT}
+          />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Service Request</Text>
+
+        <Text style={styles.headerTitle}>
+          Create Service Request
+        </Text>
+
         <View style={styles.headerSpacer} />
       </View>
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : undefined
+        }
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.content}
         >
-          <Text style={styles.label}>Service category</Text>
-          <Pressable style={styles.field} onPress={() => setShowCategories(true)}>
+          {/* CATEGORY */}
+          <Text style={styles.label}>
+            Service category
+          </Text>
+
+          <Pressable
+            style={styles.field}
+            onPress={() =>
+              setShowCategories(true)
+            }
+          >
             <View
               style={[
                 styles.categoryIcon,
-                { backgroundColor: category.iconBackground },
+                {
+                  backgroundColor:
+                    category.iconBackground,
+                },
               ]}
             >
               <MaterialCommunityIcons
@@ -265,11 +425,23 @@ export default function CreateJob() {
                 color={GREEN}
               />
             </View>
-            <Text style={styles.fieldValue}>{category.name}</Text>
-            <Ionicons name="chevron-down" size={18} color={MUTED} />
+
+            <Text style={styles.fieldValue}>
+              {category.name}
+            </Text>
+
+            <Ionicons
+              name="chevron-down"
+              size={18}
+              color={MUTED}
+            />
           </Pressable>
 
-          <Text style={styles.label}>Title</Text>
+          {/* TITLE */}
+          <Text style={styles.label}>
+            Title
+          </Text>
+
           <TextInput
             value={title}
             onChangeText={setTitle}
@@ -278,21 +450,36 @@ export default function CreateJob() {
             style={styles.input}
           />
 
-          <Text style={styles.label}>Description</Text>
+          {/* DESCRIPTION */}
+          <Text style={styles.label}>
+            Description
+          </Text>
+
           <TextInput
             value={description}
             onChangeText={setDescription}
             placeholder="Describe what you need..."
             placeholderTextColor={MUTED}
-            style={[styles.input, styles.textArea]}
+            style={[
+              styles.input,
+              styles.textArea,
+            ]}
             multiline
             textAlignVertical="top"
           />
 
+          {/* LOCATION */}
+          <Text style={styles.label}>
+            Location
+          </Text>
 
-          <Text style={styles.label}>Location</Text>
           <View style={styles.field}>
-            <Ionicons name="location-outline" size={18} color={GREEN} />
+            <Ionicons
+              name="location-outline"
+              size={18}
+              color={GREEN}
+            />
+
             <TextInput
               value={address}
               onChangeText={(value) => {
@@ -304,6 +491,7 @@ export default function CreateJob() {
               style={styles.inlineInput}
             />
           </View>
+
           <TouchableOpacity
             style={styles.locationBtn}
             activeOpacity={0.8}
@@ -311,74 +499,149 @@ export default function CreateJob() {
             disabled={gettingLocation}
           >
             {gettingLocation ? (
-              <ActivityIndicator size="small" color={GREEN} />
+              <ActivityIndicator
+                size="small"
+                color={GREEN}
+              />
             ) : (
-              <Ionicons name="navigate-outline" size={16} color={GREEN} />
+              <Ionicons
+                name="navigate-outline"
+                size={16}
+                color={GREEN}
+              />
             )}
+
             <Text style={styles.locationBtnText}>
-              {gettingLocation ? "Getting location..." : "Use current location"}
+              {gettingLocation
+                ? "Getting location..."
+                : "Use current location"}
             </Text>
           </TouchableOpacity>
 
-          <Text style={styles.label}>Preferred date</Text>
-          <Pressable style={styles.field} onPress={openDatePicker}>
-            <Ionicons name="calendar-outline" size={18} color={GREEN} />
-            <Text style={preferredDate ? styles.fieldValue : styles.placeholder}>
-              {preferredDate ? formatPreferredDate(preferredDate) : "Select date"}
+          {/* DATE */}
+          <Text style={styles.label}>
+            Preferred date
+          </Text>
+
+          <Pressable
+            style={styles.field}
+            onPress={openDatePicker}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={18}
+              color={GREEN}
+            />
+
+            <Text
+              style={
+                preferredDate
+                  ? styles.fieldValue
+                  : styles.placeholder
+              }
+            >
+              {preferredDate
+                ? formatPreferredDate(
+                    preferredDate,
+                  )
+                : "Select date"}
             </Text>
           </Pressable>
 
-          <Text style={styles.label}>Upload photos (1–4)</Text>
+          {/* PHOTOS */}
+          <Text style={styles.label}>
+            Upload photos (1–4)
+          </Text>
+
           <View style={styles.photoRow}>
             {photoSlots.map((uri, index) => {
-              const isAdd = index === photos.length && photos.length < MAX_PHOTOS;
+              const isAdd =
+                index === photos.length &&
+                photos.length < MAX_PHOTOS;
+
               return (
                 <Pressable
                   key={`photo-${index}`}
                   style={styles.photoSlot}
-                  onPress={uri || isAdd ? pickPhoto : undefined}
+                  onPress={
+                    uri || isAdd
+                      ? pickPhoto
+                      : undefined
+                  }
                 >
                   {uri ? (
-                    <Image source={{ uri }} style={styles.photo} />
+                    <Image
+                      source={{ uri }}
+                      style={styles.photo}
+                    />
                   ) : isAdd ? (
                     <>
-                      <Ionicons name="camera-outline" size={20} color={GREEN} />
-                      <Text style={styles.addPhoto}>Add photo</Text>
+                      <Ionicons
+                        name="camera-outline"
+                        size={20}
+                        color={GREEN}
+                      />
+
+                      <Text
+                        style={styles.addPhoto}
+                      >
+                        Add photo
+                      </Text>
                     </>
                   ) : (
-                    <Ionicons name="add" size={22} color="#D1D5DB" />
+                    <Ionicons
+                      name="add"
+                      size={22}
+                      color="#D1D5DB"
+                    />
                   )}
                 </Pressable>
               );
             })}
           </View>
-          <Text style={styles.hint}>You can upload 1 to 4 photos</Text>
 
+          <Text style={styles.hint}>
+            You can upload 1 to 4 photos
+          </Text>
+
+          {/* POST BUTTON */}
           <TouchableOpacity
             style={styles.postBtn}
             activeOpacity={0.85}
             onPress={postRequest}
           >
-            <Text style={styles.postText}>Post Request</Text>
+            <Text style={styles.postText}>
+              Post Request
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* CATEGORY MODAL */}
       <Modal
         visible={showCategories}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowCategories(false)}
+        onRequestClose={() =>
+          setShowCategories(false)
+        }
       >
         <Pressable
           style={styles.modalBackdrop}
-          onPress={() => setShowCategories(false)}
+          onPress={() =>
+            setShowCategories(false)
+          }
         >
           <Pressable style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Service category</Text>
+            <Text style={styles.sheetTitle}>
+              Service category
+            </Text>
+
             <ScrollView>
               {REQUEST_CATEGORIES.map((item) => {
-                const selected = category.name === item.name;
+                const selected =
+                  category.name === item.name;
+
                 return (
                   <Pressable
                     key={item.name}
@@ -388,10 +651,17 @@ export default function CreateJob() {
                       setShowCategories(false);
                     }}
                   >
-                    <Text style={styles.optionText}>{item.name}</Text>
-                    {selected ? (
-                      <Ionicons name="checkmark" size={18} color={GREEN} />
-                    ) : null}
+                    <Text style={styles.optionText}>
+                      {item.name}
+                    </Text>
+
+                    {selected && (
+                      <Ionicons
+                        name="checkmark"
+                        size={18}
+                        color={GREEN}
+                      />
+                    )}
                   </Pressable>
                 );
               })}
@@ -400,44 +670,93 @@ export default function CreateJob() {
         </Pressable>
       </Modal>
 
+      {/* DATE MODAL */}
       <Modal
         visible={showDate}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowDate(false)}
+        onRequestClose={() =>
+          setShowDate(false)
+        }
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setShowDate(false)}>
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() =>
+            setShowDate(false)
+          }
+        >
           <Pressable style={styles.calendarSheet}>
+            {/* CALENDAR HEADER */}
             <View style={styles.calendarHeader}>
-              <Text style={styles.sheetTitle}>Select date</Text>
-              <TouchableOpacity onPress={() => setShowDate(false)}>
-                <Ionicons name="close" size={22} color={MUTED} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.monthRow}>
-              <TouchableOpacity style={styles.monthArrow} onPress={() => changeMonth(-1)}>
-                <Ionicons name="chevron-back" size={18} color={TEXT} />
-              </TouchableOpacity>
-              <Text style={styles.monthTitle}>
-                {calendarMonth.toLocaleDateString("en-NG", {
-                  month: "long",
-                  year: "numeric",
-                })}
+              <Text style={styles.sheetTitle}>
+                Select date
               </Text>
-              <TouchableOpacity style={styles.monthArrow} onPress={() => changeMonth(1)}>
-                <Ionicons name="chevron-forward" size={18} color={TEXT} />
+
+              <TouchableOpacity
+                onPress={() =>
+                  setShowDate(false)
+                }
+              >
+                <Ionicons
+                  name="close"
+                  size={22}
+                  color={MUTED}
+                />
               </TouchableOpacity>
             </View>
 
+            {/* MONTH */}
+            <View style={styles.monthRow}>
+              <TouchableOpacity
+                style={styles.monthArrow}
+                onPress={() =>
+                  changeMonth(-1)
+                }
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={18}
+                  color={TEXT}
+                />
+              </TouchableOpacity>
+
+              <Text style={styles.monthTitle}>
+                {calendarMonth.toLocaleDateString(
+                  "en-NG",
+                  {
+                    month: "long",
+                    year: "numeric",
+                  },
+                )}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.monthArrow}
+                onPress={() =>
+                  changeMonth(1)
+                }
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={TEXT}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* WEEK DAYS */}
             <View style={styles.weekRow}>
               {WEEK_DAYS.map((day) => (
-                <Text key={day} style={styles.weekDay}>
+                <Text
+                  key={day}
+                  style={styles.weekDay}
+                >
                   {day}
                 </Text>
               ))}
             </View>
 
+            {/* CALENDAR DAYS */}
             <View style={styles.calendarGrid}>
               {Array.from({
                 length: new Date(
@@ -446,8 +765,12 @@ export default function CreateJob() {
                   1,
                 ).getDay(),
               }).map((_, index) => (
-                <View key={`empty-${index}`} style={styles.calendarDay} />
+                <View
+                  key={`empty-${index}`}
+                  style={styles.calendarDay}
+                />
               ))}
+
               {Array.from({
                 length: new Date(
                   calendarMonth.getFullYear(),
@@ -456,33 +779,49 @@ export default function CreateJob() {
                 ).getDate(),
               }).map((_, index) => {
                 const day = index + 1;
+
                 const date = new Date(
                   calendarMonth.getFullYear(),
                   calendarMonth.getMonth(),
                   day,
                 );
-                const isPast = startOfDay(date) < startOfDay(new Date());
+
+                const isPast =
+                  startOfDay(date) <
+                  startOfDay(new Date());
+
                 const isSelected =
                   preferredDate != null &&
-                  startOfDay(preferredDate).getTime() === startOfDay(date).getTime();
+                  startOfDay(
+                    preferredDate,
+                  ).getTime() ===
+                    startOfDay(
+                      date,
+                    ).getTime();
+
                 return (
                   <TouchableOpacity
                     key={day}
                     disabled={isPast}
                     style={styles.calendarDay}
-                    onPress={() => selectCalendarDate(day)}
+                    onPress={() =>
+                      selectCalendarDate(day)
+                    }
                   >
                     <View
                       style={[
                         styles.dayBubble,
-                        isSelected && styles.dayBubbleSelected,
+                        isSelected &&
+                          styles.dayBubbleSelected,
                       ]}
                     >
                       <Text
                         style={[
                           styles.dayText,
-                          isPast && styles.dayTextPast,
-                          isSelected && styles.dayTextSelected,
+                          isPast &&
+                            styles.dayTextPast,
+                          isSelected &&
+                            styles.dayTextSelected,
                         ]}
                       >
                         {day}
@@ -499,21 +838,34 @@ export default function CreateJob() {
   );
 }
 
+// =========================
+// STYLES
+// =========================
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff" },
-  flex: { flex: 1 },
+  safe: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+
+  flex: {
+    flex: 1,
+  },
+
   header: {
     height: 56,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
   },
+
   backBtn: {
     width: 36,
     height: 36,
     alignItems: "center",
     justifyContent: "center",
   },
+
   headerTitle: {
     flex: 1,
     textAlign: "center",
@@ -521,8 +873,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: TEXT,
   },
-  headerSpacer: { width: 36 },
-  content: { paddingHorizontal: 20, paddingBottom: 28 },
+
+  headerSpacer: {
+    width: 36,
+  },
+
+  content: {
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+  },
+
   label: {
     marginTop: 16,
     marginBottom: 8,
@@ -530,6 +890,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: TEXT,
   },
+
   field: {
     minHeight: 52,
     borderWidth: 1,
@@ -540,6 +901,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
+
   categoryIcon: {
     width: 28,
     height: 28,
@@ -547,8 +909,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  fieldValue: { flex: 1, fontSize: 14, color: TEXT },
-  placeholder: { flex: 1, fontSize: 14, color: MUTED },
+
+  fieldValue: {
+    flex: 1,
+    fontSize: 14,
+    color: TEXT,
+  },
+
+  placeholder: {
+    flex: 1,
+    fontSize: 14,
+    color: MUTED,
+  },
+
   input: {
     minHeight: 52,
     borderWidth: 1,
@@ -558,9 +931,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: TEXT,
   },
-  textArea: { minHeight: 110, paddingTop: 14 },
-  inlineInput: { flex: 1, fontSize: 14, color: TEXT, paddingVertical: 12 },
-  photoRow: { flexDirection: "row", gap: 10 },
+
+  textArea: {
+    minHeight: 110,
+    paddingTop: 14,
+  },
+
+  inlineInput: {
+    flex: 1,
+    fontSize: 14,
+    color: TEXT,
+    paddingVertical: 12,
+  },
+
+  locationBtn: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  locationBtnText: {
+    fontSize: 13,
+    color: GREEN,
+    fontWeight: "600",
+  },
+
+  photoRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+
   photoSlot: {
     flex: 1,
     aspectRatio: 1,
@@ -573,17 +975,25 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: "#FAFAFA",
   },
-  photo: { width: "100%", height: "100%" },
-  addPhoto: { marginTop: 4, fontSize: 10, color: GREEN, fontWeight: "600" },
-  locationBtn: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+
+  photo: {
+    width: "100%",
+    height: "100%",
   },
-  locationBtnText: { fontSize: 13, color: GREEN, fontWeight: "600" },
-  hint: { marginTop: 8, fontSize: 12, color: MUTED },
+
+  addPhoto: {
+    marginTop: 4,
+    fontSize: 10,
+    color: GREEN,
+    fontWeight: "600",
+  },
+
+  hint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: MUTED,
+  },
+
   postBtn: {
     marginTop: 22,
     height: 52,
@@ -592,12 +1002,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  postText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+
+  postText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",
     justifyContent: "flex-end",
   },
+
   sheet: {
     maxHeight: "70%",
     backgroundColor: "#fff",
@@ -605,14 +1022,26 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     padding: 16,
   },
-  sheetTitle: { fontSize: 16, fontWeight: "700", color: TEXT, marginBottom: 8 },
+
+  sheetTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: TEXT,
+    marginBottom: 8,
+  },
+
   option: {
     minHeight: 46,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  optionText: { fontSize: 15, color: TEXT },
+
+  optionText: {
+    fontSize: 15,
+    color: TEXT,
+  },
+
   calendarSheet: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
@@ -620,11 +1049,13 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 28,
   },
+
   calendarHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+
   monthRow: {
     marginTop: 8,
     marginBottom: 12,
@@ -632,6 +1063,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+
   monthArrow: {
     width: 36,
     height: 36,
@@ -640,8 +1072,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  monthTitle: { fontSize: 16, fontWeight: "700", color: TEXT },
-  weekRow: { flexDirection: "row", marginBottom: 6 },
+
+  monthTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: TEXT,
+  },
+
+  weekRow: {
+    flexDirection: "row",
+    marginBottom: 6,
+  },
+
   weekDay: {
     flex: 1,
     textAlign: "center",
@@ -649,13 +1091,19 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: MUTED,
   },
-  calendarGrid: { flexDirection: "row", flexWrap: "wrap" },
+
+  calendarGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+
   calendarDay: {
     width: "14.2857%",
     height: 44,
     alignItems: "center",
     justifyContent: "center",
   },
+
   dayBubble: {
     width: 34,
     height: 34,
@@ -663,8 +1111,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  dayBubbleSelected: { backgroundColor: GREEN },
-  dayText: { fontSize: 14, color: TEXT, fontWeight: "500" },
-  dayTextPast: { color: "#D1D5DB" },
-  dayTextSelected: { color: "#fff", fontWeight: "700" },
+
+  dayBubbleSelected: {
+    backgroundColor: GREEN,
+  },
+
+  dayText: {
+    fontSize: 14,
+    color: TEXT,
+    fontWeight: "500",
+  },
+
+  dayTextPast: {
+    color: "#D1D5DB",
+  },
+
+  dayTextSelected: {
+    color: "#fff",
+    fontWeight: "700",
+  },
 });
