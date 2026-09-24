@@ -2328,7 +2328,7 @@ const styles = StyleSheet.create({
   },
 
   cmDim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
 
