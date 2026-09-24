@@ -1,6 +1,9 @@
 /**
  * Service requests service — screens import ONLY from here.
  * Mock data uses local @/assets/profile_*.jpg (same as professionals).
+ *
+ * NOW  → mutates in-memory SERVICE_REQUESTS from src/data/serviceRequests.ts
+ * LATER → swap each function body to apiRequest(...) — keep the same signatures.
  */
 
 import type { ImageSourcePropType } from "react-native";
@@ -25,6 +28,18 @@ export type CreateServiceRequestInput = {
   images: ImageSourcePropType[];
   icon: ServiceRequestIcon;
   iconBackground: string;
+};
+
+export type UpdateServiceRequestInput = {
+  title?: string;
+  description?: string;
+  category?: string;
+  location?: string;
+  city?: string;
+  preferredDate?: string;
+  images?: ImageSourcePropType[];
+  icon?: ServiceRequestIcon;
+  iconBackground?: string;
 };
 
 export type SubmitOfferInput = {
@@ -53,9 +68,27 @@ function uniqueById(list: ServiceRequest[]): ServiceRequest[] {
   return out;
 }
 
+/** True when the request belongs to the authenticated user (mock or API). */
+export function isOwnServiceRequest(request: ServiceRequest): boolean {
+  const current = getCurrentUserId();
+  return String(request.createdByUserId) === String(current);
+}
+
 export function listServiceRequests(): ServiceRequest[] {
   // TODO backend: return apiRequest<ServiceRequest[]>("/service-requests")
   return uniqueById(SERVICE_REQUESTS);
+}
+
+/**
+ * Requests created by the logged-in user only.
+ * NOW  → filter mock by createdByUserId
+ * LATER → GET /service-requests?mine=1 or /me/service-requests
+ */
+export function listMyServiceRequests(): ServiceRequest[] {
+  const uid = getCurrentUserId();
+  return uniqueById(
+    SERVICE_REQUESTS.filter((r) => String(r.createdByUserId) === String(uid)),
+  );
 }
 
 export function listServiceRequestsByCity(city: string): ServiceRequest[] {
@@ -112,6 +145,60 @@ export function createServiceRequest(
   };
   SERVICE_REQUESTS.unshift(request);
   return request;
+}
+
+/**
+ * Update own request only.
+ * NOW  → mutates mock row if createdByUserId matches current user
+ * LATER → PATCH /service-requests/:id
+ */
+export function updateServiceRequest(
+  id: string,
+  input: UpdateServiceRequestInput,
+): ServiceRequest | null {
+  const request = getFromData(id);
+  if (!request) return null;
+  if (!isOwnServiceRequest(request)) return null;
+
+  if (input.title !== undefined) request.title = input.title.trim();
+  if (input.description !== undefined)
+    request.description = input.description.trim();
+  if (input.category !== undefined) {
+    request.category = input.category;
+    request.profession = input.category;
+  }
+  if (input.location !== undefined) request.location = input.location.trim();
+  if (input.city !== undefined) request.city = input.city.trim();
+  if (input.preferredDate !== undefined) {
+    request.preferredDate = input.preferredDate;
+    request.date = input.preferredDate;
+  }
+  if (input.images !== undefined && input.images.length > 0) {
+    request.images = input.images;
+  }
+  if (input.icon !== undefined) request.icon = input.icon;
+  if (input.iconBackground !== undefined)
+    request.iconBackground = input.iconBackground;
+
+  // TODO backend: return apiRequest(`/service-requests/${id}`, { method: "PATCH", body: input })
+  return request;
+}
+
+/**
+ * Delete own request only.
+ * NOW  → removes from mock array if owned by current user
+ * LATER → DELETE /service-requests/:id
+ */
+export function deleteServiceRequest(id: string): boolean {
+  const request = getFromData(id);
+  if (!request) return false;
+  if (!isOwnServiceRequest(request)) return false;
+
+  const index = SERVICE_REQUESTS.findIndex((r) => r.id === String(id));
+  if (index < 0) return false;
+  SERVICE_REQUESTS.splice(index, 1);
+  // TODO backend: await apiRequest(`/service-requests/${id}`, { method: "DELETE" })
+  return true;
 }
 
 export function addServiceRequestComment(
