@@ -48,19 +48,13 @@ const SIDE_TABS: {
 
 const CENTER_TAB = "requests";
 
-function FloatingTabBar({
-  state,
-  navigation,
-}: BottomTabBarProps) {
+function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
-  const focusedRoute =
-    state.routes[state.index]?.name;
+  const focusedRoute = state.routes[state.index]?.name;
 
   const goTo = (routeName: string) => {
-    const route = state.routes.find(
-      (item) => item.name === routeName,
-    );
+    const route = state.routes.find((item) => item.name === routeName);
 
     if (!route) {
       return;
@@ -80,18 +74,12 @@ function FloatingTabBar({
   const leftTabs = SIDE_TABS.slice(0, 2);
   const rightTabs = SIDE_TABS.slice(2);
 
-  const centerFocused =
-    focusedRoute === CENTER_TAB;
+  const centerFocused = focusedRoute === CENTER_TAB;
 
-  const renderTab = (
-    tab: (typeof SIDE_TABS)[0],
-  ) => {
-    const focused =
-      focusedRoute === tab.name;
+  const renderTab = (tab: (typeof SIDE_TABS)[0]) => {
+    const focused = focusedRoute === tab.name;
 
-    const color = focused
-      ? GREEN
-      : INACTIVE;
+    const color = focused ? GREEN : INACTIVE;
 
     return (
       <TouchableOpacity
@@ -105,20 +93,9 @@ function FloatingTabBar({
         }}
         accessibilityLabel={tab.label}
       >
-        <Ionicons
-          name={tab.icon}
-          size={22}
-          color={color}
-        />
+        <Ionicons name={tab.icon} size={22} color={color} />
 
-        <Text
-          style={[
-            styles.tabLabel,
-            { color },
-          ]}
-        >
-          {tab.label}
-        </Text>
+        <Text style={[styles.tabLabel, { color }]}>{tab.label}</Text>
       </TouchableOpacity>
     );
   };
@@ -128,27 +105,20 @@ function FloatingTabBar({
       style={[
         styles.wrapper,
         {
-          paddingBottom: Math.max(
-            insets.bottom,
-            8,
-          ),
+          paddingBottom: Math.max(insets.bottom, 8),
         },
       ]}
       pointerEvents="box-none"
     >
       <View style={styles.bar}>
         {/* LEFT */}
-        <View style={styles.side}>
-          {leftTabs.map(renderTab)}
-        </View>
+        <View style={styles.side}>{leftTabs.map(renderTab)}</View>
 
         {/* CENTER SPACE */}
         <View style={styles.centerSlot} />
 
         {/* RIGHT */}
-        <View style={styles.side}>
-          {rightTabs.map(renderTab)}
-        </View>
+        <View style={styles.side}>{rightTabs.map(renderTab)}</View>
       </View>
 
       {/* CENTER REQUESTS BUTTON */}
@@ -162,11 +132,7 @@ function FloatingTabBar({
         }}
         accessibilityLabel="Requests"
       >
-        <Ionicons
-          name="list"
-          size={28}
-          color="#FFFFFF"
-        />
+        <Ionicons name="list" size={28} color="#FFFFFF" />
       </TouchableOpacity>
     </View>
   );
@@ -175,9 +141,7 @@ function FloatingTabBar({
 export default function TabLayout() {
   return (
     <Tabs
-      tabBar={(props) => (
-        <FloatingTabBar {...props} />
-      )}
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
@@ -237,17 +201,17 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   wrapper: {
-  marginTop: 8,
-  position: "absolute",
-  left: 0,
-  right: 0,
-  bottom: 0,
-  alignItems: "center",
-  paddingHorizontal: 16,
-  paddingTop: 2,
-  paddingBottom: 8,
-  backgroundColor: "#FFFFFF",
-},
+    marginTop: 8,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 2,
+    paddingBottom: 8,
+    backgroundColor: "#FFFFFF",
+  },
 
   bar: {
     flexDirection: "row",
