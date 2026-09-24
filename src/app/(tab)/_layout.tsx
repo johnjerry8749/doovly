@@ -6,7 +6,7 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
-import { Tabs, router } from "expo-router";
+import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,8 +14,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const GREEN = "#159447";
 const INACTIVE = "#6B7280";
 
-/** Tab routes shown in the bar (center + is not a route). */
-const TAB_CONFIG: {
+/**
+ * Layout only — same navigation as original tabs:
+ * Home | Services | Requests (center +) | Bookings | Profile
+ * Same icons; only visual style changed to floating pill + raised center.
+ */
+const SIDE_TABS: {
   name: string;
   label: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -26,9 +30,10 @@ const TAB_CONFIG: {
   { name: "profile", label: "Profile", icon: "person-outline" },
 ];
 
+const CENTER_TAB = "requests";
+
 function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-
   const focusedRoute = state.routes[state.index]?.name;
 
   const goTo = (routeName: string) => {
@@ -46,15 +51,11 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     }
   };
 
-  const onCenterPress = () => {
-    // Same create flow as Requests “+ Create” / Profile create job
-    router.push("/(tab)/services");
-  };
+  const leftTabs = SIDE_TABS.slice(0, 2);
+  const rightTabs = SIDE_TABS.slice(2);
+  const centerFocused = focusedRoute === CENTER_TAB;
 
-  const leftTabs = TAB_CONFIG.slice(0, 2);
-  const rightTabs = TAB_CONFIG.slice(2);
-
-  const renderTab = (tab: (typeof TAB_CONFIG)[0]) => {
+  const renderTab = (tab: (typeof SIDE_TABS)[0]) => {
     const focused = focusedRoute === tab.name;
     const color = focused ? GREEN : INACTIVE;
 
@@ -84,20 +85,17 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     >
       <View style={styles.bar}>
         <View style={styles.side}>{leftTabs.map(renderTab)}</View>
-
-        {/* Spacer for the raised center button */}
         <View style={styles.centerSlot} />
-
         <View style={styles.side}>{rightTabs.map(renderTab)}</View>
       </View>
 
-      {/* Raised green + button (matches design) */}
       <TouchableOpacity
         style={styles.centerBtn}
-        onPress={onCenterPress}
+        onPress={() => goTo(CENTER_TAB)}
         activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel="Create service request"
+        accessibilityState={{ selected: centerFocused }}
+        accessibilityLabel="Requests"
       >
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
@@ -116,14 +114,7 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="home" options={{ title: "Home" }} />
       <Tabs.Screen name="services" options={{ title: "Services" }} />
-      {/* Hidden from bar — still reachable; center + opens create */}
-      <Tabs.Screen
-        name="requests"
-        options={{
-          title: "Requests",
-          href: null,
-        }}
-      />
+      <Tabs.Screen name="requests" options={{ title: "Requests" }} />
       <Tabs.Screen name="bookings" options={{ title: "Bookings" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
       <Tabs.Screen name="all-requests" options={{ href: null }} />
