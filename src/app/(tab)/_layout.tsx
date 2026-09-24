@@ -48,7 +48,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
 
   const onCenterPress = () => {
     // Same create flow as Requests “+ Create” / Profile create job
-    router.push("/profile/createjob");
+    router.push("/(tab)/services");
   };
 
   const leftTabs = TAB_CONFIG.slice(0, 2);
