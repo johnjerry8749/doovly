@@ -293,7 +293,7 @@ export default function Home() {
                     <View style={styles.verifiedBadge}>
                       <Image
                         source={require("@/assets/premium/checkmark.png")}
-                        style={{ width: 17, height: 17 }}
+                        style={styles.verifiedBadgeImage}
                         resizeMode="contain"
                       />
                     </View>
@@ -612,8 +612,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   verifiedBadgeImage: {
-    width: 17,
-    height: 17,
+    width: 28,
+    height: 28,
   },
   professionalName: {
     fontSize: 13,
