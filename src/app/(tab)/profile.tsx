@@ -213,12 +213,6 @@ export default function Profile() {
           />
 
           <MenuItem
-            icon={<MenuIcon name="document-text-outline" />}
-            title="Create Job Request"
-            onPress={() => router.push("/profile/createjob")}
-          />
-
-          <MenuItem
             icon={<MenuIcon name="list-outline" />}
             title="Service Requests"
             badge={requestCount > 0 ? requestCount : undefined}
@@ -244,7 +238,7 @@ export default function Profile() {
 
           <MenuItem
             icon={<MenuIcon name="briefcase-outline" />}
-            title="Job Offers"
+            title="Service Requests Offers"
             onPress={() => router.push("/profile/alljoboffers")}
           />
         </View>
