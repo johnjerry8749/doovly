@@ -6,54 +6,73 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+
         tabBarActiveTintColor: "#16A34A",
         tabBarInactiveTintColor: "#9CA3AF",
+
         tabBarStyle: {
           backgroundColor: "#FFFFFF",
-          borderTopColor: "#E5E7EB",
           borderTopWidth: 1,
+          borderTopColor: "#E5E7EB",
           height: 75,
-          paddingBottom: 8,
           paddingTop: 6,
+          paddingBottom: 8,
         },
+
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "600",
         },
+
         tabBarHideOnKeyboard: true,
       }}
     >
+      {/* HOME */}
       <Tabs.Screen
         name="home"
         options={{
           title: "Home",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+            <Ionicons
+              name="home-outline"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
 
+      {/* SERVICES */}
       <Tabs.Screen
         name="services"
         options={{
           title: "Services",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="briefcase-outline" size={size} color={color} />
+            <Ionicons
+              name="briefcase-outline"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
 
+      {/* BOOKINGS */}
       <Tabs.Screen
         name="bookings"
         options={{
           title: "Bookings",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
+            <Ionicons
+              name="calendar-outline"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
 
-     
+      {/* REQUESTS */}
       <Tabs.Screen
         name="requests"
         options={{
@@ -68,25 +87,35 @@ export default function TabLayout() {
         }}
       />
 
+      {/* PROFILE */}
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+            <Ionicons
+              name="person-outline"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
 
-      {/* Hidden routes */}
-      <Tabs.Screen
-        name="how-it-works"
-        options={{ href: null }}
-      />
+      {/* HIDDEN ROUTES */}
 
       <Tabs.Screen
         name="all-requests"
-        options={{ href: null }}
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="how-it-works"
+        options={{
+          href: null,
+        }}
       />
     </Tabs>
   );
