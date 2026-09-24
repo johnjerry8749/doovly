@@ -23,7 +23,6 @@ import {
   type ServiceRequest,
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
-import { listServiceCategories } from "@/services/professionals";
 import {
   addInAppNotification,
   getCurrentUserId,
@@ -33,6 +32,17 @@ import { NIGERIA_CITIES } from "@/data/cities";
 
 const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
+
+const CATEGORY_FILTERS = [
+  "All",
+  "Cleaning",
+  "Plumbing",
+  "Electrical",
+  "Mechanic",
+  "Barber",
+  "Nail Tech",
+  "Painting",
+];
 
 export default function RequestsScreen() {
   const {
@@ -56,9 +66,6 @@ export default function RequestsScreen() {
     if (!query) return [...NIGERIA_CITIES];
     return NIGERIA_CITIES.filter((c) => c.toLowerCase().includes(query));
   }, [citySearch]);
-
-  // Same mock categories as Home/Services (listServiceCategories)
-  const categoryFilters = useMemo(() => listServiceCategories(), []);
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -112,21 +119,11 @@ export default function RequestsScreen() {
         req.city.toLowerCase().includes(query) ||
         req.description.toLowerCase().includes(query);
       const matchesLocation = matchesLocationCity(req.city, req.location);
-      const matchesCategory = (() => {
-        if (categoryFilter === "All") return true;
-        const cat = categoryFilter.toLowerCase();
-        const reqCat = (req.category || "").toLowerCase();
-        const reqProf = (req.profession || "").toLowerCase();
-        if (reqCat === cat || reqProf === cat) return true;
-        if (reqCat.includes(cat) || reqProf.includes(cat)) return true;
-        if (cat === "plumber" && (reqCat.includes("plumb") || reqProf.includes("plumb"))) return true;
-        if (cat === "electrician" && (reqCat.includes("electric") || reqProf.includes("electric"))) return true;
-        if (cat === "spa" && (reqCat.includes("massage") || reqProf.includes("massage") || reqCat.includes("spa"))) return true;
-        if (cat === "nail tech" && (reqCat.includes("nail") || reqProf.includes("nail"))) return true;
-        if (cat === "barber" && (reqCat.includes("barber") || reqProf.includes("barber") || reqCat.includes("hair"))) return true;
-        if (cat === "mechanic" && (reqCat.includes("mechanic") || reqProf.includes("mechanic") || reqCat.includes("car"))) return true;
-        return false;
-      })();
+      const cat = categoryFilter.toLowerCase();
+      const matchesCategory =
+        categoryFilter === "All" ||
+        req.category.toLowerCase().includes(cat) ||
+        req.profession.toLowerCase().includes(cat);
       return matchesSearch && matchesLocation && matchesCategory;
     });
   }, [allRequests, search, categoryFilter, locationName, loadingLocation, showAllNigeria]);
@@ -392,13 +389,13 @@ export default function RequestsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersContent}
         >
-          {categoryFilters.map((item) => {
-            const active = categoryFilter === item.name;
+          {CATEGORY_FILTERS.map((cat) => {
+            const active = categoryFilter === cat;
             return (
               <TouchableOpacity
-                key={item.name}
+                key={cat}
                 style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setCategoryFilter(item.name)}
+                onPress={() => setCategoryFilter(cat)}
               >
                 <Text
                   style={[
@@ -406,7 +403,7 @@ export default function RequestsScreen() {
                     active && styles.filterChipTextActive,
                   ]}
                 >
-                  {item.name}
+                  {cat}
                 </Text>
               </TouchableOpacity>
             );
@@ -904,7 +901,7 @@ const styles = StyleSheet.create({
   },
   cmBackdrop: { flex: 1, justifyContent: "flex-end" },
   cmDim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
   cmSheet: {
