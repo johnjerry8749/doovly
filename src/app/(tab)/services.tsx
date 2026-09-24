@@ -34,7 +34,6 @@ export default function Services() {
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [favTick, setFavTick] = useState(0);
 
-  // Single source: listServiceCategories() already includes "All"
   const categories = useMemo(() => listServiceCategories(), []);
 
   const onToggleFavorite = useCallback((proId: string) => {
@@ -142,20 +141,18 @@ export default function Services() {
         >
           <Ionicons
             name={isSaved(item.id) ? "heart" : "heart-outline"}
-            size={18}
+            size={17}
             color={isSaved(item.id) ? "#EF4444" : "#111"}
           />
         </TouchableOpacity>
 
-        <View style={styles.profileImageWrapper}>
-          <View style={styles.profileImageClip}>
-            <Image source={item.image} style={styles.profileImage} />
-          </View>
+        <View style={styles.profileImageContainer}>
+          <Image source={item.image} style={styles.profileImage} />
           {item.verified ? (
-            <View style={styles.verifiedBadge} pointerEvents="none">
+            <View style={styles.verifiedBadge}>
               <Image
                 source={require("@/assets/premium/checkmark.png")}
-                style={styles.checkmark}
+                style={{ width: 17, height: 17 }}
                 resizeMode="contain"
               />
             </View>
@@ -509,7 +506,8 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 15, color: "#111", marginHorizontal: 8 },
   container: { paddingHorizontal: 14, paddingBottom: 20, paddingTop: 12 },
   filterContainer: {
-    paddingBottom: 4,
+    flexDirection: "row",
+    paddingBottom: 22,
     paddingRight: 8,
     alignItems: "center",
     gap: 14,
@@ -519,13 +517,13 @@ const styles = StyleSheet.create({
     width: 72,
   },
   filterCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 50,
+    height: 50,
+    borderRadius: 31,
     backgroundColor: "#E8F5E9",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 7,
   },
   activeFilterCircle: { backgroundColor: GREEN },
   filterName: {
@@ -544,67 +542,72 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 17, fontWeight: "800", color: "#111" },
   resultCount: { color: "#888", fontSize: 12 },
-  columnWrapper: { gap: 10, marginBottom: 12 },
+  columnWrapper: { gap: 8, marginBottom: 12 },
   professionalCard: {
     flex: 1,
     maxWidth: "32%",
+    minHeight: 100,
     backgroundColor: "#fff",
     borderRadius: 12,
-    padding: 8,
+    padding: 10,
     borderWidth: 1,
-    borderColor: "#F0F0F0",
+    borderColor: "#E1E1E1",
     position: "relative",
   },
-  heartButton: {
+  heartButton: { position: "absolute", right: 6, top: 6, zIndex: 5 },
+  profileImageContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    alignSelf: "center",
+    marginBottom: 8,
+    position: "relative",
+  },
+  profileImage: { width: "100%", height: "100%", borderRadius: 35 },
+  verifiedBadge: {
     position: "absolute",
-    top: 6,
-    right: 6,
-    zIndex: 5,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    right: -1,
+    bottom: -1,
+    width: 19,
+    height: 19,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
-  profileImageWrapper: {
-    width: "100%",
-    aspectRatio: 1,
-    borderRadius: 10,
-    marginBottom: 8,
-    backgroundColor: "#F3F4F6",
-    position: "relative",
-    overflow: "visible",
-  },
-  profileImageClip: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  profileImage: { width: "100%", height: "100%", borderRadius: 10 },
-  verifiedBadge: {
-    position: "absolute",
-    bottom: -6,
-    right: -6,
-    width: 28,
-    height: 28,
-    zIndex: 6,
-    elevation: 6,
-  },
-  checkmark: { width: 28, height: 28 },
   professionalName: {
     fontSize: 12,
     fontWeight: "800",
     color: "#111",
     marginBottom: 3,
+    textAlign: "center",
   },
-  ratingRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 3,
+  },
   ratingText: { fontSize: 10, fontWeight: "600", marginLeft: 3, color: "#333" },
   reviewCount: { fontSize: 9, color: "#777", marginLeft: 2 },
-  profession: { fontSize: 10, color: "#555", marginBottom: 3 },
-  city: { fontSize: 10, color: "#777", marginBottom: 5 },
-  price: { fontSize: 11, fontWeight: "700", color: GREEN },
+  profession: {
+    fontSize: 10,
+    color: "#555",
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  city: {
+    fontSize: 10,
+    color: "#777",
+    marginBottom: 5,
+    textAlign: "center",
+  },
+  price: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: GREEN,
+    textAlign: "center",
+  },
   emptyContainer: { alignItems: "center", paddingVertical: 60 },
   emptyTitle: { fontSize: 17, fontWeight: "700", marginTop: 12, color: "#111" },
   emptyText: { color: "#888", marginTop: 5, fontSize: 13, textAlign: "center" },
