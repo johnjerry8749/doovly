@@ -217,11 +217,16 @@ export default function CreateJob() {
       body: `${request.title} in ${request.city}.`,
     });
 
-    Alert.alert("Request posted", "Subscribed pros in this area were notified.", [
-      { text: "OK", onPress: () => router.back() },
-    ]);
-  };
-
+   Alert.alert(
+  "Request posted",
+  "Your service request has been posted successfully.",
+  [
+    {
+      text: "OK",
+      onPress: () => router.back(),
+    },
+  ]
+);
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <StatusBar barStyle="dark-content" />

@@ -78,20 +78,14 @@ const normalize = (value?: string | number | null) =>
    CATEGORY MATCH
 ============================================================ */
 
-const categoryMatches = (
-  request: ServiceRequest,
-  selectedCategory: string,
-) => {
+const categoryMatches = (request: ServiceRequest, selectedCategory: string) => {
   if (selectedCategory === "All") {
     return true;
   }
 
   const selected = normalize(selectedCategory);
 
-  const requestCategories = [
-    request.category,
-    request.profession,
-  ]
+  const requestCategories = [request.category, request.profession]
     .filter(Boolean)
     .map((value) => normalize(value));
 
@@ -166,8 +160,7 @@ const findProfessionalForUser = (
    */
   if (normalizedUserId) {
     const byProfessionalId = professionals.find(
-      (professional) =>
-        normalize(professional.id) === normalizedUserId,
+      (professional) => normalize(professional.id) === normalizedUserId,
     );
 
     if (byProfessionalId) {
@@ -209,8 +202,7 @@ const findProfessionalForUser = (
    */
   if (normalizedUserName) {
     const byName = professionals.find(
-      (professional) =>
-        normalize(professional.name) === normalizedUserName,
+      (professional) => normalize(professional.name) === normalizedUserName,
     );
 
     if (byName) {
@@ -232,10 +224,7 @@ const openUserProfile = ({
   userId?: string | number | null;
   userName?: string | null;
 }) => {
-  const professional = findProfessionalForUser(
-    userId,
-    userName,
-  );
+  const professional = findProfessionalForUser(userId, userName);
 
   if (!professional) {
     console.log("[Doovly] No professional found", {
@@ -295,9 +284,7 @@ export default function RequestsScreen() {
       return [...NIGERIA_CITIES];
     }
 
-    return NIGERIA_CITIES.filter((city) =>
-      city.toLowerCase().includes(query),
-    );
+    return NIGERIA_CITIES.filter((city) => city.toLowerCase().includes(query));
   }, [citySearch]);
 
   /* ============================================================
@@ -306,63 +293,45 @@ export default function RequestsScreen() {
 
   const [search, setSearch] = useState("");
 
-  const [categoryFilter, setCategoryFilter] =
-    useState("All");
+  const [categoryFilter, setCategoryFilter] = useState("All");
 
-  const [likedIds, setLikedIds] = useState<
-    Record<string, boolean>
-  >({});
+  const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
 
   const [extraComments, setExtraComments] = useState<
     Record<string, ServiceRequestComment[]>
   >({});
 
-  const [offerRequest, setOfferRequest] =
-    useState<ServiceRequest | null>(null);
+  const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
 
   const [offerPrice, setOfferPrice] = useState("");
 
-  const [chatRequest, setChatRequest] =
-    useState<ServiceRequest | null>(null);
+  const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
 
   const [chatText, setChatText] = useState("");
 
-  const [replyTo, setReplyTo] =
-    useState<ServiceRequestComment | null>(null);
+  const [replyTo, setReplyTo] = useState<ServiceRequestComment | null>(null);
 
-  const commentListRef =
-    useRef<FlatList<ServiceRequestComment>>(null);
+  const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
 
   /* ============================================================
      REQUEST DATA
   ============================================================ */
 
-  const allRequests = useMemo(
-    () => listServiceRequests(),
-    [],
-  );
+  const allRequests = useMemo(() => listServiceRequests(), []);
 
   /* ============================================================
      COMMENTS
   ============================================================ */
 
-  const getComments = (
-    item: ServiceRequest,
-  ): ServiceRequestComment[] => {
-    return [
-      ...(item.comments || []),
-      ...(extraComments[item.id] || []),
-    ];
+  const getComments = (item: ServiceRequest): ServiceRequestComment[] => {
+    return [...(item.comments || []), ...(extraComments[item.id] || [])];
   };
 
   /* ============================================================
      LOCATION FILTER
   ============================================================ */
 
-  const matchesLocationCity = (
-    itemCity?: string,
-    itemArea?: string,
-  ) => {
+  const matchesLocationCity = (itemCity?: string, itemArea?: string) => {
     if (
       loadingLocation ||
       showAllNigeria ||
@@ -375,10 +344,7 @@ export default function RequestsScreen() {
       return true;
     }
 
-    const city = locationName
-      .split(",")[0]
-      .trim()
-      .toLowerCase();
+    const city = locationName.split(",")[0].trim().toLowerCase();
 
     if (!city || city === "nigeria") {
       return true;
@@ -426,21 +392,11 @@ export default function RequestsScreen() {
         normalize(req.description).includes(query) ||
         normalize(req.posterName).includes(query);
 
-      const matchesCategory = categoryMatches(
-        req,
-        categoryFilter,
-      );
+      const matchesCategory = categoryMatches(req, categoryFilter);
 
-      const matchesLocation = matchesLocationCity(
-        req.city,
-        req.location,
-      );
+      const matchesLocation = matchesLocationCity(req.city, req.location);
 
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesLocation
-      );
+      return matchesSearch && matchesCategory && matchesLocation;
     });
   }, [
     allRequests,
@@ -466,9 +422,7 @@ export default function RequestsScreen() {
      SHARE
   ============================================================ */
 
-  const shareRequest = async (
-    item: ServiceRequest,
-  ) => {
+  const shareRequest = async (item: ServiceRequest) => {
     try {
       await Share.share({
         title: item.title,
@@ -512,12 +466,9 @@ export default function RequestsScreen() {
 
     const currentUserId = getCurrentUserId();
 
-    const body = replyTo
-      ? `@${replyTo.userName} ${text}`
-      : text;
+    const body = replyTo ? `@${replyTo.userName} ${text}` : text;
 
-    const currentProfessional =
-      findProfessionalForUser(currentUserId);
+    const currentProfessional = findProfessionalForUser(currentUserId);
 
     const newComment: CommentWithUser = {
       id: `local-${Date.now()}`,
@@ -526,28 +477,21 @@ export default function RequestsScreen() {
        * Use professional mock data when available.
        * Otherwise keep "You".
        */
-      userName:
-        currentProfessional?.name || "You",
+      userName: currentProfessional?.name || "You",
 
-      userAvatar:
-        currentProfessional?.image || MY_AVATAR,
+      userAvatar: currentProfessional?.image || MY_AVATAR,
 
       text: body,
 
       timeAgo: "Just now",
 
-      userId:
-        currentProfessional?.id ??
-        currentUserId,
+      userId: currentProfessional?.id ?? currentUserId,
     };
 
     setExtraComments((previous) => ({
       ...previous,
 
-      [chatRequest.id]: [
-        ...(previous[chatRequest.id] || []),
-        newComment,
-      ],
+      [chatRequest.id]: [...(previous[chatRequest.id] || []), newComment],
     }));
 
     setChatText("");
@@ -574,25 +518,19 @@ export default function RequestsScreen() {
       return;
     }
 
-    const amount = offerPrice.replace(
-      /[^\d]/g,
-      "",
-    );
+    const amount = offerPrice.replace(/[^\d]/g, "");
 
     if (!amount) {
       return;
     }
 
-    const request =
-      offerRequest as RequestWithUser;
+    const request = offerRequest as RequestWithUser;
 
-    const currentUserId =
-      getCurrentUserId();
+    const currentUserId = getCurrentUserId();
 
     const recipientId =
       request.createdByUserId &&
-      String(request.createdByUserId) !==
-        String(currentUserId)
+      String(request.createdByUserId) !== String(currentUserId)
         ? request.createdByUserId
         : currentUserId;
 
@@ -600,10 +538,9 @@ export default function RequestsScreen() {
       userId: recipientId,
       type: "general",
       title: "New Offer",
-      body:
-        `Someone sent an offer of ₦${Number(
-          amount,
-        ).toLocaleString()} on "${offerRequest.title}".`,
+      body: `Someone sent an offer of ₦${Number(
+        amount,
+      ).toLocaleString()} on "${offerRequest.title}".`,
     });
 
     closeOffer();
@@ -613,16 +550,10 @@ export default function RequestsScreen() {
      REQUEST CARD
   ============================================================ */
 
-  const renderRequest = ({
-    item,
-  }: {
-    item: ServiceRequest;
-  }) => {
+  const renderRequest = ({ item }: { item: ServiceRequest }) => {
     const liked = !!likedIds[item.id];
 
-    const likesDisplay =
-      (item.likesCount || 0) +
-      (liked ? 1 : 0);
+    const likesDisplay = (item.likesCount || 0) + (liked ? 1 : 0);
 
     const comments = getComments(item);
 
@@ -632,8 +563,7 @@ export default function RequestsScreen() {
 
     const coverImage = item.images?.[0];
 
-    const posterUserId =
-      getRequestUserId(item);
+    const posterUserId = getRequestUserId(item);
 
     /*
      * ----------------------------------------------------------
@@ -660,10 +590,8 @@ export default function RequestsScreen() {
       }
 
       openUserProfile({
-        userId:
-          getCommentUserId(firstComment),
-        userName:
-          firstComment.userName,
+        userId: getCommentUserId(firstComment),
+        userName: firstComment.userName,
       });
     };
 
@@ -679,39 +607,24 @@ export default function RequestsScreen() {
           onPress={openPosterProfile}
         >
           <View style={styles.posterAvatarWrap}>
-            <Image
-              source={item.posterAvatar}
-              style={styles.posterAvatar}
-            />
+            <Image source={item.posterAvatar} style={styles.posterAvatar} />
           </View>
 
           <View style={styles.posterInfo}>
-            <Text
-              style={styles.posterName}
-              numberOfLines={1}
-            >
+            <Text style={styles.posterName} numberOfLines={1}>
               {item.posterName}
             </Text>
 
             <View style={styles.locationRow}>
-              <Ionicons
-                name="location-outline"
-                size={13}
-                color="#6B7280"
-              />
+              <Ionicons name="location-outline" size={13} color="#6B7280" />
 
-              <Text
-                style={styles.locationText}
-                numberOfLines={1}
-              >
+              <Text style={styles.locationText} numberOfLines={1}>
                 {item.location}, {item.city}
               </Text>
             </View>
           </View>
 
-          <Text style={styles.timeAgo}>
-            {item.timeAgo}
-          </Text>
+          <Text style={styles.timeAgo}>{item.timeAgo}</Text>
         </TouchableOpacity>
 
         {/* =================================================
@@ -719,20 +632,13 @@ export default function RequestsScreen() {
         ================================================= */}
 
         <View style={styles.titleRow}>
-          <Text
-            style={styles.cardTitle}
-            numberOfLines={2}
-          >
+          <Text style={styles.cardTitle} numberOfLines={2}>
             {item.title}
           </Text>
 
           {item.isNew ? (
             <View style={styles.newBadge}>
-              <Text
-                style={styles.newBadgeText}
-              >
-                NEW
-              </Text>
+              <Text style={styles.newBadgeText}>NEW</Text>
             </View>
           ) : null}
         </View>
@@ -755,11 +661,7 @@ export default function RequestsScreen() {
 
         <View style={styles.metaRow}>
           <View style={styles.categoryChip}>
-            <Text
-              style={styles.categoryChipText}
-            >
-              {item.category}
-            </Text>
+            <Text style={styles.categoryChipText}>{item.category}</Text>
           </View>
         </View>
 
@@ -767,10 +669,7 @@ export default function RequestsScreen() {
             DESCRIPTION
         ================================================= */}
 
-        <Text
-          style={styles.description}
-          numberOfLines={3}
-        >
+        <Text style={styles.description} numberOfLines={3}>
           {item.description}
         </Text>
 
@@ -781,76 +680,36 @@ export default function RequestsScreen() {
         <View style={styles.engagementRow}>
           <TouchableOpacity
             style={styles.engagementBtn}
-            onPress={() =>
-              toggleLike(item.id)
-            }
+            onPress={() => toggleLike(item.id)}
             activeOpacity={0.7}
           >
             <Ionicons
-              name={
-                liked
-                  ? "heart"
-                  : "heart-outline"
-              }
+              name={liked ? "heart" : "heart-outline"}
               size={20}
-              color={
-                liked
-                  ? "#EF4444"
-                  : "#6B7280"
-              }
+              color={liked ? "#EF4444" : "#6B7280"}
             />
 
-            <Text
-              style={
-                styles.engagementText
-              }
-            >
-              {likesDisplay}
-            </Text>
+            <Text style={styles.engagementText}>{likesDisplay}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.engagementBtn}
-            onPress={() =>
-              openChat(item)
-            }
+            onPress={() => openChat(item)}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="chatbubble-outline"
-              size={18}
-              color="#6B7280"
-            />
+            <Ionicons name="chatbubble-outline" size={18} color="#6B7280" />
 
-            <Text
-              style={
-                styles.engagementText
-              }
-            >
-              {commentCount}
-            </Text>
+            <Text style={styles.engagementText}>{commentCount}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.engagementBtn}
-            onPress={() =>
-              shareRequest(item)
-            }
+            onPress={() => shareRequest(item)}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="share-outline"
-              size={18}
-              color="#6B7280"
-            />
+            <Ionicons name="share-outline" size={18} color="#6B7280" />
 
-            <Text
-              style={
-                styles.engagementText
-              }
-            >
-              Share
-            </Text>
+            <Text style={styles.engagementText}>Share</Text>
           </TouchableOpacity>
         </View>
 
@@ -859,55 +718,30 @@ export default function RequestsScreen() {
         ================================================= */}
 
         {firstComment ? (
-          <View
-            style={styles.commentPreview}
-          >
+          <View style={styles.commentPreview}>
             <TouchableOpacity
               activeOpacity={0.75}
-              onPress={
-                openFirstCommentProfile
-              }
+              onPress={openFirstCommentProfile}
             >
               <Image
-                source={
-                  firstComment.userAvatar
-                }
-                style={
-                  styles.commentAvatar
-                }
+                source={firstComment.userAvatar}
+                style={styles.commentAvatar}
               />
             </TouchableOpacity>
 
-            <View
-              style={styles.commentBody}
-            >
+            <View style={styles.commentBody}>
               <TouchableOpacity
                 activeOpacity={0.75}
-                onPress={
-                  openFirstCommentProfile
-                }
+                onPress={openFirstCommentProfile}
               >
-                <Text
-                  style={
-                    styles.commentName
-                  }
-                >
-                  {firstComment.userName}
-                </Text>
+                <Text style={styles.commentName}>{firstComment.userName}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() =>
-                  openChat(item)
-                }
+                onPress={() => openChat(item)}
               >
-                <Text
-                  style={
-                    styles.commentText
-                  }
-                  numberOfLines={2}
-                >
+                <Text style={styles.commentText} numberOfLines={2}>
                   {firstComment.text}
                 </Text>
               </TouchableOpacity>
@@ -915,12 +749,8 @@ export default function RequestsScreen() {
           </View>
         ) : (
           <TouchableOpacity
-            style={
-              styles.writeCommentHint
-            }
-            onPress={() =>
-              openChat(item)
-            }
+            style={styles.writeCommentHint}
+            onPress={() => openChat(item)}
             activeOpacity={0.7}
           >
             <Ionicons
@@ -929,13 +759,7 @@ export default function RequestsScreen() {
               color={GREEN}
             />
 
-            <Text
-              style={
-                styles.writeCommentHintText
-              }
-            >
-              Write a comment…
-            </Text>
+            <Text style={styles.writeCommentHintText}>Write a comment…</Text>
           </TouchableOpacity>
         )}
 
@@ -944,22 +768,10 @@ export default function RequestsScreen() {
         ================================================= */}
 
         {commentCount > 1 ? (
-          <TouchableOpacity
-            onPress={() =>
-              openChat(item)
-            }
-            activeOpacity={0.7}
-          >
-            <Text
-              style={
-                styles.viewMoreComments
-              }
-            >
-              View {commentCount - 1} more
-              comment
-              {commentCount - 1 === 1
-                ? ""
-                : "s"}
+          <TouchableOpacity onPress={() => openChat(item)} activeOpacity={0.7}>
+            <Text style={styles.viewMoreComments}>
+              View {commentCount - 1} more comment
+              {commentCount - 1 === 1 ? "" : "s"}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -970,24 +782,12 @@ export default function RequestsScreen() {
 
         <TouchableOpacity
           style={styles.sendOfferBtn}
-          onPress={() =>
-            setOfferRequest(item)
-          }
+          onPress={() => setOfferRequest(item)}
           activeOpacity={0.85}
         >
-          <Ionicons
-            name="paper-plane"
-            size={18}
-            color="#fff"
-          />
+          <Ionicons name="paper-plane" size={18} color="#fff" />
 
-          <Text
-            style={
-              styles.sendOfferText
-            }
-          >
-            Send Offer
-          </Text>
+          <Text style={styles.sendOfferText}>Send Offer</Text>
         </TouchableOpacity>
       </View>
     );
@@ -997,47 +797,28 @@ export default function RequestsScreen() {
      COMMENTS MODAL DATA
   ============================================================ */
 
-  const chatComments = chatRequest
-    ? getComments(chatRequest)
-    : [];
+  const chatComments = chatRequest ? getComments(chatRequest) : [];
 
   /* ============================================================
      UI
   ============================================================ */
 
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={["top"]}
-    >
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* =================================================
           HEADER
       ================================================= */}
 
       <View style={styles.header}>
-        <View
-          style={styles.headerTextWrap}
-        >
-          <Text
-            style={styles.headerTitle}
-          >
-            Service requests
-          </Text>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.headerTitle}>Service requests</Text>
 
           <TouchableOpacity
-            style={
-              styles.headerLocationRow
-            }
-            onPress={() =>
-              setShowLocationModal(true)
-            }
+            style={styles.headerLocationRow}
+            onPress={() => setShowLocationModal(true)}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="location"
-              size={14}
-              color={GREEN}
-            />
+            <Ionicons name="location" size={14} color={GREEN} />
 
             {loadingLocation ? (
               <ActivityIndicator
@@ -1048,14 +829,8 @@ export default function RequestsScreen() {
                 }}
               />
             ) : (
-              <Text
-                style={
-                  styles.headerSubtitle
-                }
-                numberOfLines={1}
-              >
-                {locationName ||
-                  "All Nigeria"}
+              <Text style={styles.headerSubtitle} numberOfLines={1}>
+                {locationName || "All Nigeria"}
               </Text>
             )}
 
@@ -1063,33 +838,19 @@ export default function RequestsScreen() {
               name="chevron-down"
               size={14}
               color="#6B7280"
-              style={
-                styles.dropdownIcon
-              }
+              style={styles.dropdownIcon}
             />
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
           style={styles.createBtn}
-          onPress={() =>
-            router.push(
-              "/profile/createjob",
-            )
-          }
+          onPress={() => router.push("/profile/createjob")}
           activeOpacity={0.85}
         >
-          <Ionicons
-            name="add"
-            size={18}
-            color="#fff"
-          />
+          <Ionicons name="add" size={18} color="#fff" />
 
-          <Text
-            style={styles.createBtnText}
-          >
-            Create
-          </Text>
+          <Text style={styles.createBtnText}>Create</Text>
         </TouchableOpacity>
       </View>
 
@@ -1097,16 +858,8 @@ export default function RequestsScreen() {
           SEARCH
       ================================================= */}
 
-      <View
-        style={
-          styles.searchContainer
-        }
-      >
-        <Ionicons
-          name="search-outline"
-          size={20}
-          color="#777"
-        />
+      <View style={styles.searchContainer}>
+        <Ionicons name="search-outline" size={20} color="#777" />
 
         <TextInput
           style={styles.searchInput}
@@ -1117,16 +870,8 @@ export default function RequestsScreen() {
         />
 
         {search.length > 0 ? (
-          <TouchableOpacity
-            onPress={() =>
-              setSearch("")
-            }
-          >
-            <Ionicons
-              name="close-circle"
-              size={20}
-              color="#AAA"
-            />
+          <TouchableOpacity onPress={() => setSearch("")}>
+            <Ionicons name="close-circle" size={20} color="#AAA" />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -1135,52 +880,33 @@ export default function RequestsScreen() {
           CATEGORY FILTERS
       ================================================= */}
 
-      <View
-        style={styles.filtersWrap}
-      >
+      <View style={styles.filtersWrap}>
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-          contentContainerStyle={
-            styles.filtersContent
-          }
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersContent}
         >
-          {CATEGORY_FILTERS.map(
-            (category) => {
-              const active =
-                categoryFilter ===
-                category;
+          {CATEGORY_FILTERS.map((category) => {
+            const active = categoryFilter === category;
 
-              return (
-                <TouchableOpacity
-                  key={category}
+            return (
+              <TouchableOpacity
+                key={category}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setCategoryFilter(category)}
+                activeOpacity={0.8}
+              >
+                <Text
                   style={[
-                    styles.filterChip,
-                    active &&
-                      styles.filterChipActive,
+                    styles.filterChipText,
+                    active && styles.filterChipTextActive,
                   ]}
-                  onPress={() =>
-                    setCategoryFilter(
-                      category,
-                    )
-                  }
-                  activeOpacity={0.8}
                 >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      active &&
-                        styles.filterChipTextActive,
-                    ]}
-                  >
-                    {category}
-                  </Text>
-                </TouchableOpacity>
-              );
-            },
-          )}
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -1190,50 +916,23 @@ export default function RequestsScreen() {
 
       <FlatList
         data={filteredRequests}
-        keyExtractor={(item) =>
-          item.id
-        }
+        keyExtractor={(item) => item.id}
         renderItem={renderRequest}
-        showsVerticalScrollIndicator={
-          false
-        }
-        contentContainerStyle={
-          styles.listContent
-        }
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <View
-            style={
-              styles.emptyContainer
-            }
-          >
-            <Ionicons
-              name="document-text-outline"
-              size={42}
-              color="#AAA"
-            />
+          <View style={styles.emptyContainer}>
+            <Ionicons name="document-text-outline" size={42} color="#AAA" />
 
-            <Text
-              style={
-                styles.emptyTitle
-              }
-            >
-              No requests found
-            </Text>
+            <Text style={styles.emptyTitle}>No requests found</Text>
 
-            <Text
-              style={styles.emptyText}
-            >
-              No service requests match
-              your current filters.
+            <Text style={styles.emptyText}>
+              No service requests match your current filters.
             </Text>
           </View>
         }
-        ListFooterComponent={
-          <View
-            style={{ height: 28 }}
-          />
-        }
+        ListFooterComponent={<View style={{ height: 28 }} />}
       />
 
       {/* =================================================
@@ -1248,163 +947,74 @@ export default function RequestsScreen() {
       >
         <KeyboardAvoidingView
           style={styles.cmBackdrop}
-          behavior={
-            Platform.OS === "ios"
-              ? "padding"
-              : undefined
-          }
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <Pressable
-            style={styles.cmDim}
-            onPress={closeChat}
-          />
+          <Pressable style={styles.cmDim} onPress={closeChat} />
 
-          <View
-            style={styles.cmSheet}
-          >
-            <View
-              style={styles.cmHandle}
-            />
+          <View style={styles.cmSheet}>
+            <View style={styles.cmHandle} />
 
-            <View
-              style={styles.cmHeader}
-            >
-              <Text
-                style={
-                  styles.cmHeaderTitle
-                }
-              >
-                Comments
-              </Text>
+            <View style={styles.cmHeader}>
+              <Text style={styles.cmHeaderTitle}>Comments</Text>
 
-              <TouchableOpacity
-                style={
-                  styles.cmCloseBtn
-                }
-                onPress={closeChat}
-              >
-                <Ionicons
-                  name="close"
-                  size={22}
-                  color="#111"
-                />
+              <TouchableOpacity style={styles.cmCloseBtn} onPress={closeChat}>
+                <Ionicons name="close" size={22} color="#111" />
               </TouchableOpacity>
             </View>
 
             <FlatList
               ref={commentListRef}
               data={chatComments}
-              keyExtractor={(item) =>
-                item.id
-              }
-              renderItem={({
-                item: comment,
-              }) => {
-                const userId =
-                  getCommentUserId(
-                    comment,
-                  );
+              keyExtractor={(item) => item.id}
+              renderItem={({ item: comment }) => {
+                const userId = getCommentUserId(comment);
 
-                const goToCommenterProfile =
-                  () => {
-                    openUserProfile({
-                      userId,
-                      userName:
-                        comment.userName,
-                    });
-                  };
+                const goToCommenterProfile = () => {
+                  openUserProfile({
+                    userId,
+                    userName: comment.userName,
+                  });
+                };
 
                 return (
-                  <View
-                    style={
-                      styles.cmRow
-                    }
-                  >
+                  <View style={styles.cmRow}>
                     {/* COMMENT AVATAR */}
 
                     <TouchableOpacity
                       activeOpacity={0.75}
-                      onPress={
-                        goToCommenterProfile
-                      }
+                      onPress={goToCommenterProfile}
                     >
                       <Image
-                        source={
-                          comment.userAvatar
-                        }
-                        style={
-                          styles.cmAvatar
-                        }
+                        source={comment.userAvatar}
+                        style={styles.cmAvatar}
                       />
                     </TouchableOpacity>
 
-                    <View
-                      style={
-                        styles.cmContent
-                      }
-                    >
+                    <View style={styles.cmContent}>
                       {/* COMMENT NAME */}
 
                       <TouchableOpacity
                         activeOpacity={0.75}
-                        onPress={
-                          goToCommenterProfile
-                        }
+                        onPress={goToCommenterProfile}
                       >
-                        <Text
-                          style={
-                            styles.cmMeta
-                          }
-                        >
-                          <Text
-                            style={
-                              styles.cmName
-                            }
-                          >
-                            {
-                              comment.userName
-                            }
-                          </Text>
+                        <Text style={styles.cmMeta}>
+                          <Text style={styles.cmName}>{comment.userName}</Text>
 
-                          <Text
-                            style={
-                              styles.cmTime
-                            }
-                          >
+                          <Text style={styles.cmTime}>
                             {"  "}
-                            {
-                              comment.timeAgo
-                            }
+                            {comment.timeAgo}
                           </Text>
                         </Text>
                       </TouchableOpacity>
 
                       {/* COMMENT TEXT */}
 
-                      <Text
-                        style={
-                          styles.cmText
-                        }
-                      >
-                        {comment.text}
-                      </Text>
+                      <Text style={styles.cmText}>{comment.text}</Text>
 
                       {/* REPLY */}
 
-                      <TouchableOpacity
-                        onPress={() =>
-                          setReplyTo(
-                            comment,
-                          )
-                        }
-                      >
-                        <Text
-                          style={
-                            styles.cmReply
-                          }
-                        >
-                          Reply
-                        </Text>
+                      <TouchableOpacity onPress={() => setReplyTo(comment)}>
+                        <Text style={styles.cmReply}>Reply</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1412,37 +1022,23 @@ export default function RequestsScreen() {
               }}
               style={styles.cmList}
               contentContainerStyle={
-                chatComments.length ===
-                0
+                chatComments.length === 0
                   ? styles.cmListEmptyContent
                   : styles.cmListContent
               }
               keyboardShouldPersistTaps="handled"
               ListEmptyComponent={
-                <View
-                  style={styles.cmEmpty}
-                >
+                <View style={styles.cmEmpty}>
                   <Ionicons
                     name="chatbubbles-outline"
                     size={40}
                     color="#D1D5DB"
                   />
 
-                  <Text
-                    style={
-                      styles.cmEmptyTitle
-                    }
-                  >
-                    No comments yet
-                  </Text>
+                  <Text style={styles.cmEmptyTitle}>No comments yet</Text>
 
-                  <Text
-                    style={
-                      styles.cmEmptyText
-                    }
-                  >
-                    Be the first to share
-                    your thoughts.
+                  <Text style={styles.cmEmptyText}>
+                    Be the first to share your thoughts.
                   </Text>
                 </View>
               }
@@ -1453,37 +1049,14 @@ export default function RequestsScreen() {
             ================================================= */}
 
             {replyTo ? (
-              <View
-                style={
-                  styles.cmReplyBar
-                }
-              >
-                <Text
-                  style={
-                    styles.cmReplyBarText
-                  }
-                  numberOfLines={1}
-                >
+              <View style={styles.cmReplyBar}>
+                <Text style={styles.cmReplyBarText} numberOfLines={1}>
                   Replying to{" "}
-                  <Text
-                    style={
-                      styles.cmReplyBarName
-                    }
-                  >
-                    {replyTo.userName}
-                  </Text>
+                  <Text style={styles.cmReplyBarName}>{replyTo.userName}</Text>
                 </Text>
 
-                <TouchableOpacity
-                  onPress={() =>
-                    setReplyTo(null)
-                  }
-                >
-                  <Ionicons
-                    name="close-circle"
-                    size={18}
-                    color="#9CA3AF"
-                  />
+                <TouchableOpacity onPress={() => setReplyTo(null)}>
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -1492,17 +1065,8 @@ export default function RequestsScreen() {
                 COMMENT INPUT
             ================================================= */}
 
-            <View
-              style={
-                styles.cmInputRow
-              }
-            >
-              <Image
-                source={MY_AVATAR}
-                style={
-                  styles.cmInputAvatar
-                }
-              />
+            <View style={styles.cmInputRow}>
+              <Image source={MY_AVATAR} style={styles.cmInputAvatar} />
 
               <TextInput
                 style={styles.cmInput}
@@ -1513,29 +1077,17 @@ export default function RequestsScreen() {
                 }
                 placeholderTextColor="#9CA3AF"
                 value={chatText}
-                onChangeText={
-                  setChatText
-                }
+                onChangeText={setChatText}
                 multiline
                 maxLength={500}
               />
 
               {chatText.trim() ? (
                 <TouchableOpacity
-                  style={
-                    styles.cmPostBtn
-                  }
-                  onPress={
-                    sendChatMessage
-                  }
+                  style={styles.cmPostBtn}
+                  onPress={sendChatMessage}
                 >
-                  <Text
-                    style={
-                      styles.cmPostText
-                    }
-                  >
-                    Post
-                  </Text>
+                  <Text style={styles.cmPostText}>Post</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -1555,108 +1107,50 @@ export default function RequestsScreen() {
       >
         <KeyboardAvoidingView
           style={styles.offerBackdrop}
-          behavior={
-            Platform.OS === "ios"
-              ? "padding"
-              : undefined
-          }
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <Pressable
-            style={styles.offerBackdrop}
-            onPress={closeOffer}
-          >
+          <Pressable style={styles.offerBackdrop} onPress={closeOffer}>
             <Pressable
               style={styles.offerSheet}
-              onPress={(event) =>
-                event.stopPropagation()
-              }
+              onPress={(event) => event.stopPropagation()}
             >
-              <View
-                style={
-                  styles.offerHandle
-                }
-              />
+              <View style={styles.offerHandle} />
 
-              <Text
-                style={styles.offerTitle}
-              >
-                Send Offer
-              </Text>
+              <Text style={styles.offerTitle}>Send Offer</Text>
 
               {offerRequest ? (
-                <Text
-                  style={
-                    styles.offerSubtitle
-                  }
-                  numberOfLines={2}
-                >
+                <Text style={styles.offerSubtitle} numberOfLines={2}>
                   {offerRequest.title}
                 </Text>
               ) : null}
 
-              <Text
-                style={styles.offerLabel}
-              >
-                Your price
-              </Text>
+              <Text style={styles.offerLabel}>Your price</Text>
 
-              <View
-                style={
-                  styles.offerField
-                }
-              >
-                <Text
-                  style={
-                    styles.offerNaira
-                  }
-                >
-                  ₦
-                </Text>
+              <View style={styles.offerField}>
+                <Text style={styles.offerNaira}>₦</Text>
 
                 <TextInput
                   value={offerPrice}
-                  onChangeText={
-                    setOfferPrice
-                  }
+                  onChangeText={setOfferPrice}
                   placeholder="Enter amount"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="numeric"
-                  style={
-                    styles.offerInput
-                  }
+                  style={styles.offerInput}
                 />
               </View>
 
               <TouchableOpacity
                 style={[
                   styles.offerSubmitBtn,
-                  !offerPrice.replace(
-                    /[^\d]/g,
-                    "",
-                  ) &&
+                  !offerPrice.replace(/[^\d]/g, "") &&
                     styles.offerSubmitDisabled,
                 ]}
-                disabled={
-                  !offerPrice.replace(
-                    /[^\d]/g,
-                    "",
-                  )
-                }
+                disabled={!offerPrice.replace(/[^\d]/g, "")}
                 onPress={submitOffer}
               >
-                <Ionicons
-                  name="paper-plane"
-                  size={18}
-                  color="#fff"
-                />
+                <Ionicons name="paper-plane" size={18} color="#fff" />
 
-                <Text
-                  style={
-                    styles.offerSubmitText
-                  }
-                >
-                  Send Offer
-                </Text>
+                <Text style={styles.offerSubmitText}>Send Offer</Text>
               </TouchableOpacity>
             </Pressable>
           </Pressable>
@@ -1671,61 +1165,28 @@ export default function RequestsScreen() {
         visible={showLocationModal}
         transparent
         animationType="slide"
-        onRequestClose={() =>
-          setShowLocationModal(false)
-        }
+        onRequestClose={() => setShowLocationModal(false)}
       >
         <Pressable
           style={styles.locOverlay}
-          onPress={() =>
-            setShowLocationModal(false)
-          }
+          onPress={() => setShowLocationModal(false)}
         >
-          <View
-            style={styles.locSheet}
-          >
-            <View
-              style={styles.locHandle}
-            />
+          <View style={styles.locSheet}>
+            <View style={styles.locHandle} />
 
-            <Text
-              style={styles.locTitle}
-            >
-              Choose location
-            </Text>
+            <Text style={styles.locTitle}>Choose location</Text>
 
             <TouchableOpacity
               style={styles.locOption}
-              onPress={
-                getUserLocation
-              }
+              onPress={getUserLocation}
             >
-              <Ionicons
-                name="navigate"
-                size={24}
-                color={GREEN}
-              />
+              <Ionicons name="navigate" size={24} color={GREEN} />
 
-              <View
-                style={
-                  styles.locOptionText
-                }
-              >
-                <Text
-                  style={
-                    styles.locOptionTitle
-                  }
-                >
-                  Use current location
-                </Text>
+              <View style={styles.locOptionText}>
+                <Text style={styles.locOptionTitle}>Use current location</Text>
 
-                <Text
-                  style={
-                    styles.locOptionSub
-                  }
-                >
-                  Allow access to detect
-                  your position
+                <Text style={styles.locOptionSub}>
+                  Allow access to detect your position
                 </Text>
               </View>
             </TouchableOpacity>
@@ -1733,93 +1194,41 @@ export default function RequestsScreen() {
             <TouchableOpacity
               style={styles.locOption}
               onPress={() => {
-                setShowLocationModal(
-                  false,
-                );
+                setShowLocationModal(false);
                 setShowCityPicker(true);
               }}
             >
-              <Ionicons
-                name="list-outline"
-                size={24}
-                color={GREEN}
-              />
+              <Ionicons name="list-outline" size={24} color={GREEN} />
 
-              <View
-                style={
-                  styles.locOptionText
-                }
-              >
-                <Text
-                  style={
-                    styles.locOptionTitle
-                  }
-                >
-                  Select a city
-                </Text>
+              <View style={styles.locOptionText}>
+                <Text style={styles.locOptionTitle}>Select a city</Text>
 
-                <Text
-                  style={
-                    styles.locOptionSub
-                  }
-                >
-                  Pick from popular cities
-                  in Nigeria
+                <Text style={styles.locOptionSub}>
+                  Pick from popular cities in Nigeria
                 </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.locOption}
-              onPress={
-                viewAllInNigeria
-              }
+              onPress={viewAllInNigeria}
             >
-              <Ionicons
-                name="globe-outline"
-                size={24}
-                color={GREEN}
-              />
+              <Ionicons name="globe-outline" size={24} color={GREEN} />
 
-              <View
-                style={
-                  styles.locOptionText
-                }
-              >
-                <Text
-                  style={
-                    styles.locOptionTitle
-                  }
-                >
-                  View all in Nigeria
-                </Text>
+              <View style={styles.locOptionText}>
+                <Text style={styles.locOptionTitle}>View all in Nigeria</Text>
 
-                <Text
-                  style={
-                    styles.locOptionSub
-                  }
-                >
-                  See requests from every
-                  city
+                <Text style={styles.locOptionSub}>
+                  See requests from every city
                 </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.locCancel}
-              onPress={() =>
-                setShowLocationModal(
-                  false,
-                )
-              }
+              onPress={() => setShowLocationModal(false)}
             >
-              <Text
-                style={
-                  styles.locCancelText
-                }
-              >
-                Cancel
-              </Text>
+              <Text style={styles.locCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -1833,127 +1242,58 @@ export default function RequestsScreen() {
         visible={showCityPicker}
         transparent
         animationType="slide"
-        onRequestClose={
-          closeCityPicker
-        }
+        onRequestClose={closeCityPicker}
       >
-        <View
-          style={styles.locOverlay}
-        >
-          <View
-            style={[
-              styles.locSheet,
-              styles.locCitySheet,
-            ]}
-          >
-            <View
-              style={styles.locHandle}
-            />
+        <View style={styles.locOverlay}>
+          <View style={[styles.locSheet, styles.locCitySheet]}>
+            <View style={styles.locHandle} />
 
-            <Text
-              style={styles.locTitle}
-            >
-              Select a city
-            </Text>
+            <Text style={styles.locTitle}>Select a city</Text>
 
-            <View
-              style={
-                styles.locSearchBox
-              }
-            >
-              <Ionicons
-                name="search-outline"
-                size={20}
-                color="#888"
-              />
+            <View style={styles.locSearchBox}>
+              <Ionicons name="search-outline" size={20} color="#888" />
 
               <TextInput
-                style={
-                  styles.locSearchInput
-                }
+                style={styles.locSearchInput}
                 placeholder="Filter cities..."
                 placeholderTextColor="#888"
                 value={citySearch}
-                onChangeText={
-                  setCitySearch
-                }
+                onChangeText={setCitySearch}
                 autoCorrect={false}
               />
 
               {citySearch.length > 0 ? (
-                <TouchableOpacity
-                  onPress={() =>
-                    setCitySearch("")
-                  }
-                >
-                  <Ionicons
-                    name="close-circle"
-                    size={20}
-                    color="#AAA"
-                  />
+                <TouchableOpacity onPress={() => setCitySearch("")}>
+                  <Ionicons name="close-circle" size={20} color="#AAA" />
                 </TouchableOpacity>
               ) : null}
             </View>
 
             <FlatList
               data={filteredCities}
-              keyExtractor={(item) =>
-                item
-              }
+              keyExtractor={(item) => item}
               keyboardShouldPersistTaps="handled"
-              style={
-                styles.locCityList
-              }
+              style={styles.locCityList}
               ListEmptyComponent={
-                <Text
-                  style={
-                    styles.locEmptyCities
-                  }
-                >
-                  No city found.
-                </Text>
+                <Text style={styles.locEmptyCities}>No city found.</Text>
               }
-              renderItem={({
-                item: city,
-              }) => (
+              renderItem={({ item: city }) => (
                 <TouchableOpacity
-                  style={
-                    styles.locCityItem
-                  }
-                  onPress={() =>
-                    selectCity(city)
-                  }
+                  style={styles.locCityItem}
+                  onPress={() => selectCity(city)}
                 >
-                  <Ionicons
-                    name="location-outline"
-                    size={20}
-                    color={GREEN}
-                  />
+                  <Ionicons name="location-outline" size={20} color={GREEN} />
 
-                  <Text
-                    style={
-                      styles.locCityItemText
-                    }
-                  >
-                    {city}
-                  </Text>
+                  <Text style={styles.locCityItemText}>{city}</Text>
                 </TouchableOpacity>
               )}
             />
 
             <TouchableOpacity
               style={styles.locCancel}
-              onPress={
-                closeCityPicker
-              }
+              onPress={closeCityPicker}
             >
-              <Text
-                style={
-                  styles.locCancelText
-                }
-              >
-                Cancel
-              </Text>
+              <Text style={styles.locCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2338,8 +1678,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     maxHeight: "78%",
     minHeight: "55%",
-    paddingBottom:
-      Platform.OS === "ios" ? 28 : 12,
+    paddingBottom: Platform.OS === "ios" ? 28 : 12,
   },
 
   cmHandle: {
@@ -2356,8 +1695,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 10,
-    borderBottomWidth:
-      StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#E5E7EB",
   },
 
@@ -2465,8 +1803,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: "#F9FAFB",
-    borderTopWidth:
-      StyleSheet.hairlineWidth,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#E5E7EB",
   },
 
@@ -2487,8 +1824,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 10,
     paddingBottom: 6,
-    borderTopWidth:
-      StyleSheet.hairlineWidth,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#E5E7EB",
     gap: 10,
   },
