@@ -129,18 +129,6 @@ export default function ProfessionalProfile() {
 
   const isOwnProfile = isOwnProfessionalProfile(pro.id);
 
-  const onBook = (service?: ProService) => {
-    router.push({
-      pathname: "/(tab)/bookings",
-      params: {
-        proId: pro.id,
-        serviceId: service?.id ?? "",
-        serviceName: service?.name ?? "",
-        price: service?.price ?? pro.priceFrom,
-      },
-    });
-  };
-
   const submitReview = async () => {
     const comment = reviewText.trim();
 
@@ -277,7 +265,7 @@ export default function ProfessionalProfile() {
               <View style={styles.verifiedBadge}>
                 <Image
                   source={require("@/assets/premium/checkmark.png")}
-                  style={styles.verifiedBadgeImage}
+                  style={{ width: 50, height: 50, marginLeft: -4 }}
                   resizeMode="contain"
                 />
               </View>
@@ -646,10 +634,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 2,
-  },
-  verifiedBadgeImage: {
-    width: 32,
-    height: 32,
   },
   nameRow: {
     flexDirection: "row",
