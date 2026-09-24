@@ -293,7 +293,7 @@ export default function Home() {
                     <View style={styles.verifiedBadge}>
                       <Image
                         source={require("@/assets/premium/checkmark.png")}
-                        style={{ width: 17, height: 17 }}
+                        style={{ width: 30, height: 30 }}
                         resizeMode="contain"
                       />
                     </View>
@@ -602,19 +602,19 @@ const styles = StyleSheet.create({
   profileImage: { width: "100%", height: "100%", borderRadius: 35 },
   verifiedBadge: {
     position: "absolute",
-    right: -1,
-    bottom: -1,
-    width: 19,
-    height: 19,
+    right: 4,
+    bottom: 6,
+    width: 13,
+    height: 13,
     borderRadius: 10,
     backgroundColor: "#FFFFFF",
-    alignItems: "center",
+    // verifiedBadgeImage: {
+  //   width: 17,
+  //   height: 17,
+  // }, alignItems: "center",
     justifyContent: "center",
   },
-  verifiedBadgeImage: {
-    width: 17,
-    height: 17,
-  },
+ 
   professionalName: {
     fontSize: 13,
     fontWeight: "800",
