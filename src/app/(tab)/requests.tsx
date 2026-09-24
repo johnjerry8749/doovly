@@ -219,13 +219,9 @@ export default function RequestsScreen() {
           </View>
           <View style={styles.posterInfo}>
             <View style={styles.posterNameRow}>
-               <TouchableOpacity
-                onPress={() => router.push(`/professional/[id]`)}
-              >
               <Text style={styles.posterName} numberOfLines={1}>
-                {item.posterName} 
+                {item.posterName}
               </Text>
-              </TouchableOpacity>
               {item.posterVerified ? (
                 <Ionicons
                   name="checkmark-circle"
