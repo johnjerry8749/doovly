@@ -13,11 +13,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const GREEN = "#159447";
 const INACTIVE = "#6B7280";
+const CENTER_BG = "#D1FAE5";
 
 /**
  * Layout only — same navigation as original tabs:
- * Home | Services | Requests (center +) | Bookings | Profile
- * Same icons; only visual style changed to floating pill + raised center.
+ * Home | Services | Requests (center) | Bookings | Profile
  */
 const SIDE_TABS: {
   name: string;
@@ -90,14 +90,14 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
       </View>
 
       <TouchableOpacity
-        style={styles.centerBtn}
+        style={[styles.centerBtn, centerFocused && styles.centerBtnFocused]}
         onPress={() => goTo(CENTER_TAB)}
         activeOpacity={0.85}
         accessibilityRole="button"
         accessibilityState={{ selected: centerFocused }}
         accessibilityLabel="Requests"
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
+        <Ionicons name="list" size={26} color={GREEN} />
       </TouchableOpacity>
     </View>
   );
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-evenly",
   },
   centerSlot: {
-    width: 72,
+    width: 64,
   },
   tabItem: {
     alignItems: "center",
@@ -173,25 +173,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
   },
+  /* Lowered vs previous raised FAB — sits closer to the bar */
   centerBtn: {
     position: "absolute",
-    top: -18,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: GREEN,
+    top: 4,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: CENTER_BG,
     alignItems: "center",
     justifyContent: "center",
     ...Platform.select({
       ios: {
-        shadowColor: GREEN,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.35,
-        shadowRadius: 8,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 8,
+        elevation: 3,
       },
     }),
+  },
+  centerBtnFocused: {
+    backgroundColor: "#A7F3D0",
   },
 });
