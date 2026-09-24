@@ -271,11 +271,6 @@ export default function Profile() {
                 <MenuIcon name="list-outline" />
               }
               title="Service Requests"
-              badge={
-                requestCount > 0
-                  ? requestCount
-                  : undefined
-              }
               onPress={() =>
                 router.push(
                   "/profile/my_service_requests",
