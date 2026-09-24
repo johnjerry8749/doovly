@@ -25,15 +25,14 @@ import {
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
 
-import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
-
 import {
   addInAppNotification,
   getCurrentUserId,
 } from "@/services/inAppNotifications";
 
-import { useLocation } from "@/context/LocationContext";
+import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { NIGERIA_CITIES } from "@/data/cities";
+import { useLocation } from "@/context/LocationContext";
 
 const GREEN = "#159447";
 
@@ -51,12 +50,17 @@ const CATEGORY_FILTERS = [
 type RequestWithUser = ServiceRequest & {
   userId?: string | number;
   posterUserId?: string | number;
+  posterId?: string | number;
   createdByUserId?: string | number;
+  professionalId?: string | number;
 };
 
 type CommentWithUser = ServiceRequestComment & {
   userId?: string | number;
   createdByUserId?: string | number;
+  authorId?: string | number;
+  posterUserId?: string | number;
+  professionalId?: string | number;
 };
 
 /* ============================================================
@@ -67,6 +71,10 @@ const normalize = (value?: string | null) =>
   String(value || "")
     .trim()
     .toLowerCase();
+
+/* ============================================================
+   CATEGORY MATCH
+============================================================ */
 
 const categoryMatches = (
   request: ServiceRequest,
@@ -93,31 +101,44 @@ const categoryMatches = (
   );
 };
 
+/* ============================================================
+   REQUEST USER ID
+============================================================ */
+
 const getRequestUserId = (
   request: ServiceRequest,
-) => {
+): string | number | undefined => {
   const item = request as RequestWithUser;
 
   return (
     item.posterUserId ??
+    item.posterId ??
     item.createdByUserId ??
-    item.userId
-  );
-};
-
-const getCommentUserId = (
-  comment: ServiceRequestComment,
-) => {
-  const item = comment as CommentWithUser;
-
-  return (
     item.userId ??
-    item.createdByUserId
+    item.professionalId
   );
 };
 
 /* ============================================================
-   USER PROFILE NAVIGATION
+   COMMENT USER ID
+============================================================ */
+
+const getCommentUserId = (
+  comment: ServiceRequestComment,
+): string | number | undefined => {
+  const item = comment as CommentWithUser;
+
+  return (
+    item.userId ??
+    item.createdByUserId ??
+    item.authorId ??
+    item.posterUserId ??
+    item.professionalId
+  );
+};
+
+/* ============================================================
+   USER / PROFESSIONAL PROFILE NAVIGATION
 ============================================================ */
 
 const openUserProfile = (
@@ -126,15 +147,18 @@ const openUserProfile = (
   if (
     userId === undefined ||
     userId === null ||
-    userId === ""
+    String(userId).trim() === ""
   ) {
     return;
   }
 
+  const id = String(userId).trim();
+
   router.push({
     pathname: "/professional/[id]",
     params: {
-      id: String(userId),
+      id,
+      from: "requests",
     },
   });
 };
@@ -188,10 +212,9 @@ export default function RequestsScreen() {
     Record<string, boolean>
   >({});
 
-  const [extraComments, setExtraComments] =
-    useState<
-      Record<string, ServiceRequestComment[]>
-    >({});
+  const [extraComments, setExtraComments] = useState<
+    Record<string, ServiceRequestComment[]>
+  >({});
 
   const [offerRequest, setOfferRequest] =
     useState<ServiceRequest | null>(null);
@@ -210,7 +233,7 @@ export default function RequestsScreen() {
     useRef<FlatList<ServiceRequestComment>>(null);
 
   /* ============================================================
-     MOCK REQUEST DATA
+     REQUEST DATA
   ============================================================ */
 
   const allRequests = useMemo(
@@ -396,16 +419,20 @@ export default function RequestsScreen() {
       return;
     }
 
+    const currentUserId =
+      getCurrentUserId();
+
     const body = replyTo
       ? `@${replyTo.userName} ${text}`
       : text;
 
-    const newComment: ServiceRequestComment = {
+    const newComment: CommentWithUser = {
       id: `local-${Date.now()}`,
       userName: "You",
       userAvatar: MY_AVATAR,
       text: body,
       timeAgo: "Just now",
+      userId: currentUserId,
     };
 
     setExtraComments((previous) => ({
@@ -440,10 +467,8 @@ export default function RequestsScreen() {
       return;
     }
 
-    const amount = offerPrice.replace(
-      /[^\d]/g,
-      "",
-    );
+    const amount =
+      offerPrice.replace(/[^\d]/g, "");
 
     if (!amount) {
       return;
@@ -484,13 +509,15 @@ export default function RequestsScreen() {
   }: {
     item: ServiceRequest;
   }) => {
-    const liked = !!likedIds[item.id];
+    const liked =
+      !!likedIds[item.id];
 
     const likesDisplay =
       (item.likesCount || 0) +
       (liked ? 1 : 0);
 
-    const comments = getComments(item);
+    const comments =
+      getComments(item);
 
     const commentCount =
       comments.length;
@@ -504,6 +531,16 @@ export default function RequestsScreen() {
     const posterUserId =
       getRequestUserId(item);
 
+    const openPosterProfile = () => {
+      if (!posterUserId) {
+        return;
+      }
+
+      openUserProfile(
+        posterUserId,
+      );
+    };
+
     return (
       <View style={styles.card}>
         {/* =================================================
@@ -513,22 +550,15 @@ export default function RequestsScreen() {
         <TouchableOpacity
           style={styles.posterRow}
           activeOpacity={0.75}
-          onPress={() =>
-            openUserProfile(
-              posterUserId,
-            )
-          }
+          onPress={openPosterProfile}
         >
           <View
-            style={
-              styles.posterAvatarWrap
-            }
+            style={styles.posterAvatarWrap}
           >
             <Image
               source={item.posterAvatar}
               style={styles.posterAvatar}
             />
-            
           </View>
 
           <View
@@ -586,7 +616,9 @@ export default function RequestsScreen() {
               style={styles.newBadge}
             >
               <Text
-                style={styles.newBadgeText}
+                style={
+                  styles.newBadgeText
+                }
               >
                 NEW
               </Text>
@@ -645,7 +677,9 @@ export default function RequestsScreen() {
           style={styles.engagementRow}
         >
           <TouchableOpacity
-            style={styles.engagementBtn}
+            style={
+              styles.engagementBtn
+            }
             onPress={() =>
               toggleLike(item.id)
             }
@@ -675,7 +709,9 @@ export default function RequestsScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.engagementBtn}
+            style={
+              styles.engagementBtn
+            }
             onPress={() =>
               openChat(item)
             }
@@ -697,7 +733,9 @@ export default function RequestsScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.engagementBtn}
+            style={
+              styles.engagementBtn
+            }
             onPress={() =>
               shareRequest(item)
             }
@@ -725,19 +763,22 @@ export default function RequestsScreen() {
 
         {firstComment ? (
           <View
-            style={
-              styles.commentPreview
-            }
+            style={styles.commentPreview}
           >
             <TouchableOpacity
               activeOpacity={0.75}
-              onPress={() =>
-                openUserProfile(
+              onPress={() => {
+                const userId =
                   getCommentUserId(
                     firstComment,
-                  ),
-                )
-              }
+                  );
+
+                if (userId) {
+                  openUserProfile(
+                    userId,
+                  );
+                }
+              }}
             >
               <Image
                 source={
@@ -754,13 +795,18 @@ export default function RequestsScreen() {
             >
               <TouchableOpacity
                 activeOpacity={0.75}
-                onPress={() =>
-                  openUserProfile(
+                onPress={() => {
+                  const userId =
                     getCommentUserId(
                       firstComment,
-                    ),
-                  )
-                }
+                    );
+
+                  if (userId) {
+                    openUserProfile(
+                      userId,
+                    );
+                  }
+                }}
               >
                 <Text
                   style={
@@ -832,9 +878,11 @@ export default function RequestsScreen() {
                 styles.viewMoreComments
               }
             >
-              View {commentCount - 1}{" "}
-              more comment
-              {commentCount - 1 === 1
+              View{" "}
+              {commentCount - 1} more
+              comment
+              {commentCount - 1 ===
+              1
                 ? ""
                 : "s"}
             </Text>
@@ -846,7 +894,9 @@ export default function RequestsScreen() {
         ================================================= */}
 
         <TouchableOpacity
-          style={styles.sendOfferBtn}
+          style={
+            styles.sendOfferBtn
+          }
           onPress={() =>
             setOfferRequest(item)
           }
@@ -859,7 +909,9 @@ export default function RequestsScreen() {
           />
 
           <Text
-            style={styles.sendOfferText}
+            style={
+              styles.sendOfferText
+            }
           >
             Send Offer
           </Text>
@@ -872,9 +924,10 @@ export default function RequestsScreen() {
      COMMENTS MODAL DATA
   ============================================================ */
 
-  const chatComments = chatRequest
-    ? getComments(chatRequest)
-    : [];
+  const chatComments =
+    chatRequest
+      ? getComments(chatRequest)
+      : [];
 
   /* ============================================================
      UI
@@ -963,7 +1016,9 @@ export default function RequestsScreen() {
           />
 
           <Text
-            style={styles.createBtnText}
+            style={
+              styles.createBtnText
+            }
           >
             Create
           </Text>
@@ -975,7 +1030,9 @@ export default function RequestsScreen() {
       ================================================= */}
 
       <View
-        style={styles.searchContainer}
+        style={
+          styles.searchContainer
+        }
       >
         <Ionicons
           name="search-outline"
@@ -1089,7 +1146,9 @@ export default function RequestsScreen() {
             />
 
             <Text
-              style={styles.emptyTitle}
+              style={
+                styles.emptyTitle
+              }
             >
               No requests found
             </Text>
@@ -1151,7 +1210,9 @@ export default function RequestsScreen() {
               </Text>
 
               <TouchableOpacity
-                style={styles.cmCloseBtn}
+                style={
+                  styles.cmCloseBtn
+                }
                 onPress={closeChat}
               >
                 <Ionicons
@@ -1176,18 +1237,29 @@ export default function RequestsScreen() {
                     comment,
                   );
 
+                const goToCommenterProfile =
+                  () => {
+                    if (!userId) {
+                      return;
+                    }
+
+                    openUserProfile(
+                      userId,
+                    );
+                  };
+
                 return (
                   <View
                     style={
                       styles.cmRow
                     }
                   >
+                    {/* COMMENT AVATAR */}
+
                     <TouchableOpacity
                       activeOpacity={0.75}
-                      onPress={() =>
-                        openUserProfile(
-                          userId,
-                        )
+                      onPress={
+                        goToCommenterProfile
                       }
                     >
                       <Image
@@ -1205,12 +1277,12 @@ export default function RequestsScreen() {
                         styles.cmContent
                       }
                     >
+                      {/* COMMENT NAME */}
+
                       <TouchableOpacity
                         activeOpacity={0.75}
-                        onPress={() =>
-                          openUserProfile(
-                            userId,
-                          )
+                        onPress={
+                          goToCommenterProfile
                         }
                       >
                         <Text
@@ -1241,11 +1313,17 @@ export default function RequestsScreen() {
                         </Text>
                       </TouchableOpacity>
 
+                      {/* COMMENT TEXT */}
+
                       <Text
-                        style={styles.cmText}
+                        style={
+                          styles.cmText
+                        }
                       >
                         {comment.text}
                       </Text>
+
+                      {/* REPLY */}
 
                       <TouchableOpacity
                         onPress={() =>
@@ -1304,7 +1382,9 @@ export default function RequestsScreen() {
               }
             />
 
-            {/* REPLY BAR */}
+            {/* =================================================
+                REPLY BAR
+            ================================================= */}
 
             {replyTo ? (
               <View
@@ -1342,7 +1422,9 @@ export default function RequestsScreen() {
               </View>
             ) : null}
 
-            {/* COMMENT INPUT */}
+            {/* =================================================
+                COMMENT INPUT
+            ================================================= */}
 
             <View
               style={
@@ -1406,9 +1488,7 @@ export default function RequestsScreen() {
         onRequestClose={closeOffer}
       >
         <KeyboardAvoidingView
-          style={
-            styles.offerBackdrop
-          }
+          style={styles.offerBackdrop}
           behavior={
             Platform.OS === "ios"
               ? "padding"
@@ -1416,9 +1496,7 @@ export default function RequestsScreen() {
           }
         >
           <Pressable
-            style={
-              styles.offerBackdrop
-            }
+            style={styles.offerBackdrop}
             onPress={closeOffer}
           >
             <Pressable
@@ -1457,10 +1535,14 @@ export default function RequestsScreen() {
               </Text>
 
               <View
-                style={styles.offerField}
+                style={
+                  styles.offerField
+                }
               >
                 <Text
-                  style={styles.offerNaira}
+                  style={
+                    styles.offerNaira
+                  }
                 >
                   ₦
                 </Text>
@@ -1494,9 +1576,7 @@ export default function RequestsScreen() {
                     "",
                   )
                 }
-                onPress={
-                  submitOffer
-                }
+                onPress={submitOffer}
               >
                 <Ionicons
                   name="paper-plane"
@@ -1590,9 +1670,7 @@ export default function RequestsScreen() {
                 setShowLocationModal(
                   false,
                 );
-                setShowCityPicker(
-                  true,
-                );
+                setShowCityPicker(true);
               }}
             >
               <Ionicons
@@ -1740,9 +1818,7 @@ export default function RequestsScreen() {
               0 ? (
                 <TouchableOpacity
                   onPress={() =>
-                    setCitySearch(
-                      "",
-                    )
+                    setCitySearch("")
                   }
                 >
                   <Ionicons
@@ -1962,7 +2038,6 @@ const styles = StyleSheet.create({
   posterAvatarWrap: {
     width: 40,
     height: 40,
-    position: "relative",
   },
 
   posterAvatar: {
@@ -1970,20 +2045,6 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: "#E5E7EB",
-  },
-
-  posterVerifiedBadge: {
-    position: "absolute",
-    right: -4,
-    bottom: -4,
-    width: 20,
-    height: 20,
-    zIndex: 2,
-  },
-
-  posterCheckmark: {
-    width: 20,
-    height: 20,
   },
 
   posterInfo: {
@@ -2203,7 +2264,8 @@ const styles = StyleSheet.create({
 
   cmDim: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor:
+      "rgba(0,0,0,0.45)",
   },
 
   cmSheet: {
@@ -2213,7 +2275,9 @@ const styles = StyleSheet.create({
     maxHeight: "78%",
     minHeight: "55%",
     paddingBottom:
-      Platform.OS === "ios" ? 28 : 12,
+      Platform.OS === "ios"
+        ? 28
+        : 12,
   },
 
   cmHandle: {
@@ -2402,7 +2466,8 @@ const styles = StyleSheet.create({
   offerBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor:
+      "rgba(0,0,0,0.4)",
   },
 
   offerSheet: {
@@ -2496,7 +2561,8 @@ const styles = StyleSheet.create({
 
   locOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor:
+      "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
 
