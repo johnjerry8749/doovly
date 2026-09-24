@@ -28,6 +28,7 @@ import {
   listMyServiceRequests,
   type ServiceRequest,
 } from "@/services/serviceRequests";
+import CreateJobModal from "@/components/CreateJobModal"; // adjust path if needed
 
 const GREEN = "#159447";
 const TEXT = "#111827";
@@ -37,6 +38,12 @@ export default function MyServiceRequestsScreen() {
   const router = useRouter();
   const [requests, setRequests] = useState<ServiceRequest[]>(() =>
     listMyServiceRequests(),
+  );
+
+  // Modal state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<ServiceRequest | null>(
+    null,
   );
 
   const refresh = useCallback(() => {
@@ -49,15 +56,24 @@ export default function MyServiceRequestsScreen() {
     }, [refresh]),
   );
 
-  const onCreate = () => {
-    router.push("/profile/createjob");
+  const openCreate = () => {
+    setEditingRequest(null);
+    setModalVisible(true);
   };
 
-  const onEdit = (item: ServiceRequest) => {
-    router.push({
-      pathname: "/profile/createjob",
-      params: { editId: item.id },
-    });
+  const openEdit = (item: ServiceRequest) => {
+    setEditingRequest(item);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setEditingRequest(null);
+  };
+
+  const handleSaved = (_request: ServiceRequest) => {
+    refresh();
+    // modal closes itself via onClose after save
   };
 
   const onDelete = (item: ServiceRequest) => {
@@ -72,7 +88,11 @@ export default function MyServiceRequestsScreen() {
           onPress: () => {
             const ok = deleteServiceRequest(item.id);
             if (ok) refresh();
-            else Alert.alert("Could not delete", "Only your own posts can be deleted.");
+            else
+              Alert.alert(
+                "Could not delete",
+                "Only your own posts can be deleted.",
+              );
           },
         },
       ],
@@ -118,7 +138,7 @@ export default function MyServiceRequestsScreen() {
         <View style={styles.actionsRow}>
           <TouchableOpacity
             style={styles.editBtn}
-            onPress={() => onEdit(item)}
+            onPress={() => openEdit(item)}
             activeOpacity={0.8}
           >
             <Ionicons name="pencil" size={16} color={GREEN} />
@@ -153,7 +173,7 @@ export default function MyServiceRequestsScreen() {
         <Text style={styles.headerTitle}>Service Requests</Text>
         <TouchableOpacity
           style={styles.createBtn}
-          onPress={onCreate}
+          onPress={openCreate}
           activeOpacity={0.85}
         >
           <Ionicons name="add" size={18} color="#fff" />
@@ -176,13 +196,21 @@ export default function MyServiceRequestsScreen() {
             </Text>
             <TouchableOpacity
               style={styles.emptyCreate}
-              onPress={onCreate}
+              onPress={openCreate}
               activeOpacity={0.85}
             >
               <Text style={styles.emptyCreateText}>Create request</Text>
             </TouchableOpacity>
           </View>
         }
+      />
+
+      {/* Modal lives here — not a route */}
+      <CreateJobModal
+        visible={modalVisible}
+        onClose={closeModal}
+        request={editingRequest}
+        onSaved={handleSaved}
       />
     </SafeAreaView>
   );

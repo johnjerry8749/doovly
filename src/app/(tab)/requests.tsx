@@ -24,20 +24,17 @@ import {
   type ServiceRequest,
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
-
 import { listProfessionals } from "@/services/professionals";
-
 import {
   getCurrentUserId,
   addInAppNotification,
 } from "@/services/inAppNotifications";
-
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { useLocation } from "@/context/LocationContext";
+import CreateJobModal from "@/components/CreateJobModal";
 
 const GREEN = "#159447";
-
 const MY_AVATAR = require("@/assets/profile_1.jpg");
 
 const CATEGORY_FILTERS = [
@@ -74,17 +71,10 @@ const normalize = (value?: string | number | null) =>
     .trim()
     .toLowerCase();
 
-/* ============================================================
-   CATEGORY MATCH
-============================================================ */
-
 const categoryMatches = (request: ServiceRequest, selectedCategory: string) => {
-  if (selectedCategory === "All") {
-    return true;
-  }
+  if (selectedCategory === "All") return true;
 
   const selected = normalize(selectedCategory);
-
   const requestCategories = [request.category, request.profession]
     .filter(Boolean)
     .map((value) => normalize(value));
@@ -97,15 +87,10 @@ const categoryMatches = (request: ServiceRequest, selectedCategory: string) => {
   );
 };
 
-/* ============================================================
-   REQUEST USER ID
-============================================================ */
-
 const getRequestUserId = (
   request: ServiceRequest,
 ): string | number | undefined => {
   const item = request as RequestWithUser;
-
   return (
     item.professionalId ??
     item.posterUserId ??
@@ -115,15 +100,10 @@ const getRequestUserId = (
   );
 };
 
-/* ============================================================
-   COMMENT USER ID
-============================================================ */
-
 const getCommentUserId = (
   comment: ServiceRequestComment,
 ): string | number | undefined => {
   const item = comment as CommentWithUser;
-
   return (
     item.professionalId ??
     item.userId ??
@@ -133,89 +113,43 @@ const getCommentUserId = (
   );
 };
 
-/* ============================================================
-   FIND PROFESSIONAL FROM MOCK DATA
-============================================================ */
-
 const findProfessionalForUser = (
   userId?: string | number | null,
   userName?: string | null,
 ) => {
   const professionals = listProfessionals();
-
-  if (!professionals || professionals.length === 0) {
-    return undefined;
-  }
+  if (!professionals?.length) return undefined;
 
   const normalizedUserId = normalize(userId);
   const normalizedUserName = normalize(userName);
 
-  /*
-   * ----------------------------------------------------------
-   * 1. Try professional.id
-   * ----------------------------------------------------------
-   *
-   * This is the most reliable match when the request already
-   * contains the professional's ID.
-   */
   if (normalizedUserId) {
     const byProfessionalId = professionals.find(
-      (professional) => normalize(professional.id) === normalizedUserId,
+      (p) => normalize(p.id) === normalizedUserId,
     );
+    if (byProfessionalId) return byProfessionalId;
 
-    if (byProfessionalId) {
-      return byProfessionalId;
-    }
-  }
-
-  /*
-   * ----------------------------------------------------------
-   * 2. Try userId / profileId
-   * ----------------------------------------------------------
-   *
-   * Some mock/API data may have a separate userId.
-   */
-  if (normalizedUserId) {
-    const byUserId = professionals.find((professional) => {
-      const person = professional as typeof professional & {
+    const byUserId = professionals.find((p) => {
+      const person = p as typeof p & {
         userId?: string | number;
         profileId?: string | number;
       };
-
       return (
         normalize(person.userId) === normalizedUserId ||
         normalize(person.profileId) === normalizedUserId
       );
     });
-
-    if (byUserId) {
-      return byUserId;
-    }
+    if (byUserId) return byUserId;
   }
 
-  /*
-   * ----------------------------------------------------------
-   * 3. Exact professional name
-   * ----------------------------------------------------------
-   *
-   * This is especially useful with the current mock data.
-   */
   if (normalizedUserName) {
-    const byName = professionals.find(
-      (professional) => normalize(professional.name) === normalizedUserName,
+    return professionals.find(
+      (p) => normalize(p.name) === normalizedUserName,
     );
-
-    if (byName) {
-      return byName;
-    }
   }
 
   return undefined;
 };
-
-/* ============================================================
-   OPEN PROFESSIONAL PROFILE
-============================================================ */
 
 const openUserProfile = ({
   userId,
@@ -225,24 +159,11 @@ const openUserProfile = ({
   userName?: string | null;
 }) => {
   const professional = findProfessionalForUser(userId, userName);
-
   if (!professional) {
-    console.log("[Doovly] No professional found", {
-      userId,
-      userName,
-    });
-
+    console.log("[Doovly] No professional found", { userId, userName });
     return;
   }
 
-  /*
-   * IMPORTANT:
-   *
-   * Do NOT navigate using the raw userId.
-   *
-   * The professional mock data is the source of truth.
-   * We navigate using the actual professional.id.
-   */
   router.push({
     pathname: "/professional/[id]",
     params: {
@@ -257,10 +178,6 @@ const openUserProfile = ({
 ============================================================ */
 
 export default function RequestsScreen() {
-  /* ============================================================
-     LOCATION
-  ============================================================ */
-
   const {
     locationName,
     loadingLocation,
@@ -279,58 +196,39 @@ export default function RequestsScreen() {
 
   const filteredCities = useMemo(() => {
     const query = citySearch.trim().toLowerCase();
-
-    if (!query) {
-      return [...NIGERIA_CITIES];
-    }
-
-    return NIGERIA_CITIES.filter((city) => city.toLowerCase().includes(query));
+    if (!query) return [...NIGERIA_CITIES];
+    return NIGERIA_CITIES.filter((city) =>
+      city.toLowerCase().includes(query),
+    );
   }, [citySearch]);
 
-  /* ============================================================
-     STATE
-  ============================================================ */
-
+  /* ---------- state ---------- */
   const [search, setSearch] = useState("");
-
   const [categoryFilter, setCategoryFilter] = useState("All");
-
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
-
   const [extraComments, setExtraComments] = useState<
     Record<string, ServiceRequestComment[]>
   >({});
+  const [allRequests, setAllRequests] = useState(() => listServiceRequests());
 
+  const [createVisible, setCreateVisible] = useState(false);
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
-
   const [offerPrice, setOfferPrice] = useState("");
-
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
-
   const [chatText, setChatText] = useState("");
-
   const [replyTo, setReplyTo] = useState<ServiceRequestComment | null>(null);
 
   const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
 
-  /* ============================================================
-     REQUEST DATA
-  ============================================================ */
+  const refreshRequests = () => setAllRequests(listServiceRequests());
 
-  const allRequests = useMemo(() => listServiceRequests(), []);
+  /* ---------- comments ---------- */
+  const getComments = (item: ServiceRequest): ServiceRequestComment[] => [
+    ...(item.comments || []),
+    ...(extraComments[item.id] || []),
+  ];
 
-  /* ============================================================
-     COMMENTS
-  ============================================================ */
-
-  const getComments = (item: ServiceRequest): ServiceRequestComment[] => {
-    return [...(item.comments || []), ...(extraComments[item.id] || [])];
-  };
-
-  /* ============================================================
-     LOCATION FILTER
-  ============================================================ */
-
+  /* ---------- location filter ---------- */
   const matchesLocationCity = (itemCity?: string, itemArea?: string) => {
     if (
       loadingLocation ||
@@ -345,17 +243,11 @@ export default function RequestsScreen() {
     }
 
     const city = locationName.split(",")[0].trim().toLowerCase();
-
-    if (!city || city === "nigeria") {
-      return true;
-    }
+    if (!city || city === "nigeria") return true;
 
     const requestCity = normalize(itemCity);
     const requestArea = normalize(itemArea);
-
-    if (!requestCity && !requestArea) {
-      return true;
-    }
+    if (!requestCity && !requestArea) return true;
 
     return (
       requestCity.includes(city) ||
@@ -364,22 +256,14 @@ export default function RequestsScreen() {
     );
   };
 
-  /* ============================================================
-     FILTER REQUESTS
-  ============================================================ */
-
+  /* ---------- filtered list ---------- */
   const filteredRequests = useMemo(() => {
     const query = search.trim().toLowerCase();
-
     const seen = new Set<string>();
 
     return allRequests.filter((request) => {
       const req = request as RequestWithUser;
-
-      if (seen.has(req.id)) {
-        return false;
-      }
-
+      if (seen.has(req.id)) return false;
       seen.add(req.id);
 
       const matchesSearch =
@@ -392,11 +276,11 @@ export default function RequestsScreen() {
         normalize(req.description).includes(query) ||
         normalize(req.posterName).includes(query);
 
-      const matchesCategory = categoryMatches(req, categoryFilter);
-
-      const matchesLocation = matchesLocationCity(req.city, req.location);
-
-      return matchesSearch && matchesCategory && matchesLocation;
+      return (
+        matchesSearch &&
+        categoryMatches(req, categoryFilter) &&
+        matchesLocationCity(req.city, req.location)
+      );
     });
   }, [
     allRequests,
@@ -407,20 +291,10 @@ export default function RequestsScreen() {
     showAllNigeria,
   ]);
 
-  /* ============================================================
-     LIKE
-  ============================================================ */
-
+  /* ---------- actions ---------- */
   const toggleLike = (id: string) => {
-    setLikedIds((previous) => ({
-      ...previous,
-      [id]: !previous[id],
-    }));
+    setLikedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
-
-  /* ============================================================
-     SHARE
-  ============================================================ */
 
   const shareRequest = async (item: ServiceRequest) => {
     try {
@@ -433,13 +307,9 @@ export default function RequestsScreen() {
           "— Shared from Doovly",
       });
     } catch {
-      // User cancelled sharing.
+      // cancelled
     }
   };
-
-  /* ============================================================
-     COMMENTS
-  ============================================================ */
 
   const openChat = (item: ServiceRequest) => {
     setChatRequest(item);
@@ -454,59 +324,35 @@ export default function RequestsScreen() {
   };
 
   const sendChatMessage = () => {
-    if (!chatRequest) {
-      return;
-    }
-
+    if (!chatRequest) return;
     const text = chatText.trim();
-
-    if (!text) {
-      return;
-    }
+    if (!text) return;
 
     const currentUserId = getCurrentUserId();
-
     const body = replyTo ? `@${replyTo.userName} ${text}` : text;
-
     const currentProfessional = findProfessionalForUser(currentUserId);
 
     const newComment: CommentWithUser = {
       id: `local-${Date.now()}`,
-
-      /*
-       * Use professional mock data when available.
-       * Otherwise keep "You".
-       */
       userName: currentProfessional?.name || "You",
-
       userAvatar: currentProfessional?.image || MY_AVATAR,
-
       text: body,
-
       timeAgo: "Just now",
-
       userId: currentProfessional?.id ?? currentUserId,
     };
 
-    setExtraComments((previous) => ({
-      ...previous,
-
-      [chatRequest.id]: [...(previous[chatRequest.id] || []), newComment],
+    setExtraComments((prev) => ({
+      ...prev,
+      [chatRequest.id]: [...(prev[chatRequest.id] || []), newComment],
     }));
 
     setChatText("");
     setReplyTo(null);
 
     setTimeout(() => {
-      commentListRef.current?.scrollToEnd({
-        animated: true,
-      });
+      commentListRef.current?.scrollToEnd({ animated: true });
     }, 100);
   };
-
-  /* ============================================================
-     SEND OFFER
-  ============================================================ */
 
   const closeOffer = () => {
     setOfferRequest(null);
@@ -514,20 +360,12 @@ export default function RequestsScreen() {
   };
 
   const submitOffer = () => {
-    if (!offerRequest) {
-      return;
-    }
-
+    if (!offerRequest) return;
     const amount = offerPrice.replace(/[^\d]/g, "");
-
-    if (!amount) {
-      return;
-    }
+    if (!amount) return;
 
     const request = offerRequest as RequestWithUser;
-
     const currentUserId = getCurrentUserId();
-
     const recipientId =
       request.createdByUserId &&
       String(request.createdByUserId) !== String(currentUserId)
@@ -538,57 +376,28 @@ export default function RequestsScreen() {
       userId: recipientId,
       type: "general",
       title: "New Offer",
-      body: `Someone sent an offer of ₦${Number(
-        amount,
-      ).toLocaleString()} on "${offerRequest.title}".`,
+      body: `Someone sent an offer of ₦${Number(amount).toLocaleString()} on "${offerRequest.title}".`,
     });
 
     closeOffer();
   };
 
-  /* ============================================================
-     REQUEST CARD
-  ============================================================ */
-
+  /* ---------- card ---------- */
   const renderRequest = ({ item }: { item: ServiceRequest }) => {
     const liked = !!likedIds[item.id];
-
     const likesDisplay = (item.likesCount || 0) + (liked ? 1 : 0);
-
     const comments = getComments(item);
-
     const commentCount = comments.length;
-
     const firstComment = comments[0];
-
     const coverImage = item.images?.[0];
-
     const posterUserId = getRequestUserId(item);
 
-    /*
-     * ----------------------------------------------------------
-     * POSTER PROFILE
-     * ----------------------------------------------------------
-     */
-
     const openPosterProfile = () => {
-      openUserProfile({
-        userId: posterUserId,
-        userName: item.posterName,
-      });
+      openUserProfile({ userId: posterUserId, userName: item.posterName });
     };
 
-    /*
-     * ----------------------------------------------------------
-     * FIRST COMMENT PROFILE
-     * ----------------------------------------------------------
-     */
-
     const openFirstCommentProfile = () => {
-      if (!firstComment) {
-        return;
-      }
-
+      if (!firstComment) return;
       openUserProfile({
         userId: getCommentUserId(firstComment),
         userName: firstComment.userName,
@@ -597,10 +406,6 @@ export default function RequestsScreen() {
 
     return (
       <View style={styles.card}>
-        {/* =================================================
-            POST AUTHOR
-        ================================================= */}
-
         <TouchableOpacity
           style={styles.posterRow}
           activeOpacity={0.75}
@@ -609,43 +414,30 @@ export default function RequestsScreen() {
           <View style={styles.posterAvatarWrap}>
             <Image source={item.posterAvatar} style={styles.posterAvatar} />
           </View>
-
           <View style={styles.posterInfo}>
             <Text style={styles.posterName} numberOfLines={1}>
               {item.posterName}
             </Text>
-
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={13} color="#6B7280" />
-
               <Text style={styles.locationText} numberOfLines={1}>
                 {item.location}, {item.city}
               </Text>
             </View>
           </View>
-
           <Text style={styles.timeAgo}>{item.timeAgo}</Text>
         </TouchableOpacity>
-
-        {/* =================================================
-            TITLE
-        ================================================= */}
 
         <View style={styles.titleRow}>
           <Text style={styles.cardTitle} numberOfLines={2}>
             {item.title}
           </Text>
-
           {item.isNew ? (
             <View style={styles.newBadge}>
               <Text style={styles.newBadgeText}>NEW</Text>
             </View>
           ) : null}
         </View>
-
-        {/* =================================================
-            IMAGE
-        ================================================= */}
 
         {coverImage ? (
           <Image
@@ -655,27 +447,15 @@ export default function RequestsScreen() {
           />
         ) : null}
 
-        {/* =================================================
-            CATEGORY
-        ================================================= */}
-
         <View style={styles.metaRow}>
           <View style={styles.categoryChip}>
             <Text style={styles.categoryChipText}>{item.category}</Text>
           </View>
         </View>
 
-        {/* =================================================
-            DESCRIPTION
-        ================================================= */}
-
         <Text style={styles.description} numberOfLines={3}>
           {item.description}
         </Text>
-
-        {/* =================================================
-            ENGAGEMENT
-        ================================================= */}
 
         <View style={styles.engagementRow}>
           <TouchableOpacity
@@ -688,7 +468,6 @@ export default function RequestsScreen() {
               size={20}
               color={liked ? "#EF4444" : "#6B7280"}
             />
-
             <Text style={styles.engagementText}>{likesDisplay}</Text>
           </TouchableOpacity>
 
@@ -698,7 +477,6 @@ export default function RequestsScreen() {
             activeOpacity={0.7}
           >
             <Ionicons name="chatbubble-outline" size={18} color="#6B7280" />
-
             <Text style={styles.engagementText}>{commentCount}</Text>
           </TouchableOpacity>
 
@@ -708,14 +486,9 @@ export default function RequestsScreen() {
             activeOpacity={0.7}
           >
             <Ionicons name="share-outline" size={18} color="#6B7280" />
-
             <Text style={styles.engagementText}>Share</Text>
           </TouchableOpacity>
         </View>
-
-        {/* =================================================
-            FIRST COMMENT
-        ================================================= */}
 
         {firstComment ? (
           <View style={styles.commentPreview}>
@@ -728,7 +501,6 @@ export default function RequestsScreen() {
                 style={styles.commentAvatar}
               />
             </TouchableOpacity>
-
             <View style={styles.commentBody}>
               <TouchableOpacity
                 activeOpacity={0.75}
@@ -736,7 +508,6 @@ export default function RequestsScreen() {
               >
                 <Text style={styles.commentName}>{firstComment.userName}</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => openChat(item)}
@@ -758,14 +529,9 @@ export default function RequestsScreen() {
               size={16}
               color={GREEN}
             />
-
             <Text style={styles.writeCommentHintText}>Write a comment…</Text>
           </TouchableOpacity>
         )}
-
-        {/* =================================================
-            MORE COMMENTS
-        ================================================= */}
 
         {commentCount > 1 ? (
           <TouchableOpacity onPress={() => openChat(item)} activeOpacity={0.7}>
@@ -776,64 +542,44 @@ export default function RequestsScreen() {
           </TouchableOpacity>
         ) : null}
 
-        {/* =================================================
-            SEND OFFER
-        ================================================= */}
-
         <TouchableOpacity
           style={styles.sendOfferBtn}
           onPress={() => setOfferRequest(item)}
           activeOpacity={0.85}
         >
           <Ionicons name="paper-plane" size={18} color="#fff" />
-
           <Text style={styles.sendOfferText}>Send Offer</Text>
         </TouchableOpacity>
       </View>
     );
   };
 
-  /* ============================================================
-     COMMENTS MODAL DATA
-  ============================================================ */
-
   const chatComments = chatRequest ? getComments(chatRequest) : [];
 
-  /* ============================================================
-     UI
-  ============================================================ */
-
+  /* ---------- UI ---------- */
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      {/* =================================================
-          HEADER
-      ================================================= */}
-
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTextWrap}>
           <Text style={styles.headerTitle}>Service requests</Text>
-
           <TouchableOpacity
             style={styles.headerLocationRow}
             onPress={() => setShowLocationModal(true)}
             activeOpacity={0.7}
           >
             <Ionicons name="location" size={14} color={GREEN} />
-
             {loadingLocation ? (
               <ActivityIndicator
                 size="small"
                 color={GREEN}
-                style={{
-                  marginLeft: 5,
-                }}
+                style={{ marginLeft: 5 }}
               />
             ) : (
               <Text style={styles.headerSubtitle} numberOfLines={1}>
                 {locationName || "All Nigeria"}
               </Text>
             )}
-
             <Ionicons
               name="chevron-down"
               size={14}
@@ -845,22 +591,17 @@ export default function RequestsScreen() {
 
         <TouchableOpacity
           style={styles.createBtn}
-          onPress={() => router.push("/profile/createjob")}
+          onPress={() => setCreateVisible(true)}
           activeOpacity={0.85}
         >
           <Ionicons name="add" size={18} color="#fff" />
-
           <Text style={styles.createBtnText}>Create</Text>
         </TouchableOpacity>
       </View>
 
-      {/* =================================================
-          SEARCH
-      ================================================= */}
-
+      {/* Search */}
       <View style={styles.searchContainer}>
         <Ionicons name="search-outline" size={20} color="#777" />
-
         <TextInput
           style={styles.searchInput}
           placeholder="Search service requests..."
@@ -868,7 +609,6 @@ export default function RequestsScreen() {
           value={search}
           onChangeText={setSearch}
         />
-
         {search.length > 0 ? (
           <TouchableOpacity onPress={() => setSearch("")}>
             <Ionicons name="close-circle" size={20} color="#AAA" />
@@ -876,10 +616,7 @@ export default function RequestsScreen() {
         ) : null}
       </View>
 
-      {/* =================================================
-          CATEGORY FILTERS
-      ================================================= */}
-
+      {/* Category filters */}
       <View style={styles.filtersWrap}>
         <ScrollView
           horizontal
@@ -888,7 +625,6 @@ export default function RequestsScreen() {
         >
           {CATEGORY_FILTERS.map((category) => {
             const active = categoryFilter === category;
-
             return (
               <TouchableOpacity
                 key={category}
@@ -910,10 +646,7 @@ export default function RequestsScreen() {
         </ScrollView>
       </View>
 
-      {/* =================================================
-          REQUEST LIST
-      ================================================= */}
-
+      {/* List */}
       <FlatList
         data={filteredRequests}
         keyExtractor={(item) => item.id}
@@ -924,9 +657,7 @@ export default function RequestsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="document-text-outline" size={42} color="#AAA" />
-
             <Text style={styles.emptyTitle}>No requests found</Text>
-
             <Text style={styles.emptyText}>
               No service requests match your current filters.
             </Text>
@@ -935,10 +666,18 @@ export default function RequestsScreen() {
         ListFooterComponent={<View style={{ height: 28 }} />}
       />
 
-      {/* =================================================
-          COMMENTS MODAL
-      ================================================= */}
+      {/* Create Job Modal */}
+      <CreateJobModal
+        visible={createVisible}
+        onClose={() => setCreateVisible(false)}
+        request={null}
+        onSaved={() => {
+          refreshRequests();
+          setCreateVisible(false);
+        }}
+      />
 
+      {/* Comments Modal */}
       <Modal
         visible={!!chatRequest}
         transparent
@@ -950,13 +689,10 @@ export default function RequestsScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <Pressable style={styles.cmDim} onPress={closeChat} />
-
           <View style={styles.cmSheet}>
             <View style={styles.cmHandle} />
-
             <View style={styles.cmHeader}>
               <Text style={styles.cmHeaderTitle}>Comments</Text>
-
               <TouchableOpacity style={styles.cmCloseBtn} onPress={closeChat}>
                 <Ionicons name="close" size={22} color="#111" />
               </TouchableOpacity>
@@ -968,7 +704,6 @@ export default function RequestsScreen() {
               keyExtractor={(item) => item.id}
               renderItem={({ item: comment }) => {
                 const userId = getCommentUserId(comment);
-
                 const goToCommenterProfile = () => {
                   openUserProfile({
                     userId,
@@ -978,8 +713,6 @@ export default function RequestsScreen() {
 
                 return (
                   <View style={styles.cmRow}>
-                    {/* COMMENT AVATAR */}
-
                     <TouchableOpacity
                       activeOpacity={0.75}
                       onPress={goToCommenterProfile}
@@ -989,30 +722,20 @@ export default function RequestsScreen() {
                         style={styles.cmAvatar}
                       />
                     </TouchableOpacity>
-
                     <View style={styles.cmContent}>
-                      {/* COMMENT NAME */}
-
                       <TouchableOpacity
                         activeOpacity={0.75}
                         onPress={goToCommenterProfile}
                       >
                         <Text style={styles.cmMeta}>
                           <Text style={styles.cmName}>{comment.userName}</Text>
-
                           <Text style={styles.cmTime}>
                             {"  "}
                             {comment.timeAgo}
                           </Text>
                         </Text>
                       </TouchableOpacity>
-
-                      {/* COMMENT TEXT */}
-
                       <Text style={styles.cmText}>{comment.text}</Text>
-
-                      {/* REPLY */}
-
                       <TouchableOpacity onPress={() => setReplyTo(comment)}>
                         <Text style={styles.cmReply}>Reply</Text>
                       </TouchableOpacity>
@@ -1034,9 +757,7 @@ export default function RequestsScreen() {
                     size={40}
                     color="#D1D5DB"
                   />
-
                   <Text style={styles.cmEmptyTitle}>No comments yet</Text>
-
                   <Text style={styles.cmEmptyText}>
                     Be the first to share your thoughts.
                   </Text>
@@ -1044,30 +765,20 @@ export default function RequestsScreen() {
               }
             />
 
-            {/* =================================================
-                REPLY BAR
-            ================================================= */}
-
             {replyTo ? (
               <View style={styles.cmReplyBar}>
                 <Text style={styles.cmReplyBarText} numberOfLines={1}>
                   Replying to{" "}
                   <Text style={styles.cmReplyBarName}>{replyTo.userName}</Text>
                 </Text>
-
                 <TouchableOpacity onPress={() => setReplyTo(null)}>
                   <Ionicons name="close-circle" size={18} color="#9CA3AF" />
                 </TouchableOpacity>
               </View>
             ) : null}
 
-            {/* =================================================
-                COMMENT INPUT
-            ================================================= */}
-
             <View style={styles.cmInputRow}>
               <Image source={MY_AVATAR} style={styles.cmInputAvatar} />
-
               <TextInput
                 style={styles.cmInput}
                 placeholder={
@@ -1081,7 +792,6 @@ export default function RequestsScreen() {
                 multiline
                 maxLength={500}
               />
-
               {chatText.trim() ? (
                 <TouchableOpacity
                   style={styles.cmPostBtn}
@@ -1095,10 +805,7 @@ export default function RequestsScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* =================================================
-          SEND OFFER MODAL
-      ================================================= */}
-
+      {/* Send Offer Modal */}
       <Modal
         visible={!!offerRequest}
         transparent
@@ -1112,23 +819,18 @@ export default function RequestsScreen() {
           <Pressable style={styles.offerBackdrop} onPress={closeOffer}>
             <Pressable
               style={styles.offerSheet}
-              onPress={(event) => event.stopPropagation()}
+              onPress={(e) => e.stopPropagation()}
             >
               <View style={styles.offerHandle} />
-
               <Text style={styles.offerTitle}>Send Offer</Text>
-
               {offerRequest ? (
                 <Text style={styles.offerSubtitle} numberOfLines={2}>
                   {offerRequest.title}
                 </Text>
               ) : null}
-
               <Text style={styles.offerLabel}>Your price</Text>
-
               <View style={styles.offerField}>
                 <Text style={styles.offerNaira}>₦</Text>
-
                 <TextInput
                   value={offerPrice}
                   onChangeText={setOfferPrice}
@@ -1138,7 +840,6 @@ export default function RequestsScreen() {
                   style={styles.offerInput}
                 />
               </View>
-
               <TouchableOpacity
                 style={[
                   styles.offerSubmitBtn,
@@ -1149,7 +850,6 @@ export default function RequestsScreen() {
                 onPress={submitOffer}
               >
                 <Ionicons name="paper-plane" size={18} color="#fff" />
-
                 <Text style={styles.offerSubmitText}>Send Offer</Text>
               </TouchableOpacity>
             </Pressable>
@@ -1157,10 +857,7 @@ export default function RequestsScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* =================================================
-          LOCATION MODAL
-      ================================================= */}
-
+      {/* Location Modal */}
       <Modal
         visible={showLocationModal}
         transparent
@@ -1173,7 +870,6 @@ export default function RequestsScreen() {
         >
           <View style={styles.locSheet}>
             <View style={styles.locHandle} />
-
             <Text style={styles.locTitle}>Choose location</Text>
 
             <TouchableOpacity
@@ -1181,10 +877,8 @@ export default function RequestsScreen() {
               onPress={getUserLocation}
             >
               <Ionicons name="navigate" size={24} color={GREEN} />
-
               <View style={styles.locOptionText}>
                 <Text style={styles.locOptionTitle}>Use current location</Text>
-
                 <Text style={styles.locOptionSub}>
                   Allow access to detect your position
                 </Text>
@@ -1199,10 +893,8 @@ export default function RequestsScreen() {
               }}
             >
               <Ionicons name="list-outline" size={24} color={GREEN} />
-
               <View style={styles.locOptionText}>
                 <Text style={styles.locOptionTitle}>Select a city</Text>
-
                 <Text style={styles.locOptionSub}>
                   Pick from popular cities in Nigeria
                 </Text>
@@ -1214,10 +906,8 @@ export default function RequestsScreen() {
               onPress={viewAllInNigeria}
             >
               <Ionicons name="globe-outline" size={24} color={GREEN} />
-
               <View style={styles.locOptionText}>
                 <Text style={styles.locOptionTitle}>View all in Nigeria</Text>
-
                 <Text style={styles.locOptionSub}>
                   See requests from every city
                 </Text>
@@ -1234,10 +924,7 @@ export default function RequestsScreen() {
         </Pressable>
       </Modal>
 
-      {/* =================================================
-          CITY PICKER
-      ================================================= */}
-
+      {/* City Picker */}
       <Modal
         visible={showCityPicker}
         transparent
@@ -1247,12 +934,10 @@ export default function RequestsScreen() {
         <View style={styles.locOverlay}>
           <View style={[styles.locSheet, styles.locCitySheet]}>
             <View style={styles.locHandle} />
-
             <Text style={styles.locTitle}>Select a city</Text>
 
             <View style={styles.locSearchBox}>
               <Ionicons name="search-outline" size={20} color="#888" />
-
               <TextInput
                 style={styles.locSearchInput}
                 placeholder="Filter cities..."
@@ -1261,7 +946,6 @@ export default function RequestsScreen() {
                 onChangeText={setCitySearch}
                 autoCorrect={false}
               />
-
               {citySearch.length > 0 ? (
                 <TouchableOpacity onPress={() => setCitySearch("")}>
                   <Ionicons name="close-circle" size={20} color="#AAA" />
@@ -1283,7 +967,6 @@ export default function RequestsScreen() {
                   onPress={() => selectCity(city)}
                 >
                   <Ionicons name="location-outline" size={20} color={GREEN} />
-
                   <Text style={styles.locCityItemText}>{city}</Text>
                 </TouchableOpacity>
               )}
@@ -1303,7 +986,7 @@ export default function RequestsScreen() {
 }
 
 /* ============================================================
-   STYLES
+   STYLES (unchanged layout)
 ============================================================ */
 
 const styles = StyleSheet.create({
@@ -1312,7 +995,6 @@ const styles = StyleSheet.create({
     marginBottom: 35,
     backgroundColor: "#fff",
   },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -1320,36 +1002,30 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 10,
   },
-
   headerTextWrap: {
     flex: 1,
     minWidth: 0,
   },
-
   headerTitle: {
     fontSize: 20,
     fontWeight: "800",
     color: "#111",
   },
-
   headerLocationRow: {
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
     marginTop: 3,
   },
-
   headerSubtitle: {
     fontSize: 13,
     color: "#777",
     marginLeft: 4,
     maxWidth: 180,
   },
-
   dropdownIcon: {
     marginLeft: 4,
   },
-
   createBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1359,13 +1035,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
   },
-
   createBtnText: {
     color: "#fff",
     fontSize: 13,
     fontWeight: "700",
   },
-
   searchContainer: {
     height: 46,
     borderWidth: 1,
@@ -1377,7 +1051,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 10,
   },
-
   searchInput: {
     flex: 1,
     fontSize: 15,
@@ -1385,18 +1058,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     paddingVertical: 0,
   },
-
   filtersWrap: {
     height: 44,
     marginBottom: 8,
   },
-
   filtersContent: {
     paddingHorizontal: 16,
     alignItems: "center",
     gap: 8,
   },
-
   filterChip: {
     height: 34,
     paddingHorizontal: 14,
@@ -1406,27 +1076,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 4,
   },
-
   filterChipActive: {
     backgroundColor: GREEN,
   },
-
   filterChipText: {
     fontSize: 13,
     fontWeight: "600",
     color: "#6B7280",
   },
-
   filterChipTextActive: {
     color: "#fff",
   },
-
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
     gap: 14,
   },
-
   card: {
     borderWidth: 1,
     borderColor: "#E8E8E8",
@@ -1434,64 +1099,54 @@ const styles = StyleSheet.create({
     padding: 14,
     backgroundColor: "#fff",
   },
-
   posterRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
   },
-
   posterAvatarWrap: {
     width: 40,
     height: 40,
   },
-
   posterAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: "#E5E7EB",
   },
-
   posterInfo: {
     flex: 1,
     marginLeft: 10,
     minWidth: 0,
   },
-
   posterName: {
     fontSize: 14,
     fontWeight: "700",
     color: "#111",
     flexShrink: 1,
   },
-
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
     marginTop: 2,
   },
-
   locationText: {
     fontSize: 12,
     color: "#6B7280",
     flex: 1,
   },
-
   timeAgo: {
     fontSize: 11,
     color: "#9CA3AF",
     marginLeft: 8,
   },
-
   titleRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
     marginBottom: 10,
   },
-
   cardTitle: {
     flex: 1,
     fontSize: 16,
@@ -1499,20 +1154,17 @@ const styles = StyleSheet.create({
     color: "#111",
     lineHeight: 22,
   },
-
   newBadge: {
     backgroundColor: "#F59E0B",
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-
   newBadgeText: {
     color: "#fff",
     fontSize: 10,
     fontWeight: "800",
   },
-
   coverImage: {
     width: "100%",
     height: 180,
@@ -1520,32 +1172,27 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
     marginBottom: 10,
   },
-
   metaRow: {
     flexDirection: "row",
     marginBottom: 8,
   },
-
   categoryChip: {
     backgroundColor: "#F3F4F6",
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-
   categoryChipText: {
     fontSize: 12,
     fontWeight: "600",
     color: "#6B7280",
   },
-
   description: {
     fontSize: 13,
     lineHeight: 20,
     color: "#4B5563",
     marginBottom: 12,
   },
-
   engagementRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1555,33 +1202,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-
   engagementBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
   },
-
   engagementText: {
     fontSize: 13,
     color: "#6B7280",
     fontWeight: "500",
   },
-
   commentPreview: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
     marginBottom: 6,
   },
-
   commentAvatar: {
     width: 28,
     height: 28,
     borderRadius: 14,
     backgroundColor: "#E5E7EB",
   },
-
   commentBody: {
     flex: 1,
     backgroundColor: "#F9FAFB",
@@ -1589,20 +1231,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
-
   commentName: {
     fontSize: 12,
     fontWeight: "700",
     color: "#111",
     marginBottom: 2,
   },
-
   commentText: {
     fontSize: 12,
     color: "#4B5563",
     lineHeight: 17,
   },
-
   viewMoreComments: {
     fontSize: 12,
     color: GREEN,
@@ -1610,20 +1249,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginLeft: 36,
   },
-
   writeCommentHint: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     marginBottom: 12,
   },
-
   writeCommentHintText: {
     fontSize: 13,
     color: GREEN,
     fontWeight: "600",
   },
-
   sendOfferBtn: {
     backgroundColor: GREEN,
     borderRadius: 24,
@@ -1633,25 +1269,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-
   sendOfferText: {
     color: "#fff",
     fontSize: 15,
     fontWeight: "700",
   },
-
   emptyContainer: {
     alignItems: "center",
     paddingVertical: 60,
   },
-
   emptyTitle: {
     fontSize: 17,
     fontWeight: "700",
     marginTop: 12,
     color: "#111",
   },
-
   emptyText: {
     color: "#888",
     marginTop: 5,
@@ -1659,20 +1291,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  /* ============================================================
-     COMMENTS MODAL
-  ============================================================ */
-
+  /* Comments modal */
   cmBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
   },
-
   cmDim: {
     ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
-
   cmSheet: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 16,
@@ -1681,7 +1308,6 @@ const styles = StyleSheet.create({
     minHeight: "55%",
     paddingBottom: Platform.OS === "ios" ? 28 : 12,
   },
-
   cmHandle: {
     width: 40,
     height: 4,
@@ -1691,7 +1317,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 6,
   },
-
   cmHeader: {
     alignItems: "center",
     justifyContent: "center",
@@ -1699,13 +1324,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#E5E7EB",
   },
-
   cmHeaderTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: "#111",
   },
-
   cmCloseBtn: {
     position: "absolute",
     right: 14,
@@ -1715,47 +1338,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   cmList: {
     flexGrow: 1,
   },
-
   cmListContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 8,
   },
-
   cmListEmptyContent: {
     flexGrow: 1,
     justifyContent: "center",
     paddingVertical: 40,
   },
-
   cmEmpty: {
     alignItems: "center",
     paddingVertical: 40,
   },
-
   cmEmptyTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: "#111",
     marginTop: 12,
   },
-
   cmEmptyText: {
     fontSize: 13,
     color: "#9CA3AF",
     marginTop: 4,
   },
-
   cmRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 18,
   },
-
   cmAvatar: {
     width: 36,
     height: 36,
@@ -1763,40 +1378,33 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
     marginRight: 12,
   },
-
   cmContent: {
     flex: 1,
     minWidth: 0,
   },
-
   cmMeta: {
     marginBottom: 2,
   },
-
   cmName: {
     fontSize: 13,
     fontWeight: "700",
     color: "#111",
   },
-
   cmTime: {
     fontSize: 12,
     color: "#9CA3AF",
   },
-
   cmText: {
     fontSize: 14,
     color: "#1F2937",
     lineHeight: 20,
   },
-
   cmReply: {
     fontSize: 12,
     fontWeight: "600",
     color: "#9CA3AF",
     marginTop: 6,
   },
-
   cmReplyBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -1807,18 +1415,15 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#E5E7EB",
   },
-
   cmReplyBarText: {
     fontSize: 13,
     color: "#6B7280",
     flex: 1,
   },
-
   cmReplyBarName: {
     fontWeight: "700",
     color: "#111",
   },
-
   cmInputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -1829,7 +1434,6 @@ const styles = StyleSheet.create({
     borderTopColor: "#E5E7EB",
     gap: 10,
   },
-
   cmInputAvatar: {
     width: 32,
     height: 32,
@@ -1837,7 +1441,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
     marginBottom: 4,
   },
-
   cmInput: {
     flex: 1,
     minHeight: 40,
@@ -1846,28 +1449,22 @@ const styles = StyleSheet.create({
     color: "#111",
     paddingVertical: 10,
   },
-
   cmPostBtn: {
     paddingHorizontal: 8,
     paddingVertical: 8,
   },
-
   cmPostText: {
     fontSize: 15,
     fontWeight: "700",
     color: GREEN,
   },
 
-  /* ============================================================
-     OFFER MODAL
-  ============================================================ */
-
+  /* Offer modal */
   offerBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.4)",
   },
-
   offerSheet: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 24,
@@ -1876,7 +1473,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 32,
   },
-
   offerHandle: {
     width: 40,
     height: 4,
@@ -1885,14 +1481,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 14,
   },
-
   offerTitle: {
     fontSize: 18,
     fontWeight: "800",
     color: "#111827",
     textAlign: "center",
   },
-
   offerSubtitle: {
     fontSize: 13,
     color: "#6B7280",
@@ -1900,14 +1494,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 16,
   },
-
   offerLabel: {
     fontSize: 13,
     fontWeight: "600",
     color: "#111827",
     marginBottom: 8,
   },
-
   offerField: {
     minHeight: 52,
     borderWidth: 1,
@@ -1919,20 +1511,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-
   offerNaira: {
     fontSize: 16,
     color: "#9CA3AF",
     fontWeight: "600",
   },
-
   offerInput: {
     flex: 1,
     fontSize: 16,
     color: "#111827",
     paddingVertical: 12,
   },
-
   offerSubmitBtn: {
     backgroundColor: GREEN,
     borderRadius: 26,
@@ -1942,27 +1531,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-
   offerSubmitDisabled: {
     opacity: 0.45,
   },
-
   offerSubmitText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
   },
 
-  /* ============================================================
-     LOCATION MODAL
-  ============================================================ */
-
+  /* Location modal */
   locOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
-
   locSheet: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
@@ -1971,11 +1554,9 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     paddingTop: 12,
   },
-
   locCitySheet: {
     maxHeight: "80%",
   },
-
   locHandle: {
     width: 40,
     height: 4,
@@ -1984,14 +1565,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
-
   locTitle: {
     fontSize: 18,
     fontWeight: "800",
     color: "#111",
     marginBottom: 18,
   },
-
   locOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -1999,36 +1578,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
   },
-
   locOptionText: {
     marginLeft: 14,
     flex: 1,
   },
-
   locOptionTitle: {
     fontSize: 15,
     fontWeight: "700",
     color: "#111",
   },
-
   locOptionSub: {
     fontSize: 12,
     color: "#777",
     marginTop: 2,
   },
-
   locCancel: {
     marginTop: 16,
     alignItems: "center",
     paddingVertical: 12,
   },
-
   locCancelText: {
     fontSize: 15,
     fontWeight: "600",
     color: "#888",
   },
-
   locSearchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -2039,18 +1612,15 @@ const styles = StyleSheet.create({
     height: 44,
     marginBottom: 12,
   },
-
   locSearchInput: {
     flex: 1,
     fontSize: 15,
     color: "#111",
     marginLeft: 8,
   },
-
   locCityList: {
     maxHeight: 320,
   },
-
   locCityItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -2058,14 +1628,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F5F5F5",
   },
-
   locCityItemText: {
     flex: 1,
     fontSize: 15,
     color: "#111",
     marginLeft: 12,
   },
-
   locEmptyCities: {
     textAlign: "center",
     color: "#888",
