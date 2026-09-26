@@ -358,8 +358,8 @@ export default function ProfessionalProfile() {
             <View style={styles.badgeRow}>
               {pro.verified ? (
                 <View style={styles.badgeItem}>
-                  <MaterialCommunityIcons
-                    name="shield-check"
+                  <Ionicons
+                    name="checkmark-circle"
                     size={28}
                     color={GREEN}
                   />
@@ -374,7 +374,7 @@ export default function ProfessionalProfile() {
               {pro.subscribed ? (
                 <View style={styles.badgeItem}>
                   <MaterialCommunityIcons
-                    name="shield-check"
+                    name="shield-crown"
                     size={28}
                     color="#D4AF37"
                   />
