@@ -4,7 +4,13 @@
  * Screens import ONLY from here.
  *
  * NOW  → mock in-memory conversations
- * LATER → swap to apiRequest + realtime (Supabase channels / websockets)
+ * LATER → apiRequest + realtime (Supabase channels / websockets)
+ *
+ * Booking messaging lock:
+ *   Pending  → locked (waiting for professional Accept)
+ *   Ongoing  → unlocked (after Accept)
+ *   Declined → locked
+ * Accept / Decline UI is only for the professional on the Received side.
  */
 
 import { getProfessionalById } from "@/services/professionals";
@@ -43,6 +49,7 @@ export type Conversation = {
 
 const CURRENT_USER_ID = "u1";
 
+const pro1 = getProfessionalById("1");
 const pro2 = getProfessionalById("2");
 const pro3 = getProfessionalById("3");
 const pro4 = getProfessionalById("4");
@@ -109,7 +116,7 @@ const messagesByConv: Record<string, ChatMessage[]> = {
       id: "m1",
       conversationId: "c1",
       senderId: CURRENT_USER_ID,
-      text: "Hi Chioma, thank you for connecting. I wanted to follow up on the proposal we discussed.",
+      text: "Hi Chioma, thank you for connecting.",
       createdAt: "9:30 AM",
       isMine: true,
     },
@@ -117,40 +124,8 @@ const messagesByConv: Record<string, ChatMessage[]> = {
       id: "m2",
       conversationId: "c1",
       senderId: "2",
-      text: "Hi! Thanks for reaching out. I'd love to discuss it further.",
+      text: "Hi! Thanks for reaching out.",
       createdAt: "9:32 AM",
-      isMine: false,
-    },
-    {
-      id: "m3",
-      conversationId: "c1",
-      senderId: CURRENT_USER_ID,
-      text: "Great! Are you available for a quick call this week?",
-      createdAt: "9:33 AM",
-      isMine: true,
-    },
-    {
-      id: "m4",
-      conversationId: "c1",
-      senderId: "2",
-      text: "Yes, Thursday afternoon works for me. How about 2 PM?",
-      createdAt: "9:35 AM",
-      isMine: false,
-    },
-    {
-      id: "m5",
-      conversationId: "c1",
-      senderId: CURRENT_USER_ID,
-      text: "Perfect, 2 PM on Thursday it is. I'll send a calendar invite.",
-      createdAt: "9:36 AM",
-      isMine: true,
-    },
-    {
-      id: "m6",
-      conversationId: "c1",
-      senderId: "2",
-      text: "Sounds good! Looking forward to it.",
-      createdAt: "9:37 AM",
       isMine: false,
     },
   ],
@@ -221,7 +196,9 @@ export function getMessages(conversationId: string): ChatMessage[] {
   return [...(messagesByConv[conversationId] ?? [])];
 }
 
-export function getConversation(conversationId: string): Conversation | undefined {
+export function getConversation(
+  conversationId: string,
+): Conversation | undefined {
   return conversations.find((c) => c.id === conversationId);
 }
 
@@ -318,17 +295,12 @@ export function canOpenSharedLocation(
   return isSharingLocation(conversationId);
 }
 
+/** Chat-side lock for booking threads (maps from Booking.status) */
 export type BookingChatStatus = "Pending" | "Accepted" | "Declined";
 
 const bookingStatusByConv: Record<string, BookingChatStatus> = {};
 const professionalIdByConv: Record<string, string> = {};
-/** booking id → conversation id so history reopens the same thread */
 const conversationIdByBookingId: Record<string, string> = {};
-
-// =====================================================
-// SEED: Pending booking chats (Accept / Decline demo)
-// Logged-in pro id is "1" (see savedProviders MOCK_LOGGED_IN_PRO_ID)
-// =====================================================
 
 function seedPendingBookingChat(input: {
   conversationId: string;
@@ -379,9 +351,7 @@ function seedPendingBookingChat(input: {
   conversationIdByBookingId[bookingId] = id;
 }
 
-const pro1 = getProfessionalById("1");
-
-// Received job r1 — you are the professional; show Accept / Decline
+// Received r1 — logged-in pro "1" sees Accept / Decline
 seedPendingBookingChat({
   conversationId: "booking-hist-r1",
   bookingId: "r1",
@@ -397,7 +367,7 @@ seedPendingBookingChat({
   lastMessage: "Booking request: House Cleaning",
 });
 
-// Booked job b1 — you are the customer; waiting for pro (no Accept for you)
+// Booked b1 — customer waiting (no Accept for customer)
 seedPendingBookingChat({
   conversationId: "booking-hist-b1",
   bookingId: "b1",
@@ -413,24 +383,6 @@ seedPendingBookingChat({
   date: "May 25, 2025 10:00 AM",
   lastMessage: "Booking request: Plumbing Installation",
 });
-
-export function formatBookingChatMessage(booking: Booking): string {
-  const amount =
-    booking.amount != null ? `₦${booking.amount.toLocaleString()}` : "—";
-
-  return [
-    `Hi ${booking.professionalName},`,
-    ``,
-    `This is about my booking:`,
-    `• Booking ID: ${booking.id}`,
-    `• Service: ${booking.title}`,
-    `• Date: ${booking.date}`,
-    `• Status: ${booking.status}`,
-    `• Amount: ${amount}`,
-    ``,
-    `Looking forward to your reply.`,
-  ].join("\n");
-}
 
 export function getOrCreateConversationForProfessional(
   professionalId: string,
@@ -462,23 +414,24 @@ export function getOrCreateConversationForProfessional(
   return conv;
 }
 
+/** Map Booking.status → chat lock (Ongoing unlocks messaging) */
 function syncChatLockFromBooking(
   conversationId: string,
   status: Booking["status"],
 ) {
   if (status === "Pending") {
     bookingStatusByConv[conversationId] = "Pending";
-  } else if (status === "Declined" || status === "Cancelled") {
+  } else if (status === "Declined") {
     bookingStatusByConv[conversationId] = "Declined";
   } else {
+    // Ongoing (and any future open statuses)
     bookingStatusByConv[conversationId] = "Accepted";
   }
 }
 
 /**
  * Open chat from booking history.
- * Reuses the conversation from book time — does NOT resend booking details.
- * Messaging stays locked until the professional accepts.
+ * Does not resend booking details. Messaging locked until professional accepts.
  */
 export function openBookingChat(
   booking: Booking,
@@ -524,15 +477,19 @@ export function openBookingChat(
     conversations = [conv, ...conversations];
 
     if (!messagesByConv[id]) {
+      const systemText =
+        booking.status === "Pending"
+          ? `Booking request: ${booking.title}\nDate: ${booking.date}\nWaiting for professional to accept.`
+          : booking.status === "Declined"
+            ? `Booking: ${booking.title}\nDate: ${booking.date}\nThis booking was declined.`
+            : `Booking: ${booking.title}\nDate: ${booking.date}\nStatus: Ongoing`;
+
       messagesByConv[id] = [
         {
           id: `sys-${booking.id}`,
           conversationId: id,
           senderId: "system",
-          text:
-            booking.status === "Pending"
-              ? `Booking request: ${booking.title}\nDate: ${booking.date}\nWaiting for professional to accept.`
-              : `Booking: ${booking.title}\nDate: ${booking.date}\nStatus: ${booking.status}`,
+          text: systemText,
           createdAt: "Earlier",
           isMine: false,
           kind: "text",
@@ -547,14 +504,6 @@ export function openBookingChat(
   return conv;
 }
 
-/** @deprecated use openBookingChat */
-export function getOrCreateConversationForBooking(
-  booking: Booking,
-  mainTab: "booked" | "received",
-): Conversation {
-  return openBookingChat(booking, mainTab);
-}
-
 export function getBookingStatus(conversationId: string): BookingChatStatus {
   return bookingStatusByConv[conversationId] ?? "Accepted";
 }
@@ -563,6 +512,7 @@ export function canSendMessage(conversationId: string): boolean {
   return getBookingStatus(conversationId) === "Accepted";
 }
 
+/** True when current user is the professional for this booking thread */
 export function isProfessionalInConversation(
   conversationId: string,
   currentUserId: string,
@@ -607,7 +557,7 @@ export function createBookingConversation(input: {
     conversationIdByBookingId[input.bookingId] = id;
   }
 
-  const systemMsg: ChatMessage = {
+  messagesByConv[id].push({
     id: `sys-${Date.now()}`,
     conversationId: id,
     senderId: "system",
@@ -615,8 +565,7 @@ export function createBookingConversation(input: {
     createdAt: nowLabel(),
     isMine: false,
     kind: "text",
-  };
-  messagesByConv[id].push(systemMsg);
+  });
 
   return conv;
 }
