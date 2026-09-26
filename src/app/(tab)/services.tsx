@@ -498,9 +498,9 @@ const styles = StyleSheet.create({
     width: 72,
   },
   filterCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: "#ECFDF5",
     alignItems: "center",
     justifyContent: "center",
@@ -545,13 +545,10 @@ const styles = StyleSheet.create({
   professionalCard: {
     flex: 1,
     maxWidth: "32%",
-    minHeight: 100,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E1E1E1",
-    padding: 10,
-    paddingTop: 4,
   },
   favoriteButton: {
     position: "absolute",
