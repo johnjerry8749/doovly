@@ -83,7 +83,7 @@ export function getProfileForEdit(): ProfileEditData | null {
     phone: mockPhone,
     email: mockEmail,
     profession: pro.profession,
-    bio: mockBio,
+    bio: pro.bio ?? mockBio,
     city: pro.city,
     image: pro.image,
     verified: pro.verified,
@@ -120,6 +120,7 @@ export async function updateProfile(
   pro.name = input.name.trim() || pro.name;
   pro.profession = input.profession.trim() || pro.profession;
   pro.city = input.city.trim() || pro.city;
+  pro.bio = input.bio.trim() || pro.bio;
   mockPhone = input.phone.trim() || mockPhone;
   mockEmail = input.email.trim() || mockEmail;
   mockBio = input.bio.trim() || mockBio;
