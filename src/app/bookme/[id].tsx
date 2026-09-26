@@ -279,9 +279,7 @@ export default function BookMeScreen() {
           <Ionicons name="arrow-back" size={24} color="#16A34A" />
         </TouchableOpacity>
         <Text style={styles.logo}>Doovly</Text>
-        <View style={styles.shield}>
-          <Ionicons name="shield-checkmark" size={22} color="#16A34A" />
-        </View>
+        <View style={styles.shield} />
       </View>
 
       <ScrollView
@@ -372,27 +370,6 @@ export default function BookMeScreen() {
             style={styles.notesIcon}
           />
         </View>
-
-        <View style={styles.breakdown}>
-          <Text style={styles.breakdownTitle}>Price Breakdown</Text>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Service fee</Text>
-            <Text style={styles.rowValue}>{formatNaira(serviceFee)}</Text>
-          </View>
-          <View style={styles.row}>
-            <View>
-              <Text style={styles.rowLabel}>Platform fee</Text>
-              <Text style={styles.feeHint}>Set by Doovly</Text>
-            </View>
-            <Text style={styles.rowValue}>{formatNaira(platformFee)}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.row}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{formatNaira(total)}</Text>
-          </View>
-        </View>
-
         <TouchableOpacity
           style={styles.payBtn}
           onPress={handleConfirmBooking}
