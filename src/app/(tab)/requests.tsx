@@ -670,6 +670,7 @@ const styles = StyleSheet.create({
   filtersRow: {
     paddingHorizontal: 16,
     paddingBottom: 10,
+    marginTop: 8,
     alignItems: "center",
     gap: 8,
   },
