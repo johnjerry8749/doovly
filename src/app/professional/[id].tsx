@@ -318,7 +318,7 @@ export default function ProfessionalProfile() {
               {pro.name}
             </Text>
 
-            {pro.subscribed && (
+            {/* {pro.subscribed && (
               <View style={styles.premiumShield}>
                 <MaterialCommunityIcons
                   name="shield-check"
@@ -326,7 +326,7 @@ export default function ProfessionalProfile() {
                   color="#D4AF37"
                 />
               </View>
-            )}
+            )} */}
           </View>
 
           {pro.bio ? (
