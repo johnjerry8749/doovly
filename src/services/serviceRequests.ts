@@ -27,6 +27,8 @@ export type CreateServiceRequestInput = {
   images: ImageSourcePropType[];
   icon: ServiceRequestIcon;
   iconBackground: string;
+  /** How many offers this request should accept (1–20) */
+  maxOffers: number;
 };
 
 export type UpdateServiceRequestInput = {
@@ -137,6 +139,8 @@ export function createServiceRequest(
     posterAvatar: DEFAULT_AVATAR,
     posterVerified: false,
     likesCount: 0,
+    maxOffers: Math.min(20, Math.max(1, Math.floor(input.maxOffers) || 5)),
+    offersCount: 0,
     comments: [],
   };
   SERVICE_REQUESTS.unshift(request);
@@ -219,24 +223,62 @@ export function likeServiceRequest(requestId: string, liked: boolean): number {
   return request.likesCount;
 }
 
+/** Whether the current user may send an offer on this request. */
+export function canSendOfferOnRequest(request: ServiceRequest): {
+  ok: boolean;
+  reason?: "own" | "full" | "missing";
+} {
+  if (!request) return { ok: false, reason: "missing" };
+  if (isOwnServiceRequest(request)) return { ok: false, reason: "own" };
+  const max = request.maxOffers ?? 5;
+  const count = request.offersCount ?? 0;
+  if (count >= max) return { ok: false, reason: "full" };
+  return { ok: true };
+}
+
 export function submitServiceRequestOffer(input: SubmitOfferInput): {
   ok: boolean;
   requestId: string;
   amount: number;
   recipientUserId: string;
+  reason?: "own" | "full" | "invalid";
 } | null {
   // TODO backend: POST /service-requests/:id/offers
   const request = getFromData(input.requestId);
-  if (!request || !input.amount || input.amount <= 0) return null;
-  const recipientUserId =
-    request.createdByUserId &&
-    request.createdByUserId !== getCurrentUserId()
-      ? request.createdByUserId
-      : getCurrentUserId();
+  if (!request || !input.amount || input.amount <= 0) {
+    return {
+      ok: false,
+      requestId: input.requestId,
+      amount: 0,
+      recipientUserId: "",
+      reason: "invalid",
+    };
+  }
+  if (isOwnServiceRequest(request)) {
+    return {
+      ok: false,
+      requestId: request.id,
+      amount: input.amount,
+      recipientUserId: request.createdByUserId,
+      reason: "own",
+    };
+  }
+  const max = request.maxOffers ?? 5;
+  const count = request.offersCount ?? 0;
+  if (count >= max) {
+    return {
+      ok: false,
+      requestId: request.id,
+      amount: input.amount,
+      recipientUserId: request.createdByUserId,
+      reason: "full",
+    };
+  }
+  request.offersCount = count + 1;
   return {
     ok: true,
     requestId: request.id,
     amount: input.amount,
-    recipientUserId,
+    recipientUserId: request.createdByUserId,
   };
 }
