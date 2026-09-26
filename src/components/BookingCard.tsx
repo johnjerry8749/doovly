@@ -17,7 +17,6 @@ const GREEN = "#16A34A";
 type Props = {
   item: Booking;
   mainTab: "booked" | "received";
-  onReport?: (item: Booking) => void;
 };
 
 function formatAmount(amount?: number) {
