@@ -158,24 +158,24 @@ export default function Services() {
           })
         }
       >
-        <View style={styles.imageContainer}>
-          <Image source={item.image} style={styles.professionalImage} />
-          {item.verified ? (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={14} color={GREEN} />
-            </View>
-          ) : null}
-          <TouchableOpacity
-            style={styles.favoriteButton}
-            onPress={() => onToggleFavorite(item.id)}
-            hitSlop={8}
-          >
-            <Ionicons
-              name={saved ? "heart" : "heart-outline"}
-              size={16}
-              color={saved ? "#EF4444" : "#fff"}
-            />
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.favoriteButton}
+          onPress={() => onToggleFavorite(item.id)}
+          hitSlop={8}
+        >
+          <Ionicons
+            name={saved ? "heart" : "heart-outline"}
+            size={16}
+            color={saved ? "#EF4444" : "#9CA3AF"}
+          />
+        </TouchableOpacity>
+
+        <View style={styles.profileImageContainer}>
+          <Image
+            source={item.image}
+            style={styles.profileImage}
+            resizeMode="cover"
+          />
         </View>
 
         <View style={styles.cardContent}>
@@ -183,13 +183,6 @@ export default function Services() {
             <Text style={styles.professionalName} numberOfLines={1}>
               {item.name}
             </Text>
-            {item.subscribed ? (
-              <MaterialCommunityIcons
-                name="shield-check"
-                size={14}
-                color="#D4AF37"
-              />
-            ) : null}
           </View>
 
           <View style={styles.ratingRow}>
@@ -552,37 +545,35 @@ const styles = StyleSheet.create({
   professionalCard: {
     flex: 1,
     maxWidth: "32%",
+    minHeight: 100,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E8E8E8",
-    overflow: "hidden",
-  },
-  imageContainer: {
-    position: "relative",
-  },
-  professionalImage: {
-    width: "100%",
-    height: 90,
-    backgroundColor: "#E5E7EB",
-  },
-  verifiedBadge: {
-    position: "absolute",
-    bottom: 4,
-    left: 4,
-    backgroundColor: "#fff",
-    borderRadius: 8,
+    borderColor: "#E1E1E1",
+    padding: 10,
+    paddingTop: 4,
   },
   favoriteButton: {
     position: "absolute",
-    top: 4,
-    right: 4,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    alignItems: "center",
-    justifyContent: "center",
+    right: 8,
+    top: 8,
+    zIndex: 5,
+  },
+  profileImageContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    alignSelf: "center",
+    marginTop: 12,
+    marginBottom: 8,
+    position: "relative",
+    overflow: "hidden",
+    backgroundColor: "#E5E7EB",
+  },
+  profileImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 35,
   },
   cardContent: {
     padding: 8,
