@@ -384,18 +384,6 @@ export default function Profile() {
           <View style={styles.card}>
             <MenuItem
               icon={
-                <MenuIcon name="wallet-outline" />
-              }
-              title="Wallet / Payment Methods"
-              onPress={() =>
-                router.push(
-                  "/profile/wallet_paymentmeth",
-                )
-              }
-            />
-
-            <MenuItem
-              icon={
                 <View style={styles.iconBg}>
                   <MaterialCommunityIcons
                     name="crown"
