@@ -48,6 +48,8 @@ export type ServiceRequest = {
   maxOffers: number;
   /** How many offers have been submitted so far */
   offersCount: number;
+  /** User ids that already sent an offer (one offer per user) */
+  offeredByUserIds?: string[];
   comments: ServiceRequestComment[];
 };
 
