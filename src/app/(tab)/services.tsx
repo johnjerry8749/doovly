@@ -1,1 +1,772 @@
-PLACEHOLDER_WILL_REPLACE
+import React, { useMemo, useState, useCallback } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import {
+  listProfessionals,
+  listServiceCategories,
+  type Professional,
+} from "@/services/professionals";
+import { getCurrentUserId } from "@/services/inAppNotifications";
+import { isSaved, toggleSave } from "@/services/savedProviders";
+import { NIGERIA_CITIES } from "@/data/cities";
+import { useLocation } from "@/context/LocationContext";
+
+const GREEN = "#159447";
+
+export default function Services() {
+  const [search, setSearch] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState("All");
+  const [favTick, setFavTick] = useState(0);
+
+  const categories = useMemo(() => listServiceCategories(), []);
+
+  const {
+    locationName,
+    loadingLocation,
+    showAllNigeria,
+    showLocationModal,
+    setShowLocationModal,
+    showCityPicker,
+    setShowCityPicker,
+    citySearch,
+    setCitySearch,
+    getUserLocation,
+    selectCity,
+    viewAllInNigeria,
+    closeCityPicker,
+  } = useLocation();
+
+  const professionals = listProfessionals();
+
+  const onToggleFavorite = useCallback((proId: string) => {
+    const result = toggleSave(proId);
+    if (!result.ok && result.reason === "limit") {
+      Alert.alert(
+        "Save limit reached",
+        "Free users can save up to 5 providers. Upgrade to Pro for unlimited saves.",
+        [
+          { text: "Not now", style: "cancel" },
+          {
+            text: "Upgrade",
+            onPress: () => router.push("/profile/subscription/subscription"),
+          },
+        ],
+      );
+      return;
+    }
+    if (result.ok) setFavTick((t) => t + 1);
+  }, []);
+
+  const filteredCities = useMemo(() => {
+    const query = citySearch.trim().toLowerCase();
+    if (!query) return [...NIGERIA_CITIES];
+    return NIGERIA_CITIES.filter((city) => city.toLowerCase().includes(query));
+  }, [citySearch]);
+
+  const matchesLocationCity = useCallback(
+    (itemCity: string) => {
+      if (
+        showAllNigeria ||
+        !locationName ||
+        locationName === "All Nigeria" ||
+        locationName.toLowerCase().includes("unavailable") ||
+        locationName.toLowerCase().includes("click here") ||
+        locationName.toLowerCase().includes("getting")
+      ) {
+        return true;
+      }
+      const city = locationName.split(",")[0].trim().toLowerCase();
+      if (!city || city === "nigeria") return true;
+      const professionalCity = itemCity.toLowerCase();
+      return (
+        professionalCity.includes(city) || city.includes(professionalCity)
+      );
+    },
+    [locationName, showAllNigeria],
+  );
+
+  const matchesCategory = useCallback((profession: string, filter: string) => {
+    if (filter === "All") return true;
+    const category = filter.toLowerCase();
+    const professional = profession.toLowerCase();
+    if (professional === category || professional.includes(category)) return true;
+    if (
+      category === "spa" &&
+      (professional.includes("massage") || professional.includes("spa"))
+    )
+      return true;
+    if (category === "nail tech" && professional.includes("nail")) return true;
+    return false;
+  }, []);
+
+  const filteredProfessionals = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return professionals.filter((person) => {
+      const matchesSearch =
+        !query ||
+        person.name.toLowerCase().includes(query) ||
+        person.profession.toLowerCase().includes(query) ||
+        person.city.toLowerCase().includes(query);
+      return (
+        matchesSearch &&
+        matchesCategory(person.profession, selectedFilter) &&
+        matchesLocationCity(person.city)
+      );
+    });
+  }, [
+    professionals,
+    search,
+    selectedFilter,
+    matchesCategory,
+    matchesLocationCity,
+  ]);
+
+  const renderProfessional = ({ item }: { item: Professional }) => {
+    const saved = isSaved(item.id);
+    const rating =
+      item.reviews.length >= 10
+        ? Math.min(5, Math.floor(item.reviews.length / 10)).toFixed(1)
+        : "4.8";
+
+    return (
+      <TouchableOpacity
+        style={styles.professionalCard}
+        activeOpacity={0.85}
+        onPress={() => router.push(`/professional/${item.id}`)}
+      >
+        <TouchableOpacity
+          style={styles.heartButton}
+          activeOpacity={0.7}
+          onPress={(event) => {
+            event.stopPropagation();
+            onToggleFavorite(item.id);
+          }}
+        >
+          <Ionicons
+            name={saved ? "heart" : "heart-outline"}
+            size={17}
+            color={saved ? "#EF4444" : "#111"}
+          />
+        </TouchableOpacity>
+
+        <View style={styles.profileImageContainer}>
+          <Image
+            source={item.image}
+            style={styles.profileImage}
+            resizeMode="cover"
+          />
+        </View>
+
+        <View style={styles.nameContainer}>
+          <Text style={styles.professionalName} numberOfLines={1}>
+            {item.name}
+          </Text>
+        </View>
+
+        <View style={styles.ratingRow}>
+          <Ionicons name="star" size={12} color="#F4C400" />
+          <Text style={styles.ratingText}>{rating}</Text>
+          <Text style={styles.reviewCount}>({item.reviews.length})</Text>
+        </View>
+
+        <Text style={styles.profession} numberOfLines={1}>
+          {item.profession}
+        </Text>
+
+        <Text style={styles.city} numberOfLines={1}>
+          {item.city}
+        </Text>
+
+        <Text style={styles.price} numberOfLines={1}>
+          From {item.priceFrom}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.stickyHeader}>
+        <View style={styles.locationRow}>
+          <TouchableOpacity
+            style={styles.locationContainer}
+            onPress={() => setShowLocationModal(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="location" size={22} color={GREEN} />
+            {loadingLocation ? (
+              <View style={styles.locationLoading}>
+                <ActivityIndicator size="small" color={GREEN} />
+                <Text style={styles.locationLoadingText}>Getting location...</Text>
+              </View>
+            ) : (
+              <Text style={styles.locationText} numberOfLines={1}>
+                {locationName}
+              </Text>
+            )}
+            <Ionicons name="chevron-down" size={16} color="#111" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.notificationButton}
+            activeOpacity={0.7}
+            onPress={() =>
+              router.push({
+                pathname: "/notification/[id]",
+                params: { id: String(getCurrentUserId()) },
+              })
+            }
+          >
+            <Ionicons name="notifications-outline" size={24} color="#111" />
+            <View style={styles.notificationDot} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={20} color="#777" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for a service..."
+            placeholderTextColor="#888"
+            value={search}
+            onChangeText={setSearch}
+          />
+          <TouchableOpacity activeOpacity={0.7}>
+            <Ionicons name="options-outline" size={22} color={GREEN} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.fixedCategorySection}>
+        <FlatList
+          horizontal
+          data={categories}
+          keyExtractor={(item, index) => `${item.name}-${index}`}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContainer}
+          renderItem={({ item: filter }) => {
+            const active = selectedFilter === filter.name;
+            return (
+              <TouchableOpacity
+                style={styles.filterItem}
+                onPress={() => setSelectedFilter(filter.name)}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.filterCircle,
+                    active && styles.activeFilterCircle,
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name={filter.icon as any}
+                    size={26}
+                    color={active ? "#fff" : "#087A38"}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.filterName,
+                    active && styles.activeFilterName,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {filter.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>All professionals</Text>
+          <Text style={styles.resultCount}>
+            {filteredProfessionals.length} found
+          </Text>
+        </View>
+      </View>
+
+      <FlatList
+        data={filteredProfessionals}
+        extraData={`${favTick}-${selectedFilter}`}
+        keyExtractor={(item) => item.id}
+        numColumns={3}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.professionalList}
+        columnWrapperStyle={styles.columnWrapper}
+        renderItem={renderProfessional}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="search-outline" size={42} color="#aaa" />
+            <Text style={styles.emptyTitle}>No professionals found</Text>
+            <Text style={styles.emptyText}>
+              Try another service, location or search term.
+            </Text>
+          </View>
+        }
+        ListFooterComponent={<View style={styles.listBottomSpace} />}
+      />
+
+      <Modal
+        visible={showLocationModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLocationModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowLocationModal(false)}
+        >
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Choose location</Text>
+
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={getUserLocation}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="navigate" size={24} color={GREEN} />
+              <View style={styles.modalOptionText}>
+                <Text style={styles.modalOptionTitle}>Use current location</Text>
+                <Text style={styles.modalOptionSub}>
+                  Allow access to detect your position
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={() => {
+                setShowLocationModal(false);
+                setShowCityPicker(true);
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="list-outline" size={24} color={GREEN} />
+              <View style={styles.modalOptionText}>
+                <Text style={styles.modalOptionTitle}>Select a city</Text>
+                <Text style={styles.modalOptionSub}>
+                  Pick from popular cities in Nigeria
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={viewAllInNigeria}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="globe-outline" size={24} color={GREEN} />
+              <View style={styles.modalOptionText}>
+                <Text style={styles.modalOptionTitle}>View all in Nigeria</Text>
+                <Text style={styles.modalOptionSub}>
+                  See professionals from every city
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalCancel}
+              onPress={() => setShowLocationModal(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={showCityPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={closeCityPicker}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, styles.cityPickerSheet]}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Select a city</Text>
+
+            <View style={styles.citySearchBox}>
+              <Ionicons name="search-outline" size={20} color="#888" />
+              <TextInput
+                style={styles.citySearchInput}
+                placeholder="Filter cities..."
+                placeholderTextColor="#888"
+                value={citySearch}
+                onChangeText={setCitySearch}
+                autoCorrect={false}
+              />
+              {citySearch.length > 0 && (
+                <TouchableOpacity onPress={() => setCitySearch("")}>
+                  <Ionicons name="close-circle" size={20} color="#aaa" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <FlatList
+              data={filteredCities}
+              keyExtractor={(item) => item}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              style={styles.cityList}
+              ListEmptyComponent={
+                <Text style={styles.emptyCitiesText}>
+                  No city found. Try another spelling.
+                </Text>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.cityItem}
+                  onPress={() => selectCity(item)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="location-outline" size={20} color={GREEN} />
+                  <Text style={styles.cityItemText}>{item}</Text>
+                </TouchableOpacity>
+              )}
+            />
+
+            <TouchableOpacity
+              style={styles.modalCancel}
+              onPress={closeCityPicker}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  stickyHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  locationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+    gap: 6,
+  },
+  locationLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  locationLoadingText: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+  locationText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111",
+    flexShrink: 1,
+  },
+  notificationButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  notificationDot: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: GREEN,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 46,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: "#111",
+  },
+  fixedCategorySection: {
+    backgroundColor: "#FFFFFF",
+    paddingTop: 10,
+  },
+  filterContainer: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  filterItem: {
+    alignItems: "center",
+    marginRight: 14,
+    width: 72,
+  },
+  filterCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#ECFDF5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  activeFilterCircle: {
+    backgroundColor: GREEN,
+  },
+  filterName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
+  },
+  activeFilterName: {
+    color: GREEN,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#111",
+  },
+  resultCount: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+  professionalList: {
+    paddingHorizontal: 12,
+    paddingTop: 4,
+  },
+  columnWrapper: {
+    gap: 8,
+    marginBottom: 10,
+  },
+  professionalCard: {
+    flex: 1,
+    maxWidth: "32%",
+    minHeight: 100,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#E1E1E1",
+    position: "relative",
+  },
+  heartButton: {
+    position: "absolute",
+    right: 6,
+    top: 6,
+    zIndex: 20,
+  },
+  profileImageContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    alignSelf: "center",
+    marginBottom: 8,
+    position: "relative",
+  },
+  profileImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 35,
+    backgroundColor: "#E5E7EB",
+  },
+  nameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: 0,
+  },
+  professionalName: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#111",
+    maxWidth: 88,
+    marginBottom: 3,
+  },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 3,
+  },
+  ratingText: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginLeft: 3,
+    color: "#333",
+  },
+  reviewCount: {
+    fontSize: 10,
+    color: "#777",
+    marginLeft: 2,
+  },
+  profession: {
+    fontSize: 11,
+    color: "#555",
+    marginBottom: 2,
+  },
+  city: {
+    fontSize: 10,
+    color: "#777",
+    marginBottom: 5,
+  },
+  price: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: GREEN,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: 48,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#333",
+    marginTop: 10,
+  },
+  emptyText: {
+    color: "#888",
+    marginTop: 5,
+    fontSize: 13,
+    textAlign: "center",
+  },
+  listBottomSpace: {
+    height: 100,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+    paddingTop: 10,
+  },
+  cityPickerSheet: {
+    maxHeight: "80%",
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D1D5DB",
+    alignSelf: "center",
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111",
+    marginBottom: 16,
+  },
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    gap: 14,
+  },
+  modalOptionText: {
+    flex: 1,
+  },
+  modalOptionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111",
+  },
+  modalOptionSub: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  modalCancel: {
+    marginTop: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  citySearchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 12,
+    gap: 8,
+  },
+  citySearchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: "#111",
+  },
+  cityList: {
+    maxHeight: 320,
+  },
+  cityItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  cityItemText: {
+    fontSize: 15,
+    color: "#111",
+    marginLeft: 12,
+  },
+  emptyCitiesText: {
+    textAlign: "center",
+    color: "#888",
+    paddingVertical: 24,
+  },
+});
