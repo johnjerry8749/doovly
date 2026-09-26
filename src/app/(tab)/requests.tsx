@@ -141,7 +141,7 @@ const findProfessionalForUser = (
 
 /** Hard debounce: ignore rapid multi-taps (2–10x) stacking profile screens */
 let lastProfileNavAt = 0;
-const PROFILE_NAV_COOLDOWN_MS = 2500;
+const PROFILE_NAV_COOLDOWN_MS = 4500;
 
 const openUserProfile = ({
   userId,
