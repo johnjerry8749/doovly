@@ -33,6 +33,7 @@ import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { useLocation } from "@/context/LocationContext";
 import CreateJobModal from "@/components/CreateJobModal";
+import RequestImageSlider from "@/components/RequestImageSlider";
 
 const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
@@ -41,10 +42,6 @@ const CATEGORY_FILTERS = [
   "All",
   ...SERVICE_CATEGORIES.map((category) => category.name),
 ];
-
-/* ============================================================
-   TYPES
-============================================================ */
 
 type RequestWithUser = ServiceRequest & {
   userId?: string | number;
@@ -62,10 +59,6 @@ type CommentWithUser = ServiceRequestComment & {
   professionalId?: string | number;
 };
 
-/* ============================================================
-   HELPERS
-============================================================ */
-
 const normalize = (value?: string | number | null) =>
   String(value ?? "")
     .trim()
@@ -73,12 +66,10 @@ const normalize = (value?: string | number | null) =>
 
 const categoryMatches = (request: ServiceRequest, selectedCategory: string) => {
   if (selectedCategory === "All") return true;
-
   const selected = normalize(selectedCategory);
   const requestCategories = [request.category, request.profession]
     .filter(Boolean)
     .map((value) => normalize(value));
-
   return requestCategories.some(
     (value) =>
       value === selected ||
@@ -119,16 +110,13 @@ const findProfessionalForUser = (
 ) => {
   const professionals = listProfessionals();
   if (!professionals?.length) return undefined;
-
   const normalizedUserId = normalize(userId);
   const normalizedUserName = normalize(userName);
-
   if (normalizedUserId) {
     const byProfessionalId = professionals.find(
       (p) => normalize(p.id) === normalizedUserId,
     );
     if (byProfessionalId) return byProfessionalId;
-
     const byUserId = professionals.find((p) => {
       const person = p as typeof p & {
         userId?: string | number;
@@ -141,13 +129,9 @@ const findProfessionalForUser = (
     });
     if (byUserId) return byUserId;
   }
-
   if (normalizedUserName) {
-    return professionals.find(
-      (p) => normalize(p.name) === normalizedUserName,
-    );
+    return professionals.find((p) => normalize(p.name) === normalizedUserName);
   }
-
   return undefined;
 };
 
@@ -159,23 +143,12 @@ const openUserProfile = ({
   userName?: string | null;
 }) => {
   const professional = findProfessionalForUser(userId, userName);
-  if (!professional) {
-    console.log("[Doovly] No professional found", { userId, userName });
-    return;
-  }
-
+  if (!professional) return;
   router.push({
     pathname: "/professional/[id]",
-    params: {
-      id: String(professional.id),
-      from: "requests",
-    },
+    params: { id: String(professional.id), from: "requests" },
   });
 };
-
-/* ============================================================
-   SCREEN
-============================================================ */
 
 export default function RequestsScreen() {
   const {
@@ -202,7 +175,6 @@ export default function RequestsScreen() {
     );
   }, [citySearch]);
 
-  /* ---------- state ---------- */
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
@@ -210,25 +182,21 @@ export default function RequestsScreen() {
     Record<string, ServiceRequestComment[]>
   >({});
   const [allRequests, setAllRequests] = useState(() => listServiceRequests());
-
   const [createVisible, setCreateVisible] = useState(false);
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
   const [offerPrice, setOfferPrice] = useState("");
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
   const [chatText, setChatText] = useState("");
   const [replyTo, setReplyTo] = useState<ServiceRequestComment | null>(null);
-
   const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
 
   const refreshRequests = () => setAllRequests(listServiceRequests());
 
-  /* ---------- comments ---------- */
   const getComments = (item: ServiceRequest): ServiceRequestComment[] => [
     ...(item.comments || []),
     ...(extraComments[item.id] || []),
   ];
 
-  /* ---------- location filter ---------- */
   const matchesLocationCity = (itemCity?: string, itemArea?: string) => {
     if (
       loadingLocation ||
@@ -241,14 +209,11 @@ export default function RequestsScreen() {
     ) {
       return true;
     }
-
     const city = locationName.split(",")[0].trim().toLowerCase();
     if (!city || city === "nigeria") return true;
-
     const requestCity = normalize(itemCity);
     const requestArea = normalize(itemArea);
     if (!requestCity && !requestArea) return true;
-
     return (
       requestCity.includes(city) ||
       city.includes(requestCity) ||
@@ -256,16 +221,13 @@ export default function RequestsScreen() {
     );
   };
 
-  /* ---------- filtered list ---------- */
   const filteredRequests = useMemo(() => {
     const query = search.trim().toLowerCase();
     const seen = new Set<string>();
-
     return allRequests.filter((request) => {
       const req = request as RequestWithUser;
       if (seen.has(req.id)) return false;
       seen.add(req.id);
-
       const matchesSearch =
         !query ||
         normalize(req.title).includes(query) ||
@@ -275,7 +237,6 @@ export default function RequestsScreen() {
         normalize(req.city).includes(query) ||
         normalize(req.description).includes(query) ||
         normalize(req.posterName).includes(query);
-
       return (
         matchesSearch &&
         categoryMatches(req, categoryFilter) &&
@@ -291,7 +252,6 @@ export default function RequestsScreen() {
     showAllNigeria,
   ]);
 
-  /* ---------- actions ---------- */
   const toggleLike = (id: string) => {
     setLikedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
@@ -327,11 +287,9 @@ export default function RequestsScreen() {
     if (!chatRequest) return;
     const text = chatText.trim();
     if (!text) return;
-
     const currentUserId = getCurrentUserId();
     const body = replyTo ? `@${replyTo.userName} ${text}` : text;
     const currentProfessional = findProfessionalForUser(currentUserId);
-
     const newComment: CommentWithUser = {
       id: `local-${Date.now()}`,
       userName: currentProfessional?.name || "You",
@@ -340,15 +298,12 @@ export default function RequestsScreen() {
       timeAgo: "Just now",
       userId: currentProfessional?.id ?? currentUserId,
     };
-
     setExtraComments((prev) => ({
       ...prev,
       [chatRequest.id]: [...(prev[chatRequest.id] || []), newComment],
     }));
-
     setChatText("");
     setReplyTo(null);
-
     setTimeout(() => {
       commentListRef.current?.scrollToEnd({ animated: true });
     }, 100);
@@ -363,7 +318,6 @@ export default function RequestsScreen() {
     if (!offerRequest) return;
     const amount = offerPrice.replace(/[^\d]/g, "");
     if (!amount) return;
-
     const request = offerRequest as RequestWithUser;
     const currentUserId = getCurrentUserId();
     const recipientId =
@@ -371,25 +325,21 @@ export default function RequestsScreen() {
       String(request.createdByUserId) !== String(currentUserId)
         ? request.createdByUserId
         : currentUserId;
-
     addInAppNotification({
       userId: recipientId,
       type: "general",
       title: "New Offer",
       body: `Someone sent an offer of ₦${Number(amount).toLocaleString()} on "${offerRequest.title}".`,
     });
-
     closeOffer();
   };
 
-  /* ---------- card ---------- */
   const renderRequest = ({ item }: { item: ServiceRequest }) => {
     const liked = !!likedIds[item.id];
     const likesDisplay = (item.likesCount || 0) + (liked ? 1 : 0);
     const comments = getComments(item);
     const commentCount = comments.length;
     const firstComment = comments[0];
-    const coverImage = item.images?.[0];
     const posterUserId = getRequestUserId(item);
 
     const openPosterProfile = () => {
@@ -439,12 +389,8 @@ export default function RequestsScreen() {
           ) : null}
         </View>
 
-        {coverImage ? (
-          <Image
-            source={coverImage}
-            style={styles.coverImage}
-            resizeMode="cover"
-          />
+        {item.images?.length ? (
+          <RequestImageSlider images={item.images} height={180} />
         ) : null}
 
         <View style={styles.metaRow}>
@@ -492,26 +438,17 @@ export default function RequestsScreen() {
 
         {firstComment ? (
           <View style={styles.commentPreview}>
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={openFirstCommentProfile}
-            >
+            <TouchableOpacity activeOpacity={0.75} onPress={openFirstCommentProfile}>
               <Image
                 source={firstComment.userAvatar}
                 style={styles.commentAvatar}
               />
             </TouchableOpacity>
             <View style={styles.commentBody}>
-              <TouchableOpacity
-                activeOpacity={0.75}
-                onPress={openFirstCommentProfile}
-              >
+              <TouchableOpacity activeOpacity={0.75} onPress={openFirstCommentProfile}>
                 <Text style={styles.commentName}>{firstComment.userName}</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => openChat(item)}
-              >
+              <TouchableOpacity activeOpacity={0.8} onPress={() => openChat(item)}>
                 <Text style={styles.commentText} numberOfLines={2}>
                   {firstComment.text}
                 </Text>
@@ -556,10 +493,8 @@ export default function RequestsScreen() {
 
   const chatComments = chatRequest ? getComments(chatRequest) : [];
 
-  /* ---------- UI ---------- */
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTextWrap}>
           <Text style={styles.headerTitle}>Service requests</Text>
@@ -570,22 +505,13 @@ export default function RequestsScreen() {
           >
             <Ionicons name="location" size={14} color={GREEN} />
             {loadingLocation ? (
-              <ActivityIndicator
-                size="small"
-                color={GREEN}
-                style={{ marginLeft: 5 }}
-              />
+              <ActivityIndicator size="small" color={GREEN} style={{ marginLeft: 5 }} />
             ) : (
               <Text style={styles.headerSubtitle} numberOfLines={1}>
                 {locationName || "All Nigeria"}
               </Text>
             )}
-            <Ionicons
-              name="chevron-down"
-              size={14}
-              color="#6B7280"
-              style={styles.dropdownIcon}
-            />
+            <Ionicons name="chevron-down" size={14} color="#6B7280" style={styles.dropdownIcon} />
           </TouchableOpacity>
         </View>
 
@@ -599,238 +525,79 @@ export default function RequestsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color="#777" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search service requests..."
-          placeholderTextColor="#888"
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search.length > 0 ? (
-          <TouchableOpacity onPress={() => setSearch("")}>
-            <Ionicons name="close-circle" size={20} color="#AAA" />
-          </TouchableOpacity>
-        ) : null}
+      <View style={styles.searchRow}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search requests..."
+            placeholderTextColor="#9CA3AF"
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
       </View>
 
-      {/* Category filters */}
-      <View style={styles.filtersWrap}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersContent}
-        >
-          {CATEGORY_FILTERS.map((category) => {
-            const active = categoryFilter === category;
-            return (
-              <TouchableOpacity
-                key={category}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setCategoryFilter(category)}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    active && styles.filterChipTextActive,
-                  ]}
-                >
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersRow}
+      >
+        {CATEGORY_FILTERS.map((cat) => {
+          const active = categoryFilter === cat;
+          return (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+              onPress={() => setCategoryFilter(cat)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
-      {/* List */}
       <FlatList
         data={filteredRequests}
         keyExtractor={(item) => item.id}
         renderItem={renderRequest}
-        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
-        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={42} color="#AAA" />
+          <View style={styles.empty}>
+            <Ionicons name="document-text-outline" size={42} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No requests found</Text>
-            <Text style={styles.emptyText}>
-              No service requests match your current filters.
-            </Text>
+            <Text style={styles.emptyText}>Try another filter or create a job.</Text>
           </View>
         }
-        ListFooterComponent={<View style={{ height: 28 }} />}
       />
 
-      {/* Create Job Modal */}
       <CreateJobModal
         visible={createVisible}
         onClose={() => setCreateVisible(false)}
-        request={null}
         onSaved={() => {
           refreshRequests();
           setCreateVisible(false);
         }}
       />
 
-      {/* Comments Modal */}
-      <Modal
-        visible={!!chatRequest}
-        transparent
-        animationType="slide"
-        onRequestClose={closeChat}
-      >
+      {/* Offer modal */}
+      <Modal visible={!!offerRequest} transparent animationType="slide" onRequestClose={closeOffer}>
         <KeyboardAvoidingView
-          style={styles.cmBackdrop}
+          style={styles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <Pressable style={styles.cmDim} onPress={closeChat} />
-          <View style={styles.cmSheet}>
-            <View style={styles.cmHandle} />
-            <View style={styles.cmHeader}>
-              <Text style={styles.cmHeaderTitle}>Comments</Text>
-              <TouchableOpacity style={styles.cmCloseBtn} onPress={closeChat}>
-                <Ionicons name="close" size={22} color="#111" />
-              </TouchableOpacity>
-            </View>
-
-            <FlatList
-              ref={commentListRef}
-              data={chatComments}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item: comment }) => {
-                const userId = getCommentUserId(comment);
-                const goToCommenterProfile = () => {
-                  openUserProfile({
-                    userId,
-                    userName: comment.userName,
-                  });
-                };
-
-                return (
-                  <View style={styles.cmRow}>
-                    <TouchableOpacity
-                      activeOpacity={0.75}
-                      onPress={goToCommenterProfile}
-                    >
-                      <Image
-                        source={comment.userAvatar}
-                        style={styles.cmAvatar}
-                      />
-                    </TouchableOpacity>
-                    <View style={styles.cmContent}>
-                      <TouchableOpacity
-                        activeOpacity={0.75}
-                        onPress={goToCommenterProfile}
-                      >
-                        <Text style={styles.cmMeta}>
-                          <Text style={styles.cmName}>{comment.userName}</Text>
-                          <Text style={styles.cmTime}>
-                            {"  "}
-                            {comment.timeAgo}
-                          </Text>
-                        </Text>
-                      </TouchableOpacity>
-                      <Text style={styles.cmText}>{comment.text}</Text>
-                      <TouchableOpacity onPress={() => setReplyTo(comment)}>
-                        <Text style={styles.cmReply}>Reply</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              }}
-              style={styles.cmList}
-              contentContainerStyle={
-                chatComments.length === 0
-                  ? styles.cmListEmptyContent
-                  : styles.cmListContent
-              }
-              keyboardShouldPersistTaps="handled"
-              ListEmptyComponent={
-                <View style={styles.cmEmpty}>
-                  <Ionicons
-                    name="chatbubbles-outline"
-                    size={40}
-                    color="#D1D5DB"
-                  />
-                  <Text style={styles.cmEmptyTitle}>No comments yet</Text>
-                  <Text style={styles.cmEmptyText}>
-                    Be the first to share your thoughts.
-                  </Text>
-                </View>
-              }
-            />
-
-            {replyTo ? (
-              <View style={styles.cmReplyBar}>
-                <Text style={styles.cmReplyBarText} numberOfLines={1}>
-                  Replying to{" "}
-                  <Text style={styles.cmReplyBarName}>{replyTo.userName}</Text>
-                </Text>
-                <TouchableOpacity onPress={() => setReplyTo(null)}>
-                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
-            <View style={styles.cmInputRow}>
-              <Image source={MY_AVATAR} style={styles.cmInputAvatar} />
-              <TextInput
-                style={styles.cmInput}
-                placeholder={
-                  replyTo
-                    ? `Reply to ${replyTo.userName}…`
-                    : "What do you think of this?"
-                }
-                placeholderTextColor="#9CA3AF"
-                value={chatText}
-                onChangeText={setChatText}
-                multiline
-                maxLength={500}
-              />
-              {chatText.trim() ? (
-                <TouchableOpacity
-                  style={styles.cmPostBtn}
-                  onPress={sendChatMessage}
-                >
-                  <Text style={styles.cmPostText}>Post</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Send Offer Modal */}
-      <Modal
-        visible={!!offerRequest}
-        transparent
-        animationType="slide"
-        onRequestClose={closeOffer}
-      >
-        <KeyboardAvoidingView
-          style={styles.offerBackdrop}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          <Pressable style={styles.offerBackdrop} onPress={closeOffer}>
-            <Pressable
-              style={styles.offerSheet}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <View style={styles.offerHandle} />
-              <Text style={styles.offerTitle}>Send Offer</Text>
-              {offerRequest ? (
-                <Text style={styles.offerSubtitle} numberOfLines={2}>
-                  {offerRequest.title}
-                </Text>
-              ) : null}
-              <Text style={styles.offerLabel}>Your price</Text>
+          <Pressable style={styles.modalOverlay} onPress={closeOffer}>
+            <Pressable style={styles.modalSheet}>
+              <Text style={styles.modalTitle}>Send Offer</Text>
+              <Text style={styles.modalSub} numberOfLines={2}>
+                {offerRequest?.title}
+              </Text>
               <View style={styles.offerField}>
-                <Text style={styles.offerNaira}>₦</Text>
+                <Text style={styles.naira}>₦</Text>
                 <TextInput
                   value={offerPrice}
                   onChangeText={setOfferPrice}
@@ -841,50 +608,84 @@ export default function RequestsScreen() {
                 />
               </View>
               <TouchableOpacity
-                style={[
-                  styles.offerSubmitBtn,
-                  !offerPrice.replace(/[^\d]/g, "") &&
-                    styles.offerSubmitDisabled,
-                ]}
-                disabled={!offerPrice.replace(/[^\d]/g, "")}
+                style={[styles.sendOfferBtn, !offerPrice.replace(/\D/g, "") && { opacity: 0.5 }]}
+                disabled={!offerPrice.replace(/\D/g, "")}
                 onPress={submitOffer}
+                activeOpacity={0.85}
               >
                 <Ionicons name="paper-plane" size={18} color="#fff" />
-                <Text style={styles.offerSubmitText}>Send Offer</Text>
+                <Text style={styles.sendOfferText}>Send Offer</Text>
               </TouchableOpacity>
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Location Modal */}
+      {/* Comments modal */}
+      <Modal visible={!!chatRequest} transparent animationType="slide" onRequestClose={closeChat}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={styles.chatSheet}>
+            <View style={styles.chatHeader}>
+              <Text style={styles.modalTitle} numberOfLines={1}>
+                {chatRequest?.title}
+              </Text>
+              <TouchableOpacity onPress={closeChat}>
+                <Ionicons name="close" size={22} color="#111" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              ref={commentListRef}
+              data={chatComments}
+              keyExtractor={(c) => c.id}
+              contentContainerStyle={{ padding: 16, flexGrow: 1 }}
+              renderItem={({ item: c }) => (
+                <View style={styles.chatBubble}>
+                  <Image source={c.userAvatar} style={styles.commentAvatar} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.commentName}>{c.userName}</Text>
+                    <Text style={styles.commentText}>{c.text}</Text>
+                    <Text style={styles.timeAgo}>{c.timeAgo}</Text>
+                  </View>
+                </View>
+              )}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>No comments yet. Be the first.</Text>
+              }
+            />
+            <View style={styles.chatInputRow}>
+              <TextInput
+                style={styles.chatInput}
+                placeholder="Write a comment..."
+                placeholderTextColor="#9CA3AF"
+                value={chatText}
+                onChangeText={setChatText}
+                multiline
+              />
+              <TouchableOpacity onPress={sendChatMessage} activeOpacity={0.8}>
+                <Ionicons name="send" size={22} color={GREEN} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Location modals simplified via existing handlers */}
       <Modal
         visible={showLocationModal}
         transparent
         animationType="slide"
         onRequestClose={() => setShowLocationModal(false)}
       >
-        <Pressable
-          style={styles.locOverlay}
-          onPress={() => setShowLocationModal(false)}
-        >
-          <View style={styles.locSheet}>
-            <View style={styles.locHandle} />
-            <Text style={styles.locTitle}>Choose location</Text>
-
-            <TouchableOpacity
-              style={styles.locOption}
-              onPress={getUserLocation}
-            >
-              <Ionicons name="navigate" size={24} color={GREEN} />
-              <View style={styles.locOptionText}>
-                <Text style={styles.locOptionTitle}>Use current location</Text>
-                <Text style={styles.locOptionSub}>
-                  Allow access to detect your position
-                </Text>
-              </View>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowLocationModal(false)}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Choose location</Text>
+            <TouchableOpacity style={styles.locOption} onPress={getUserLocation}>
+              <Ionicons name="navigate" size={22} color={GREEN} />
+              <Text style={styles.locOptionText}>Use current location</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.locOption}
               onPress={() => {
@@ -892,91 +693,42 @@ export default function RequestsScreen() {
                 setShowCityPicker(true);
               }}
             >
-              <Ionicons name="list-outline" size={24} color={GREEN} />
-              <View style={styles.locOptionText}>
-                <Text style={styles.locOptionTitle}>Select a city</Text>
-                <Text style={styles.locOptionSub}>
-                  Pick from popular cities in Nigeria
-                </Text>
-              </View>
+              <Ionicons name="list-outline" size={22} color={GREEN} />
+              <Text style={styles.locOptionText}>Select a city</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.locOption}
-              onPress={viewAllInNigeria}
-            >
-              <Ionicons name="globe-outline" size={24} color={GREEN} />
-              <View style={styles.locOptionText}>
-                <Text style={styles.locOptionTitle}>View all in Nigeria</Text>
-                <Text style={styles.locOptionSub}>
-                  See requests from every city
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.locCancel}
-              onPress={() => setShowLocationModal(false)}
-            >
-              <Text style={styles.locCancelText}>Cancel</Text>
+            <TouchableOpacity style={styles.locOption} onPress={viewAllInNigeria}>
+              <Ionicons name="globe-outline" size={22} color={GREEN} />
+              <Text style={styles.locOptionText}>View all in Nigeria</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
       </Modal>
 
-      {/* City Picker */}
-      <Modal
-        visible={showCityPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={closeCityPicker}
-      >
-        <View style={styles.locOverlay}>
-          <View style={[styles.locSheet, styles.locCitySheet]}>
-            <View style={styles.locHandle} />
-            <Text style={styles.locTitle}>Select a city</Text>
-
-            <View style={styles.locSearchBox}>
-              <Ionicons name="search-outline" size={20} color="#888" />
-              <TextInput
-                style={styles.locSearchInput}
-                placeholder="Filter cities..."
-                placeholderTextColor="#888"
-                value={citySearch}
-                onChangeText={setCitySearch}
-                autoCorrect={false}
-              />
-              {citySearch.length > 0 ? (
-                <TouchableOpacity onPress={() => setCitySearch("")}>
-                  <Ionicons name="close-circle" size={20} color="#AAA" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-
+      <Modal visible={showCityPicker} transparent animationType="slide" onRequestClose={closeCityPicker}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { maxHeight: "70%" }]}>
+            <Text style={styles.modalTitle}>Select a city</Text>
+            <TextInput
+              style={styles.citySearch}
+              placeholder="Filter cities..."
+              placeholderTextColor="#9CA3AF"
+              value={citySearch}
+              onChangeText={setCitySearch}
+            />
             <FlatList
               data={filteredCities}
-              keyExtractor={(item) => item}
-              keyboardShouldPersistTaps="handled"
-              style={styles.locCityList}
-              ListEmptyComponent={
-                <Text style={styles.locEmptyCities}>No city found.</Text>
-              }
+              keyExtractor={(c) => c}
               renderItem={({ item: city }) => (
-                <TouchableOpacity
-                  style={styles.locCityItem}
-                  onPress={() => selectCity(city)}
-                >
+                <TouchableOpacity style={styles.locOption} onPress={() => selectCity(city)}>
                   <Ionicons name="location-outline" size={20} color={GREEN} />
-                  <Text style={styles.locCityItemText}>{city}</Text>
+                  <Text style={styles.locOptionText}>{city}</Text>
                 </TouchableOpacity>
               )}
             />
-
-            <TouchableOpacity
-              style={styles.locCancel}
-              onPress={closeCityPicker}
-            >
-              <Text style={styles.locCancelText}>Cancel</Text>
+            <TouchableOpacity onPress={closeCityPicker} style={{ paddingVertical: 12 }}>
+              <Text style={{ textAlign: "center", color: "#6B7280", fontWeight: "600" }}>
+                Cancel
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -985,16 +737,8 @@ export default function RequestsScreen() {
   );
 }
 
-/* ============================================================
-   STYLES (unchanged layout)
-============================================================ */
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    marginBottom: 35,
-    backgroundColor: "#fff",
-  },
+  safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -1002,643 +746,189 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 10,
   },
-  headerTextWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#111",
-  },
-  headerLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    marginTop: 3,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: "#777",
-    marginLeft: 4,
-    maxWidth: 180,
-  },
-  dropdownIcon: {
-    marginLeft: 4,
-  },
+  headerTextWrap: { flex: 1 },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: "#111827" },
+  headerLocationRow: { flexDirection: "row", alignItems: "center", marginTop: 2, gap: 4 },
+  headerSubtitle: { fontSize: 13, color: "#6B7280", maxWidth: 180 },
+  dropdownIcon: { marginLeft: 2 },
   createBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     backgroundColor: GREEN,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
-  createBtnText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  searchContainer: {
-    height: 46,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    borderRadius: 23,
+  createBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  searchRow: { paddingHorizontal: 16, marginBottom: 8 },
+  searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    marginHorizontal: 16,
-    marginBottom: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: "#111",
-    marginHorizontal: 8,
-    paddingVertical: 0,
-  },
-  filtersWrap: {
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    paddingHorizontal: 12,
     height: 44,
-    marginBottom: 8,
-  },
-  filtersContent: {
-    paddingHorizontal: 16,
-    alignItems: "center",
     gap: 8,
   },
+  searchInput: { flex: 1, fontSize: 15, color: "#111" },
+  filtersRow: { paddingHorizontal: 12, paddingBottom: 8, gap: 8 },
   filterChip: {
-    height: 34,
     paddingHorizontal: 14,
-    borderRadius: 17,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 4,
+    marginRight: 8,
   },
-  filterChipActive: {
-    backgroundColor: GREEN,
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-  filterChipTextActive: {
-    color: "#fff",
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-    gap: 14,
-  },
+  filterChipActive: { backgroundColor: "#DCFCE7" },
+  filterChipText: { fontSize: 13, fontWeight: "600", color: "#6B7280" },
+  filterChipTextActive: { color: GREEN },
+  listContent: { paddingHorizontal: 16, paddingBottom: 100 },
   card: {
     borderWidth: 1,
     borderColor: "#E8E8E8",
     borderRadius: 16,
     padding: 14,
     backgroundColor: "#fff",
+    marginBottom: 14,
   },
-  posterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  posterAvatarWrap: {
-    width: 40,
-    height: 40,
-  },
-  posterAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#E5E7EB",
-  },
-  posterInfo: {
-    flex: 1,
-    marginLeft: 10,
-    minWidth: 0,
-  },
-  posterName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#111",
-    flexShrink: 1,
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    marginTop: 2,
-  },
-  locationText: {
-    fontSize: 12,
-    color: "#6B7280",
-    flex: 1,
-  },
-  timeAgo: {
-    fontSize: 11,
-    color: "#9CA3AF",
-    marginLeft: 8,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    marginBottom: 10,
-  },
-  cardTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#111",
-    lineHeight: 22,
-  },
+  posterRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  posterAvatarWrap: { marginRight: 10 },
+  posterAvatar: { width: 40, height: 40, borderRadius: 20 },
+  posterInfo: { flex: 1, minWidth: 0 },
+  posterName: { fontSize: 14, fontWeight: "700", color: "#111827" },
+  locationRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
+  locationText: { fontSize: 12, color: "#6B7280", flex: 1 },
+  timeAgo: { fontSize: 11, color: "#9CA3AF" },
+  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8 },
+  cardTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#111827" },
   newBadge: {
     backgroundColor: "#F59E0B",
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    borderRadius: 6,
+    paddingHorizontal: 7,
     paddingVertical: 3,
   },
-  newBadgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  coverImage: {
-    width: "100%",
-    height: 180,
-    borderRadius: 12,
-    backgroundColor: "#F3F4F6",
-    marginBottom: 10,
-  },
-  metaRow: {
-    flexDirection: "row",
-    marginBottom: 8,
-  },
+  newBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  metaRow: { marginBottom: 8 },
   categoryChip: {
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
+    alignSelf: "flex-start",
+    backgroundColor: "#ECFDF5",
     paddingHorizontal: 10,
     paddingVertical: 4,
+    borderRadius: 8,
   },
-  categoryChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-  description: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: "#4B5563",
-    marginBottom: 12,
-  },
-  engagementRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 18,
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  engagementBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  engagementText: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  commentPreview: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    marginBottom: 6,
-  },
-  commentAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#E5E7EB",
-  },
-  commentBody: {
-    flex: 1,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  commentName: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#111",
-    marginBottom: 2,
-  },
-  commentText: {
-    fontSize: 12,
-    color: "#4B5563",
-    lineHeight: 17,
-  },
-  viewMoreComments: {
-    fontSize: 12,
-    color: GREEN,
-    fontWeight: "600",
-    marginBottom: 12,
-    marginLeft: 36,
-  },
+  categoryChipText: { fontSize: 12, fontWeight: "600", color: GREEN },
+  description: { fontSize: 14, color: "#4B5563", lineHeight: 20, marginBottom: 10 },
+  engagementRow: { flexDirection: "row", gap: 16, marginBottom: 10 },
+  engagementBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
+  engagementText: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
+  commentPreview: { flexDirection: "row", gap: 8, marginBottom: 8 },
+  commentAvatar: { width: 28, height: 28, borderRadius: 14 },
+  commentBody: { flex: 1 },
+  commentName: { fontSize: 13, fontWeight: "700", color: "#111827" },
+  commentText: { fontSize: 13, color: "#4B5563", marginTop: 2 },
   writeCommentHint: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  writeCommentHintText: {
+  writeCommentHintText: { fontSize: 13, color: GREEN, fontWeight: "600" },
+  viewMoreComments: {
     fontSize: 13,
-    color: GREEN,
+    color: "#6B7280",
     fontWeight: "600",
+    marginBottom: 10,
   },
   sendOfferBtn: {
     backgroundColor: GREEN,
-    borderRadius: 24,
+    borderRadius: 12,
     paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
-  sendOfferText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  emptyContainer: {
-    alignItems: "center",
-    paddingVertical: 60,
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    marginTop: 12,
-    color: "#111",
-  },
-  emptyText: {
-    color: "#888",
-    marginTop: 5,
-    fontSize: 13,
-    textAlign: "center",
-  },
-
-  /* Comments modal */
-  cmBackdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  cmDim: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.45)",
-  },
-  cmSheet: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    maxHeight: "78%",
-    minHeight: "55%",
-    paddingBottom: Platform.OS === "ios" ? 28 : 12,
-  },
-  cmHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D5DB",
-    alignSelf: "center",
-    marginTop: 10,
-    marginBottom: 6,
-  },
-  cmHeader: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E5E7EB",
-  },
-  cmHeaderTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111",
-  },
-  cmCloseBtn: {
-    position: "absolute",
-    right: 14,
-    top: 8,
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cmList: {
-    flexGrow: 1,
-  },
-  cmListContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  cmListEmptyContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingVertical: 40,
-  },
-  cmEmpty: {
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  cmEmptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111",
-    marginTop: 12,
-  },
-  cmEmptyText: {
-    fontSize: 13,
-    color: "#9CA3AF",
-    marginTop: 4,
-  },
-  cmRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 18,
-  },
-  cmAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#E5E7EB",
-    marginRight: 12,
-  },
-  cmContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  cmMeta: {
-    marginBottom: 2,
-  },
-  cmName: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#111",
-  },
-  cmTime: {
-    fontSize: 12,
-    color: "#9CA3AF",
-  },
-  cmText: {
-    fontSize: 14,
-    color: "#1F2937",
-    lineHeight: 20,
-  },
-  cmReply: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#9CA3AF",
-    marginTop: 6,
-  },
-  cmReplyBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: "#F9FAFB",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#E5E7EB",
-  },
-  cmReplyBarText: {
-    fontSize: 13,
-    color: "#6B7280",
-    flex: 1,
-  },
-  cmReplyBarName: {
-    fontWeight: "700",
-    color: "#111",
-  },
-  cmInputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 6,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#E5E7EB",
-    gap: 10,
-  },
-  cmInputAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#E5E7EB",
-    marginBottom: 4,
-  },
-  cmInput: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
-    fontSize: 15,
-    color: "#111",
-    paddingVertical: 10,
-  },
-  cmPostBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  cmPostText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: GREEN,
-  },
-
-  /* Offer modal */
-  offerBackdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  offerSheet: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 32,
-  },
-  offerHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D5DB",
-    alignSelf: "center",
-    marginBottom: 14,
-  },
-  offerTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
-    textAlign: "center",
-  },
-  offerSubtitle: {
-    fontSize: 13,
-    color: "#6B7280",
-    textAlign: "center",
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  offerLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 8,
-  },
-  offerField: {
-    minHeight: 52,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    marginBottom: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  offerNaira: {
-    fontSize: 16,
-    color: "#9CA3AF",
-    fontWeight: "600",
-  },
-  offerInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#111827",
-    paddingVertical: 12,
-  },
-  offerSubmitBtn: {
-    backgroundColor: GREEN,
-    borderRadius: 26,
-    paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  offerSubmitDisabled: {
-    opacity: 0.45,
-  },
-  offerSubmitText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  /* Location modal */
-  locOverlay: {
+  sendOfferText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  empty: { alignItems: "center", paddingVertical: 60 },
+  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#374151", marginTop: 10 },
+  emptyText: { fontSize: 13, color: "#9CA3AF", marginTop: 4, textAlign: "center" },
+  modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
-  locSheet: {
+  modalSheet: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-    paddingTop: 12,
+    padding: 20,
+    paddingBottom: 28,
   },
-  locCitySheet: {
-    maxHeight: "80%",
+  modalTitle: { fontSize: 18, fontWeight: "800", color: "#111827", marginBottom: 6 },
+  modalSub: { fontSize: 13, color: "#6B7280", marginBottom: 14 },
+  offerField: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 14,
   },
-  locHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#DDD",
-    alignSelf: "center",
-    marginBottom: 16,
+  naira: { fontSize: 16, color: "#9CA3AF", marginRight: 6 },
+  offerInput: { flex: 1, fontSize: 16, color: "#111", paddingVertical: 12 },
+  chatSheet: {
+    flex: 1,
+    marginTop: 80,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
-  locTitle: {
-    fontSize: 18,
-    fontWeight: "800",
+  chatHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  chatBubble: { flexDirection: "row", gap: 10, marginBottom: 14 },
+  chatInputRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 10,
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  chatInput: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 100,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 15,
     color: "#111",
-    marginBottom: 18,
   },
   locOption: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
   },
-  locOptionText: {
-    marginLeft: 14,
-    flex: 1,
-  },
-  locOptionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111",
-  },
-  locOptionSub: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 2,
-  },
-  locCancel: {
-    marginTop: 16,
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  locCancelText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#888",
-  },
-  locSearchBox: {
-    flexDirection: "row",
-    alignItems: "center",
+  locOptionText: { fontSize: 15, fontWeight: "600", color: "#111827" },
+  citySearch: {
     borderWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: "#E5E7EB",
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 44,
-    marginBottom: 12,
-  },
-  locSearchInput: {
-    flex: 1,
+    paddingVertical: 10,
+    marginBottom: 10,
     fontSize: 15,
     color: "#111",
-    marginLeft: 8,
-  },
-  locCityList: {
-    maxHeight: 320,
-  },
-  locCityItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F5F5F5",
-  },
-  locCityItemText: {
-    flex: 1,
-    fontSize: 15,
-    color: "#111",
-    marginLeft: 12,
-  },
-  locEmptyCities: {
-    textAlign: "center",
-    color: "#888",
-    marginTop: 30,
-    fontSize: 14,
-    marginBottom: 55,
   },
 });
