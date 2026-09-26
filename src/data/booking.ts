@@ -5,16 +5,15 @@
  *   Pending → Ongoing   (professional accepts in chat)
  *   Pending → Declined  (professional declines in chat)
  *
- * Booked   = current user is the customer
- * Received = current user is the professional
+ * Booked   = current user is the customer (u1)
+ *            professionalId must NOT be "1" (logged-in pro)
+ * Received = current user is the professional (id "1")
  *
  * LATER: replace BOOKED_JOBS / RECEIVED_JOBS with API payloads.
- *        Keep Booking type + listBookedJobs / listReceivedJobs signatures.
  */
 
 import { PROFESSIONALS } from "@/data/professionals";
 
-/** Only statuses shown on the Bookings tab */
 export type BookingStatus = "Pending" | "Ongoing" | "Declined";
 
 export type Booking = {
@@ -103,15 +102,18 @@ function createBooking(input: {
   };
 }
 
-/** Booked by current user (customer u1) — Pending | Ongoing | Declined only */
+/**
+ * Booked = you hired someone else (professionalId ≠ "1")
+ * You are the customer → Open Chat + Cancel (Pending); no Accept/Decline
+ */
 export const BOOKED_JOBS: Booking[] = [
   createBooking({
     id: "b1",
-    professionalId: "1",
+    professionalId: "2", // Chioma — NOT you
     customerId: "u1",
-    title: "Plumbing Installation",
-    rating: 4.8,
-    reviews: 126,
+    title: "Nail Extension",
+    rating: 4.9,
+    reviews: 89,
     date: "May 25, 2025 10:00 AM",
     location: "Lagos",
     status: "Pending",
@@ -119,15 +121,15 @@ export const BOOKED_JOBS: Booking[] = [
   }),
   createBooking({
     id: "b2",
-    professionalId: "2",
+    professionalId: "4",
     customerId: "u1",
-    title: "Nail Extension",
+    title: "Full Body Massage",
     rating: 4.9,
-    reviews: 89,
+    reviews: 32,
     date: "May 22, 2025 02:30 PM",
     location: "Lagos",
     status: "Ongoing",
-    amount: 12500,
+    amount: 18000,
   }),
   createBooking({
     id: "b3",
@@ -143,7 +145,10 @@ export const BOOKED_JOBS: Booking[] = [
   }),
 ];
 
-/** Received as professional (logged-in mock pro id = "1") */
+/**
+ * Received = customers hired YOU (professionalId "1")
+ * You are the pro → Open Chat; Accept/Decline only in chat when Pending
+ */
 export const RECEIVED_JOBS: Booking[] = [
   createBooking({
     id: "r1",
