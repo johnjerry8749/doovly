@@ -668,6 +668,39 @@ export default function ProfessionalProfile() {
           </ScrollView>
         </View>
 
+        {/* FIXED BOOK BUTTON */}
+        <View style={styles.bookingFooter}>
+          <TouchableOpacity
+            style={[
+              styles.bookButton,
+              isOwnProfile && styles.disabledButton,
+            ]}
+            activeOpacity={isOwnProfile ? 1 : 0.8}
+            disabled={isOwnProfile}
+            onPress={() => {
+              if (isOwnProfile) return;
+              router.push({
+                pathname: "/bookme/[id]",
+                params: {
+                  id: pro.id,
+                  serviceId: "",
+                  serviceName: "",
+                  price: pro.priceFrom,
+                },
+              });
+            }}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={20}
+              color="#FFFFFF"
+            />
+            <Text style={styles.bookButtonText}>
+              {isOwnProfile ? "Your profile" : "Book Now"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <Modal
           visible={reviewModalVisible}
           transparent
@@ -1029,6 +1062,27 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.55,
+  },
+  bookingFooter: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    backgroundColor: "#FFFFFF",
+  },
+  bookButton: {
+    backgroundColor: GREEN,
+    borderRadius: 14,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  bookButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 16,
   },
   modalOverlay: {
     flex: 1,
