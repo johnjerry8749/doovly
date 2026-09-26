@@ -10,10 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { statusColors, type Booking } from "@/services/bookings";
-import {
-  getOrCreateConversationForBooking,
-  formatBookingChatMessage,
-} from "@/services/chat";
+import { openBookingChat } from "@/services/chat";
 
 const GREEN = "#16A34A";
 
@@ -32,7 +29,6 @@ export function BookingCard({ item, mainTab }: Props) {
   const statusStyle = statusColors[item.status];
   const amountText = formatAmount(item.amount);
 
-  // Booked → show professional; Received → show customer
   const displayName =
     mainTab === "booked" ? item.professionalName : item.customerName;
   const displayImage =
@@ -44,20 +40,16 @@ export function BookingCard({ item, mainTab }: Props) {
     item.status === "Ongoing";
 
   const openChat = () => {
-    const conv = getOrCreateConversationForBooking(item, mainTab);
-    const message = formatBookingChatMessage(item);
+    // View existing booking chat only — never resend booking details
+    const conv = openBookingChat(item, mainTab);
     router.push({
       pathname: "/chat/[id]",
-      params: {
-        id: conv.id,
-        initialMessage: message,
-      },
+      params: { id: conv.id },
     });
   };
 
   return (
     <View style={styles.card}>
-      {/* Top: avatar + name + rating + status */}
       <View style={styles.topSection}>
         <View style={styles.avatarContainer}>
           <Image
@@ -111,7 +103,6 @@ export function BookingCard({ item, mainTab }: Props) {
         ) : null}
       </View>
 
-      {/* Open Chat + Cancel only — Call lives inside chat */}
       <View style={styles.actionsRow}>
         <TouchableOpacity
           style={styles.chatButton}
