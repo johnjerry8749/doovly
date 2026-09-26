@@ -1,27 +1,21 @@
 /**
- * Shared bookings mock data.
+ * Bookings mock data
+ * ------------------
+ * Status lifecycle (UI):
+ *   Pending → Ongoing   (professional accepts in chat)
+ *   Pending → Declined  (professional declines in chat)
  *
- * Flow (status lifecycle):
- *   Pending → Accepted → Ongoing → Awaiting Approval → Completed
- *   (or Cancelled / Declined at any early stage)
+ * Booked   = current user is the customer
+ * Received = current user is the professional
  *
- * Booked  = jobs the current user booked as a customer (see professional)
- * Received = jobs the current user received as a professional (see customer)
- *
- * LATER: Replace BOOKED_JOBS / RECEIVED_JOBS with API responses.
- *        Keep the Booking type and listBookedJobs / listReceivedJobs signatures.
+ * LATER: replace BOOKED_JOBS / RECEIVED_JOBS with API payloads.
+ *        Keep Booking type + listBookedJobs / listReceivedJobs signatures.
  */
 
 import { PROFESSIONALS } from "@/data/professionals";
 
-export type BookingStatus =
-  | "Pending"
-  | "Accepted"
-  | "Ongoing"
-  | "Awaiting Approval"
-  | "Completed"
-  | "Cancelled"
-  | "Declined";
+/** Only statuses shown on the Bookings tab */
+export type BookingStatus = "Pending" | "Ongoing" | "Declined";
 
 export type Booking = {
   id: string;
@@ -46,11 +40,7 @@ export const statusColors: Record<
   { bg: string; text: string }
 > = {
   Pending: { bg: "#E8F8EF", text: "#16A34A" },
-  Accepted: { bg: "#E8F8EF", text: "#16A34A" },
-  Ongoing: { bg: "#E8F8EF", text: "#16A34A" },
-  "Awaiting Approval": { bg: "#FFF4E5", text: "#D97706" },
-  Completed: { bg: "#F3F4F6", text: "#6B7280" },
-  Cancelled: { bg: "#FEE2E2", text: "#DC2626" },
+  Ongoing: { bg: "#DBEAFE", text: "#2563EB" },
   Declined: { bg: "#FEE2E2", text: "#DC2626" },
 };
 
@@ -59,7 +49,6 @@ const CUSTOMERS: Record<string, { name: string; image: number }> = {
   u2: { name: "Ada Okafor", image: require("@/assets/profile_2.jpg") },
   u3: { name: "Tunde Adebayo", image: require("@/assets/profile_3.jpg") },
   u4: { name: "Chioma Nwosu", image: require("@/assets/profile_4.jpg") },
-  u5: { name: "Blessing Kalu", image: require("@/assets/profile_1.jpg") },
 };
 
 function getProfessional(professionalId: string) {
@@ -114,9 +103,8 @@ function createBooking(input: {
   };
 }
 
-/** Booked by current user (customer u1) */
+/** Booked by current user (customer u1) — Pending | Ongoing | Declined only */
 export const BOOKED_JOBS: Booking[] = [
-  // Pending — Open Chat shows waiting state (pro must accept)
   createBooking({
     id: "b1",
     professionalId: "1",
@@ -150,50 +138,13 @@ export const BOOKED_JOBS: Booking[] = [
     reviews: 64,
     date: "May 18, 2025 11:00 AM",
     location: "Abuja",
-    status: "Completed",
+    status: "Declined",
     amount: 28000,
-  }),
-  createBooking({
-    id: "b4",
-    professionalId: "4",
-    customerId: "u1",
-    title: "Full Body Massage",
-    rating: 4.9,
-    reviews: 32,
-    date: "May 20, 2025 04:00 PM",
-    location: "Lagos",
-    status: "Accepted",
-    amount: 18000,
-  }),
-  createBooking({
-    id: "b5",
-    professionalId: "6",
-    customerId: "u1",
-    title: "Haircut",
-    rating: 4.8,
-    reviews: 25,
-    date: "May 23, 2025 01:00 PM",
-    location: "Abuja",
-    status: "Awaiting Approval",
-    amount: 8500,
-  }),
-  createBooking({
-    id: "b6",
-    professionalId: "2",
-    customerId: "u1",
-    title: "Nail Art Design",
-    rating: 4.9,
-    reviews: 89,
-    date: "May 26, 2025 03:00 PM",
-    location: "Lagos",
-    status: "Cancelled",
-    amount: 15400,
   }),
 ];
 
 /** Received as professional (logged-in mock pro id = "1") */
 export const RECEIVED_JOBS: Booking[] = [
-  // Pending for pro "1" — Open Chat shows Accept / Decline
   createBooking({
     id: "r1",
     professionalId: "1",
@@ -227,32 +178,8 @@ export const RECEIVED_JOBS: Booking[] = [
     reviews: 8,
     date: "May 24, 2025 11:00 AM",
     location: "Abuja",
-    status: "Completed",
+    status: "Declined",
     amount: 12000,
-  }),
-  createBooking({
-    id: "r4",
-    professionalId: "1",
-    customerId: "u5",
-    title: "Deep Cleaning",
-    rating: 5.0,
-    reviews: 12,
-    date: "May 29, 2025 10:00 AM",
-    location: "Lagos",
-    status: "Awaiting Approval",
-    amount: 15400,
-  }),
-  createBooking({
-    id: "r5",
-    professionalId: "1",
-    customerId: "u3",
-    title: "Drain Cleaning",
-    rating: 4.6,
-    reviews: 9,
-    date: "May 21, 2025 03:00 PM",
-    location: "Lagos",
-    status: "Accepted",
-    amount: 10000,
   }),
 ];
 
