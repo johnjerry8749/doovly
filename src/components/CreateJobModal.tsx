@@ -464,10 +464,6 @@ export default function CreateJobModal({
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>
-                Photos ({images.length}/{MAX_IMAGES})
-              </Text>
-
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -489,17 +485,6 @@ export default function CreateJobModal({
                     </TouchableOpacity>
                   </View>
                 ))}
-
-                {images.length < MAX_IMAGES ? (
-                  <TouchableOpacity
-                    style={styles.addThumb}
-                    onPress={pickImages}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="add" size={28} color={GREEN} />
-                    <Text style={styles.addThumbText}>Add</Text>
-                  </TouchableOpacity>
-                ) : null}
               </ScrollView>
 
               {images.length === 0 ? (
@@ -513,7 +498,7 @@ export default function CreateJobModal({
                   </View>
                   <Text style={styles.uploadTitle}>Add photos</Text>
                   <Text style={styles.uploadSub}>
-                    Up to {MAX_IMAGES} images
+                    Up to from 1 to {MAX_IMAGES} images
                   </Text>
                 </TouchableOpacity>
               ) : null}
