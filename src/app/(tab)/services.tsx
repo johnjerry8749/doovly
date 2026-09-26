@@ -55,6 +55,7 @@ export default function Services() {
 
   const onToggleFavorite = useCallback((proId: string) => {
     const result = toggleSave(proId);
+
     if (!result.ok && result.reason === "limit") {
       Alert.alert(
         "Save limit reached",
@@ -69,13 +70,18 @@ export default function Services() {
       );
       return;
     }
-    if (result.ok) setFavTick((t) => t + 1);
+
+    if (result.ok) {
+      setFavTick((t) => t + 1);
+    }
   }, []);
 
   const filteredCities = useMemo(() => {
     const query = citySearch.trim().toLowerCase();
     if (!query) return [...NIGERIA_CITIES];
-    return NIGERIA_CITIES.filter((city) => city.toLowerCase().includes(query));
+    return NIGERIA_CITIES.filter((city) =>
+      city.toLowerCase().includes(query),
+    );
   }, [citySearch]);
 
   const matchesLocationCity = useCallback(
@@ -108,8 +114,9 @@ export default function Services() {
     if (
       category === "spa" &&
       (professional.includes("massage") || professional.includes("spa"))
-    )
+    ) {
       return true;
+    }
     if (category === "nail tech" && professional.includes("nail")) return true;
     return false;
   }, []);
@@ -136,11 +143,13 @@ export default function Services() {
     matchesLocationCity,
   ]);
 
-  const renderPro = ({ item }: { item: Professional }) => {
+  const renderProfessional = ({ item }: { item: Professional }) => {
     const saved = isSaved(item.id);
+    const stars = Math.min(5, Math.floor((item.reviews?.length || 0) / 10));
+
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={styles.professionalCard}
         activeOpacity={0.85}
         onPress={() =>
           router.push({
@@ -149,53 +158,56 @@ export default function Services() {
           })
         }
       >
-        <View style={styles.imageWrap}>
-          <Image source={item.image} style={styles.avatar} />
+        <View style={styles.imageContainer}>
+          <Image source={item.image} style={styles.professionalImage} />
           {item.verified ? (
             <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={16} color={GREEN} />
+              <Ionicons name="checkmark-circle" size={14} color={GREEN} />
             </View>
           ) : null}
           <TouchableOpacity
-            style={styles.favBtn}
+            style={styles.favoriteButton}
             onPress={() => onToggleFavorite(item.id)}
             hitSlop={8}
           >
             <Ionicons
               name={saved ? "heart" : "heart-outline"}
-              size={18}
+              size={16}
               color={saved ? "#EF4444" : "#fff"}
             />
           </TouchableOpacity>
         </View>
-        <View style={styles.cardBody}>
+
+        <View style={styles.cardContent}>
           <View style={styles.nameRow}>
-            <Text style={styles.name} numberOfLines={1}>
+            <Text style={styles.professionalName} numberOfLines={1}>
               {item.name}
             </Text>
             {item.subscribed ? (
               <MaterialCommunityIcons
                 name="shield-check"
-                size={16}
+                size={14}
                 color="#D4AF37"
               />
             ) : null}
           </View>
+
           <View style={styles.ratingRow}>
-            <Ionicons name="star" size={12} color="#F59E0B" />
-            <Text style={styles.ratingText}>
-              {Math.min(5, Math.floor((item.reviews?.length || 0) / 10))}
-            </Text>
+            <Ionicons name="star" size={11} color="#F59E0B" />
+            <Text style={styles.ratingText}>{stars}</Text>
             <Text style={styles.reviewCount}>
               ({item.reviews?.length || 0})
             </Text>
           </View>
+
           <Text style={styles.profession} numberOfLines={1}>
             {item.profession}
           </Text>
+
           <Text style={styles.city} numberOfLines={1}>
             {item.city}
           </Text>
+
           <Text style={styles.price}>From {item.priceFrom}</Text>
         </View>
       </TouchableOpacity>
@@ -203,18 +215,20 @@ export default function Services() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Services</Text>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.stickyHeader}>
+        <View style={styles.locationRow}>
           <TouchableOpacity
-            style={styles.locationRow}
+            style={styles.locationContainer}
             onPress={() => setShowLocationModal(true)}
             activeOpacity={0.7}
           >
-            <Ionicons name="location" size={14} color={GREEN} />
+            <Ionicons name="location" size={16} color={GREEN} />
             {loadingLocation ? (
-              <ActivityIndicator size="small" color={GREEN} style={{ marginLeft: 4 }} />
+              <View style={styles.locationLoading}>
+                <ActivityIndicator size="small" color={GREEN} />
+                <Text style={styles.locationLoadingText}>Getting location...</Text>
+              </View>
             ) : (
               <Text style={styles.locationText} numberOfLines={1}>
                 {locationName || "All Nigeria"}
@@ -222,11 +236,22 @@ export default function Services() {
             )}
             <Ionicons name="chevron-down" size={14} color="#6B7280" />
           </TouchableOpacity>
-        </View>
-      </View>
 
-      <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() =>
+              router.push({
+                pathname: "/notification/[id]",
+                params: { id: String(getCurrentUserId()) },
+              })
+            }
+            activeOpacity={0.7}
+          >
+            <Ionicons name="notifications-outline" size={22} color="#111" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.searchContainer}>
           <Ionicons name="search-outline" size={18} color="#9CA3AF" />
           <TextInput
             style={styles.searchInput}
@@ -238,48 +263,51 @@ export default function Services() {
         </View>
       </View>
 
-      <FlatList
-        horizontal
-        data={categories}
-        keyExtractor={(item, index) => `${item.name}-${index}`}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterContainer}
-        renderItem={({ item: filter }) => {
-          const active = selectedFilter === filter.name;
-          return (
-            <TouchableOpacity
-              style={styles.filterItem}
-              onPress={() => setSelectedFilter(filter.name)}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.filterCircle,
-                  active && styles.activeFilterCircle,
-                ]}
+      <View style={styles.fixedCategorySection}>
+        <FlatList
+          horizontal
+          data={categories}
+          keyExtractor={(item, index) => `${item.name}-${index}`}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContainer}
+          renderItem={({ item: filter }) => {
+            const active = selectedFilter === filter.name;
+            return (
+              <TouchableOpacity
+                style={styles.filterItem}
+                onPress={() => setSelectedFilter(filter.name)}
+                activeOpacity={0.7}
               >
-                <MaterialCommunityIcons
-                  name={filter.icon as any}
-                  size={22}
-                  color={active ? "#fff" : GREEN}
-                />
-              </View>
-              <Text
-                style={[
-                  styles.filterName,
-                  active && styles.activeFilterName,
-                ]}
-                numberOfLines={1}
-              >
-                {filter.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        }}
-      />
+                <View
+                  style={[
+                    styles.filterCircle,
+                    active && styles.activeFilterCircle,
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name={filter.icon as any}
+                    size={22}
+                    color={active ? "#fff" : GREEN}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.filterName,
+                    active && styles.activeFilterName,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {filter.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>
+        <Text style={styles.sectionTitle}>Professionals</Text>
+        <Text style={styles.resultCount}>
           {filteredProfessionals.length} found
         </Text>
       </View>
@@ -288,10 +316,10 @@ export default function Services() {
         data={filteredProfessionals}
         extraData={`${favTick}-${selectedFilter}`}
         keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.listContent}
-        renderItem={renderPro}
+        numColumns={3}
+        columnWrapperStyle={styles.columnWrapper}
+        contentContainerStyle={styles.professionalList}
+        renderItem={renderProfessional}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -403,33 +431,70 @@ export default function Services() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  stickyHeader: {
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 8,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: "#111827" },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginTop: 2,
+    justifyContent: "space-between",
+    marginBottom: 12,
   },
-  locationText: { fontSize: 13, color: "#6B7280", maxWidth: 180 },
-  searchRow: { paddingHorizontal: 16, marginBottom: 4 },
-  searchBox: {
+  locationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+    gap: 6,
+  },
+  locationLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  locationLoadingText: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+  locationText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111",
+    flexShrink: 1,
+  },
+  notificationButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F3F4F6",
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 44,
+    height: 46,
     gap: 8,
   },
-  searchInput: { flex: 1, fontSize: 15, color: "#111" },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: "#111",
+  },
+  fixedCategorySection: {
+    backgroundColor: "#FFFFFF",
+    paddingTop: 10,
+  },
   filterContainer: {
     paddingHorizontal: 12,
     paddingBottom: 8,
@@ -465,52 +530,79 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
-  sectionTitle: { fontSize: 14, fontWeight: "700", color: "#374151" },
-  listContent: { paddingHorizontal: 12 },
-  row: { justifyContent: "space-between" },
-  card: {
-    width: "48%",
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#111",
+  },
+  resultCount: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+  professionalList: {
+    paddingHorizontal: 12,
+    paddingTop: 4,
+  },
+  columnWrapper: {
+    gap: 8,
+    marginBottom: 10,
+  },
+  professionalCard: {
+    flex: 1,
+    maxWidth: "32%",
     backgroundColor: "#fff",
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E8E8E8",
-    marginBottom: 12,
     overflow: "hidden",
   },
-  imageWrap: { position: "relative" },
-  avatar: { width: "100%", height: 120, backgroundColor: "#E5E7EB" },
+  imageContainer: {
+    position: "relative",
+  },
+  professionalImage: {
+    width: "100%",
+    height: 90,
+    backgroundColor: "#E5E7EB",
+  },
   verifiedBadge: {
     position: "absolute",
-    bottom: 6,
-    left: 6,
+    bottom: 4,
+    left: 4,
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderRadius: 8,
   },
-  favBtn: {
+  favoriteButton: {
     position: "absolute",
-    top: 6,
-    right: 6,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    top: 4,
+    right: 4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: "rgba(0,0,0,0.35)",
     alignItems: "center",
     justifyContent: "center",
   },
-  cardBody: { padding: 10 },
+  cardContent: {
+    padding: 8,
+  },
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 3,
     marginBottom: 2,
   },
-  name: { flex: 1, fontSize: 13, fontWeight: "700", color: "#111" },
+  professionalName: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#111",
+  },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 3,
+    marginBottom: 2,
   },
   ratingText: {
     fontSize: 11,
@@ -531,7 +623,7 @@ const styles = StyleSheet.create({
   city: {
     fontSize: 10,
     color: "#777",
-    marginBottom: 5,
+    marginBottom: 4,
   },
   price: {
     fontSize: 12,
