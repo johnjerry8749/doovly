@@ -49,7 +49,6 @@ export type Conversation = {
 
 const CURRENT_USER_ID = "u1";
 
-const pro1 = getProfessionalById("1");
 const pro2 = getProfessionalById("2");
 const pro3 = getProfessionalById("3");
 const pro4 = getProfessionalById("4");
@@ -351,7 +350,7 @@ function seedPendingBookingChat(input: {
   conversationIdByBookingId[bookingId] = id;
 }
 
-// Received r1 — logged-in pro "1" sees Accept / Decline
+// Received r1 — YOU are pro "1" → Accept / Decline in chat
 seedPendingBookingChat({
   conversationId: "booking-hist-r1",
   bookingId: "r1",
@@ -367,21 +366,21 @@ seedPendingBookingChat({
   lastMessage: "Booking request: House Cleaning",
 });
 
-// Booked b1 — customer waiting (no Accept for customer)
+// Booked b1 — YOU are customer; waiting on Chioma (pro 2), no Accept for you
 seedPendingBookingChat({
   conversationId: "booking-hist-b1",
   bookingId: "b1",
-  professionalId: "1",
+  professionalId: "2",
   participant: {
-    id: "1",
-    name: pro1?.name ?? "John Chukwuemeka",
-    image: pro1?.image ?? 0,
-    verified: pro1?.verified,
+    id: "2",
+    name: pro2?.name ?? "Chioma Eze",
+    image: pro2?.image ?? 0,
+    verified: pro2?.verified,
     online: true,
   },
-  title: "Plumbing Installation",
+  title: "Nail Extension",
   date: "May 25, 2025 10:00 AM",
-  lastMessage: "Booking request: Plumbing Installation",
+  lastMessage: "Booking request: Nail Extension",
 });
 
 export function getOrCreateConversationForProfessional(
@@ -424,7 +423,6 @@ function syncChatLockFromBooking(
   } else if (status === "Declined") {
     bookingStatusByConv[conversationId] = "Declined";
   } else {
-    // Ongoing (and any future open statuses)
     bookingStatusByConv[conversationId] = "Accepted";
   }
 }
