@@ -115,13 +115,13 @@ export default function Services() {
   }, []);
 
   const filteredProfessionals = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const q = search.trim().toLowerCase();
     return professionals.filter((person) => {
       const matchesSearch =
-        !query ||
-        person.name.toLowerCase().includes(query) ||
-        person.profession.toLowerCase().includes(query) ||
-        person.city.toLowerCase().includes(query);
+        !q ||
+        person.name.toLowerCase().includes(q) ||
+        person.profession.toLowerCase().includes(q) ||
+        person.city.toLowerCase().includes(q);
       return (
         matchesSearch &&
         matchesCategory(person.profession, selectedFilter) &&
@@ -136,186 +136,170 @@ export default function Services() {
     matchesLocationCity,
   ]);
 
-  const renderProfessional = ({ item }: { item: Professional }) => {
+  const renderPro = ({ item }: { item: Professional }) => {
     const saved = isSaved(item.id);
-    const rating =
-      item.reviews.length >= 10
-        ? Math.min(5, Math.floor(item.reviews.length / 10)).toFixed(1)
-        : "4.8";
-
     return (
       <TouchableOpacity
-        style={styles.professionalCard}
+        style={styles.card}
         activeOpacity={0.85}
-        onPress={() => router.push(`/professional/${item.id}`)}
+        onPress={() =>
+          router.push({
+            pathname: "/professional/[id]",
+            params: { id: item.id },
+          })
+        }
       >
-        <TouchableOpacity
-          style={styles.heartButton}
-          activeOpacity={0.7}
-          onPress={(event) => {
-            event.stopPropagation();
-            onToggleFavorite(item.id);
-          }}
-        >
-          <Ionicons
-            name={saved ? "heart" : "heart-outline"}
-            size={17}
-            color={saved ? "#EF4444" : "#111"}
-          />
-        </TouchableOpacity>
-
-        <View style={styles.profileImageContainer}>
-          <Image
-            source={item.image}
-            style={styles.profileImage}
-            resizeMode="cover"
-          />
+        <View style={styles.imageWrap}>
+          <Image source={item.image} style={styles.avatar} />
+          {item.verified ? (
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={16} color={GREEN} />
+            </View>
+          ) : null}
+          <TouchableOpacity
+            style={styles.favBtn}
+            onPress={() => onToggleFavorite(item.id)}
+            hitSlop={8}
+          >
+            <Ionicons
+              name={saved ? "heart" : "heart-outline"}
+              size={18}
+              color={saved ? "#EF4444" : "#fff"}
+            />
+          </TouchableOpacity>
         </View>
-
-        <View style={styles.nameContainer}>
-          <Text style={styles.professionalName} numberOfLines={1}>
-            {item.name}
+        <View style={styles.cardBody}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {item.name}
+            </Text>
+            {item.subscribed ? (
+              <MaterialCommunityIcons
+                name="shield-check"
+                size={16}
+                color="#D4AF37"
+              />
+            ) : null}
+          </View>
+          <View style={styles.ratingRow}>
+            <Ionicons name="star" size={12} color="#F59E0B" />
+            <Text style={styles.ratingText}>
+              {Math.min(5, Math.floor((item.reviews?.length || 0) / 10))}
+            </Text>
+            <Text style={styles.reviewCount}>
+              ({item.reviews?.length || 0})
+            </Text>
+          </View>
+          <Text style={styles.profession} numberOfLines={1}>
+            {item.profession}
           </Text>
+          <Text style={styles.city} numberOfLines={1}>
+            {item.city}
+          </Text>
+          <Text style={styles.price}>From {item.priceFrom}</Text>
         </View>
-
-        <View style={styles.ratingRow}>
-          <Ionicons name="star" size={12} color="#F4C400" />
-          <Text style={styles.ratingText}>{rating}</Text>
-          <Text style={styles.reviewCount}>({item.reviews.length})</Text>
-        </View>
-
-        <Text style={styles.profession} numberOfLines={1}>
-          {item.profession}
-        </Text>
-
-        <Text style={styles.city} numberOfLines={1}>
-          {item.city}
-        </Text>
-
-        <Text style={styles.price} numberOfLines={1}>
-          From {item.priceFrom}
-        </Text>
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.stickyHeader}>
-        <View style={styles.locationRow}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Services</Text>
           <TouchableOpacity
-            style={styles.locationContainer}
+            style={styles.locationRow}
             onPress={() => setShowLocationModal(true)}
             activeOpacity={0.7}
           >
-            <Ionicons name="location" size={22} color={GREEN} />
+            <Ionicons name="location" size={14} color={GREEN} />
             {loadingLocation ? (
-              <View style={styles.locationLoading}>
-                <ActivityIndicator size="small" color={GREEN} />
-                <Text style={styles.locationLoadingText}>Getting location...</Text>
-              </View>
+              <ActivityIndicator size="small" color={GREEN} style={{ marginLeft: 4 }} />
             ) : (
               <Text style={styles.locationText} numberOfLines={1}>
-                {locationName}
+                {locationName || "All Nigeria"}
               </Text>
             )}
-            <Ionicons name="chevron-down" size={16} color="#111" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.notificationButton}
-            activeOpacity={0.7}
-            onPress={() =>
-              router.push({
-                pathname: "/notification/[id]",
-                params: { id: String(getCurrentUserId()) },
-              })
-            }
-          >
-            <Ionicons name="notifications-outline" size={24} color="#111" />
-            <View style={styles.notificationDot} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color="#777" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search for a service..."
-            placeholderTextColor="#888"
-            value={search}
-            onChangeText={setSearch}
-          />
-          <TouchableOpacity activeOpacity={0.7}>
-            <Ionicons name="options-outline" size={22} color={GREEN} />
+            <Ionicons name="chevron-down" size={14} color="#6B7280" />
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.fixedCategorySection}>
-        <FlatList
-          horizontal
-          data={categories}
-          keyExtractor={(item, index) => `${item.name}-${index}`}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContainer}
-          renderItem={({ item: filter }) => {
-            const active = selectedFilter === filter.name;
-            return (
-              <TouchableOpacity
-                style={styles.filterItem}
-                onPress={() => setSelectedFilter(filter.name)}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.filterCircle,
-                    active && styles.activeFilterCircle,
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name={filter.icon as any}
-                    size={26}
-                    color={active ? "#fff" : "#087A38"}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.filterName,
-                    active && styles.activeFilterName,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {filter.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          }}
-        />
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>All professionals</Text>
-          <Text style={styles.resultCount}>
-            {filteredProfessionals.length} found
-          </Text>
+      <View style={styles.searchRow}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search professionals..."
+            placeholderTextColor="#9CA3AF"
+            value={search}
+            onChangeText={setSearch}
+          />
         </View>
+      </View>
+
+      <FlatList
+        horizontal
+        data={categories}
+        keyExtractor={(item, index) => `${item.name}-${index}`}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterContainer}
+        renderItem={({ item: filter, index }) => {
+          const active = selectedFilter === filter.name;
+          return (
+            <TouchableOpacity
+              key={`${filter.name}-${index}`}
+              style={styles.filterItem}
+              onPress={() => setSelectedFilter(filter.name)}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.filterCircle,
+                  active && styles.activeFilterCircle,
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name={filter.icon as any}
+                  size={22}
+                  color={active ? "#fff" : GREEN}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.filterName,
+                  active && styles.activeFilterName,
+                ]}
+                numberOfLines={1}
+              >
+                {filter.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        }}
+      />
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>
+          {filteredProfessionals.length} found
+        </Text>
       </View>
 
       <FlatList
         data={filteredProfessionals}
         extraData={`${favTick}-${selectedFilter}`}
         keyExtractor={(item) => item.id}
-        numColumns={3}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.listContent}
+        renderItem={renderPro}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.professionalList}
-        columnWrapperStyle={styles.columnWrapper}
-        renderItem={renderProfessional}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="search-outline" size={42} color="#aaa" />
+            <Ionicons name="search-outline" size={42} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No professionals found</Text>
             <Text style={styles.emptyText}>
-              Try another service, location or search term.
+              Try another filter or search term.
             </Text>
           </View>
         }
@@ -335,52 +319,33 @@ export default function Services() {
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Choose location</Text>
-
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={getUserLocation}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="navigate" size={24} color={GREEN} />
+            <TouchableOpacity style={styles.modalOption} onPress={getUserLocation}>
+              <Ionicons name="navigate" size={22} color={GREEN} />
               <View style={styles.modalOptionText}>
                 <Text style={styles.modalOptionTitle}>Use current location</Text>
-                <Text style={styles.modalOptionSub}>
-                  Allow access to detect your position
-                </Text>
+                <Text style={styles.modalOptionSub}>GPS based</Text>
               </View>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.modalOption}
               onPress={() => {
                 setShowLocationModal(false);
                 setShowCityPicker(true);
               }}
-              activeOpacity={0.7}
             >
-              <Ionicons name="list-outline" size={24} color={GREEN} />
+              <Ionicons name="list-outline" size={22} color={GREEN} />
               <View style={styles.modalOptionText}>
                 <Text style={styles.modalOptionTitle}>Select a city</Text>
-                <Text style={styles.modalOptionSub}>
-                  Pick from popular cities in Nigeria
-                </Text>
+                <Text style={styles.modalOptionSub}>Pick from list</Text>
               </View>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={viewAllInNigeria}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="globe-outline" size={24} color={GREEN} />
+            <TouchableOpacity style={styles.modalOption} onPress={viewAllInNigeria}>
+              <Ionicons name="globe-outline" size={22} color={GREEN} />
               <View style={styles.modalOptionText}>
                 <Text style={styles.modalOptionTitle}>View all in Nigeria</Text>
-                <Text style={styles.modalOptionSub}>
-                  See professionals from every city
-                </Text>
+                <Text style={styles.modalOptionSub}>No location filter</Text>
               </View>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.modalCancel}
               onPress={() => setShowLocationModal(false)}
@@ -401,51 +366,34 @@ export default function Services() {
           <View style={[styles.modalSheet, styles.cityPickerSheet]}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Select a city</Text>
-
             <View style={styles.citySearchBox}>
-              <Ionicons name="search-outline" size={20} color="#888" />
+              <Ionicons name="search-outline" size={18} color="#9CA3AF" />
               <TextInput
                 style={styles.citySearchInput}
                 placeholder="Filter cities..."
-                placeholderTextColor="#888"
+                placeholderTextColor="#9CA3AF"
                 value={citySearch}
                 onChangeText={setCitySearch}
-                autoCorrect={false}
               />
-              {citySearch.length > 0 && (
-                <TouchableOpacity onPress={() => setCitySearch("")}>
-                  <Ionicons name="close-circle" size={20} color="#aaa" />
-                </TouchableOpacity>
-              )}
             </View>
-
             <FlatList
               data={filteredCities}
-              keyExtractor={(item) => item}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
+              keyExtractor={(c) => c}
               style={styles.cityList}
-              ListEmptyComponent={
-                <Text style={styles.emptyCitiesText}>
-                  No city found. Try another spelling.
-                </Text>
-              }
-              renderItem={({ item }) => (
+              renderItem={({ item: city }) => (
                 <TouchableOpacity
                   style={styles.cityItem}
-                  onPress={() => selectCity(item)}
-                  activeOpacity={0.7}
+                  onPress={() => selectCity(city)}
                 >
                   <Ionicons name="location-outline" size={20} color={GREEN} />
-                  <Text style={styles.cityItemText}>{item}</Text>
+                  <Text style={styles.cityItemText}>{city}</Text>
                 </TouchableOpacity>
               )}
+              ListEmptyComponent={
+                <Text style={styles.emptyCitiesText}>No cities found</Text>
+              }
             />
-
-            <TouchableOpacity
-              style={styles.modalCancel}
-              onPress={closeCityPicker}
-            >
+            <TouchableOpacity style={styles.modalCancel} onPress={closeCityPicker}>
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -456,96 +404,53 @@ export default function Services() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  stickyHeader: {
+  safe: { flex: 1, backgroundColor: "#FFFFFF" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 8,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
   },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: "#111827" },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
+    gap: 4,
+    marginTop: 2,
   },
-  locationContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: 12,
-    gap: 6,
-  },
-  locationLoading: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  locationLoadingText: {
-    fontSize: 13,
-    color: "#6B7280",
-  },
-  locationText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111",
-    flexShrink: 1,
-  },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  notificationDot: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: GREEN,
-  },
-  searchContainer: {
+  locationText: { fontSize: 13, color: "#6B7280", maxWidth: 180 },
+  searchRow: { paddingHorizontal: 16, marginBottom: 4 },
+  searchBox: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F3F4F6",
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 46,
+    height: 44,
     gap: 8,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: "#111",
-  },
-  fixedCategorySection: {
-    backgroundColor: "#FFFFFF",
-    paddingTop: 10,
-  },
+  searchInput: { flex: 1, fontSize: 15, color: "#111" },
   filterContainer: {
-    paddingHorizontal: 12,
-    paddingBottom: 8,
+    flexDirection: "row",
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
+    alignItems: "center",
   },
   filterItem: {
     alignItems: "center",
-    marginRight: 14,
     width: 72,
+    marginRight: 14,
   },
   filterCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#ECFDF5",
-    alignItems: "center",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#E8F5E9",
     justifyContent: "center",
-    marginBottom: 6,
+    alignItems: "center",
+    marginBottom: 7,
   },
   activeFilterCircle: {
     backgroundColor: GREEN,
@@ -558,75 +463,55 @@ const styles = StyleSheet.create({
   },
   activeFilterName: {
     color: GREEN,
+    fontWeight: "700",
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#111",
-  },
-  resultCount: {
-    fontSize: 13,
-    color: "#6B7280",
-  },
-  professionalList: {
-    paddingHorizontal: 12,
-    paddingTop: 4,
-  },
-  columnWrapper: {
-    gap: 8,
-    marginBottom: 10,
-  },
-  professionalCard: {
-    flex: 1,
-    maxWidth: "32%",
-    minHeight: 100,
+  sectionTitle: { fontSize: 14, fontWeight: "700", color: "#374151" },
+  listContent: { paddingHorizontal: 12 },
+  row: { justifyContent: "space-between" },
+  card: {
+    width: "48%",
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E1E1E1",
-    position: "relative",
+    borderColor: "#E8E8E8",
+    marginBottom: 12,
+    overflow: "hidden",
   },
-  heartButton: {
+  imageWrap: { position: "relative" },
+  avatar: { width: "100%", height: 120, backgroundColor: "#E5E7EB" },
+  verifiedBadge: {
     position: "absolute",
-    right: 6,
+    bottom: 6,
+    left: 6,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+  },
+  favBtn: {
+    position: "absolute",
     top: 6,
-    zIndex: 20,
+    right: 6,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  profileImageContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    alignSelf: "center",
-    marginBottom: 8,
-    position: "relative",
-  },
-  profileImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 35,
-    backgroundColor: "#E5E7EB",
-  },
-  nameContainer: {
+  cardBody: { padding: 10 },
+  nameRow: {
     flexDirection: "row",
     alignItems: "center",
-    width: "100%",
-    marginBottom: 0,
+    gap: 4,
+    marginBottom: 2,
   },
-  professionalName: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#111",
-    maxWidth: 88,
-    marginBottom: 3,
-  },
+  name: { flex: 1, fontSize: 13, fontWeight: "700", color: "#111" },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
