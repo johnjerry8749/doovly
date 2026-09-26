@@ -56,7 +56,9 @@ type CommentWithUser = ServiceRequestComment & {
 };
 
 const normalize = (value?: string | number | null) =>
-  String(value ?? "").trim().toLowerCase();
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
 
 const categoryMatches = (request: ServiceRequest, selectedCategory: string) => {
   if (selectedCategory === "All") return true;
@@ -66,31 +68,60 @@ const categoryMatches = (request: ServiceRequest, selectedCategory: string) => {
     .map((value) => normalize(value));
   return requestCategories.some(
     (value) =>
-      value === selected || value.includes(selected) || selected.includes(value),
+      value === selected ||
+      value.includes(selected) ||
+      selected.includes(value),
   );
 };
 
-const getRequestUserId = (request: ServiceRequest): string | number | undefined => {
+const getRequestUserId = (
+  request: ServiceRequest,
+): string | number | undefined => {
   const item = request as RequestWithUser;
-  return item.professionalId ?? item.posterUserId ?? item.posterId ?? item.createdByUserId ?? item.userId;
+  return (
+    item.professionalId ??
+    item.posterUserId ??
+    item.posterId ??
+    item.createdByUserId ??
+    item.userId
+  );
 };
 
-const getCommentUserId = (comment: ServiceRequestComment): string | number | undefined => {
+const getCommentUserId = (
+  comment: ServiceRequestComment,
+): string | number | undefined => {
   const item = comment as CommentWithUser;
-  return item.professionalId ?? item.userId ?? item.createdByUserId ?? item.authorId ?? item.posterUserId;
+  return (
+    item.professionalId ??
+    item.userId ??
+    item.createdByUserId ??
+    item.authorId ??
+    item.posterUserId
+  );
 };
 
-const findProfessionalForUser = (userId?: string | number | null, userName?: string | null) => {
+const findProfessionalForUser = (
+  userId?: string | number | null,
+  userName?: string | null,
+) => {
   const professionals = listProfessionals();
   if (!professionals?.length) return undefined;
   const normalizedUserId = normalize(userId);
   const normalizedUserName = normalize(userName);
   if (normalizedUserId) {
-    const byProfessionalId = professionals.find((p) => normalize(p.id) === normalizedUserId);
+    const byProfessionalId = professionals.find(
+      (p) => normalize(p.id) === normalizedUserId,
+    );
     if (byProfessionalId) return byProfessionalId;
     const byUserId = professionals.find((p) => {
-      const person = p as typeof p & { userId?: string | number; profileId?: string | number };
-      return normalize(person.userId) === normalizedUserId || normalize(person.profileId) === normalizedUserId;
+      const person = p as typeof p & {
+        userId?: string | number;
+        profileId?: string | number;
+      };
+      return (
+        normalize(person.userId) === normalizedUserId ||
+        normalize(person.profileId) === normalizedUserId
+      );
     });
     if (byUserId) return byUserId;
   }
@@ -141,7 +172,9 @@ export default function RequestsScreen() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
-  const [extraComments, setExtraComments] = useState<Record<string, ServiceRequestComment[]>>({});
+  const [extraComments, setExtraComments] = useState<
+    Record<string, ServiceRequestComment[]>
+  >({});
   const [allRequests, setAllRequests] = useState(() => listServiceRequests());
   const [createVisible, setCreateVisible] = useState(false);
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
@@ -175,7 +208,11 @@ export default function RequestsScreen() {
     const requestCity = normalize(itemCity);
     const requestArea = normalize(itemArea);
     if (!requestCity && !requestArea) return true;
-    return requestCity.includes(city) || city.includes(requestCity) || requestArea.includes(city);
+    return (
+      requestCity.includes(city) ||
+      city.includes(requestCity) ||
+      requestArea.includes(city)
+    );
   };
 
   const filteredRequests = useMemo(() => {
@@ -194,9 +231,20 @@ export default function RequestsScreen() {
         normalize(req.city).includes(query) ||
         normalize(req.description).includes(query) ||
         normalize(req.posterName).includes(query);
-      return matchesSearch && categoryMatches(req, categoryFilter) && matchesLocationCity(req.city, req.location);
+      return (
+        matchesSearch &&
+        categoryMatches(req, categoryFilter) &&
+        matchesLocationCity(req.city, req.location)
+      );
     });
-  }, [allRequests, search, categoryFilter, locationName, loadingLocation, showAllNigeria]);
+  }, [
+    allRequests,
+    search,
+    categoryFilter,
+    locationName,
+    loadingLocation,
+    showAllNigeria,
+  ]);
 
   const toggleLike = (id: string) => {
     setLikedIds((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -206,8 +254,7 @@ export default function RequestsScreen() {
     try {
       await Share.share({
         title: item.title,
-        message:
-          `${item.title}\n${item.category} @ ${item.location}, ${item.city}\n\n${item.description}\n\n— Shared from Doovly`,
+        message: `${item.title}\n${item.category} @ ${item.location}, ${item.city}\n\n${item.description}\n\n— Shared from Doovly`,
       });
     } catch {
       // cancelled
@@ -264,7 +311,8 @@ export default function RequestsScreen() {
     const request = offerRequest as RequestWithUser;
     const currentUserId = getCurrentUserId();
     const recipientId =
-      request.createdByUserId && String(request.createdByUserId) !== String(currentUserId)
+      request.createdByUserId &&
+      String(request.createdByUserId) !== String(currentUserId)
         ? request.createdByUserId
         : currentUserId;
     addInAppNotification({
@@ -289,7 +337,9 @@ export default function RequestsScreen() {
         <TouchableOpacity
           style={styles.posterRow}
           activeOpacity={0.75}
-          onPress={() => openUserProfile({ userId: posterUserId, userName: item.posterName })}
+          onPress={() =>
+            openUserProfile({ userId: posterUserId, userName: item.posterName })
+          }
         >
           <View style={styles.posterAvatarWrap}>
             <Image source={item.posterAvatar} style={styles.posterAvatar} />
@@ -319,7 +369,9 @@ export default function RequestsScreen() {
           ) : null}
         </View>
 
-        {item.images?.length ? <RequestImageSlider images={item.images} height={180} /> : null}
+        {item.images?.length ? (
+          <RequestImageSlider images={item.images} height={180} />
+        ) : null}
 
         <View style={styles.metaRow}>
           <View style={styles.categoryChip}>
@@ -332,15 +384,31 @@ export default function RequestsScreen() {
         </Text>
 
         <View style={styles.engagementRow}>
-          <TouchableOpacity style={styles.engagementBtn} onPress={() => toggleLike(item.id)} activeOpacity={0.7}>
-            <Ionicons name={liked ? "heart" : "heart-outline"} size={20} color={liked ? "#EF4444" : "#6B7280"} />
+          <TouchableOpacity
+            style={styles.engagementBtn}
+            onPress={() => toggleLike(item.id)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={liked ? "heart" : "heart-outline"}
+              size={20}
+              color={liked ? "#EF4444" : "#6B7280"}
+            />
             <Text style={styles.engagementText}>{likesDisplay}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.engagementBtn} onPress={() => openChat(item)} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.engagementBtn}
+            onPress={() => openChat(item)}
+            activeOpacity={0.7}
+          >
             <Ionicons name="chatbubble-outline" size={18} color="#6B7280" />
             <Text style={styles.engagementText}>{commentCount}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.engagementBtn} onPress={() => shareRequest(item)} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.engagementBtn}
+            onPress={() => shareRequest(item)}
+            activeOpacity={0.7}
+          >
             <Ionicons name="share-outline" size={18} color="#6B7280" />
             <Text style={styles.engagementText}>Share</Text>
           </TouchableOpacity>
@@ -357,11 +425,17 @@ export default function RequestsScreen() {
                 })
               }
             >
-              <Image source={firstComment.userAvatar} style={styles.commentAvatar} />
+              <Image
+                source={firstComment.userAvatar}
+                style={styles.commentAvatar}
+              />
             </TouchableOpacity>
             <View style={styles.commentBody}>
               <Text style={styles.commentName}>{firstComment.userName}</Text>
-              <TouchableOpacity activeOpacity={0.8} onPress={() => openChat(item)}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => openChat(item)}
+              >
                 <Text style={styles.commentText} numberOfLines={2}>
                   {firstComment.text}
                 </Text>
@@ -369,8 +443,16 @@ export default function RequestsScreen() {
             </View>
           </View>
         ) : (
-          <TouchableOpacity style={styles.writeCommentHint} onPress={() => openChat(item)} activeOpacity={0.7}>
-            <Ionicons name="chatbubble-ellipses-outline" size={16} color={GREEN} />
+          <TouchableOpacity
+            style={styles.writeCommentHint}
+            onPress={() => openChat(item)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={16}
+              color={GREEN}
+            />
             <Text style={styles.writeCommentHintText}>Write a comment…</Text>
           </TouchableOpacity>
         )}
@@ -378,7 +460,8 @@ export default function RequestsScreen() {
         {commentCount > 1 ? (
           <TouchableOpacity onPress={() => openChat(item)} activeOpacity={0.7}>
             <Text style={styles.viewMoreComments}>
-              View {commentCount - 1} more comment{commentCount - 1 === 1 ? "" : "s"}
+              View {commentCount - 1} more comment
+              {commentCount - 1 === 1 ? "" : "s"}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -409,16 +492,29 @@ export default function RequestsScreen() {
           >
             <Ionicons name="location" size={14} color={GREEN} />
             {loadingLocation ? (
-              <ActivityIndicator size="small" color={GREEN} style={{ marginLeft: 5 }} />
+              <ActivityIndicator
+                size="small"
+                color={GREEN}
+                style={{ marginLeft: 5 }}
+              />
             ) : (
               <Text style={styles.headerSubtitle} numberOfLines={1}>
                 {locationName || "All Nigeria"}
               </Text>
             )}
-            <Ionicons name="chevron-down" size={14} color="#6B7280" style={styles.dropdownIcon} />
+            <Ionicons
+              name="chevron-down"
+              size={14}
+              color="#6B7280"
+              style={styles.dropdownIcon}
+            />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.createBtn} onPress={() => setCreateVisible(true)} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.createBtn}
+          onPress={() => setCreateVisible(true)}
+          activeOpacity={0.85}
+        >
           <Ionicons name="add" size={18} color="#fff" />
           <Text style={styles.createBtnText}>Create</Text>
         </TouchableOpacity>
@@ -476,7 +572,9 @@ export default function RequestsScreen() {
           <View style={styles.empty}>
             <Ionicons name="document-text-outline" size={42} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No requests found</Text>
-            <Text style={styles.emptyText}>Try another filter or create a job.</Text>
+            <Text style={styles.emptyText}>
+              Try another filter or create a job.
+            </Text>
           </View>
         }
       />
@@ -490,7 +588,12 @@ export default function RequestsScreen() {
         }}
       />
 
-      <Modal visible={!!offerRequest} transparent animationType="slide" onRequestClose={closeOffer}>
+      <Modal
+        visible={!!offerRequest}
+        transparent
+        animationType="slide"
+        onRequestClose={closeOffer}
+      >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -513,7 +616,10 @@ export default function RequestsScreen() {
                 />
               </View>
               <TouchableOpacity
-                style={[styles.sendOfferBtn, !offerPrice.replace(/\D/g, "") && { opacity: 0.5 }]}
+                style={[
+                  styles.sendOfferBtn,
+                  !offerPrice.replace(/\D/g, "") && { opacity: 0.5 },
+                ]}
                 disabled={!offerPrice.replace(/\D/g, "")}
                 onPress={submitOffer}
                 activeOpacity={0.85}
@@ -526,7 +632,12 @@ export default function RequestsScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal visible={!!chatRequest} transparent animationType="slide" onRequestClose={closeChat}>
+      <Modal
+        visible={!!chatRequest}
+        transparent
+        animationType="slide"
+        onRequestClose={closeChat}
+      >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -556,7 +667,9 @@ export default function RequestsScreen() {
                 </View>
               )}
               ListEmptyComponent={
-                <Text style={styles.emptyText}>No comments yet. Be the first.</Text>
+                <Text style={styles.emptyText}>
+                  No comments yet. Be the first.
+                </Text>
               }
             />
             <View style={styles.chatInputRow}>
@@ -582,10 +695,16 @@ export default function RequestsScreen() {
         animationType="slide"
         onRequestClose={() => setShowLocationModal(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowLocationModal(false)}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowLocationModal(false)}
+        >
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Choose location</Text>
-            <TouchableOpacity style={styles.locOption} onPress={getUserLocation}>
+            <TouchableOpacity
+              style={styles.locOption}
+              onPress={getUserLocation}
+            >
               <Ionicons name="navigate" size={22} color={GREEN} />
               <Text style={styles.locOptionText}>Use current location</Text>
             </TouchableOpacity>
@@ -599,7 +718,10 @@ export default function RequestsScreen() {
               <Ionicons name="list-outline" size={22} color={GREEN} />
               <Text style={styles.locOptionText}>Select a city</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.locOption} onPress={viewAllInNigeria}>
+            <TouchableOpacity
+              style={styles.locOption}
+              onPress={viewAllInNigeria}
+            >
               <Ionicons name="globe-outline" size={22} color={GREEN} />
               <Text style={styles.locOptionText}>View all in Nigeria</Text>
             </TouchableOpacity>
@@ -607,7 +729,12 @@ export default function RequestsScreen() {
         </Pressable>
       </Modal>
 
-      <Modal visible={showCityPicker} transparent animationType="slide" onRequestClose={closeCityPicker}>
+      <Modal
+        visible={showCityPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={closeCityPicker}
+      >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { maxHeight: "70%" }]}>
             <Text style={styles.modalTitle}>Select a city</Text>
@@ -622,14 +749,28 @@ export default function RequestsScreen() {
               data={filteredCities}
               keyExtractor={(c) => c}
               renderItem={({ item: city }) => (
-                <TouchableOpacity style={styles.locOption} onPress={() => selectCity(city)}>
+                <TouchableOpacity
+                  style={styles.locOption}
+                  onPress={() => selectCity(city)}
+                >
                   <Ionicons name="location-outline" size={20} color={GREEN} />
                   <Text style={styles.locOptionText}>{city}</Text>
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity onPress={closeCityPicker} style={{ paddingVertical: 12 }}>
-              <Text style={{ textAlign: "center", color: "#6B7280", fontWeight: "600" }}>Cancel</Text>
+            <TouchableOpacity
+              onPress={closeCityPicker}
+              style={{ paddingVertical: 12 }}
+            >
+              <Text
+                style={{
+                  textAlign: "center",
+                  color: "#6B7280",
+                  fontWeight: "600",
+                }}
+              >
+                Cancel
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -649,7 +790,12 @@ const styles = StyleSheet.create({
   },
   headerTextWrap: { flex: 1 },
   headerTitle: { fontSize: 22, fontWeight: "800", color: "#111827" },
-  headerLocationRow: { flexDirection: "row", alignItems: "center", marginTop: 2, gap: 4 },
+  headerLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+    gap: 4,
+  },
   headerSubtitle: { fontSize: 13, color: "#6B7280", maxWidth: 180 },
   dropdownIcon: { marginLeft: 2 },
   createBtn: {
@@ -680,8 +826,8 @@ const styles = StyleSheet.create({
   filtersContent: {
     paddingHorizontal: 16,
     paddingBottom: 10,
-  
-   alignItems: "center",
+
+    alignItems: "center",
     gap: 8,
   },
   filterChip: {
@@ -718,10 +864,20 @@ const styles = StyleSheet.create({
   posterAvatar: { width: 40, height: 40, borderRadius: 20 },
   posterInfo: { flex: 1, minWidth: 0 },
   posterName: { fontSize: 14, fontWeight: "700", color: "#111827" },
-  locationRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    marginTop: 2,
+  },
   locationText: { fontSize: 12, color: "#6B7280", flex: 1 },
   timeAgo: { fontSize: 11, color: "#9CA3AF" },
-  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8 },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 8,
+  },
   cardTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#111827" },
   newBadge: {
     backgroundColor: "#F59E0B",
@@ -739,7 +895,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   categoryChipText: { fontSize: 12, fontWeight: "600", color: GREEN },
-  description: { fontSize: 14, color: "#4B5563", lineHeight: 20, marginBottom: 10 },
+  description: {
+    fontSize: 14,
+    color: "#4B5563",
+    lineHeight: 20,
+    marginBottom: 10,
+  },
   engagementRow: { flexDirection: "row", gap: 16, marginBottom: 10 },
   engagementBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
   engagementText: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
@@ -748,9 +909,19 @@ const styles = StyleSheet.create({
   commentBody: { flex: 1 },
   commentName: { fontSize: 13, fontWeight: "700", color: "#111827" },
   commentText: { fontSize: 13, color: "#4B5563", marginTop: 2 },
-  writeCommentHint: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
+  writeCommentHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
   writeCommentHintText: { fontSize: 13, color: GREEN, fontWeight: "600" },
-  viewMoreComments: { fontSize: 13, color: "#6B7280", fontWeight: "600", marginBottom: 10 },
+  viewMoreComments: {
+    fontSize: 13,
+    color: "#6B7280",
+    fontWeight: "600",
+    marginBottom: 10,
+  },
   sendOfferBtn: {
     backgroundColor: GREEN,
     borderRadius: 12,
@@ -762,8 +933,18 @@ const styles = StyleSheet.create({
   },
   sendOfferText: { color: "#fff", fontSize: 15, fontWeight: "700" },
   empty: { alignItems: "center", paddingVertical: 60 },
-  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#374151", marginTop: 10 },
-  emptyText: { fontSize: 13, color: "#9CA3AF", marginTop: 4, textAlign: "center" },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#374151",
+    marginTop: 10,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    marginTop: 4,
+    textAlign: "center",
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -776,7 +957,12 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 28,
   },
-  modalTitle: { fontSize: 18, fontWeight: "800", color: "#111827", marginBottom: 6 },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: 6,
+  },
   modalSub: { fontSize: 13, color: "#6B7280", marginBottom: 14 },
   offerField: {
     flexDirection: "row",

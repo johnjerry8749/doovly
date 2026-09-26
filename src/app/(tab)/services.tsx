@@ -79,9 +79,7 @@ export default function Services() {
   const filteredCities = useMemo(() => {
     const query = citySearch.trim().toLowerCase();
     if (!query) return [...NIGERIA_CITIES];
-    return NIGERIA_CITIES.filter((city) =>
-      city.toLowerCase().includes(query),
-    );
+    return NIGERIA_CITIES.filter((city) => city.toLowerCase().includes(query));
   }, [citySearch]);
 
   const matchesLocationCity = useCallback(
@@ -99,9 +97,7 @@ export default function Services() {
       const city = locationName.split(",")[0].trim().toLowerCase();
       if (!city || city === "nigeria") return true;
       const professionalCity = itemCity.toLowerCase();
-      return (
-        professionalCity.includes(city) || city.includes(professionalCity)
-      );
+      return professionalCity.includes(city) || city.includes(professionalCity);
     },
     [locationName, showAllNigeria],
   );
@@ -110,7 +106,8 @@ export default function Services() {
     if (filter === "All") return true;
     const category = filter.toLowerCase();
     const professional = profession.toLowerCase();
-    if (professional === category || professional.includes(category)) return true;
+    if (professional === category || professional.includes(category))
+      return true;
     if (
       category === "spa" &&
       (professional.includes("massage") || professional.includes("spa"))
@@ -220,7 +217,9 @@ export default function Services() {
             {loadingLocation ? (
               <View style={styles.locationLoading}>
                 <ActivityIndicator size="small" color={GREEN} />
-                <Text style={styles.locationLoadingText}>Getting location...</Text>
+                <Text style={styles.locationLoadingText}>
+                  Getting location...
+                </Text>
               </View>
             ) : (
               <Text style={styles.locationText} numberOfLines={1}>
@@ -232,15 +231,19 @@ export default function Services() {
 
           <TouchableOpacity
             style={styles.notificationButton}
+            activeOpacity={0.7}
             onPress={() =>
               router.push({
                 pathname: "/notification/[id]",
-                params: { id: String(getCurrentUserId()) },
+                params: {
+                  id: String(getCurrentUserId()),
+                },
               })
             }
-            activeOpacity={0.7}
           >
-            <Ionicons name="notifications-outline" size={22} color="#111" />
+            <Ionicons name="notifications-outline" size={28} color="#111" />
+
+            <View style={styles.notificationDot} />
           </TouchableOpacity>
         </View>
 
@@ -284,10 +287,7 @@ export default function Services() {
                   />
                 </View>
                 <Text
-                  style={[
-                    styles.filterName,
-                    active && styles.activeFilterName,
-                  ]}
+                  style={[styles.filterName, active && styles.activeFilterName]}
                   numberOfLines={1}
                 >
                   {filter.name}
@@ -339,10 +339,15 @@ export default function Services() {
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Choose location</Text>
-            <TouchableOpacity style={styles.modalOption} onPress={getUserLocation}>
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={getUserLocation}
+            >
               <Ionicons name="navigate" size={22} color={GREEN} />
               <View style={styles.modalOptionText}>
-                <Text style={styles.modalOptionTitle}>Use current location</Text>
+                <Text style={styles.modalOptionTitle}>
+                  Use current location
+                </Text>
                 <Text style={styles.modalOptionSub}>GPS based</Text>
               </View>
             </TouchableOpacity>
@@ -359,7 +364,10 @@ export default function Services() {
                 <Text style={styles.modalOptionSub}>Pick from list</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalOption} onPress={viewAllInNigeria}>
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={viewAllInNigeria}
+            >
               <Ionicons name="globe-outline" size={22} color={GREEN} />
               <View style={styles.modalOptionText}>
                 <Text style={styles.modalOptionTitle}>View all in Nigeria</Text>
@@ -413,7 +421,10 @@ export default function Services() {
                 <Text style={styles.emptyCitiesText}>No cities found</Text>
               }
             />
-            <TouchableOpacity style={styles.modalCancel} onPress={closeCityPicker}>
+            <TouchableOpacity
+              style={styles.modalCancel}
+              onPress={closeCityPicker}
+            >
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -469,6 +480,16 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  notificationDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#159447",
   },
   searchContainer: {
     flexDirection: "row",
