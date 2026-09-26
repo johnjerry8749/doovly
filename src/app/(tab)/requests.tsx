@@ -131,8 +131,9 @@ const findProfessionalForUser = (
   return undefined;
 };
 
-/** Prevent double-tap from stacking multiple profile screens */
-let isOpeningProfile = false;
+/** Hard debounce: ignore rapid multi-taps (2–10x) stacking profile screens */
+let lastProfileNavAt = 0;
+const PROFILE_NAV_COOLDOWN_MS = 2500;
 
 const openUserProfile = ({
   userId,
@@ -141,17 +142,17 @@ const openUserProfile = ({
   userId?: string | number | null;
   userName?: string | null;
 }) => {
-  if (isOpeningProfile) return;
+  const now = Date.now();
+  if (now - lastProfileNavAt < PROFILE_NAV_COOLDOWN_MS) return;
+
   const professional = findProfessionalForUser(userId, userName);
   if (!professional) return;
-  isOpeningProfile = true;
+
+  lastProfileNavAt = now;
   router.push({
     pathname: "/professional/[id]",
     params: { id: String(professional.id), from: "requests" },
   });
-  setTimeout(() => {
-    isOpeningProfile = false;
-  }, 900);
 };
 
 export default function RequestsScreen() {
@@ -678,24 +679,26 @@ export default function RequestsScreen() {
                 <View style={styles.chatBubble}>
                   <TouchableOpacity
                     activeOpacity={0.75}
-                    onPress={() =>
+                    onPress={() => {
+                      closeChat();
                       openUserProfile({
                         userId: getCommentUserId(c),
                         userName: c.userName,
-                      })
-                    }
+                      });
+                    }}
                   >
                     <Image source={c.userAvatar} style={styles.commentAvatar} />
                   </TouchableOpacity>
                   <View style={{ flex: 1 }}>
                     <TouchableOpacity
                       activeOpacity={0.75}
-                      onPress={() =>
+                      onPress={() => {
+                        closeChat();
                         openUserProfile({
                           userId: getCommentUserId(c),
                           userName: c.userName,
-                        })
-                      }
+                        });
+                      }}
                     >
                       <Text style={styles.commentName}>{c.userName}</Text>
                     </TouchableOpacity>
