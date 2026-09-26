@@ -49,6 +49,8 @@ export type Professional = {
   latitude: number;
   longitude: number;
   role: string;
+  /** Short about text from Edit Profile */
+  bio?: string;
 
   services: ProService[];
 
@@ -70,9 +72,6 @@ export function starsFromReviewCount(count: number): number {
 // =========================
 
 export const PROFESSIONALS: Professional[] = [
-  // =====================================================
-  // 1. JOHN CHUKWUEMEKA  (logged-in mock pro — subscribed for Pro features)
-  // =====================================================
   {
     id: "1",
     name: "John Chukwuemeka",
@@ -80,11 +79,12 @@ export const PROFESSIONALS: Professional[] = [
     city: "Lagos",
     priceFrom: "₦8,000",
     image: require("@/assets/profile_1.jpg"),
-    verified: false,
+    verified: true,
     subscribed: true,
     latitude: 6.5244,
     longitude: 3.3792,
     role: "admin",
+    bio: "Experienced plumber with 8+ years fixing residential and commercial systems across Lagos.",
 
     services: [
       {
@@ -171,9 +171,6 @@ export const PROFESSIONALS: Professional[] = [
     ],
   },
 
-  // =====================================================
-  // 2. CHIOMA EZE
-  // =====================================================
   {
     id: "2",
     name: "Chioma Eze",
@@ -186,6 +183,7 @@ export const PROFESSIONALS: Professional[] = [
     latitude: 6.6018,
     longitude: 3.3515,
     role: "user",
+    bio: "Creative nail tech specializing in gel extensions and bridal nail art.",
 
     services: [
       {
@@ -264,9 +262,6 @@ export const PROFESSIONALS: Professional[] = [
     ],
   },
 
-  // =====================================================
-  // 3. IKECHUKWU OBI
-  // =====================================================
   {
     id: "3",
     name: "Ikechukwu Obi",
@@ -279,6 +274,7 @@ export const PROFESSIONALS: Professional[] = [
     latitude: 9.0765,
     longitude: 7.3986,
     role: "user",
+    bio: "Mobile mechanic for engine diagnostics, brakes, and same-day repairs.",
 
     services: [
       {
@@ -357,9 +353,6 @@ export const PROFESSIONALS: Professional[] = [
     ],
   },
 
-  // =====================================================
-  // 4. BLESSING JOY
-  // =====================================================
   {
     id: "4",
     name: "Blessing Joy",
@@ -372,6 +365,7 @@ export const PROFESSIONALS: Professional[] = [
     latitude: 6.4281,
     longitude: 3.4219,
     role: "user",
+    bio: "Certified massage therapist focused on deep tissue and full-body relaxation.",
 
     services: [
       {
@@ -441,9 +435,6 @@ export const PROFESSIONALS: Professional[] = [
     ],
   },
 
-  // =====================================================
-  // 5. EMEKA OKORO
-  // =====================================================
   {
     id: "5",
     name: "Emeka Okoro",
@@ -456,6 +447,7 @@ export const PROFESSIONALS: Professional[] = [
     latitude: 4.8156,
     longitude: 7.0498,
     role: "user",
+    bio: "Licensed electrician for home wiring, fault finding, and lighting installs.",
 
     services: [
       {
@@ -534,9 +526,6 @@ export const PROFESSIONALS: Professional[] = [
     ],
   },
 
-  // =====================================================
-  // 6. AISHA BELLO
-  // =====================================================
   {
     id: "6",
     name: "Aisha Bello",
@@ -549,6 +538,7 @@ export const PROFESSIONALS: Professional[] = [
     latitude: 9.0579,
     longitude: 7.4951,
     role: "user",
+    bio: "Sharp fades and beard trims with a clean, professional finish every time.",
 
     services: [
       {
@@ -627,10 +617,6 @@ export const PROFESSIONALS: Professional[] = [
   },
 ];
 
-// =========================
-// GET PROFESSIONAL BY ID
-// =========================
-
 export function getProfessionalById(
   id: string
 ): Professional | undefined {
@@ -638,10 +624,6 @@ export function getProfessionalById(
     (professional) => professional.id === String(id)
   );
 }
-
-// =========================
-// DISTANCE CALCULATION
-// =========================
 
 export function getDistanceKm(
   lat1: number,
