@@ -38,7 +38,11 @@ import {
   addInAppNotification,
   getCurrentUserId,
 } from "@/services/inAppNotifications";
-import { getLoggedInProfessionalId } from "@/services/savedProviders";
+import {
+  getLoggedInProfessionalId,
+  isCurrentUserPro,
+} from "@/services/savedProviders";
+import { getProfessionalById } from "@/services/professionals";
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#DCFCE7";
@@ -109,6 +113,8 @@ export default function ChatConversation() {
     loggedInProId &&
       isProfessionalInConversation(conversationId, loggedInProId),
   );
+  /** Doovly Pro subscriber — call button is Pro-only */
+  const isProUser = isCurrentUserPro();
 
   useEffect(() => {
     const conv = getConversation(conversationId);
@@ -118,6 +124,9 @@ export default function ChatConversation() {
     setBookingStatus(getBookingStatus(conversationId));
     markConversationRead(conversationId);
   }, [conversationId]);
+
+  const proDisplayName =
+    getProfessionalById(loggedInProId ?? "")?.name ?? "Professional";
 
   const onSend = async () => {
     const trimmed = text.trim();
@@ -136,7 +145,7 @@ export default function ChatConversation() {
 
   const onAccept = () => {
     if (!conversation) return;
-    const msg = acceptBooking(conversationId, conversation.participant.name);
+    const msg = acceptBooking(conversationId, proDisplayName);
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Accepted");
 
@@ -144,13 +153,13 @@ export default function ChatConversation() {
       userId: "u1",
       type: "booking",
       title: "Booking Accepted",
-      body: `${conversation.participant.name} accepted your booking.`,
+      body: `${proDisplayName} accepted your booking.`,
     });
   };
 
   const onDecline = () => {
     if (!conversation) return;
-    const msg = declineBooking(conversationId, conversation.participant.name);
+    const msg = declineBooking(conversationId, proDisplayName);
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Declined");
 
@@ -158,8 +167,27 @@ export default function ChatConversation() {
       userId: "u1",
       type: "booking",
       title: "Booking Declined",
-      body: `${conversation.participant.name} declined your booking.`,
+      body: `${proDisplayName} declined your booking.`,
     });
+  };
+
+  const onCall = () => {
+    if (!conversation) return;
+    Alert.alert(
+      "Call",
+      `Call ${conversation.participant.name}?\n\n(Voice call will connect when backend is ready.)`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Call",
+          onPress: () =>
+            Alert.alert(
+              "Calling…",
+              `Connecting to ${conversation.participant.name}`,
+            ),
+        },
+      ],
+    );
   };
 
   const onShareLocation = () => {
@@ -247,6 +275,7 @@ export default function ChatConversation() {
   }
 
   const p = conversation.participant;
+  const showCallBtn = isProUser && bookingStatus === "Accepted";
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -275,6 +304,16 @@ export default function ChatConversation() {
                 : "Offline"}
           </Text>
         </View>
+
+        {showCallBtn && (
+          <TouchableOpacity
+            style={styles.headerAction}
+            onPress={onCall}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="call-outline" size={20} color={PRIMARY} />
+          </TouchableOpacity>
+        )}
 
         {sharing ? (
           <TouchableOpacity
@@ -320,7 +359,11 @@ export default function ChatConversation() {
             listRef.current?.scrollToEnd({ animated: false })
           }
           renderItem={({ item }) => {
-            if (item.kind === "location_stopped") {
+            // System messages (booking status, accept/decline, stop share)
+            if (
+              item.senderId === "system" ||
+              item.kind === "location_stopped"
+            ) {
               return (
                 <View style={styles.systemWrap}>
                   <Text style={styles.systemText}>{item.text}</Text>
@@ -421,52 +464,21 @@ export default function ChatConversation() {
         />
 
         {bookingStatus === "Pending" && isProfessional && (
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              borderBottomWidth: 1,
-              borderBottomColor: "#F3F4F6",
-            }}
-          >
+          <View style={styles.acceptRow}>
             <TouchableOpacity
               onPress={onDecline}
-              style={{
-                flex: 1,
-                height: 44,
-                borderRadius: 12,
-                backgroundColor: "#FEE2E2",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              style={styles.declineBtn}
               activeOpacity={0.85}
             >
-              <Text
-                style={{ color: "#DC2626", fontWeight: "700", fontSize: 15 }}
-              >
-                Decline
-              </Text>
+              <Text style={styles.declineBtnText}>Decline</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={onAccept}
-              style={{
-                flex: 1,
-                height: 44,
-                borderRadius: 12,
-                backgroundColor: PRIMARY,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              style={styles.acceptBtn}
               activeOpacity={0.85}
             >
-              <Text
-                style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 15 }}
-              >
-                Accept
-              </Text>
+              <Text style={styles.acceptBtnText}>Accept</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -506,12 +518,8 @@ export default function ChatConversation() {
               </TouchableOpacity>
             </>
           ) : (
-            <View
-              style={{ flex: 1, alignItems: "center", paddingVertical: 12 }}
-            >
-              <Text
-                style={{ fontSize: 13, color: TEXT_MUTED, fontWeight: "600" }}
-              >
+            <View style={styles.lockedBar}>
+              <Text style={styles.lockedText}>
                 {bookingStatus === "Pending"
                   ? "Waiting for professional to accept..."
                   : "This booking was declined"}
@@ -666,8 +674,9 @@ const styles = StyleSheet.create({
   systemWrap: {
     alignSelf: "center",
     marginBottom: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    maxWidth: "90%",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: "#F3F4F6",
   },
@@ -675,6 +684,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: TEXT_MUTED,
     fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 18,
   },
   time: {
     fontSize: 11,
@@ -687,6 +698,40 @@ const styles = StyleSheet.create({
   timeTheirs: {
     textAlign: "left",
   },
+  acceptRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  declineBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  declineBtnText: {
+    color: "#DC2626",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  acceptBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: PRIMARY,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  acceptBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 15,
+  },
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -695,6 +740,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#F3F4F6",
     gap: 8,
+  },
+  lockedBar: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  lockedText: {
+    fontSize: 13,
+    color: TEXT_MUTED,
+    fontWeight: "600",
   },
   attachBtn: {
     width: 40,
