@@ -113,7 +113,7 @@ export default function ChatConversation() {
     loggedInProId &&
       isProfessionalInConversation(conversationId, loggedInProId),
   );
-  /** Doovly Pro subscriber — call button is Pro-only */
+  /** Doovly Pro subscriber — call action gated on click */
   const isProUser = isCurrentUserPro();
 
   useEffect(() => {
@@ -173,6 +173,24 @@ export default function ChatConversation() {
 
   const onCall = () => {
     if (!conversation) return;
+
+    // Free users: prompt to subscribe
+    if (!isProUser) {
+      Alert.alert(
+        "Pro feature",
+        "Voice calls are available on Doovly Pro. Upgrade to call from chat.",
+        [
+          { text: "Not now", style: "cancel" },
+          {
+            text: "Subscribe",
+            onPress: () => router.push("/profile/subscription/subscription"),
+          },
+        ],
+      );
+      return;
+    }
+
+    // Pro users: allow call
     Alert.alert(
       "Call",
       `Call ${conversation.participant.name}?\n\n(Voice call will connect when backend is ready.)`,
@@ -275,7 +293,6 @@ export default function ChatConversation() {
   }
 
   const p = conversation.participant;
-  const showCallBtn = isProUser && bookingStatus === "Accepted";
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -305,15 +322,14 @@ export default function ChatConversation() {
           </Text>
         </View>
 
-        {showCallBtn && (
-          <TouchableOpacity
-            style={styles.headerAction}
-            onPress={onCall}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="call-outline" size={20} color={PRIMARY} />
-          </TouchableOpacity>
-        )}
+        {/* Call always visible — Pro can call; free users get subscribe prompt */}
+        <TouchableOpacity
+          style={styles.headerAction}
+          onPress={onCall}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="call-outline" size={20} color={PRIMARY} />
+        </TouchableOpacity>
 
         {sharing ? (
           <TouchableOpacity
