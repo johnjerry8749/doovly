@@ -23,7 +23,6 @@ import * as Location from "expo-location";
 import {
   getProfessionalById,
   getDistanceKm,
-  starsFromReviewCount,
   addReview,
   type ProReview,
 } from "@/services/professionals";
@@ -240,13 +239,6 @@ export default function ProfessionalProfile() {
         } km away`
       : pro.city;
 
-  const starCount = starsFromReviewCount(
-    reviews.length,
-  );
-
-  const reviewsToNextStar =
-    10 - (reviews.length % 10);
-
   return (
     <SafeAreaView
       style={styles.safe}
@@ -331,49 +323,13 @@ export default function ProfessionalProfile() {
             <Text style={styles.nameText}>
               {pro.name}
             </Text>
-
-            {pro.subscribed && (
-              <View style={styles.premiumShield}>
-                <MaterialCommunityIcons
-                  name="shield-check"
-                  size={25}
-                  color="#D4AF37"
-                />
-              </View>
-            )}
           </View>
 
-          <View style={styles.ratingRow}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Ionicons
-                key={star}
-                name={
-                  star <= starCount
-                    ? "star"
-                    : "star-outline"
-                }
-                size={18}
-                color={GREEN}
-              />
-            ))}
-
-            <Text style={styles.ratingText}>
-              {starCount}/5 · {reviews.length}{" "}
-              {reviews.length === 1
-                ? "review"
-                : "reviews"}
+          {pro.bio ? (
+            <Text style={styles.bioText} numberOfLines={3}>
+              {pro.bio}
             </Text>
-          </View>
-
-          {starCount < 5 && (
-            <Text style={styles.starHint}>
-              {reviewsToNextStar} more review
-              {reviewsToNextStar === 1
-                ? ""
-                : "s"}{" "}
-              to unlock the next star
-            </Text>
-          )}
+          ) : null}
 
           <View style={styles.locationRow}>
             <Ionicons
@@ -393,6 +349,40 @@ export default function ProfessionalProfile() {
               </Text>
             )}
           </View>
+
+          {(pro.verified || pro.subscribed) && (
+            <View style={styles.badgeRow}>
+              {pro.verified ? (
+                <View style={styles.badgeItem}>
+                  <MaterialCommunityIcons
+                    name="shield-check"
+                    size={28}
+                    color={GREEN}
+                  />
+                  <View style={styles.badgeTextWrap}>
+                    <Text style={styles.badgeTitle}>Verified</Text>
+                    <Text style={styles.badgeSub}>
+                      Identity & documents verified
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              {pro.subscribed ? (
+                <View style={styles.badgeItem}>
+                  <MaterialCommunityIcons
+                    name="shield-check"
+                    size={28}
+                    color="#D4AF37"
+                  />
+                  <View style={styles.badgeTextWrap}>
+                    <Text style={styles.badgeTitle}>Premium</Text>
+                    <Text style={styles.badgeSub}>Active subscription</Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          )}
 
           {/* =========================
               FIXED TABS
@@ -589,17 +579,10 @@ export default function ProfessionalProfile() {
                   disabled={isOwnProfile}
                   onPress={() => {
                     if (isOwnProfile) return;
-
-                    setReviewModalVisible(
-                      true,
-                    );
+                    setReviewModalVisible(true);
                   }}
                 >
-                  <View
-                    style={
-                      styles.writeReviewIcon
-                    }
-                  >
+                  <View style={styles.writeReviewIcon}>
                     <Ionicons
                       name="create-outline"
                       size={22}
@@ -607,26 +590,14 @@ export default function ProfessionalProfile() {
                     />
                   </View>
 
-                  <View
-                    style={
-                      styles.writeReviewContent
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.writeReviewTitle
-                      }
-                    >
+                  <View style={styles.writeReviewContent}>
+                    <Text style={styles.writeReviewTitle}>
                       {isOwnProfile
                         ? "Your profile"
                         : "Write a review"}
                     </Text>
 
-                    <Text
-                      style={
-                        styles.writeReviewHint
-                      }
-                    >
+                    <Text style={styles.writeReviewHint}>
                       {isOwnProfile
                         ? "You cannot review your own profile"
                         : "Share your experience with this professional"}
@@ -641,68 +612,28 @@ export default function ProfessionalProfile() {
                 </TouchableOpacity>
 
                 {reviews.length === 0 ? (
-                  <Text
-                    style={styles.emptyText}
-                  >
+                  <Text style={styles.emptyText}>
                     No reviews yet. Be the first!
                   </Text>
                 ) : (
                   reviews.map((review) => (
-                    <View
-                      key={review.id}
-                      style={
-                        styles.reviewCard
-                      }
-                    >
-                      <View
-                        style={
-                          styles.reviewHeader
-                        }
-                      >
-                        <View
-                          style={
-                            styles.reviewAvatar
-                          }
-                        >
-                          <Text
-                            style={
-                              styles.reviewInitial
-                            }
-                          >
-                            {review.userName
-                              .charAt(0)
-                              .toUpperCase()}
+                    <View key={review.id} style={styles.reviewCard}>
+                      <View style={styles.reviewHeader}>
+                        <View style={styles.reviewAvatar}>
+                          <Text style={styles.reviewAvatarText}>
+                            {review.userName.charAt(0).toUpperCase()}
                           </Text>
                         </View>
-
-                        <View
-                          style={
-                            styles.reviewUserInfo
-                          }
-                        >
-                          <Text
-                            style={
-                              styles.reviewName
-                            }
-                          >
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.reviewName}>
                             {review.userName}
                           </Text>
-
-                          <Text
-                            style={
-                              styles.reviewDate
-                            }
-                          >
+                          <Text style={styles.reviewDate}>
                             {review.date}
                           </Text>
                         </View>
                       </View>
-
-                      <Text
-                        style={
-                          styles.reviewComment
-                        }
-                      >
+                      <Text style={styles.reviewComment}>
                         {review.comment}
                       </Text>
                     </View>
@@ -710,186 +641,57 @@ export default function ProfessionalProfile() {
                 )}
               </View>
             )}
-
-            <View style={styles.bottomSpace} />
           </ScrollView>
         </View>
 
-        {/* =========================
-            FIXED BOOK BUTTON
-        ========================== */}
-        <View style={styles.bookingFooter}>
-          <TouchableOpacity
-            style={[
-              styles.bookButton,
-              isOwnProfile &&
-                styles.disabledButton,
-            ]}
-            activeOpacity={
-              isOwnProfile ? 1 : 0.8
-            }
-            disabled={isOwnProfile}
-            onPress={() => {
-              if (isOwnProfile) return;
-
-              router.push({
-                pathname: "/bookme/[id]",
-                params: {
-                  id: pro.id,
-                  serviceId: "",
-                  serviceName: "",
-                  price: pro.priceFrom,
-                },
-              });
-            }}
-          >
-            <Ionicons
-              name="calendar-outline"
-              size={20}
-              color="#FFFFFF"
-            />
-
-            <Text
-              style={styles.bookButtonText}
-            >
-              {isOwnProfile
-                ? "Your profile"
-                : "Book Now"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* =========================
-            REVIEW MODAL
-        ========================== */}
+        {/* Review modal */}
         <Modal
           visible={reviewModalVisible}
           transparent
           animationType="slide"
-          onRequestClose={() =>
-            setReviewModalVisible(false)
-          }
+          onRequestClose={() => setReviewModalVisible(false)}
         >
           <KeyboardAvoidingView
             style={styles.modalOverlay}
-            behavior={
-              Platform.OS === "ios"
-                ? "padding"
-                : undefined
-            }
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
           >
-            <View style={styles.reviewModal}>
-              <View
-                style={styles.modalHeader}
-              >
-                <View
-                  style={
-                    styles.modalTitleContainer
-                  }
-                >
-                  <Text
-                    style={styles.modalTitle}
-                  >
-                    Write a review
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.modalSubtitle
-                    }
-                  >
-                    Share your experience with{" "}
-                    {pro.name}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={
-                    styles.modalCloseButton
-                  }
-                  onPress={() =>
-                    setReviewModalVisible(
-                      false,
-                    )
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name="close"
-                    size={24}
-                    color="#374151"
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View
-                style={styles.modalInfo}
-              >
-                <Ionicons
-                  name="star"
-                  size={20}
-                  color={GREEN}
-                />
-
-                <Text
-                  style={styles.modalInfoText}
-                >
-                  Your honest experience can
-                  help other users make better
-                  decisions.
-                </Text>
-              </View>
-
+            <View style={styles.modalSheet}>
+              <Text style={styles.modalTitle}>Write a review</Text>
               <TextInput
-                style={styles.input}
+                style={styles.modalInput}
                 placeholder="Your name (optional)"
                 placeholderTextColor="#9CA3AF"
                 value={reviewerName}
-                onChangeText={
-                  setReviewerName
-                }
-                editable={!submitting}
+                onChangeText={setReviewerName}
               />
-
               <TextInput
-                style={[
-                  styles.input,
-                  styles.commentInput,
-                ]}
+                style={[styles.modalInput, styles.modalTextArea]}
                 placeholder="Share your experience..."
                 placeholderTextColor="#9CA3AF"
                 value={reviewText}
                 onChangeText={setReviewText}
                 multiline
                 textAlignVertical="top"
-                editable={!submitting}
               />
-
               <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  (!reviewText.trim() ||
-                    submitting) &&
-                    styles.disabledButton,
-                ]}
-                disabled={
-                  !reviewText.trim() ||
-                  submitting
-                }
+                style={[styles.modalSubmit, submitting && { opacity: 0.6 }]}
                 onPress={submitReview}
-                activeOpacity={0.8}
+                disabled={submitting}
+                activeOpacity={0.85}
               >
                 {submitting ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text
-                    style={
-                      styles.submitButtonText
-                    }
-                  >
-                    Post Review
-                  </Text>
+                  <Text style={styles.modalSubmitText}>Post review</Text>
                 )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setReviewModalVisible(false)}
+                style={{ paddingVertical: 12 }}
+              >
+                <Text style={{ textAlign: "center", color: "#6B7280" }}>
+                  Cancel
+                </Text>
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
@@ -904,115 +706,68 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
-
   container: {
     flex: 1,
   },
-
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
   },
-
   notFound: {
     fontSize: 16,
     color: "#6B7280",
     marginBottom: 12,
   },
-
   backLink: {
     fontSize: 15,
     color: GREEN,
     fontWeight: "600",
   },
-
-  /* =========================
-     HEADER
-  ========================== */
-
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-
   backButton: {
     width: 40,
     height: 40,
+    alignItems: "center",
     justifyContent: "center",
   },
-
   headerTitle: {
+    flex: 1,
+    textAlign: "center",
     fontSize: 17,
     fontWeight: "700",
     color: "#111827",
   },
-
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
   },
-
   headerActionBtn: {
-    padding: 6,
-  },
-
-  /* =========================
-     FIXED PROFILE
-  ========================== */
-
-  fixedProfileSection: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    zIndex: 10,
-  },
-
-  avatarContainer: {
-    alignSelf: "center",
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    marginBottom: 14,
-    position: "relative",
-  },
-
-  avatar: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: "#E5E7EB",
-  },
-
-  verifiedBadge: {
-    position: "absolute",
-    right: 9,
-    bottom: 0,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
   },
-
+  fixedProfileSection: {
+    alignItems: "center",
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  avatarContainer: {
+    marginBottom: 10,
+  },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#E5E7EB",
+  },
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1020,407 +775,275 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 8,
   },
-
   nameText: {
     fontSize: 22,
     fontWeight: "800",
     color: "#111827",
+    textAlign: "center",
   },
-
-  premiumShield: {
-    marginLeft: 2,
+  bioText: {
+    textAlign: "center",
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#6B7280",
+    paddingHorizontal: 24,
+    marginBottom: 10,
   },
-
-  ratingRow: {
+  badgeRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
-    marginBottom: 4,
+    gap: 20,
+    marginBottom: 14,
+    paddingHorizontal: 12,
   },
-
-  ratingText: {
+  badgeItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    maxWidth: "48%",
+  },
+  badgeTextWrap: {
+    flexShrink: 1,
+  },
+  badgeTitle: {
     fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  badgeSub: {
+    fontSize: 11,
     color: "#6B7280",
-    marginLeft: 6,
+    marginTop: 1,
   },
-
-  starHint: {
-    textAlign: "center",
-    fontSize: 12,
-    color: "#9CA3AF",
-    marginBottom: 8,
-  },
-
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    marginBottom: 18,
+    marginBottom: 14,
   },
-
   locationText: {
     fontSize: 13,
     color: "#6B7280",
+    fontWeight: "500",
   },
-
-  /* =========================
-     FIXED TABS
-  ========================== */
-
   tabs: {
     flexDirection: "row",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 12,
+    width: "100%",
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
   },
-
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: "center",
-    borderRadius: 10,
   },
-
   activeTab: {
-    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 2,
+    borderBottomColor: GREEN,
   },
-
   tabText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#6B7280",
+    color: "#9CA3AF",
   },
-
   activeTabText: {
     color: GREEN,
   },
-
-  /* =========================
-     SCROLLING CONTENT
-  ========================== */
-
   scrollArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
   },
-
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 30,
+    padding: 16,
+    paddingBottom: 40,
   },
-
-  /* =========================
-     SERVICES
-  ========================== */
-
   serviceCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fff",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: "#E5E7EB",
     overflow: "hidden",
   },
-
   serviceRow: {
     flexDirection: "row",
     alignItems: "center",
     padding: 14,
+    gap: 12,
   },
-
   serviceBorder: {
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-
   serviceIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F0FDF4",
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#ECFDF5",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
-
   serviceInfo: {
     flex: 1,
-    minWidth: 0,
   },
-
   serviceName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
     color: "#111827",
   },
-
   serviceDescription: {
     fontSize: 12,
     color: "#6B7280",
     marginTop: 2,
   },
-
   servicePrice: {
     fontSize: 14,
     fontWeight: "700",
     color: GREEN,
   },
-
-  /* =========================
-     PORTFOLIO
-  ========================== */
-
   portfolioGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    gap: 12,
   },
-
   portfolioItem: {
-    width: "48%",
-    marginBottom: 12,
+    width: "47%",
   },
-
   projectImage: {
     width: "100%",
-    height: 130,
-    borderRadius: 14,
+    height: 120,
+    borderRadius: 12,
     backgroundColor: "#E5E7EB",
   },
-
   projectTitle: {
     fontSize: 12,
-    color: "#374151",
+    color: "#4B5563",
     marginTop: 6,
   },
-
-  /* =========================
-     REVIEWS
-  ========================== */
-
   reviewsContainer: {
     gap: 12,
   },
-
   writeReviewButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F0FDF4",
-    borderRadius: 14,
+    gap: 12,
     padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
     marginBottom: 8,
   },
-
   writeReviewIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#ECFDF5",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
-
   writeReviewContent: {
     flex: 1,
   },
-
   writeReviewTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
     color: "#111827",
   },
-
   writeReviewHint: {
     fontSize: 12,
     color: "#6B7280",
     marginTop: 2,
   },
-
+  reviewCard: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#fff",
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
+  },
+  reviewAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reviewAvatarText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: GREEN,
+  },
+  reviewName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: "#9CA3AF",
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: "#4B5563",
+    lineHeight: 20,
+  },
   emptyText: {
     textAlign: "center",
     color: "#9CA3AF",
     fontSize: 14,
     paddingVertical: 24,
   },
-
-  reviewCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-    padding: 14,
-  },
-
-  reviewHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-
-  reviewAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: GREEN,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-
-  reviewInitial: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-
-  reviewUserInfo: {
-    flex: 1,
-  },
-
-  reviewName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  reviewDate: {
-    fontSize: 12,
-    color: "#9CA3AF",
-  },
-
-  reviewComment: {
-    fontSize: 13,
-    color: "#374151",
-    lineHeight: 20,
-  },
-
-  bottomSpace: {
-    height: 20,
-  },
-
-  /* =========================
-     BOOKING FOOTER
-  ========================== */
-
-  bookingFooter: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
-    backgroundColor: "#FFFFFF",
-  },
-
-  bookButton: {
-    backgroundColor: GREEN,
-    borderRadius: 14,
-    paddingVertical: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-
-  bookButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-
   disabledButton: {
-    opacity: 0.5,
+    opacity: 0.55,
   },
-
-  /* =========================
-     REVIEW MODAL
-  ========================== */
-
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
-
-  reviewModal: {
-    backgroundColor: "#FFFFFF",
+  modalSheet: {
+    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    paddingBottom: 32,
+    paddingBottom: 28,
   },
-
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 16,
-  },
-
-  modalTitleContainer: {
-    flex: 1,
-  },
-
   modalTitle: {
     fontSize: 18,
     fontWeight: "800",
     color: "#111827",
+    marginBottom: 14,
   },
-
-  modalSubtitle: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginTop: 4,
-  },
-
-  modalCloseButton: {
-    padding: 4,
-  },
-
-  modalInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F0FDF4",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    gap: 8,
-  },
-
-  modalInfoText: {
-    flex: 1,
-    fontSize: 12,
-    color: "#374151",
-    lineHeight: 18,
-  },
-
-  input: {
+  modalInput: {
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 14,
-    color: "#111827",
+    fontSize: 15,
+    color: "#111",
     marginBottom: 12,
   },
-
-  commentInput: {
+  modalTextArea: {
     minHeight: 100,
-    textAlignVertical: "top",
   },
-
-  submitButton: {
+  modalSubmit: {
     backgroundColor: GREEN,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
   },
-
-  submitButtonText: {
-    color: "#FFFFFF",
+  modalSubmitText: {
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "700",
-    fontSize: 15,
   },
 });
