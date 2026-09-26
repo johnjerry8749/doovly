@@ -1,16 +1,15 @@
 /**
  * Shared bookings mock data.
  *
- * Bookings are connected to professionals using professionalId
- * and to customers using customerId.
+ * Flow (status lifecycle):
+ *   Pending → Accepted → Ongoing → Awaiting Approval → Completed
+ *   (or Cancelled / Declined at any early stage)
  *
- * This keeps PROFESSIONALS as the main source of truth for:
- * - Professional name
- * - Profile image
- * - Verification status
+ * Booked  = jobs the current user booked as a customer (see professional)
+ * Received = jobs the current user received as a professional (see customer)
  *
- * Later:
- * Replace this mock data with API / database data.
+ * LATER: Replace BOOKED_JOBS / RECEIVED_JOBS with API responses.
+ *        Keep the Booking type and listBookedJobs / listReceivedJobs signatures.
  */
 
 import { PROFESSIONALS } from "@/data/professionals";
@@ -20,46 +19,36 @@ import { PROFESSIONALS } from "@/data/professionals";
 // =========================
 
 export type BookingStatus =
-  | "Upcoming"
-  | "Ongoing"
-  | "Completed"
-  | "Cancelled"
   | "Pending"
   | "Accepted"
-  | "Declined"
-  | "Awaiting Approval";
+  | "Ongoing"
+  | "Awaiting Approval"
+  | "Completed"
+  | "Cancelled"
+  | "Declined";
 
 export type PaymentMethod = "pay_now" | "pay_on_site";
 
 export type PaymentStatus =
-  | "held" // money is secured in Paystack until job is completed
-  | "released" // money has been paid to the professional
+  | "held" // money secured in Paystack until job is completed
+  | "released" // paid to the professional
   | "pay_on_site" // no online payment
-  | "refunded"; // money returned to customer
+  | "refunded";
 
 export type Booking = {
   id: string;
-
-  /**
-   * ID of the professional this booking belongs to.
-   */
   professionalId: string;
-
-  /**
-   * ID of the customer who made the booking.
-   * (Added for full DB schema readiness)
-   */
   customerId: string;
-
   title: string;
 
-  /**
-   * These values are copied from PROFESSIONALS
-   * when the mock booking is created.
-   */
-  providerName: string;
-  verified: boolean;
-  image: number;
+  /** Display: professional side (always filled) */
+  professionalName: string;
+  professionalVerified: boolean;
+  professionalImage: number;
+
+  /** Display: customer side (for Received tab) */
+  customerName: string;
+  customerImage: number;
 
   rating: number;
   reviews: number;
@@ -68,46 +57,10 @@ export type Booking = {
   location: string;
   status: BookingStatus;
 
-  /**
-   * How the customer chose to pay.
-   * - pay_now: paid online, money secured by Paystack until job is completed
-   * - pay_on_site: Pro subscribers only, pay the professional directly
-   */
   paymentMethod: PaymentMethod;
-
-  /**
-   * Current state of the payment.
-   */
   paymentStatus: PaymentStatus;
-
-  /**
-   * Amount in Naira (optional for display on cards).
-   */
   amount?: number;
 };
-
-// =========================
-// FILTERS
-// =========================
-
-export const BOOKED_FILTERS = [
-  "All",
-  "Upcoming",
-  "Ongoing",
-  "Awaiting Approval",
-  "Completed",
-  "Cancelled",
-] as const;
-
-export const RECEIVED_FILTERS = [
-  "All",
-  "Pending",
-  "Accepted",
-  "Ongoing",
-  "Awaiting Approval",
-  "Completed",
-  "Declined",
-] as const;
 
 // =========================
 // STATUS COLORS
@@ -115,77 +68,50 @@ export const RECEIVED_FILTERS = [
 
 export const statusColors: Record<
   BookingStatus,
-  {
-    bg: string;
-    text: string;
-  }
+  { bg: string; text: string }
 > = {
-  Upcoming: {
-    bg: "#E8F8EF",
-    text: "#16A34A",
-  },
-
-  Ongoing: {
-    bg: "#E8F8EF",
-    text: "#16A34A",
-  },
-
-  Completed: {
-    bg: "#F3F4F6",
-    text: "#6B7280",
-  },
-
-  Cancelled: {
-    bg: "#FEE2E2",
-    text: "#DC2626",
-  },
-
-  Pending: {
-    bg: "#E8F8EF",
-    text: "#16A34A",
-  },
-
-  Accepted: {
-    bg: "#E8F8EF",
-    text: "#16A34A",
-  },
-
-  Declined: {
-    bg: "#FEE2E2",
-    text: "#DC2626",
-  },
-
-  "Awaiting Approval": {
-    bg: "#FFF4E5",
-    text: "#D97706",
-  },
+  Pending: { bg: "#E8F8EF", text: "#16A34A" },
+  Accepted: { bg: "#E8F8EF", text: "#16A34A" },
+  Ongoing: { bg: "#E8F8EF", text: "#16A34A" },
+  "Awaiting Approval": { bg: "#FFF4E5", text: "#D97706" },
+  Completed: { bg: "#F3F4F6", text: "#6B7280" },
+  Cancelled: { bg: "#FEE2E2", text: "#DC2626" },
+  Declined: { bg: "#FEE2E2", text: "#DC2626" },
 };
 
 // =========================
-// HELPER
+// MOCK CUSTOMERS (for Received display + chat)
 // =========================
 
-/**
- * Get a professional from the professional mock
- * using the professional ID.
- */
+const CUSTOMERS: Record<
+  string,
+  { name: string; image: number }
+> = {
+  u1: { name: "You", image: require("@/assets/profile_1.jpg") },
+  u2: { name: "Ada Okafor", image: require("@/assets/profile_2.jpg") },
+  u3: { name: "Tunde Adebayo", image: require("@/assets/profile_3.jpg") },
+  u4: { name: "Chioma Nwosu", image: require("@/assets/profile_4.jpg") },
+  u5: { name: "Blessing Kalu", image: require("@/assets/profile_1.jpg") },
+};
+
+// =========================
+// HELPERS
+// =========================
+
 function getProfessional(professionalId: string) {
-  return PROFESSIONALS.find(
-    (professional) => professional.id === professionalId,
+  return PROFESSIONALS.find((p) => p.id === professionalId);
+}
+
+function getCustomer(customerId: string) {
+  return (
+    CUSTOMERS[customerId] ?? {
+      name: "Customer",
+      image: require("@/assets/profile_1.jpg"),
+    }
   );
 }
 
-/**
- * Create a booking from a professional.
- *
- * This automatically gets:
- * - name
- * - verification
- * - image
- *
- * from PROFESSIONALS.
- */
-function createBooking(booking: {
+function createBooking(input: {
   id: string;
   professionalId: string;
   customerId: string;
@@ -199,49 +125,42 @@ function createBooking(booking: {
   paymentStatus: PaymentStatus;
   amount?: number;
 }): Booking {
-  const professional = getProfessional(booking.professionalId);
-
+  const professional = getProfessional(input.professionalId);
   if (!professional) {
     throw new Error(
-      `Professional with ID "${booking.professionalId}" was not found.`,
+      `Professional with ID "${input.professionalId}" was not found.`,
     );
   }
+  const customer = getCustomer(input.customerId);
 
   return {
-    id: booking.id,
-    professionalId: booking.professionalId,
-    customerId: booking.customerId,
-    title: booking.title,
-
-    providerName: professional.name,
-    verified: professional.verified,
-    image: professional.image,
-
-    rating: booking.rating,
-    reviews: booking.reviews,
-
-    date: booking.date,
-    location: booking.location,
-    status: booking.status,
-
-    paymentMethod: booking.paymentMethod,
-    paymentStatus: booking.paymentStatus,
-    amount: booking.amount,
+    id: input.id,
+    professionalId: input.professionalId,
+    customerId: input.customerId,
+    title: input.title,
+    professionalName: professional.name,
+    professionalVerified: professional.verified,
+    professionalImage: professional.image,
+    customerName: customer.name,
+    customerImage: customer.image,
+    rating: input.rating,
+    reviews: input.reviews,
+    date: input.date,
+    location: input.location,
+    status: input.status,
+    paymentMethod: input.paymentMethod,
+    paymentStatus: input.paymentStatus,
+    amount: input.amount,
   };
 }
 
 // =========================
-// JOBS I BOOKED
-// CUSTOMER (current user = u1)
+// BOOKED (current user = customer u1)
 // =========================
 
 export const BOOKED_JOBS: Booking[] = [
-  // ---------------------------------------
-  // JOHN CHUKWUEMEKA
-  // verified: FALSE
-  // ---------------------------------------
   createBooking({
-    id: "1",
+    id: "b1",
     professionalId: "1",
     customerId: "u1",
     title: "Plumbing Installation",
@@ -249,18 +168,13 @@ export const BOOKED_JOBS: Booking[] = [
     reviews: 126,
     date: "May 25, 2025 10:00 AM",
     location: "Lagos",
-    status: "Upcoming",
+    status: "Pending",
     paymentMethod: "pay_now",
     paymentStatus: "held",
     amount: 15400,
   }),
-
-  // ---------------------------------------
-  // CHIOMA EZE
-  // verified: TRUE
-  // ---------------------------------------
   createBooking({
-    id: "2",
+    id: "b2",
     professionalId: "2",
     customerId: "u1",
     title: "Nail Extension",
@@ -273,13 +187,8 @@ export const BOOKED_JOBS: Booking[] = [
     paymentStatus: "held",
     amount: 12500,
   }),
-
-  // ---------------------------------------
-  // IKECHUKWU OBI
-  // verified: FALSE
-  // ---------------------------------------
   createBooking({
-    id: "3",
+    id: "b3",
     professionalId: "3",
     customerId: "u1",
     title: "Car Repair",
@@ -292,13 +201,8 @@ export const BOOKED_JOBS: Booking[] = [
     paymentStatus: "released",
     amount: 28000,
   }),
-
-  // ---------------------------------------
-  // BLESSING JOY
-  // verified: TRUE
-  // ---------------------------------------
   createBooking({
-    id: "4",
+    id: "b4",
     professionalId: "4",
     customerId: "u1",
     title: "Full Body Massage",
@@ -306,18 +210,13 @@ export const BOOKED_JOBS: Booking[] = [
     reviews: 32,
     date: "May 20, 2025 04:00 PM",
     location: "Lagos",
-    status: "Upcoming",
+    status: "Accepted",
     paymentMethod: "pay_on_site",
     paymentStatus: "pay_on_site",
     amount: 18000,
   }),
-
-  // ---------------------------------------
-  // AISHA BELLO
-  // verified: TRUE
-  // ---------------------------------------
   createBooking({
-    id: "5",
+    id: "b5",
     professionalId: "6",
     customerId: "u1",
     title: "Haircut",
@@ -325,17 +224,13 @@ export const BOOKED_JOBS: Booking[] = [
     reviews: 25,
     date: "May 23, 2025 01:00 PM",
     location: "Abuja",
-    status: "Accepted",
+    status: "Awaiting Approval",
     paymentMethod: "pay_now",
     paymentStatus: "held",
     amount: 8500,
   }),
-
-  // ---------------------------------------
-  // Awaiting customer approval (demo)
-  // ---------------------------------------
   createBooking({
-    id: "6",
+    id: "b6",
     professionalId: "2",
     customerId: "u1",
     title: "Nail Art Design",
@@ -343,30 +238,20 @@ export const BOOKED_JOBS: Booking[] = [
     reviews: 89,
     date: "May 26, 2025 03:00 PM",
     location: "Lagos",
-    status: "Awaiting Approval",
+    status: "Cancelled",
     paymentMethod: "pay_now",
-    paymentStatus: "held",
+    paymentStatus: "refunded",
     amount: 15400,
   }),
 ];
 
 // =========================
-// JOBS I RECEIVED
-// PROVIDER
-// =========================
-//
-// These are customers booking services.
-// The professional associated with the job
-// is still connected through professionalId.
+// RECEIVED (current user acts as professional)
 // =========================
 
 export const RECEIVED_JOBS: Booking[] = [
-  // ---------------------------------------
-  // CHIOMA EZE
-  // verified: TRUE
-  // ---------------------------------------
   createBooking({
-    id: "1",
+    id: "r1",
     professionalId: "2",
     customerId: "u2",
     title: "House Cleaning",
@@ -379,13 +264,8 @@ export const RECEIVED_JOBS: Booking[] = [
     paymentStatus: "held",
     amount: 15400,
   }),
-
-  // ---------------------------------------
-  // BLESSING JOY
-  // verified: TRUE
-  // ---------------------------------------
   createBooking({
-    id: "2",
+    id: "r2",
     professionalId: "4",
     customerId: "u3",
     title: "AC Repair",
@@ -398,13 +278,8 @@ export const RECEIVED_JOBS: Booking[] = [
     paymentStatus: "pay_on_site",
     amount: 22000,
   }),
-
-  // ---------------------------------------
-  // AISHA BELLO
-  // verified: TRUE
-  // ---------------------------------------
   createBooking({
-    id: "3",
+    id: "r3",
     professionalId: "6",
     customerId: "u4",
     title: "Furniture Assembly",
@@ -417,12 +292,8 @@ export const RECEIVED_JOBS: Booking[] = [
     paymentStatus: "released",
     amount: 12000,
   }),
-
-  // ---------------------------------------
-  // Awaiting customer approval (demo)
-  // ---------------------------------------
   createBooking({
-    id: "4",
+    id: "r4",
     professionalId: "2",
     customerId: "u5",
     title: "Deep Cleaning",
@@ -435,40 +306,41 @@ export const RECEIVED_JOBS: Booking[] = [
     paymentStatus: "held",
     amount: 15400,
   }),
+  createBooking({
+    id: "r5",
+    professionalId: "1",
+    customerId: "u3",
+    title: "Drain Cleaning",
+    rating: 4.6,
+    reviews: 9,
+    date: "May 21, 2025 03:00 PM",
+    location: "Lagos",
+    status: "Accepted",
+    paymentMethod: "pay_now",
+    paymentStatus: "held",
+    amount: 10000,
+  }),
 ];
 
 // =========================
-// LIST BOOKED JOBS
+// LIST / GET (same signatures for API swap)
 // =========================
 
 export function listBookedJobs(): Booking[] {
   return BOOKED_JOBS;
 }
 
-// =========================
-// LIST RECEIVED JOBS
-// =========================
-
 export function listReceivedJobs(): Booking[] {
   return RECEIVED_JOBS;
 }
-
-// =========================
-// GET BOOKING BY ID
-// =========================
 
 export function getBookingById(
   id: string,
   type: "booked" | "received" = "booked",
 ): Booking | undefined {
   const list = type === "booked" ? BOOKED_JOBS : RECEIVED_JOBS;
-
   return list.find((job) => job.id === String(id));
 }
-
-// =========================
-// GET PROFESSIONAL FOR BOOKING
-// =========================
 
 export function getProfessionalForBooking(booking: Booking) {
   return PROFESSIONALS.find(

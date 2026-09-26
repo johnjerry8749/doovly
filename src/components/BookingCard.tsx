@@ -10,9 +10,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { statusColors, type Booking } from "@/services/bookings";
-import { isCurrentUserPro } from "@/services/savedProviders";
 import {
-  getOrCreateConversationForProfessional,
+  getOrCreateConversationForBooking,
   formatBookingChatMessage,
 } from "@/services/chat";
 
@@ -31,7 +30,6 @@ function formatAmount(amount?: number) {
 
 export function BookingCard({ item, mainTab, onReport }: Props) {
   const statusStyle = statusColors[item.status];
-  const showChat = item.status !== "Completed" || isCurrentUserPro();
   const amountText = formatAmount(item.amount);
   const isPayOnSite =
     item.paymentMethod === "pay_on_site" ||
@@ -39,14 +37,36 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
 
   const showPaymentBanner =
     (item.paymentMethod === "pay_now" &&
-      (item.paymentStatus === "held" || item.paymentStatus === "released")) ||
+      (item.paymentStatus === "held" ||
+        item.paymentStatus === "released" ||
+        item.paymentStatus === "refunded")) ||
     isPayOnSite;
 
   const paymentLabel = isPayOnSite
     ? "Payment will be on site"
     : item.paymentStatus === "released"
       ? "Payment released"
-      : "Payment secured in Paystack";
+      : item.paymentStatus === "refunded"
+        ? "Payment refunded"
+        : "Payment secured in Paystack";
+
+  // Booked → show professional; Received → show customer
+  const displayName =
+    mainTab === "booked" ? item.professionalName : item.customerName;
+  const displayImage =
+    mainTab === "booked" ? item.professionalImage : item.customerImage;
+
+  const openChat = () => {
+    const conv = getOrCreateConversationForBooking(item, mainTab);
+    const message = formatBookingChatMessage(item);
+    router.push({
+      pathname: "/chat/[id]",
+      params: {
+        id: conv.id,
+        initialMessage: message,
+      },
+    });
+  };
 
   const renderStatusActions = () => {
     // RECEIVED — Pending (pro can accept/decline)
@@ -77,7 +97,6 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
     }
 
     // RECEIVED — Accepted / Ongoing
-    // Only the provider can cancel once accepted (including pay on site).
     if (
       mainTab === "received" &&
       (item.status === "Accepted" || item.status === "Ongoing")
@@ -131,15 +150,13 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
       );
     }
 
-    // RECEIVED — Awaiting Approval (pro already marked complete)
+    // RECEIVED — Awaiting Approval
     if (mainTab === "received" && item.status === "Awaiting Approval") {
       return null;
     }
 
-    // BOOKED — not yet accepted (Upcoming only)
-    // Client can cancel only before the provider accepts.
-    // Same rule for pay on site and Paystack.
-    if (mainTab === "booked" && item.status === "Upcoming") {
+    // BOOKED — Pending: client can cancel before pro accepts
+    if (mainTab === "booked" && item.status === "Pending") {
       return (
         <View style={styles.actionRow}>
           <TouchableOpacity
@@ -156,7 +173,7 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
       );
     }
 
-    // BOOKED — Accepted / Ongoing: client cannot cancel (only provider)
+    // BOOKED — Accepted / Ongoing: client cannot cancel
     if (
       mainTab === "booked" &&
       (item.status === "Accepted" || item.status === "Ongoing")
@@ -225,12 +242,16 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
       {/* Top: avatar + name + rating + status */}
       <View style={styles.topSection}>
         <View style={styles.avatarContainer}>
-          <Image source={item.image} style={styles.avatar} resizeMode="cover" />
+          <Image
+            source={displayImage}
+            style={styles.avatar}
+            resizeMode="cover"
+          />
         </View>
 
         <View style={styles.providerInfo}>
           <Text style={styles.providerName} numberOfLines={1}>
-            {item.providerName}
+            {displayName}
           </Text>
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={14} color="#F59E0B" />
@@ -251,10 +272,8 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
         </View>
       </View>
 
-      {/* Service title */}
       <Text style={styles.jobTitle}>{item.title}</Text>
 
-      {/* Date + Location (city text only — no map open from card) */}
       <View style={styles.infoContainer}>
         <View style={styles.infoItem}>
           <Ionicons name="calendar-outline" size={17} color={GREEN} />
@@ -268,7 +287,6 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
         </View>
       </View>
 
-      {/* Payment banner (Paystack or Pay on site) */}
       {showPaymentBanner && (
         <View
           style={[
@@ -311,30 +329,16 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
         </View>
       )}
 
-      {/* Chat / Call — location shared only inside chat for privacy */}
+      {/* Open Chat — always available so bookings track into conversation */}
       <View style={styles.contactRow}>
-        {showChat && (
-          <TouchableOpacity
-            style={styles.contactButton}
-            activeOpacity={0.8}
-            onPress={() => {
-              const conv = getOrCreateConversationForProfessional(
-                item.professionalId,
-              );
-              const message = formatBookingChatMessage(item);
-              router.push({
-                pathname: "/chat/[id]",
-                params: {
-                  id: conv.id,
-                  initialMessage: message,
-                },
-              });
-            }}
-          >
-            <Ionicons name="chatbubble-outline" size={17} color={GREEN} />
-            <Text style={styles.contactText}>Chat</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.contactButton}
+          activeOpacity={0.8}
+          onPress={openChat}
+        >
+          <Ionicons name="chatbubble-outline" size={17} color={GREEN} />
+          <Text style={styles.contactText}>Open Chat</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.contactButton} activeOpacity={0.8}>
           <Ionicons name="call-outline" size={17} color={GREEN} />
           <Text style={styles.contactText}>Call</Text>
@@ -368,20 +372,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-  },
-  verifiedBadge: {
-    position: "absolute",
-    right: -6,
-    bottom: -5,
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 20,
-  },
-  verifiedBadgeImage: {
-    width: 32,
-    height: 32,
   },
   providerInfo: {
     flex: 1,

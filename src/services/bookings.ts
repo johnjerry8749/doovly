@@ -15,8 +15,6 @@ import {
   listReceivedJobs as listReceivedFromData,
   getBookingById as getBookingFromData,
   getProfessionalForBooking as getProfessionalFromData,
-  BOOKED_FILTERS,
-  RECEIVED_FILTERS,
   statusColors,
   type Booking,
   type BookingStatus,
@@ -26,7 +24,7 @@ import {
 
 export type { Booking, BookingStatus, PaymentMethod, PaymentStatus };
 
-export { BOOKED_FILTERS, RECEIVED_FILTERS, statusColors };
+export { statusColors };
 
 /** Jobs the current user booked with a professional. */
 export function listBookedJobs(): Booking[] {

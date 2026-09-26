@@ -24,8 +24,6 @@ import * as ImagePicker from "expo-image-picker";
 import {
   listBookedJobs,
   listReceivedJobs,
-  BOOKED_FILTERS,
-  RECEIVED_FILTERS,
   type Booking,
 } from "@/services/bookings";
 
@@ -41,7 +39,6 @@ const GREEN = "#16A34A";
 
 export default function Bookings() {
   const [mainTab, setMainTab] = useState<"booked" | "received">("booked");
-  const [filter, setFilter] = useState<string>("All");
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportBooking, setReportBooking] = useState<Booking | null>(null);
@@ -53,30 +50,12 @@ export default function Bookings() {
   const [reportPhotos, setReportPhotos] = useState<string[]>([]);
 
   const data = useMemo<Booking[]>(() => {
-    return mainTab === "booked"
-      ? listBookedJobs()
-      : listReceivedJobs();
+    return mainTab === "booked" ? listBookedJobs() : listReceivedJobs();
   }, [mainTab]);
 
-  const filteredData = useMemo<Booking[]>(() => {
-    if (filter === "All") {
-      return data;
-    }
-
-    return data.filter((item) => item.status === filter);
-  }, [data, filter]);
-
-  const handleMainTabChange = (
-    tab: "booked" | "received",
-  ) => {
+  const handleMainTabChange = (tab: "booked" | "received") => {
     setMainTab(tab);
-    setFilter("All");
   };
-
-  const filters =
-    mainTab === "booked"
-      ? BOOKED_FILTERS
-      : RECEIVED_FILTERS;
 
   const pickReportPhotos = async () => {
     try {
@@ -97,30 +76,22 @@ export default function Bookings() {
         return;
       }
 
-      const result =
-        await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["images"],
-          allowsMultipleSelection: true,
-          selectionLimit: remaining,
-          quality: 0.7,
-        });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: true,
+        selectionLimit: remaining,
+        quality: 0.7,
+      });
 
       if (result.canceled) {
         return;
       }
 
-      const uris = result.assets
-        .map((asset) => asset.uri)
-        .filter(Boolean);
+      const uris = result.assets.map((asset) => asset.uri).filter(Boolean);
 
-      setReportPhotos((previous) =>
-        [...previous, ...uris].slice(0, 3),
-      );
-    } catch (error) {
-      Alert.alert(
-        "Could not open photos",
-        "Please try again.",
-      );
+      setReportPhotos((previous) => [...previous, ...uris].slice(0, 3));
+    } catch {
+      Alert.alert("Could not open photos", "Please try again.");
     }
   };
 
@@ -134,20 +105,14 @@ export default function Bookings() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#FFFFFF"
-      />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* HEADER */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>
-            Bookings
-          </Text>
-
+          <Text style={styles.headerTitle}>Bookings</Text>
           <Text style={styles.headerSubtitle}>
-            Manage your bookings and jobs
+            Track your bookings and jobs
           </Text>
         </View>
 
@@ -163,34 +128,22 @@ export default function Bookings() {
             })
           }
         >
-          <Ionicons
-            name="notifications-outline"
-            size={28}
-            color="#111"
-          />
-
+          <Ionicons name="notifications-outline" size={28} color="#111" />
           <View style={styles.notificationDot} />
         </TouchableOpacity>
       </View>
 
-      {/* BOOKED / RECEIVED TABS */}
+      {/* BOOKED / RECEIVED TABS ONLY */}
       <View style={styles.mainTabsContainer}>
         <TouchableOpacity
-          style={[
-            styles.mainTab,
-            mainTab === "booked" &&
-              styles.mainTabActive,
-          ]}
-          onPress={() =>
-            handleMainTabChange("booked")
-          }
+          style={[styles.mainTab, mainTab === "booked" && styles.mainTabActive]}
+          onPress={() => handleMainTabChange("booked")}
           activeOpacity={0.8}
         >
           <Text
             style={[
               styles.mainTabText,
-              mainTab === "booked" &&
-                styles.mainTabTextActive,
+              mainTab === "booked" && styles.mainTabTextActive,
             ]}
           >
             Booked
@@ -200,19 +153,15 @@ export default function Bookings() {
         <TouchableOpacity
           style={[
             styles.mainTab,
-            mainTab === "received" &&
-              styles.mainTabActive,
+            mainTab === "received" && styles.mainTabActive,
           ]}
-          onPress={() =>
-            handleMainTabChange("received")
-          }
+          onPress={() => handleMainTabChange("received")}
           activeOpacity={0.8}
         >
           <Text
             style={[
               styles.mainTabText,
-              mainTab === "received" &&
-                styles.mainTabTextActive,
+              mainTab === "received" && styles.mainTabTextActive,
             ]}
           >
             Received
@@ -220,80 +169,26 @@ export default function Bookings() {
         </TouchableOpacity>
       </View>
 
-      {/* FILTER CARD */}
-      <View style={styles.filterCard}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={
-            styles.filtersContainer
-          }
-          keyboardShouldPersistTaps="handled"
-        >
-          {filters.map((item) => {
-            const active = filter === item;
-
-            return (
-              <TouchableOpacity
-                key={item}
-                style={[
-                  styles.filterChip,
-                  active &&
-                    styles.filterChipActive,
-                ]}
-                onPress={() => setFilter(item)}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    active &&
-                      styles.filterChipTextActive,
-                  ]}
-                >
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* BOOKINGS LIST */}
+      {/* BOOKINGS LIST — full record history, no filters */}
       <FlatList
-        data={filteredData}
-        keyExtractor={(item) =>
-          `${mainTab}-${item.id}`
-        }
-        contentContainerStyle={
-          styles.listContent
-        }
+        data={data}
+        keyExtractor={(item) => `${mainTab}-${item.id}`}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIcon}>
-              <Ionicons
-                name="calendar-outline"
-                size={28}
-                color="#9CA3AF"
-              />
+              <Ionicons name="calendar-outline" size={28} color="#9CA3AF" />
             </View>
-
-            <Text style={styles.emptyTitle}>
-              No bookings found
-            </Text>
-
+            <Text style={styles.emptyTitle}>No bookings yet</Text>
             <Text style={styles.emptyText}>
-              Try another filter or check back later.
+              Your {mainTab === "booked" ? "bookings" : "received jobs"} will
+              show up here.
             </Text>
           </View>
         }
         renderItem={({ item }) => (
-          <BookingCard
-            item={item}
-            mainTab={mainTab}
-            onReport={openReport}
-          />
+          <BookingCard item={item} mainTab={mainTab} onReport={openReport} />
         )}
       />
 
@@ -302,17 +197,11 @@ export default function Bookings() {
         visible={showReportModal}
         transparent
         animationType="slide"
-        onRequestClose={() =>
-          setShowReportModal(false)
-        }
+        onRequestClose={() => setShowReportModal(false)}
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={
-            Platform.OS === "ios"
-              ? "padding"
-              : undefined
-          }
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <Pressable
             style={styles.modalOverlayInner}
@@ -320,17 +209,13 @@ export default function Bookings() {
           >
             <Pressable
               style={styles.modalBackdrop}
-              onPress={() =>
-                setShowReportModal(false)
-              }
+              onPress={() => setShowReportModal(false)}
             />
 
             <View style={styles.modalSheet}>
               <View style={styles.modalHandle} />
 
-              <Text style={styles.modalTitle}>
-                Report an issue
-              </Text>
+              <Text style={styles.modalTitle}>Report an issue</Text>
 
               <Text style={styles.modalSubtitle}>
                 {reportBooking
@@ -340,60 +225,38 @@ export default function Bookings() {
 
               <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={
-                  styles.modalScrollContent
-                }
+                contentContainerStyle={styles.modalScrollContent}
                 keyboardShouldPersistTaps="handled"
               >
-                <Text style={styles.modalLabel}>
-                  Reason
-                </Text>
+                <Text style={styles.modalLabel}>Reason</Text>
 
                 {DISPUTE_REASONS.map((reason) => {
-                  const selected =
-                    selectedReason === reason;
+                  const selected = selectedReason === reason;
 
                   return (
                     <TouchableOpacity
                       key={reason}
                       style={[
                         styles.reasonRow,
-                        selected &&
-                          styles.reasonRowSelected,
+                        selected && styles.reasonRowSelected,
                       ]}
-                      onPress={() =>
-                        setSelectedReason(reason)
-                      }
+                      onPress={() => setSelectedReason(reason)}
                       activeOpacity={0.8}
                     >
                       <View
                         style={[
                           styles.reasonRadio,
-                          selected &&
-                            styles.reasonRadioSelected,
+                          selected && styles.reasonRadioSelected,
                         ]}
                       >
-                        {selected && (
-                          <View
-                            style={
-                              styles.reasonRadioDot
-                            }
-                          />
-                        )}
+                        {selected && <View style={styles.reasonRadioDot} />}
                       </View>
-
-                      <Text
-                        style={styles.reasonText}
-                      >
-                        {reason}
-                      </Text>
+                      <Text style={styles.reasonText}>{reason}</Text>
                     </TouchableOpacity>
                   );
                 })}
 
-                <Text style={styles.modalLabel}>
-                  Description
-                </Text>
+                <Text style={styles.modalLabel}>Description</Text>
 
                 <TextInput
                   style={styles.descriptionInput}
@@ -401,40 +264,24 @@ export default function Bookings() {
                   placeholderTextColor="#9CA3AF"
                   multiline
                   value={reportDescription}
-                  onChangeText={
-                    setReportDescription
-                  }
+                  onChangeText={setReportDescription}
                 />
 
-                <Text style={styles.modalLabel}>
-                  Photos (optional)
-                </Text>
+                <Text style={styles.modalLabel}>Photos (optional)</Text>
 
                 <View style={styles.photoRow}>
                   {reportPhotos.map((uri) => (
                     <View key={uri}>
-                      <Image
-                        source={{ uri }}
-                        style={styles.photoThumb}
-                      />
-
+                      <Image source={{ uri }} style={styles.photoThumb} />
                       <TouchableOpacity
                         style={styles.photoRemove}
                         onPress={() =>
-                          setReportPhotos(
-                            (previous) =>
-                              previous.filter(
-                                (photo) =>
-                                  photo !== uri,
-                              ),
+                          setReportPhotos((previous) =>
+                            previous.filter((photo) => photo !== uri),
                           )
                         }
                       >
-                        <Ionicons
-                          name="close"
-                          size={12}
-                          color="#FFFFFF"
-                        />
+                        <Ionicons name="close" size={12} color="#FFFFFF" />
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -445,17 +292,8 @@ export default function Bookings() {
                       onPress={pickReportPhotos}
                       activeOpacity={0.8}
                     >
-                      <Ionicons
-                        name="camera-outline"
-                        size={20}
-                        color={GREEN}
-                      />
-
-                      <Text
-                        style={styles.addPhotoText}
-                      >
-                        Add
-                      </Text>
+                      <Ionicons name="camera-outline" size={20} color={GREEN} />
+                      <Text style={styles.addPhotoText}>Add</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -473,28 +311,21 @@ export default function Bookings() {
                 <TouchableOpacity
                   style={[
                     styles.submitReportBtn,
-                    (!selectedReason ||
-                      !reportDescription.trim()) && {
+                    (!selectedReason || !reportDescription.trim()) && {
                       opacity: 0.5,
                     },
                   ]}
                   activeOpacity={0.85}
-                  disabled={
-                    !selectedReason ||
-                    !reportDescription.trim()
-                  }
+                  disabled={!selectedReason || !reportDescription.trim()}
                   onPress={() => {
                     Alert.alert(
                       "Report submitted",
                       "We will review this dispute shortly.",
                     );
-
                     setShowReportModal(false);
                   }}
                 >
-                  <Text style={styles.submitReportText}>
-                    Submit Report
-                  </Text>
+                  <Text style={styles.submitReportText}>Submit Report</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -512,7 +343,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
 
-  /* HEADER */
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -551,14 +381,13 @@ const styles = StyleSheet.create({
     backgroundColor: GREEN,
   },
 
-  /* MAIN TABS */
   mainTabsContainer: {
     flexDirection: "row",
     marginHorizontal: 16,
     backgroundColor: "#F3F4F6",
     borderRadius: 12,
     padding: 4,
-    marginBottom: 10,
+    marginBottom: 12,
   },
 
   mainTab: {
@@ -584,52 +413,6 @@ const styles = StyleSheet.create({
     color: GREEN,
   },
 
-  /* FILTER CARD */
-  filterCard: {
-    marginHorizontal: 16,
-    marginBottom: 10,
-    borderRadius: 14,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    overflow: "hidden",
-  },
-
-  filtersContainer: {
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-    alignItems: "center",
-  },
-
-  filterChip: {
-    minHeight: 36,
-    paddingHorizontal: 15,
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-  },
-
-  filterChipActive: {
-    backgroundColor: "#DCFCE7",
-    borderColor: "#BBF7D0",
-  },
-
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-
-  filterChipTextActive: {
-    color: GREEN,
-    fontWeight: "700",
-  },
-
-  /* LIST */
   listContent: {
     paddingHorizontal: 16,
     paddingTop: 4,
@@ -663,9 +446,9 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     marginTop: 4,
     textAlign: "center",
+    paddingHorizontal: 24,
   },
 
-  /* MODAL */
   modalOverlay: {
     flex: 1,
   },
@@ -806,15 +589,15 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: GREEN,
+    borderColor: "#BBF7D0",
     borderStyle: "dashed",
+    backgroundColor: "#F0FDF4",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F0FDF4",
+    gap: 2,
   },
 
   addPhotoText: {
-    marginTop: 2,
     fontSize: 11,
     fontWeight: "600",
     color: GREEN,
@@ -828,29 +611,31 @@ const styles = StyleSheet.create({
 
   cancelReportBtn: {
     flex: 1,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: "#F3F4F6",
-    borderRadius: 14,
-    paddingVertical: 14,
     alignItems: "center",
+    justifyContent: "center",
   },
 
   cancelReportText: {
-    color: "#374151",
     fontSize: 15,
     fontWeight: "700",
+    color: "#374151",
   },
 
   submitReportBtn: {
     flex: 1,
+    height: 48,
+    borderRadius: 12,
     backgroundColor: GREEN,
-    borderRadius: 14,
-    paddingVertical: 14,
     alignItems: "center",
+    justifyContent: "center",
   },
 
   submitReportText: {
-    color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
+    color: "#FFFFFF",
   },
 });
