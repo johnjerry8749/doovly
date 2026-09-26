@@ -71,7 +71,7 @@ export function starsFromReviewCount(count: number): number {
 
 export const PROFESSIONALS: Professional[] = [
   // =====================================================
-  // 1. JOHN CHUKWUEMEKA
+  // 1. JOHN CHUKWUEMEKA  (logged-in mock pro — subscribed for Pro features)
   // =====================================================
   {
     id: "1",
@@ -81,7 +81,7 @@ export const PROFESSIONALS: Professional[] = [
     priceFrom: "₦8,000",
     image: require("@/assets/profile_1.jpg"),
     verified: false,
-    subscribed: false,
+    subscribed: true,
     latitude: 6.5244,
     longitude: 3.3792,
     role: "admin",
@@ -579,8 +579,6 @@ export const PROFESSIONALS: Professional[] = [
         icon: "face-man",
       },
     ],
-    // None subscribe user allow only 5 images
-    //subcribe pro user only allow up to 20 img 
     portfolio: [
       {
         id: "p1",
