@@ -14,10 +14,6 @@
 
 import { PROFESSIONALS } from "@/data/professionals";
 
-// =========================
-// TYPES
-// =========================
-
 export type BookingStatus =
   | "Pending"
   | "Accepted"
@@ -32,30 +28,18 @@ export type Booking = {
   professionalId: string;
   customerId: string;
   title: string;
-
-  /** Display: professional side (always filled) */
   professionalName: string;
   professionalVerified: boolean;
   professionalImage: number;
-
-  /** Display: customer side (for Received tab) */
   customerName: string;
   customerImage: number;
-
   rating: number;
   reviews: number;
-
   date: string;
   location: string;
   status: BookingStatus;
-
-  /** Job amount in Naira */
   amount?: number;
 };
-
-// =========================
-// STATUS COLORS
-// =========================
 
 export const statusColors: Record<
   BookingStatus,
@@ -70,24 +54,13 @@ export const statusColors: Record<
   Declined: { bg: "#FEE2E2", text: "#DC2626" },
 };
 
-// =========================
-// MOCK CUSTOMERS (for Received display + chat)
-// =========================
-
-const CUSTOMERS: Record<
-  string,
-  { name: string; image: number }
-> = {
+const CUSTOMERS: Record<string, { name: string; image: number }> = {
   u1: { name: "You", image: require("@/assets/profile_1.jpg") },
   u2: { name: "Ada Okafor", image: require("@/assets/profile_2.jpg") },
   u3: { name: "Tunde Adebayo", image: require("@/assets/profile_3.jpg") },
   u4: { name: "Chioma Nwosu", image: require("@/assets/profile_4.jpg") },
   u5: { name: "Blessing Kalu", image: require("@/assets/profile_1.jpg") },
 };
-
-// =========================
-// HELPERS
-// =========================
 
 function getProfessional(professionalId: string) {
   return PROFESSIONALS.find((p) => p.id === professionalId);
@@ -141,11 +114,9 @@ function createBooking(input: {
   };
 }
 
-// =========================
-// BOOKED (current user = customer u1)
-// =========================
-
+/** Booked by current user (customer u1) */
 export const BOOKED_JOBS: Booking[] = [
+  // Pending — Open Chat shows waiting state (pro must accept)
   createBooking({
     id: "b1",
     professionalId: "1",
@@ -220,14 +191,12 @@ export const BOOKED_JOBS: Booking[] = [
   }),
 ];
 
-// =========================
-// RECEIVED (current user acts as professional)
-// =========================
-
+/** Received as professional (logged-in mock pro id = "1") */
 export const RECEIVED_JOBS: Booking[] = [
+  // Pending for pro "1" — Open Chat shows Accept / Decline
   createBooking({
     id: "r1",
-    professionalId: "2",
+    professionalId: "1",
     customerId: "u2",
     title: "House Cleaning",
     rating: 5.0,
@@ -239,7 +208,7 @@ export const RECEIVED_JOBS: Booking[] = [
   }),
   createBooking({
     id: "r2",
-    professionalId: "4",
+    professionalId: "1",
     customerId: "u3",
     title: "AC Repair",
     rating: 4.8,
@@ -251,7 +220,7 @@ export const RECEIVED_JOBS: Booking[] = [
   }),
   createBooking({
     id: "r3",
-    professionalId: "6",
+    professionalId: "1",
     customerId: "u4",
     title: "Furniture Assembly",
     rating: 4.9,
@@ -263,7 +232,7 @@ export const RECEIVED_JOBS: Booking[] = [
   }),
   createBooking({
     id: "r4",
-    professionalId: "2",
+    professionalId: "1",
     customerId: "u5",
     title: "Deep Cleaning",
     rating: 5.0,
@@ -286,10 +255,6 @@ export const RECEIVED_JOBS: Booking[] = [
     amount: 10000,
   }),
 ];
-
-// =========================
-// LIST / GET (same signatures for API swap)
-// =========================
 
 export function listBookedJobs(): Booking[] {
   return BOOKED_JOBS;
