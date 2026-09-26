@@ -18,11 +18,9 @@ import {
   statusColors,
   type Booking,
   type BookingStatus,
-  type PaymentMethod,
-  type PaymentStatus,
 } from "@/data/booking";
 
-export type { Booking, BookingStatus, PaymentMethod, PaymentStatus };
+export type { Booking, BookingStatus };
 
 export { statusColors };
 

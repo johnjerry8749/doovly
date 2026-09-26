@@ -20,7 +20,7 @@ const GREEN = "#16A34A";
 type Props = {
   item: Booking;
   mainTab: "booked" | "received";
-  onReport: (item: Booking) => void;
+  onReport?: (item: Booking) => void;
 };
 
 function formatAmount(amount?: number) {
@@ -28,33 +28,20 @@ function formatAmount(amount?: number) {
   return `₦${amount.toLocaleString()}`;
 }
 
-export function BookingCard({ item, mainTab, onReport }: Props) {
+export function BookingCard({ item, mainTab }: Props) {
   const statusStyle = statusColors[item.status];
   const amountText = formatAmount(item.amount);
-  const isPayOnSite =
-    item.paymentMethod === "pay_on_site" ||
-    item.paymentStatus === "pay_on_site";
-
-  const showPaymentBanner =
-    (item.paymentMethod === "pay_now" &&
-      (item.paymentStatus === "held" ||
-        item.paymentStatus === "released" ||
-        item.paymentStatus === "refunded")) ||
-    isPayOnSite;
-
-  const paymentLabel = isPayOnSite
-    ? "Payment will be on site"
-    : item.paymentStatus === "released"
-      ? "Payment released"
-      : item.paymentStatus === "refunded"
-        ? "Payment refunded"
-        : "Payment secured in Paystack";
 
   // Booked → show professional; Received → show customer
   const displayName =
     mainTab === "booked" ? item.professionalName : item.customerName;
   const displayImage =
     mainTab === "booked" ? item.professionalImage : item.customerImage;
+
+  const canCancel =
+    item.status === "Pending" ||
+    item.status === "Accepted" ||
+    item.status === "Ongoing";
 
   const openChat = () => {
     const conv = getOrCreateConversationForBooking(item, mainTab);
@@ -66,175 +53,6 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
         initialMessage: message,
       },
     });
-  };
-
-  const renderStatusActions = () => {
-    // RECEIVED — Pending (pro can accept/decline)
-    if (mainTab === "received" && item.status === "Pending") {
-      return (
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.acceptButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert("Accept Job", "This job will be marked as Accepted.")
-            }
-          >
-            <Text style={styles.acceptButtonText}>Accept</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.declineButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert("Decline Job", "This job will be declined.")
-            }
-          >
-            <Ionicons name="close" size={16} color="#DC2626" />
-            <Text style={styles.declineButtonText}>Decline</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    // RECEIVED — Accepted / Ongoing
-    if (
-      mainTab === "received" &&
-      (item.status === "Accepted" || item.status === "Ongoing")
-    ) {
-      return (
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.cancelButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert("Cancel Job", "This job will be cancelled.")
-            }
-          >
-            <Ionicons name="close" size={16} color="#DC2626" />
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          {item.status === "Accepted" ? (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.onMyWayButton]}
-              activeOpacity={0.8}
-              onPress={() =>
-                Alert.alert(
-                  "On My Way",
-                  "Customer will be notified that you are on your way.",
-                )
-              }
-            >
-              <Ionicons name="navigate-outline" size={16} color="#FFFFFF" />
-              <Text style={styles.onMyWayButtonText}>I'm On My Way</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.completeButton]}
-              activeOpacity={0.8}
-              onPress={() =>
-                Alert.alert(
-                  "Mark as Completed",
-                  "Customer will be asked to Approve the job before payment is released.",
-                )
-              }
-            >
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={16}
-                color="#FFFFFF"
-              />
-              <Text style={styles.completeButtonText}>Mark as Completed</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      );
-    }
-
-    // RECEIVED — Awaiting Approval
-    if (mainTab === "received" && item.status === "Awaiting Approval") {
-      return null;
-    }
-
-    // BOOKED — Pending: client can cancel before pro accepts
-    if (mainTab === "booked" && item.status === "Pending") {
-      return (
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.cancelButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert("Cancel Booking", "This booking will be cancelled.")
-            }
-          >
-            <Ionicons name="close" size={16} color="#DC2626" />
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    // BOOKED — Accepted / Ongoing: client cannot cancel
-    if (
-      mainTab === "booked" &&
-      (item.status === "Accepted" || item.status === "Ongoing")
-    ) {
-      return null;
-    }
-
-    // BOOKED — Awaiting Approval (customer must approve)
-    if (mainTab === "booked" && item.status === "Awaiting Approval") {
-      return (
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.approveButton]}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert(
-                "Approve Job",
-                "Job approved. Payment will be released to the professional.",
-              )
-            }
-          >
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={16}
-              color="#FFFFFF"
-            />
-            <Text style={styles.approveButtonText}>
-              Approve & Release{amountText ? ` ${amountText}` : ""}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.reportButton]}
-            activeOpacity={0.8}
-            onPress={() => onReport(item)}
-          >
-            <Ionicons name="flag-outline" size={16} color="#DC2626" />
-            <Text style={styles.reportButtonText}>Report Issue</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    if (item.status === "Completed") {
-      return null;
-    }
-
-    if (item.status === "Cancelled" || item.status === "Declined") {
-      return (
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.secondaryActionButton]}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="document-text-outline" size={16} color={GREEN} />
-            <Text style={styles.secondaryActionText}>View Details</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return null;
   };
 
   return (
@@ -285,67 +103,43 @@ export function BookingCard({ item, mainTab, onReport }: Props) {
             {item.location}
           </Text>
         </View>
+        {amountText ? (
+          <View style={styles.infoItem}>
+            <Ionicons name="cash-outline" size={17} color={GREEN} />
+            <Text style={styles.amountText}>{amountText}</Text>
+          </View>
+        ) : null}
       </View>
 
-      {showPaymentBanner && (
-        <View
-          style={[
-            styles.paymentBanner,
-            isPayOnSite && styles.paymentBannerOnSite,
-          ]}
-        >
-          <View
-            style={[
-              styles.paymentIconWrap,
-              isPayOnSite && styles.paymentIconWrapOnSite,
-            ]}
-          >
-            <Ionicons
-              name={isPayOnSite ? "cash-outline" : "lock-closed"}
-              size={16}
-              color="#FFFFFF"
-            />
-          </View>
-          <View style={styles.paymentTextWrap}>
-            <Text
-              style={[
-                styles.paymentLabel,
-                isPayOnSite && styles.paymentLabelOnSite,
-              ]}
-            >
-              {paymentLabel}
-            </Text>
-            {amountText ? (
-              <Text
-                style={[
-                  styles.paymentAmount,
-                  isPayOnSite && styles.paymentAmountOnSite,
-                ]}
-              >
-                {amountText}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-      )}
-
-      {/* Open Chat — always available so bookings track into conversation */}
-      <View style={styles.contactRow}>
+      {/* Open Chat + Cancel only — Call lives inside chat */}
+      <View style={styles.actionsRow}>
         <TouchableOpacity
-          style={styles.contactButton}
+          style={styles.chatButton}
           activeOpacity={0.8}
           onPress={openChat}
         >
           <Ionicons name="chatbubble-outline" size={17} color={GREEN} />
-          <Text style={styles.contactText}>Open Chat</Text>
+          <Text style={styles.chatButtonText}>Open Chat</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.contactButton} activeOpacity={0.8}>
-          <Ionicons name="call-outline" size={17} color={GREEN} />
-          <Text style={styles.contactText}>Call</Text>
-        </TouchableOpacity>
-      </View>
 
-      {renderStatusActions()}
+        {canCancel && (
+          <TouchableOpacity
+            style={styles.cancelButton}
+            activeOpacity={0.8}
+            onPress={() =>
+              Alert.alert(
+                mainTab === "booked" ? "Cancel Booking" : "Cancel Job",
+                mainTab === "booked"
+                  ? "This booking will be cancelled."
+                  : "This job will be cancelled.",
+              )
+            }
+          >
+            <Ionicons name="close" size={16} color="#DC2626" />
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -434,157 +228,44 @@ const styles = StyleSheet.create({
     color: "#4B5563",
     flex: 1,
   },
-  paymentBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ECFDF5",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-    gap: 10,
-  },
-  paymentBannerOnSite: {
-    backgroundColor: "#FFF7ED",
-  },
-  paymentIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: GREEN,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  paymentIconWrapOnSite: {
-    backgroundColor: "#EA580C",
-  },
-  paymentTextWrap: {
-    flex: 1,
-  },
-  paymentLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#166534",
-  },
-  paymentLabelOnSite: {
-    color: "#9A3412",
-  },
-  paymentAmount: {
+  amountText: {
     fontSize: 15,
     fontWeight: "700",
     color: GREEN,
-    marginTop: 1,
   },
-  paymentAmountOnSite: {
-    color: "#C2410C",
-  },
-  contactRow: {
+  actionsRow: {
     flexDirection: "row",
     gap: 10,
-    marginBottom: 10,
+    alignItems: "center",
   },
-  contactButton: {
+  chatButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 10,
     backgroundColor: "#F0FDF4",
     borderWidth: 1,
     borderColor: "#BBF7D0",
   },
-  contactText: {
+  chatButtonText: {
     fontSize: 13,
     fontWeight: "600",
     color: GREEN,
   },
-  actionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 4,
-  },
-  actionButton: {
+  cancelButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
-  },
-  acceptButton: {
-    backgroundColor: GREEN,
-    flex: 1,
-    justifyContent: "center",
-  },
-  acceptButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  declineButton: {
-    backgroundColor: "#FEE2E2",
-  },
-  declineButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#DC2626",
-  },
-  cancelButton: {
     backgroundColor: "#FEE2E2",
   },
   cancelButtonText: {
     fontSize: 13,
     fontWeight: "600",
     color: "#DC2626",
-  },
-  onMyWayButton: {
-    backgroundColor: GREEN,
-    flex: 1,
-    justifyContent: "center",
-  },
-  onMyWayButtonText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  completeButton: {
-    backgroundColor: GREEN,
-    flex: 1,
-    justifyContent: "center",
-  },
-  completeButtonText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  approveButton: {
-    backgroundColor: GREEN,
-    flex: 1,
-    justifyContent: "center",
-  },
-  approveButtonText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  reportButton: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#FECACA",
-  },
-  reportButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#DC2626",
-  },
-  secondaryActionButton: {
-    backgroundColor: "#F3F4F6",
-  },
-  secondaryActionText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: GREEN,
   },
 });

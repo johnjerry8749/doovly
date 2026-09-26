@@ -27,14 +27,6 @@ export type BookingStatus =
   | "Cancelled"
   | "Declined";
 
-export type PaymentMethod = "pay_now" | "pay_on_site";
-
-export type PaymentStatus =
-  | "held" // money secured in Paystack until job is completed
-  | "released" // paid to the professional
-  | "pay_on_site" // no online payment
-  | "refunded";
-
 export type Booking = {
   id: string;
   professionalId: string;
@@ -57,8 +49,7 @@ export type Booking = {
   location: string;
   status: BookingStatus;
 
-  paymentMethod: PaymentMethod;
-  paymentStatus: PaymentStatus;
+  /** Job amount in Naira */
   amount?: number;
 };
 
@@ -121,8 +112,6 @@ function createBooking(input: {
   date: string;
   location: string;
   status: BookingStatus;
-  paymentMethod: PaymentMethod;
-  paymentStatus: PaymentStatus;
   amount?: number;
 }): Booking {
   const professional = getProfessional(input.professionalId);
@@ -148,8 +137,6 @@ function createBooking(input: {
     date: input.date,
     location: input.location,
     status: input.status,
-    paymentMethod: input.paymentMethod,
-    paymentStatus: input.paymentStatus,
     amount: input.amount,
   };
 }
@@ -169,8 +156,6 @@ export const BOOKED_JOBS: Booking[] = [
     date: "May 25, 2025 10:00 AM",
     location: "Lagos",
     status: "Pending",
-    paymentMethod: "pay_now",
-    paymentStatus: "held",
     amount: 15400,
   }),
   createBooking({
@@ -183,8 +168,6 @@ export const BOOKED_JOBS: Booking[] = [
     date: "May 22, 2025 02:30 PM",
     location: "Lagos",
     status: "Ongoing",
-    paymentMethod: "pay_now",
-    paymentStatus: "held",
     amount: 12500,
   }),
   createBooking({
@@ -197,8 +180,6 @@ export const BOOKED_JOBS: Booking[] = [
     date: "May 18, 2025 11:00 AM",
     location: "Abuja",
     status: "Completed",
-    paymentMethod: "pay_now",
-    paymentStatus: "released",
     amount: 28000,
   }),
   createBooking({
@@ -211,8 +192,6 @@ export const BOOKED_JOBS: Booking[] = [
     date: "May 20, 2025 04:00 PM",
     location: "Lagos",
     status: "Accepted",
-    paymentMethod: "pay_on_site",
-    paymentStatus: "pay_on_site",
     amount: 18000,
   }),
   createBooking({
@@ -225,8 +204,6 @@ export const BOOKED_JOBS: Booking[] = [
     date: "May 23, 2025 01:00 PM",
     location: "Abuja",
     status: "Awaiting Approval",
-    paymentMethod: "pay_now",
-    paymentStatus: "held",
     amount: 8500,
   }),
   createBooking({
@@ -239,8 +216,6 @@ export const BOOKED_JOBS: Booking[] = [
     date: "May 26, 2025 03:00 PM",
     location: "Lagos",
     status: "Cancelled",
-    paymentMethod: "pay_now",
-    paymentStatus: "refunded",
     amount: 15400,
   }),
 ];
@@ -260,8 +235,6 @@ export const RECEIVED_JOBS: Booking[] = [
     date: "May 28, 2025 09:00 AM",
     location: "Lagos",
     status: "Pending",
-    paymentMethod: "pay_now",
-    paymentStatus: "held",
     amount: 15400,
   }),
   createBooking({
@@ -274,8 +247,6 @@ export const RECEIVED_JOBS: Booking[] = [
     date: "May 27, 2025 02:30 PM",
     location: "Lagos",
     status: "Ongoing",
-    paymentMethod: "pay_on_site",
-    paymentStatus: "pay_on_site",
     amount: 22000,
   }),
   createBooking({
@@ -288,8 +259,6 @@ export const RECEIVED_JOBS: Booking[] = [
     date: "May 24, 2025 11:00 AM",
     location: "Abuja",
     status: "Completed",
-    paymentMethod: "pay_now",
-    paymentStatus: "released",
     amount: 12000,
   }),
   createBooking({
@@ -302,8 +271,6 @@ export const RECEIVED_JOBS: Booking[] = [
     date: "May 29, 2025 10:00 AM",
     location: "Lagos",
     status: "Awaiting Approval",
-    paymentMethod: "pay_now",
-    paymentStatus: "held",
     amount: 15400,
   }),
   createBooking({
@@ -316,8 +283,6 @@ export const RECEIVED_JOBS: Booking[] = [
     date: "May 21, 2025 03:00 PM",
     location: "Lagos",
     status: "Accepted",
-    paymentMethod: "pay_now",
-    paymentStatus: "held",
     amount: 10000,
   }),
 ];

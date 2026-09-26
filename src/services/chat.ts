@@ -341,8 +341,8 @@ export async function stopSharingLocation(
     senderId: CURRENT_USER_ID,
     text: "Location sharing stopped",
     createdAt: nowLabel(),
-    isMine: true,
     kind: "location_stopped",
+    isMine: true,
   };
 
   pushMessage(conversationId, msg);
@@ -367,16 +367,8 @@ export function canOpenSharedLocation(
  * Location is NOT included by default (privacy — share only via Share Location).
  */
 export function formatBookingChatMessage(booking: Booking): string {
-  const payment =
-    booking.paymentMethod === "pay_on_site"
-      ? "Pay on site"
-      : booking.paymentStatus === "released"
-        ? "Paid (released)"
-        : booking.paymentStatus === "held"
-          ? "Payment secured in Paystack"
-          : booking.paymentStatus === "refunded"
-            ? "Refunded"
-            : booking.paymentStatus;
+  const amount =
+    booking.amount != null ? `₦${booking.amount.toLocaleString()}` : "—";
 
   return [
     `Hi ${booking.professionalName},`,
@@ -386,7 +378,7 @@ export function formatBookingChatMessage(booking: Booking): string {
     `• Service: ${booking.title}`,
     `• Date: ${booking.date}`,
     `• Status: ${booking.status}`,
-    `• Payment: ${payment}`,
+    `• Amount: ${amount}`,
     ``,
     `Looking forward to your reply.`,
   ].join("\n");

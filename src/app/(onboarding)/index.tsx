@@ -1,262 +1,181 @@
+import React, { useRef, useState } from "react";
 import {
+  View,
+  Text,
+  StyleSheet,
   Dimensions,
   FlatList,
+  TouchableOpacity,
   Image,
   StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { router } from "expo-router";
 
 const { width } = Dimensions.get("window");
+const GREEN = "#16A34A";
 
-const slides = [
+const SLIDES = [
   {
     id: "1",
-    title: "Find Trusted Local Professionals",
+    title: "Find Trusted Pros",
     description:
-      "Connect with verified experts in your area — plumbers, electricians, cleaners, barbers, nail techs and more.",
+      "Discover verified professionals near you for any service you need.",
     image: require("@/assets/onboarding/onboarding_1.jpg"),
   },
   {
     id: "2",
-    title: "Book & Pay Securely",
+    title: "Book in Seconds",
     description:
-      "Book in seconds and pay safely with Paystack. No cash, no stress.",
+      "Choose a service, pick a time, and book instantly. Simple and stress-free.",
     image: require("@/assets/onboarding/onboarding_2.jpg"),
   },
   {
     id: "3",
-    title: "Offer Your Own Services and Earn",
+    title: "Chat & Get It Done",
     description:
-      "Add your service, set your price and start receiving bookings from people near you.",
+      "Message your pro, share location, and manage the job until it’s complete.",
     image: require("@/assets/onboarding/onboarding_3.jpg"),
   },
 ];
 
-type Slide = (typeof slides)[number];
+export default function Onboarding() {
+  const [index, setIndex] = useState(0);
+  const listRef = useRef<FlatList>(null);
 
-export default function Index() {
-  const router = useRouter();
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const i = Math.round(e.nativeEvent.contentOffset.x / width);
+    if (i !== index) setIndex(i);
+  };
 
-  const flatListRef = useRef<FlatList<Slide>>(null);
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  // =========================
-  // NEXT BUTTON
-  // =========================
-  const handleNext = () => {
-    const isLastSlide = currentIndex === slides.length - 1;
-
-    if (isLastSlide) {
+  const goNext = () => {
+    if (index < SLIDES.length - 1) {
+      listRef.current?.scrollToIndex({ index: index + 1, animated: true });
+    } else {
       router.replace("/(auth)/login");
-      return;
     }
-
-    flatListRef.current?.scrollToIndex({
-      index: currentIndex + 1,
-      animated: true,
-    });
   };
 
-  // =========================
-  // SKIP BUTTON
-  // =========================
-  const handleSkip = () => {
-    router.replace("/(auth)/login");
-  };
-
-  // =========================
-  // SLIDE
-  // =========================
-  const renderSlide = ({ item }: { item: Slide }) => {
-    return (
-      <View style={styles.slide}>
-        <Image
-          source={item.image}
-          style={styles.image}
-          resizeMode="contain"
-        />
-
-        <Text style={styles.title}>{item.title}</Text>
-
-        <Text style={styles.description}>{item.description}</Text>
-      </View>
-    );
-  };
-
-  // =========================
-  // SCREEN
-  // =========================
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#FFFFFF"
-      />
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" />
 
-      {/* Skip */}
-      <TouchableOpacity
-        style={styles.skipButton}
-        onPress={handleSkip}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.skipText}>Skip</Text>
-      </TouchableOpacity>
-
-      {/* Slides */}
       <FlatList
-        ref={flatListRef}
-        data={slides}
-        renderItem={renderSlide}
+        ref={listRef}
+        data={SLIDES}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        bounces={false}
-        onMomentumScrollEnd={(event) => {
-          const index = Math.round(
-            event.nativeEvent.contentOffset.x / width
-          );
-
-          setCurrentIndex(index);
-        }}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        renderItem={({ item }) => (
+          <View style={styles.slide}>
+            <Image source={item.image} style={styles.image} resizeMode="cover" />
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.description}>{item.description}</Text>
+          </View>
+        )}
       />
 
-      {/* Dots */}
-      <View style={styles.dotsContainer}>
-        {slides.map((slide) => (
-          <View
-            key={slide.id}
-            style={[
-              styles.dot,
-              slide.id === slides[currentIndex].id &&
-                styles.activeDot,
-            ]}
-          />
-        ))}
-      </View>
+      <View style={styles.footer}>
+        <View style={styles.dots}>
+          {SLIDES.map((s, i) => (
+            <View
+              key={s.id}
+              style={[styles.dot, i === index && styles.dotActive]}
+            />
+          ))}
+        </View>
 
-      {/* Next / Get Started */}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleNext}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.buttonText}>
-          {currentIndex === slides.length - 1
-            ? "Get Started"
-            : "Next"}
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.btn} onPress={goNext} activeOpacity={0.85}>
+          <Text style={styles.btnText}>
+            {index === SLIDES.length - 1 ? "Get Started" : "Next"}
+          </Text>
+        </TouchableOpacity>
+
+        {index < SLIDES.length - 1 && (
+          <TouchableOpacity
+            onPress={() => router.replace("/(auth)/login")}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.skip}>Skip</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // =========================
-  // CONTAINER
-  // =========================
-  container: {
+  safe: {
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
-
-  // =========================
-  // SKIP
-  // =========================
-  skipButton: {
-    position: "absolute",
-    top: 50,
-    right: 24,
-    zIndex: 10,
-    padding: 8,
-  },
-
-  skipText: {
-    color: "#16A34A",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  // =========================
-  // SLIDE
-  // =========================
   slide: {
     width,
+    paddingHorizontal: 24,
     alignItems: "center",
-    paddingHorizontal: 32,
-    paddingTop: 80,
+    paddingTop: 24,
   },
-
   image: {
-    width: width * 0.75,
-    height: width * 0.75,
-    marginBottom: 40,
+    width: width - 48,
+    height: 280,
+    borderRadius: 20,
+    marginBottom: 28,
   },
-
-  // =========================
-  // TEXT
-  // =========================
   title: {
+    fontSize: 24,
+    fontWeight: "800",
     color: "#111827",
-    fontSize: 26,
-    fontWeight: "700",
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
-
   description: {
+    fontSize: 15,
     color: "#6B7280",
-    fontSize: 16,
-    lineHeight: 24,
     textAlign: "center",
+    lineHeight: 22,
+    paddingHorizontal: 8,
   },
-
-  // =========================
-  // DOTS
-  // =========================
-  dotsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
+  footer: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
     alignItems: "center",
-    marginBottom: 32,
+    gap: 16,
   },
-
+  dots: {
+    flexDirection: "row",
+    gap: 8,
+  },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#D1D5DB",
-    marginHorizontal: 4,
+    backgroundColor: "#E5E7EB",
   },
-
-  activeDot: {
-    width: 24,
-    backgroundColor: "#16A34A",
+  dotActive: {
+    backgroundColor: GREEN,
+    width: 20,
   },
-
-  // =========================
-  // BUTTON
-  // =========================
-  button: {
-    backgroundColor: "#16A34A",
-    marginHorizontal: 24,
-    marginBottom: 40,
-    paddingVertical: 16,
-    borderRadius: 12,
+  btn: {
+    width: "100%",
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: GREEN,
     alignItems: "center",
+    justifyContent: "center",
   },
-
-  buttonText: {
+  btnText: {
+    fontSize: 16,
+    fontWeight: "700",
     color: "#FFFFFF",
-    fontSize: 17,
+  },
+  skip: {
+    fontSize: 14,
     fontWeight: "600",
+    color: "#6B7280",
   },
 });
-
