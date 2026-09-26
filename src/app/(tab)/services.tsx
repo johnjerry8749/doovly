@@ -244,11 +244,10 @@ export default function Services() {
         keyExtractor={(item, index) => `${item.name}-${index}`}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterContainer}
-        renderItem={({ item: filter, index }) => {
+        renderItem={({ item: filter }) => {
           const active = selectedFilter === filter.name;
           return (
             <TouchableOpacity
-              key={`${filter.name}-${index}`}
               style={styles.filterItem}
               onPress={() => setSelectedFilter(filter.name)}
               activeOpacity={0.7}
@@ -432,25 +431,22 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 15, color: "#111" },
   filterContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 12,
-    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingBottom: 8,
   },
   filterItem: {
     alignItems: "center",
-    width: 72,
     marginRight: 14,
+    width: 72,
   },
   filterCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#E8F5E9",
-    justifyContent: "center",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#ECFDF5",
     alignItems: "center",
-    marginBottom: 7,
+    justifyContent: "center",
+    marginBottom: 6,
   },
   activeFilterCircle: {
     backgroundColor: GREEN,
@@ -463,7 +459,6 @@ const styles = StyleSheet.create({
   },
   activeFilterName: {
     color: GREEN,
-    fontWeight: "700",
   },
   sectionHeader: {
     flexDirection: "row",
