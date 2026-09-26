@@ -24,7 +24,7 @@ type Props = {
 export default function RequestImageSlider({
   images,
   height = 180,
-  borderRadius = 12,
+  borderRadius = 0,
 }: Props) {
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);

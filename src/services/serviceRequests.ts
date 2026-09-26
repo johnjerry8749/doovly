@@ -141,6 +141,7 @@ export function createServiceRequest(
     likesCount: 0,
     maxOffers: Math.min(20, Math.max(1, Math.floor(input.maxOffers) || 5)),
     offersCount: 0,
+    offeredByUserIds: [],
     comments: [],
   };
   SERVICE_REQUESTS.unshift(request);
@@ -226,10 +227,15 @@ export function likeServiceRequest(requestId: string, liked: boolean): number {
 /** Whether the current user may send an offer on this request. */
 export function canSendOfferOnRequest(request: ServiceRequest): {
   ok: boolean;
-  reason?: "own" | "full" | "missing";
+  reason?: "own" | "full" | "already" | "missing";
 } {
   if (!request) return { ok: false, reason: "missing" };
   if (isOwnServiceRequest(request)) return { ok: false, reason: "own" };
+  const uid = String(getCurrentUserId());
+  const already = (request.offeredByUserIds || []).some(
+    (id) => String(id) === uid,
+  );
+  if (already) return { ok: false, reason: "already" };
   const max = request.maxOffers ?? 5;
   const count = request.offersCount ?? 0;
   if (count >= max) return { ok: false, reason: "full" };
@@ -241,7 +247,7 @@ export function submitServiceRequestOffer(input: SubmitOfferInput): {
   requestId: string;
   amount: number;
   recipientUserId: string;
-  reason?: "own" | "full" | "invalid";
+  reason?: "own" | "full" | "already" | "invalid";
 } | null {
   // TODO backend: POST /service-requests/:id/offers
   const request = getFromData(input.requestId);
@@ -263,6 +269,17 @@ export function submitServiceRequestOffer(input: SubmitOfferInput): {
       reason: "own",
     };
   }
+  const uid = String(getCurrentUserId());
+  const offered = request.offeredByUserIds || [];
+  if (offered.some((id) => String(id) === uid)) {
+    return {
+      ok: false,
+      requestId: request.id,
+      amount: input.amount,
+      recipientUserId: request.createdByUserId,
+      reason: "already",
+    };
+  }
   const max = request.maxOffers ?? 5;
   const count = request.offersCount ?? 0;
   if (count >= max) {
@@ -275,6 +292,7 @@ export function submitServiceRequestOffer(input: SubmitOfferInput): {
     };
   }
   request.offersCount = count + 1;
+  request.offeredByUserIds = [...offered, uid];
   return {
     ok: true,
     requestId: request.id,
