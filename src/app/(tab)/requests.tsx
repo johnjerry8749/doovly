@@ -437,28 +437,34 @@ export default function RequestsScreen() {
         </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filtersRow}
-        bounces={false}
-      >
-        {CATEGORY_FILTERS.map((cat) => {
-          const active = categoryFilter === cat;
-          return (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.filterChip, active && styles.filterChipActive]}
-              onPress={() => setCategoryFilter(cat)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      <View style={styles.filtersWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersContent}
+        >
+          {CATEGORY_FILTERS.map((category) => {
+            const active = categoryFilter === category;
+            return (
+              <TouchableOpacity
+                key={category}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setCategoryFilter(category)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    active && styles.filterChipTextActive,
+                  ]}
+                >
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       <FlatList
         data={filteredRequests}
@@ -667,28 +673,35 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: { flex: 1, fontSize: 15, color: "#111" },
-  filtersRow: {
+  filtersWrap: {
+    height: 44,
+    marginBottom: 8,
+  },
+  filtersContent: {
     paddingHorizontal: 16,
-    paddingBottom: 10,
     alignItems: "center",
     gap: 8,
   },
   filterChip: {
-    height: 38,
-    minWidth: 58,
+    height: 34,
     paddingHorizontal: 14,
-    borderRadius: 19,
+    borderRadius: 17,
     backgroundColor: "#F3F4F6",
-    alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-    marginRight: 8,
+    alignItems: "center",
+    marginRight: 4,
   },
-  filterChipActive: { backgroundColor: "#DCFCE7", borderColor: "#DCFCE7" },
-  filterChipText: { fontSize: 13, fontWeight: "600", color: "#6B7280" },
-  filterChipTextActive: { color: GREEN },
+  filterChipActive: {
+    backgroundColor: GREEN,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  filterChipTextActive: {
+    color: "#FFFFFF",
+  },
   listContent: { paddingHorizontal: 16, paddingBottom: 100, paddingTop: 8 },
   card: {
     borderWidth: 1,
