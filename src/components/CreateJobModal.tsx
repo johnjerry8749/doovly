@@ -59,6 +59,7 @@ export default function CreateJobModal({
   const [saving, setSaving] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [showCities, setShowCities] = useState(false);
+  const [maxOffers, setMaxOffers] = useState(5);
 
   const categories = useMemo(() => SERVICE_CATEGORIES, []);
   const cities = useMemo(() => NIGERIA_CITIES, []);
@@ -76,6 +77,7 @@ export default function CreateJobModal({
       setCity(request.city || "");
       setLocation(request.location || "");
       setImages(request.images?.length ? [...request.images] : []);
+      setMaxOffers(request.maxOffers ?? 5);
       return;
     }
 
@@ -85,6 +87,7 @@ export default function CreateJobModal({
     setCity("");
     setLocation("");
     setImages([]);
+    setMaxOffers(5);
   }, [visible, request]);
 
   const canSave = useMemo(
@@ -180,6 +183,7 @@ export default function CreateJobModal({
         images,
         icon: getCategoryIcon(category),
         iconBackground: getCategoryBackground(category),
+        maxOffers,
       };
 
       if (isEditing && request) {
@@ -429,7 +433,36 @@ export default function CreateJobModal({
               />
             </View>
 
-            {/* PHOTOS — up to 4 */}
+            <Text style={styles.label}>Max offers to receive</Text>
+            <Text style={styles.hintText}>
+              When this many offers arrive, others can no longer send an offer.
+            </Text>
+            <View style={styles.offerCountRow}>
+              {[1, 3, 5, 10].map((n) => {
+                const selected = maxOffers === n;
+                return (
+                  <TouchableOpacity
+                    key={n}
+                    style={[
+                      styles.offerCountChip,
+                      selected && styles.offerCountChipSelected,
+                    ]}
+                    onPress={() => setMaxOffers(n)}
+                    activeOpacity={0.85}
+                  >
+                    <Text
+                      style={[
+                        styles.offerCountChipText,
+                        selected && styles.offerCountChipTextSelected,
+                      ]}
+                    >
+                      {n}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
             <View style={styles.field}>
               <Text style={styles.label}>
                 Photos ({images.length}/{MAX_IMAGES})
@@ -579,6 +612,40 @@ const styles = StyleSheet.create({
   field: {
     marginBottom: 17,
   },
+  hintText: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 8,
+    marginTop: -4,
+  },
+  offerCountRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 16,
+  },
+  offerCountChip: {
+    minWidth: 48,
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  offerCountChipSelected: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#16A34A",
+  },
+  offerCountChipText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#374151",
+  },
+  offerCountChipTextSelected: {
+    color: "#16A34A",
+  },
   label: {
     fontSize: 13,
     fontWeight: "700",
@@ -687,35 +754,34 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 12,
-    borderWidth: 1.5,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
     borderStyle: "dashed",
-    borderColor: "#B7DCC5",
-    backgroundColor: "#F7FCF9",
+    backgroundColor: "#F0FDF4",
     alignItems: "center",
     justifyContent: "center",
+    gap: 2,
   },
   addThumbText: {
-    marginTop: 2,
     fontSize: 12,
     fontWeight: "600",
     color: GREEN,
   },
   uploadBox: {
-    minHeight: 145,
-    borderWidth: 1.5,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
     borderStyle: "dashed",
-    borderColor: "#B7DCC5",
     borderRadius: 14,
+    backgroundColor: "#F0FDF4",
+    paddingVertical: 22,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F7FCF9",
-    marginTop: 4,
   },
   uploadIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#E8F5ED",
+    backgroundColor: "#DCFCE7",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
@@ -726,39 +792,39 @@ const styles = StyleSheet.create({
     color: TEXT,
   },
   uploadSub: {
-    marginTop: 3,
+    marginTop: 2,
     fontSize: 12,
     color: MUTED,
   },
   saveButton: {
-    height: 50,
+    marginTop: 8,
+    height: 52,
     borderRadius: 14,
     backgroundColor: GREEN,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
-    gap: 7,
-    marginTop: 4,
+    gap: 8,
   },
   saveButtonDisabled: {
-    backgroundColor: "#A7CDB5",
+    opacity: 0.5,
   },
   saveButtonText: {
     color: "#fff",
-    fontSize: 15,
-    fontWeight: "800",
+    fontSize: 16,
+    fontWeight: "700",
   },
   cancelButton: {
+    marginTop: 10,
     height: 48,
     borderRadius: 14,
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 9,
-    backgroundColor: "#F3F4F6",
   },
   cancelButtonText: {
-    color: "#374151",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
+    color: "#374151",
   },
 });
