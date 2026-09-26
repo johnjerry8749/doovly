@@ -17,9 +17,10 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import type { ServiceRequest } from "@/services/serviceRequests";
 import {
-  addInAppNotification,
-  getCurrentUserId,
-} from "@/services/inAppNotifications";
+  canSendOfferOnRequest,
+  submitServiceRequestOffer,
+} from "@/services/serviceRequests";
+import { addInAppNotification } from "@/services/inAppNotifications";
 
 const GREEN = "#159447";
 
@@ -43,18 +44,26 @@ export default function RequestDetailModal({
     setOfferPrice("");
   };
 
+  const offerGate = request
+    ? canSendOfferOnRequest(request)
+    : { ok: false as const, reason: "missing" as const };
+  const showSendOffer = Boolean(offerGate.ok);
+
   const sendOffer = () => {
     if (!request) return;
     const amount = offerPrice.replace(/[^\d]/g, "");
     if (!amount) return;
 
-    const recipientId =
-      request.createdByUserId &&
-      request.createdByUserId !== getCurrentUserId()
-        ? request.createdByUserId
-        : getCurrentUserId();
+    const result = submitServiceRequestOffer({
+      requestId: request.id,
+      amount: Number(amount),
+    });
+    if (!result?.ok) {
+      closeOffer();
+      return;
+    }
     addInAppNotification({
-      userId: recipientId,
+      userId: result.recipientUserId,
       type: "general",
       title: "New Offer",
       body: `Someone sent an offer of \u20a6${Number(amount).toLocaleString()} on "${request.title}".`,
@@ -98,7 +107,7 @@ export default function RequestDetailModal({
                   {images.map((imageSource, index) => (
                     <Image
                       key={`${request.id}-image-${index}`}
-                      source={{ uri: imageSource }}
+                      source={imageSource as any}
                       style={[styles.image, { width }]}
                       resizeMode="cover"
                     />
@@ -177,14 +186,14 @@ export default function RequestDetailModal({
 
                   <View style={styles.metaItem}>
                     <Ionicons
-                      name="calendar-outline"
+                      name="layers-outline"
                       size={18}
                       color="#6B7280"
                     />
                     <View style={styles.metaTextWrap}>
-                      <Text style={styles.metaLabel}>Preferred date</Text>
+                      <Text style={styles.metaLabel}>Offers</Text>
                       <Text style={styles.metaValue}>
-                        {request.preferredDate}
+                        {request.offersCount ?? 0}/{request.maxOffers ?? 5}
                       </Text>
                     </View>
                   </View>
@@ -216,21 +225,37 @@ export default function RequestDetailModal({
                   {images.map((imageSource, index) => (
                     <Image
                       key={`thumb-${index}`}
-                      source={{ uri: imageSource }}
+                      source={imageSource as any}
                       style={styles.thumb}
                       resizeMode="cover"
                     />
                   ))}
                 </ScrollView>
 
-                <TouchableOpacity
-                  style={styles.ctaButton}
-                  activeOpacity={0.85}
-                  onPress={() => setShowOffer(true)}
-                >
-                  <Ionicons name="paper-plane-outline" size={20} color="#fff" />
-                  <Text style={styles.ctaText}>Send Offer</Text>
-                </TouchableOpacity>
+                {showSendOffer && (
+                  <TouchableOpacity
+                    style={styles.ctaButton}
+                    activeOpacity={0.85}
+                    onPress={() => setShowOffer(true)}
+                  >
+                    <Ionicons
+                      name="paper-plane-outline"
+                      size={20}
+                      color="#fff"
+                    />
+                    <Text style={styles.ctaText}>Send Offer</Text>
+                  </TouchableOpacity>
+                )}
+                {!showSendOffer && offerGate.reason === "full" && (
+                  <Text style={styles.offersFullText}>
+                    This request has received the maximum number of offers.
+                  </Text>
+                )}
+                {!showSendOffer && offerGate.reason === "own" && (
+                  <Text style={styles.offersFullText}>
+                    You cannot send an offer on your own request.
+                  </Text>
+                )}
               </View>
             </ScrollView>
           )}
@@ -281,7 +306,11 @@ export default function RequestDetailModal({
                     disabled={!offerPrice.replace(/[^\d]/g, "")}
                     onPress={sendOffer}
                   >
-                    <Ionicons name="paper-plane-outline" size={20} color="#fff" />
+                    <Ionicons
+                      name="paper-plane-outline"
+                      size={20}
+                      color="#fff"
+                    />
                     <Text style={styles.ctaText}>Send Offer</Text>
                   </TouchableOpacity>
                 </Pressable>
@@ -473,6 +502,14 @@ const styles = StyleSheet.create({
   },
   ctaDisabled: {
     opacity: 0.45,
+  },
+  offersFullText: {
+    fontSize: 13,
+    color: "#6B7280",
+    textAlign: "center",
+    marginTop: 8,
+    marginBottom: 4,
+    fontWeight: "600",
   },
   offerBackdrop: {
     flex: 1,
