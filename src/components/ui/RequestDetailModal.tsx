@@ -10,8 +10,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useWindowDimensions,
   View,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  LayoutChangeEvent,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -33,8 +35,8 @@ export default function RequestDetailModal({
   request,
   onClose,
 }: RequestDetailModalProps) {
-  const { width } = useWindowDimensions();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [imageWidth, setImageWidth] = useState(0);
   const [showOffer, setShowOffer] = useState(false);
   const [offerPrice, setOfferPrice] = useState("");
   const images = request?.images ?? [];
@@ -72,6 +74,20 @@ export default function RequestDetailModal({
     onClose();
   };
 
+  const onImageLayout = (e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    if (w > 0 && w !== imageWidth) setImageWidth(w);
+  };
+
+  const onImageScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const pageWidth = e.nativeEvent.layoutMeasurement.width || imageWidth;
+    if (pageWidth <= 0) return;
+    const currentIndex = Math.round(
+      e.nativeEvent.contentOffset.x / pageWidth,
+    );
+    setActiveImageIndex(currentIndex);
+  };
+
   return (
     <Modal
       visible={!!request}
@@ -91,49 +107,69 @@ export default function RequestDetailModal({
               bounces={false}
               contentContainerStyle={styles.scrollContent}
             >
-              <View style={styles.imageContainer}>
-                <ScrollView
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  onMomentumScrollEnd={(event) => {
-                    const pageWidth = event.nativeEvent.layoutMeasurement.width;
-                    const currentIndex = Math.round(
-                      event.nativeEvent.contentOffset.x / pageWidth,
-                    );
-                    setActiveImageIndex(currentIndex);
-                  }}
-                >
-                  {images.map((imageSource, index) => (
-                    <Image
-                      key={`${request.id}-image-${index}`}
-                      source={imageSource as any}
-                      style={[styles.image, { width }]}
-                      resizeMode="cover"
-                    />
-                  ))}
-                </ScrollView>
+              {images.length > 0 ? (
+                <View style={styles.imageContainer} onLayout={onImageLayout}>
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={onImageScroll}
+                  >
+                    {images.map((imageSource, index) => (
+                      <Image
+                        key={`${request.id}-image-${index}`}
+                        source={imageSource as any}
+                        style={[
+                          styles.image,
+                          imageWidth > 0 ? { width: imageWidth } : null,
+                        ]}
+                        resizeMode="cover"
+                      />
+                    ))}
+                  </ScrollView>
 
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={onClose}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="close" size={22} color="#111827" />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={onClose}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="close" size={22} color="#111827" />
+                  </TouchableOpacity>
 
-                <View style={styles.dotsContainer}>
-                  {images.map((_, index) => (
-                    <View
-                      key={`dot-${index}`}
-                      style={[
-                        styles.dot,
-                        index === activeImageIndex && styles.dotActive,
-                      ]}
-                    />
-                  ))}
+                  {images.length > 1 ? (
+                    <View style={styles.dotsContainer}>
+                      {images.map((_, index) => (
+                        <View
+                          key={`dot-${index}`}
+                          style={[
+                            styles.dot,
+                            index === activeImageIndex && styles.dotActive,
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  ) : null}
+
+                  {images.length > 1 ? (
+                    <View style={styles.pageBadge}>
+                      <Text style={styles.pageBadgeText}>
+                        {activeImageIndex + 1}/{images.length}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
-              </View>
+              ) : (
+                <View style={styles.imageContainerEmpty}>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={onClose}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="close" size={22} color="#111827" />
+                  </TouchableOpacity>
+                  <Ionicons name="image-outline" size={40} color="#9CA3AF" />
+                </View>
+              )}
 
               <View style={styles.contentWrap}>
                 <View style={styles.headerRow}>
@@ -216,21 +252,27 @@ export default function RequestDetailModal({
                 <Text style={styles.sectionTitle}>Description</Text>
                 <Text style={styles.description}>{request.description}</Text>
 
-                <Text style={styles.sectionTitle}>Photos ({images.length})</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.thumbRow}
-                >
-                  {images.map((imageSource, index) => (
-                    <Image
-                      key={`thumb-${index}`}
-                      source={imageSource as any}
-                      style={styles.thumb}
-                      resizeMode="cover"
-                    />
-                  ))}
-                </ScrollView>
+                {images.length > 0 ? (
+                  <>
+                    <Text style={styles.sectionTitle}>
+                      Photos ({images.length})
+                    </Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.thumbRow}
+                    >
+                      {images.map((imageSource, index) => (
+                        <Image
+                          key={`thumb-${index}`}
+                          source={imageSource as any}
+                          style={styles.thumb}
+                          resizeMode="cover"
+                        />
+                      ))}
+                    </ScrollView>
+                  </>
+                ) : null}
 
                 {showSendOffer && (
                   <TouchableOpacity
@@ -341,6 +383,13 @@ const styles = StyleSheet.create({
     height: 280,
     backgroundColor: "#E5E7EB",
   },
+  imageContainerEmpty: {
+    width: "100%",
+    height: 200,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   image: {
     height: 280,
   },
@@ -376,6 +425,20 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     backgroundColor: "#FFFFFF",
+  },
+  pageBadge: {
+    position: "absolute",
+    right: 16,
+    bottom: 24,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  pageBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
   },
   contentWrap: {
     marginTop: -8,
@@ -429,7 +492,7 @@ const styles = StyleSheet.create({
   },
   locationRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 4,
     marginTop: 4,
   },
