@@ -23,7 +23,6 @@ import * as Location from "expo-location";
 import {
   getProfessionalById,
   getDistanceKm,
-  starsFromReviewCount,
   addReview,
   type ProReview,
 } from "@/services/professionals";
@@ -240,13 +239,6 @@ export default function ProfessionalProfile() {
         } km away`
       : pro.city;
 
-  const starCount = starsFromReviewCount(
-    reviews.length,
-  );
-
-  const reviewsToNextStar =
-    10 - (reviews.length % 10);
-
   return (
     <SafeAreaView
       style={styles.safe}
@@ -337,37 +329,11 @@ export default function ProfessionalProfile() {
             )}
           </View>
 
-          <View style={styles.ratingRow}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Ionicons
-                key={star}
-                name={
-                  star <= starCount
-                    ? "star"
-                    : "star-outline"
-                }
-                size={18}
-                color={GREEN}
-              />
-            ))}
-
-            <Text style={styles.ratingText}>
-              {starCount}/5 · {reviews.length}{" "}
-              {reviews.length === 1
-                ? "review"
-                : "reviews"}
+          {pro.bio ? (
+            <Text style={styles.bioText} numberOfLines={3}>
+              {pro.bio}
             </Text>
-          </View>
-
-          {starCount < 5 && (
-            <Text style={styles.starHint}>
-              {reviewsToNextStar} more review
-              {reviewsToNextStar === 1
-                ? ""
-                : "s"}{" "}
-              to unlock the next star
-            </Text>
-          )}
+          ) : null}
 
           <View style={styles.locationRow}>
             <Ionicons
@@ -387,6 +353,39 @@ export default function ProfessionalProfile() {
               </Text>
             )}
           </View>
+
+          {(pro.verified || pro.subscribed) && (
+            <View style={styles.badgeRow}>
+              {pro.verified ? (
+                <View style={styles.badgeItem}>
+                  <MaterialCommunityIcons
+                    name="shield-check"
+                    size={28}
+                    color={GREEN}
+                  />
+                  <View style={styles.badgeTextWrap}>
+                    <Text style={styles.badgeTitle}>Verified</Text>
+                    <Text style={styles.badgeSub}>
+                      Identity & documents verified
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+              {pro.subscribed ? (
+                <View style={styles.badgeItem}>
+                  <MaterialCommunityIcons
+                    name="shield-check"
+                    size={28}
+                    color="#D4AF37"
+                  />
+                  <View style={styles.badgeTextWrap}>
+                    <Text style={styles.badgeTitle}>Premium</Text>
+                    <Text style={styles.badgeSub}>Active subscription</Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          )}
 
           <View style={styles.tabs}>
             {(
@@ -808,30 +807,47 @@ const styles = StyleSheet.create({
   premiumShield: {
     marginLeft: 4,
   },
-  ratingRow: {
+  bioText: {
+    textAlign: "center",
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#6B7280",
+    paddingHorizontal: 24,
+    marginBottom: 10,
+  },
+  badgeRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
-    marginBottom: 4,
+    gap: 20,
+    marginBottom: 14,
+    paddingHorizontal: 12,
   },
-  ratingText: {
+  badgeItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    maxWidth: "48%",
+  },
+  badgeTextWrap: {
+    flexShrink: 1,
+  },
+  badgeTitle: {
     fontSize: 13,
-    color: "#6B7280",
-    marginLeft: 6,
+    fontWeight: "700",
+    color: "#111827",
   },
-  starHint: {
-    textAlign: "center",
-    fontSize: 12,
-    color: "#9CA3AF",
-    marginBottom: 8,
+  badgeSub: {
+    fontSize: 11,
+    color: "#6B7280",
+    marginTop: 1,
   },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    marginBottom: 18,
+    marginBottom: 14,
   },
   locationText: {
     fontSize: 13,
