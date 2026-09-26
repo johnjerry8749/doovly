@@ -658,6 +658,7 @@ export default function RequestsScreen() {
           style={styles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
+          <Pressable style={{ flex: 1 }} onPress={closeChat} />
           <View style={styles.chatSheet}>
             <View style={styles.chatHeader}>
               <Text style={styles.modalTitle} numberOfLines={1}>
@@ -671,7 +672,8 @@ export default function RequestsScreen() {
               ref={commentListRef}
               data={chatComments}
               keyExtractor={(c) => c.id}
-              contentContainerStyle={{ padding: 16, flexGrow: 1 }}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
               renderItem={({ item: c }) => (
                 <View style={styles.chatBubble}>
                   <TouchableOpacity
@@ -937,11 +939,12 @@ const styles = StyleSheet.create({
   naira: { fontSize: 16, color: "#9CA3AF", marginRight: 6 },
   offerInput: { flex: 1, fontSize: 16, color: "#111", paddingVertical: 12 },
   chatSheet: {
-    flex: 1,
-    marginTop: 80,
+    height: "50%",
+    maxHeight: "50%",
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    overflow: "hidden",
   },
   chatHeader: {
     flexDirection: "row",
