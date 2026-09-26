@@ -374,10 +374,12 @@ export function formatBookingChatMessage(booking: Booking): string {
         ? "Paid (released)"
         : booking.paymentStatus === "held"
           ? "Payment secured in Paystack"
-          : booking.paymentStatus;
+          : booking.paymentStatus === "refunded"
+            ? "Refunded"
+            : booking.paymentStatus;
 
   return [
-    `Hi ${booking.providerName},`,
+    `Hi ${booking.professionalName},`,
     ``,
     `This is about my booking:`,
     `• Booking ID: ${booking.id}`,
@@ -414,6 +416,46 @@ export function getOrCreateConversationForProfessional(
       name: pro?.name ?? "Professional",
       image: pro?.image ?? 0,
       verified: pro?.verified,
+      online: false,
+    },
+    lastMessage: "",
+    lastMessageAt: "Now",
+    unreadCount: 0,
+  };
+
+  conversations = [conv, ...conversations];
+  if (!messagesByConv[id]) messagesByConv[id] = [];
+  return conv;
+}
+
+/**
+ * Open chat from a booking card.
+ * - Booked tab  → chat with the professional
+ * - Received tab → chat with the customer
+ */
+export function getOrCreateConversationForBooking(
+  booking: Booking,
+  mainTab: "booked" | "received",
+): Conversation {
+  if (mainTab === "booked") {
+    return getOrCreateConversationForProfessional(booking.professionalId);
+  }
+
+  // Received: other party is the customer
+  const participantId = booking.customerId;
+  const existing = conversations.find(
+    (c) => String(c.participant.id) === String(participantId),
+  );
+  if (existing) return existing;
+
+  const id = `c-customer-${participantId}`;
+
+  const conv: Conversation = {
+    id,
+    participant: {
+      id: String(participantId),
+      name: booking.customerName,
+      image: booking.customerImage,
       online: false,
     },
     lastMessage: "",
