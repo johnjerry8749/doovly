@@ -35,7 +35,7 @@ export type ServiceRequest = {
   iconBackground: string;
   latitude?: number;
   longitude?: number;
-  /** Local require() assets or remote URIs */
+  /** Local require() assets or remote URIs — up to 4 photos */
   images: ImageSourcePropType[];
   description: string;
   isNew: boolean;
@@ -70,7 +70,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#FFF1D5",
     latitude: 6.4281,
     longitude: 3.4219,
-    images: [AVATAR_1, AVATAR_3],
+    images: [AVATAR_1, AVATAR_3, AVATAR_2, AVATAR_4],
     description:
       "Bathroom pipe is leaking under the sink. Need someone experienced who can fix it today if possible.",
     isNew: true,
@@ -104,7 +104,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#DDF2FF",
     latitude: 6.4474,
     longitude: 3.4722,
-    images: [AVATAR_3],
+    images: [AVATAR_3, AVATAR_1, AVATAR_4],
     description:
       "Power keeps tripping in the living room. Looking for a licensed electrician to diagnose and fix.",
     isNew: true,
@@ -188,7 +188,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#FCE4EC",
     latitude: 6.4969,
     longitude: 3.3481,
-    images: [AVATAR_2, AVATAR_4],
+    images: [AVATAR_2, AVATAR_4, AVATAR_1],
     description:
       "Need gel nails and a full manicure. Looking for a neat and experienced nail tech.",
     isNew: false,
@@ -222,7 +222,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#DDF2FF",
     latitude: 4.8156,
     longitude: 7.0498,
-    images: [AVATAR_1],
+    images: [AVATAR_1, AVATAR_3],
     description:
       "Need a full house wiring safety check. Some outlets are warm and lights flicker.",
     isNew: false,
@@ -247,7 +247,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#FFF1D5",
     latitude: 9.0765,
     longitude: 7.3986,
-    images: [AVATAR_1, AVATAR_3],
+    images: [AVATAR_1, AVATAR_3, AVATAR_4, AVATAR_2],
     description:
       "Kitchen sink is fully blocked. Need a plumber who can clear it and check the pipes.",
     isNew: true,
@@ -272,7 +272,7 @@ export const SERVICE_REQUESTS: ServiceRequest[] = [
     iconBackground: "#D1FAE5",
     latitude: 6.4474,
     longitude: 3.4722,
-    images: [AVATAR_4, AVATAR_2],
+    images: [AVATAR_4, AVATAR_2, AVATAR_1],
     description:
       "Looking for a reliable cleaner to deep clean my 2 bedroom apartment. Must bring own equipment.",
     isNew: true,
