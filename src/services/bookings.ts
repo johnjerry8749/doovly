@@ -3,11 +3,10 @@
  * ----------------
  * Screens import ONLY from here.
  *
- * NOW  → reads mock data from src/data/booking.ts
- * LATER → swap the body of each function to call apiRequest("/bookings...")
+ * NOW  → mock data from src/data/booking.ts
+ * LATER → swap function bodies to apiRequest("/bookings...")
  *
- * Do not change function names when you add the backend — only the insides.
- * Functions stay synchronous so the bookings screen does not need a loading rewrite.
+ * Keep function names and return types stable when wiring the backend.
  */
 
 import {
@@ -24,27 +23,38 @@ export type { Booking, BookingStatus };
 
 export { statusColors };
 
-/** Jobs the current user booked with a professional. */
-export function listBookedJobs(): Booking[] {
-  // TODO backend: return apiRequest<Booking[]>("/bookings?type=booked")
-  return listBookedFromData();
+/** Active list statuses on Bookings tab */
+export const BOOKING_LIST_STATUSES: BookingStatus[] = [
+  "Pending",
+  "Ongoing",
+  "Declined",
+];
+
+function onlyListStatuses(jobs: Booking[]): Booking[] {
+  return jobs.filter((j) => BOOKING_LIST_STATUSES.includes(j.status));
 }
 
-/** Jobs the current user received as a professional. */
+/** Jobs the current user booked (customer side). */
+export function listBookedJobs(): Booking[] {
+  // TODO backend: return apiRequest<Booking[]>("/bookings?role=customer")
+  return onlyListStatuses(listBookedFromData());
+}
+
+/** Jobs the current user received (professional side). */
 export function listReceivedJobs(): Booking[] {
-  // TODO backend: return apiRequest<Booking[]>("/bookings?type=received")
-  return listReceivedFromData();
+  // TODO backend: return apiRequest<Booking[]>("/bookings?role=professional")
+  return onlyListStatuses(listReceivedFromData());
 }
 
 export function getBookingById(
   id: string,
   type: "booked" | "received" = "booked",
 ): Booking | undefined {
-  // TODO backend: return apiRequest<Booking>(`/bookings/${id}?type=${type}`)
+  // TODO backend: return apiRequest<Booking>(`/bookings/${id}`)
   return getBookingFromData(id, type);
 }
 
 export function getProfessionalForBooking(booking: Booking) {
-  // TODO backend: professional comes on the booking payload, or GET /professionals/:id
+  // TODO backend: include professional on booking payload or GET /professionals/:id
   return getProfessionalFromData(booking);
 }
