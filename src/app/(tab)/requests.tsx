@@ -131,6 +131,9 @@ const findProfessionalForUser = (
   return undefined;
 };
 
+/** Prevent double-tap from stacking multiple profile screens */
+let isOpeningProfile = false;
+
 const openUserProfile = ({
   userId,
   userName,
@@ -138,12 +141,17 @@ const openUserProfile = ({
   userId?: string | number | null;
   userName?: string | null;
 }) => {
+  if (isOpeningProfile) return;
   const professional = findProfessionalForUser(userId, userName);
   if (!professional) return;
+  isOpeningProfile = true;
   router.push({
     pathname: "/professional/[id]",
     params: { id: String(professional.id), from: "requests" },
   });
+  setTimeout(() => {
+    isOpeningProfile = false;
+  }, 900);
 };
 
 export default function RequestsScreen() {
