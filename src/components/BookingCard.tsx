@@ -33,13 +33,10 @@ export function BookingCard({ item, mainTab }: Props) {
   const displayImage =
     mainTab === "booked" ? item.professionalImage : item.customerImage;
 
-  const canCancel =
-    item.status === "Pending" ||
-    item.status === "Accepted" ||
-    item.status === "Ongoing";
+  /** Customer (booked) may cancel only while Pending */
+  const showCancel = mainTab === "booked" && item.status === "Pending";
 
   const openChat = () => {
-    // View existing booking chat only — never resend booking details
     const conv = openBookingChat(item, mainTab);
     router.push({
       pathname: "/chat/[id]",
@@ -112,16 +109,14 @@ export function BookingCard({ item, mainTab }: Props) {
           <Text style={styles.chatButtonText}>Open Chat</Text>
         </TouchableOpacity>
 
-        {canCancel && (
+        {showCancel && (
           <TouchableOpacity
             style={styles.cancelButton}
             activeOpacity={0.8}
             onPress={() =>
               Alert.alert(
-                mainTab === "booked" ? "Cancel Booking" : "Cancel Job",
-                mainTab === "booked"
-                  ? "This booking will be cancelled."
-                  : "This job will be cancelled.",
+                "Cancel Booking",
+                "This booking will be cancelled.",
               )
             }
           >
