@@ -24,15 +24,12 @@ export type ChatMessage = {
   senderId: string;
   text: string;
   createdAt: string;
-  /** true = current user */
   isMine: boolean;
-  /** Optional location payload (only usable while sharing is active) */
   location?: {
     label: string;
     latitude?: number;
     longitude?: number;
   };
-  /** System-style: share started / stopped */
   kind?: "text" | "location" | "location_stopped";
 };
 
@@ -43,10 +40,6 @@ export type Conversation = {
   lastMessageAt: string;
   unreadCount: number;
 };
-
-// =====================================================
-// MOCK DATA
-// =====================================================
 
 const CURRENT_USER_ID = "u1";
 
@@ -193,10 +186,7 @@ const messagesByConv: Record<string, ChatMessage[]> = {
   ],
 };
 
-/** Per-conversation: is the current user actively sharing location? */
 const locationSharingByConv: Record<string, boolean> = {};
-
-/** Last shared location label (for open-in-maps while active) */
 const lastSharedLocationByConv: Record<
   string,
   { label: string; latitude?: number; longitude?: number }
@@ -223,38 +213,22 @@ function pushMessage(conversationId: string, msg: ChatMessage) {
   }
 }
 
-// =====================================================
-// API-SHAPED FUNCTIONS
-// =====================================================
-
-/** NOW → mock | LATER → GET /conversations */
 export function listConversations(): Conversation[] {
-  // TODO backend: return apiRequest<Conversation[]>("/conversations")
   return [...conversations];
 }
 
-/** NOW → mock | LATER → GET /conversations/:id/messages */
 export function getMessages(conversationId: string): ChatMessage[] {
-  // TODO backend: return apiRequest(`/conversations/${conversationId}/messages`)
   return [...(messagesByConv[conversationId] ?? [])];
 }
 
-/** NOW → mock | LATER → GET /conversations/:id */
 export function getConversation(conversationId: string): Conversation | undefined {
-  // TODO backend: return apiRequest(`/conversations/${conversationId}`)
   return conversations.find((c) => c.id === conversationId);
 }
 
-/** NOW → mock | LATER → POST /conversations/:id/messages */
 export async function sendMessage(
   conversationId: string,
   text: string,
 ): Promise<ChatMessage> {
-  // TODO backend:
-  // return apiRequest(`/conversations/${conversationId}/messages`, {
-  //   method: "POST",
-  //   body: JSON.stringify({ text }),
-  // })
   if (!canSendMessage(conversationId)) {
     throw new Error("Messaging is locked until the booking is accepted");
   }
@@ -274,16 +248,10 @@ export async function sendMessage(
   return msg;
 }
 
-/** Mark conversation as read (mock). */
 export function markConversationRead(conversationId: string) {
-  // TODO backend: POST /conversations/:id/read
   const conv = conversations.find((c) => c.id === conversationId);
   if (conv) conv.unreadCount = 0;
 }
-
-// =====================================================
-// LOCATION SHARING (privacy: share only in chat, stop anytime)
-// =====================================================
 
 export function isSharingLocation(conversationId: string): boolean {
   return !!locationSharingByConv[conversationId];
@@ -294,10 +262,6 @@ export function getActiveSharedLocation(conversationId: string) {
   return lastSharedLocationByConv[conversationId] ?? null;
 }
 
-/**
- * Share location in this chat. Opens as a location bubble; recipient can open maps
- * only while sharing remains active.
- */
 export async function shareLocation(
   conversationId: string,
   location: { label: string; latitude?: number; longitude?: number },
@@ -322,9 +286,6 @@ export async function shareLocation(
   return msg;
 }
 
-/**
- * Stop sharing location for privacy. After this, old location bubbles cannot open maps.
- */
 export async function stopSharingLocation(
   conversationId: string,
 ): Promise<ChatMessage | null> {
@@ -349,7 +310,6 @@ export async function stopSharingLocation(
   return msg;
 }
 
-/** Whether a location message can still open maps (sharing still active). */
 export function canOpenSharedLocation(
   conversationId: string,
   message: ChatMessage,
@@ -358,14 +318,13 @@ export function canOpenSharedLocation(
   return isSharingLocation(conversationId);
 }
 
-// =====================================================
-// BOOKING → CHAT HELPERS
-// =====================================================
+export type BookingChatStatus = "Pending" | "Accepted" | "Declined";
 
-/**
- * Build a prefilled message with booking id + details.
- * Location is NOT included by default (privacy — share only via Share Location).
- */
+const bookingStatusByConv: Record<string, BookingChatStatus> = {};
+const professionalIdByConv: Record<string, string> = {};
+/** booking id → conversation id so history reopens the same thread */
+const conversationIdByBookingId: Record<string, string> = {};
+
 export function formatBookingChatMessage(booking: Booking): string {
   const amount =
     booking.amount != null ? `₦${booking.amount.toLocaleString()}` : "—";
@@ -384,15 +343,9 @@ export function formatBookingChatMessage(booking: Booking): string {
   ].join("\n");
 }
 
-/**
- * Find existing conversation with a professional, or create one (mock).
- * NOW  → in-memory
- * LATER → GET /conversations?participantId= or POST /conversations
- */
 export function getOrCreateConversationForProfessional(
   professionalId: string,
 ): Conversation {
-  // TODO backend: return apiRequest(`/conversations?with=${professionalId}`) or create
   const existing = conversations.find(
     (c) => String(c.participant.id) === String(professionalId),
   );
@@ -420,57 +373,99 @@ export function getOrCreateConversationForProfessional(
   return conv;
 }
 
+function syncChatLockFromBooking(
+  conversationId: string,
+  status: Booking["status"],
+) {
+  if (status === "Pending") {
+    bookingStatusByConv[conversationId] = "Pending";
+  } else if (status === "Declined" || status === "Cancelled") {
+    bookingStatusByConv[conversationId] = "Declined";
+  } else {
+    bookingStatusByConv[conversationId] = "Accepted";
+  }
+}
+
 /**
- * Open chat from a booking card.
- * - Booked tab  → chat with the professional
- * - Received tab → chat with the customer
+ * Open chat from booking history.
+ * Reuses the conversation from book time — does NOT resend booking details.
+ * Messaging stays locked until the professional accepts.
  */
+export function openBookingChat(
+  booking: Booking,
+  mainTab: "booked" | "received",
+): Conversation {
+  const linkedId = conversationIdByBookingId[booking.id];
+  if (linkedId) {
+    const existing = conversations.find((c) => c.id === linkedId);
+    if (existing) {
+      syncChatLockFromBooking(linkedId, booking.status);
+      return existing;
+    }
+  }
+
+  const id = `booking-hist-${booking.id}`;
+  let conv = conversations.find((c) => c.id === id);
+
+  if (!conv) {
+    const isBooked = mainTab === "booked";
+    conv = {
+      id,
+      participant: isBooked
+        ? {
+            id: String(booking.professionalId),
+            name: booking.professionalName,
+            image: booking.professionalImage,
+            verified: booking.professionalVerified,
+            online: false,
+          }
+        : {
+            id: String(booking.customerId),
+            name: booking.customerName,
+            image: booking.customerImage,
+            online: false,
+          },
+      lastMessage:
+        booking.status === "Pending"
+          ? `Booking request: ${booking.title}`
+          : `Booking: ${booking.title}`,
+      lastMessageAt: "Earlier",
+      unreadCount: 0,
+    };
+    conversations = [conv, ...conversations];
+
+    // One system snapshot only — never appended again on reopen
+    if (!messagesByConv[id]) {
+      messagesByConv[id] = [
+        {
+          id: `sys-${booking.id}`,
+          conversationId: id,
+          senderId: "system",
+          text:
+            booking.status === "Pending"
+              ? `Booking request: ${booking.title}\nDate: ${booking.date}\nWaiting for professional to accept.`
+              : `Booking: ${booking.title}\nDate: ${booking.date}\nStatus: ${booking.status}`,
+          createdAt: "Earlier",
+          isMine: false,
+          kind: "text",
+        },
+      ];
+    }
+  }
+
+  conversationIdByBookingId[booking.id] = id;
+  professionalIdByConv[id] = String(booking.professionalId);
+  syncChatLockFromBooking(id, booking.status);
+  return conv;
+}
+
+/** @deprecated use openBookingChat */
 export function getOrCreateConversationForBooking(
   booking: Booking,
   mainTab: "booked" | "received",
 ): Conversation {
-  if (mainTab === "booked") {
-    return getOrCreateConversationForProfessional(booking.professionalId);
-  }
-
-  // Received: other party is the customer
-  const participantId = booking.customerId;
-  const existing = conversations.find(
-    (c) => String(c.participant.id) === String(participantId),
-  );
-  if (existing) return existing;
-
-  const id = `c-customer-${participantId}`;
-
-  const conv: Conversation = {
-    id,
-    participant: {
-      id: String(participantId),
-      name: booking.customerName,
-      image: booking.customerImage,
-      online: false,
-    },
-    lastMessage: "",
-    lastMessageAt: "Now",
-    unreadCount: 0,
-  };
-
-  conversations = [conv, ...conversations];
-  if (!messagesByConv[id]) messagesByConv[id] = [];
-  return conv;
+  return openBookingChat(booking, mainTab);
 }
-
-// =====================================================
-// BOOKING STATUS ON CONVERSATION (Accept / Decline flow)
-// =====================================================
-
-export type BookingChatStatus = "Pending" | "Accepted" | "Declined";
-
-/** Store booking status per conversation (mock) */
-const bookingStatusByConv: Record<string, BookingChatStatus> = {};
-
-/** Who is the professional in this conversation */
-const professionalIdByConv: Record<string, string> = {};
 
 export function getBookingStatus(conversationId: string): BookingChatStatus {
   return bookingStatusByConv[conversationId] ?? "Accepted";
@@ -484,12 +479,15 @@ export function isProfessionalInConversation(
   conversationId: string,
   currentUserId: string,
 ): boolean {
-  return String(professionalIdByConv[conversationId] ?? "") === String(currentUserId);
+  return (
+    String(professionalIdByConv[conversationId] ?? "") ===
+    String(currentUserId)
+  );
 }
 
 /**
- * Create a new booking conversation in Pending state.
- * Called when customer confirms a booking.
+ * Called once when customer confirms a booking (bookme).
+ * Creates Pending chat + initial system message. History reopens this thread.
  */
 export function createBookingConversation(input: {
   professionalId: string;
@@ -498,6 +496,7 @@ export function createBookingConversation(input: {
   professionalVerified?: boolean;
   bookingTitle: string;
   bookingDate: string;
+  bookingId?: string;
 }): Conversation {
   const id = `booking-${input.professionalId}-${Date.now()}`;
 
@@ -520,6 +519,10 @@ export function createBookingConversation(input: {
   bookingStatusByConv[id] = "Pending";
   professionalIdByConv[id] = String(input.professionalId);
 
+  if (input.bookingId) {
+    conversationIdByBookingId[input.bookingId] = id;
+  }
+
   const systemMsg: ChatMessage = {
     id: `sys-${Date.now()}`,
     conversationId: id,
@@ -534,7 +537,6 @@ export function createBookingConversation(input: {
   return conv;
 }
 
-/** Professional accepts the booking */
 export function acceptBooking(
   conversationId: string,
   professionalName: string,
@@ -555,7 +557,6 @@ export function acceptBooking(
   return msg;
 }
 
-/** Professional declines the booking */
 export function declineBooking(
   conversationId: string,
   professionalName: string,
