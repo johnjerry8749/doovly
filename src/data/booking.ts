@@ -9,6 +9,9 @@
  *            professionalId must NOT be "1" (logged-in pro)
  * Received = current user is the professional (id "1")
  *
+ * Accepted service-request offers are pushed as Ongoing only
+ * (never Pending) via appendAcceptedOfferBooking.
+ *
  * LATER: replace BOOKED_JOBS / RECEIVED_JOBS with API payloads.
  */
 
@@ -74,13 +77,13 @@ function createBooking(input: {
   location: string;
   status: BookingStatus;
   amount?: number;
+  professionalName?: string;
+  professionalImage?: number;
+  professionalVerified?: boolean;
+  customerName?: string;
+  customerImage?: number;
 }): Booking {
   const professional = getProfessional(input.professionalId);
-  if (!professional) {
-    throw new Error(
-      `Professional with ID "${input.professionalId}" was not found.`,
-    );
-  }
   const customer = getCustomer(input.customerId);
 
   return {
@@ -88,11 +91,14 @@ function createBooking(input: {
     professionalId: input.professionalId,
     customerId: input.customerId,
     title: input.title,
-    professionalName: professional.name,
-    professionalVerified: professional.verified,
-    professionalImage: professional.image,
-    customerName: customer.name,
-    customerImage: customer.image,
+    professionalName:
+      input.professionalName ?? professional?.name ?? "Professional",
+    professionalVerified:
+      input.professionalVerified ?? professional?.verified ?? false,
+    professionalImage:
+      input.professionalImage ?? professional?.image ?? require("@/assets/profile_1.jpg"),
+    customerName: input.customerName ?? customer.name,
+    customerImage: input.customerImage ?? customer.image,
     rating: input.rating,
     reviews: input.reviews,
     date: input.date,
@@ -208,4 +214,60 @@ export function getProfessionalForBooking(booking: Booking) {
   return PROFESSIONALS.find(
     (professional) => professional.id === booking.professionalId,
   );
+}
+
+/**
+ * Push an accepted service-request offer into history as Ongoing only.
+ * Never stores Pending offers here.
+ */
+export function appendAcceptedOfferBooking(input: {
+  title: string;
+  amount: number;
+  location: string;
+  professionalId: string;
+  professionalName: string;
+  professionalImage: number;
+  customerId: string;
+  customerName: string;
+  customerImage: number;
+}): Booking {
+  const id = `offer-accepted-${Date.now()}`;
+  const date = new Date().toLocaleDateString("en-NG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  const booking = createBooking({
+    id,
+    professionalId: input.professionalId,
+    customerId: input.customerId,
+    title: input.title,
+    rating: 5.0,
+    reviews: 0,
+    date,
+    location: input.location,
+    status: "Ongoing",
+    amount: input.amount,
+    professionalName: input.professionalName,
+    professionalImage: input.professionalImage,
+    professionalVerified: false,
+    customerName: input.customerName,
+    customerImage: input.customerImage,
+  });
+
+  // Place on the correct side of history for the current mock user (u1 / pro 1)
+  const currentProId = "1";
+  if (String(input.professionalId) === currentProId) {
+    RECEIVED_JOBS.unshift(booking);
+  } else if (String(input.customerId) === "u1") {
+    BOOKED_JOBS.unshift(booking);
+  } else {
+    // fallback: received if pro is current, else booked
+    RECEIVED_JOBS.unshift(booking);
+  }
+
+  return booking;
 }
