@@ -32,6 +32,9 @@ import {
   getCurrentUserId,
   addInAppNotification,
 } from "@/services/inAppNotifications";
+import { createOfferConversation } from "@/services/chat";
+import { getLoggedInProfessionalId } from "@/services/savedProviders";
+import { getProfessionalById } from "@/services/professionals";
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { useLocation } from "@/context/LocationContext";
@@ -358,12 +361,41 @@ export default function RequestsScreen() {
       body: `Someone sent an offer of ₦${amountNum.toLocaleString()} on "${offerRequest.title}".`,
     });
 
+    // First feature: open chat with request + offer amount (pending provider accept)
+    const offererProId = getLoggedInProfessionalId() ?? getCurrentUserId();
+    const offererPro = getProfessionalById(String(offererProId));
+    const locationLabel = [offerRequest.location, offerRequest.city]
+      .filter(Boolean)
+      .join(", ");
+
+    const conv = createOfferConversation({
+      requestId: offerRequest.id,
+      requestTitle: offerRequest.title,
+      requestCategory: offerRequest.category,
+      requestLocation: locationLabel,
+      requestDescription: offerRequest.description,
+      amount: amountNum,
+      requestOwnerId: String(
+        offerRequest.createdByUserId ?? result.recipientUserId,
+      ),
+      requestOwnerName: offerRequest.posterName || "Provider",
+      requestOwnerImage: offerRequest.posterAvatar as number,
+      offererProfessionalId: String(offererProId),
+      offererName: offererPro?.name ?? "You",
+      offererImage:
+        (offererPro?.image as number) ??
+        (require("@/assets/profile_1.jpg") as number),
+    });
+
     setAllRequests(listServiceRequests());
     closeOffer();
+
+    router.push({
+      pathname: "/chat/[id]",
+      params: { id: conv.id },
+    });
   };
 
-  // ORIGINAL render + modals + styles — restored from pre-spoil commit
-  // Full body continues in same file below (must not be truncated).
   const renderRequest = ({ item }: { item: ServiceRequest }) => {
     const liked = !!likedIds[item.id];
     const likesDisplay = (item.likesCount || 0) + (liked ? 1 : 0);
@@ -666,7 +698,10 @@ export default function RequestsScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <Pressable style={styles.modalOverlay} onPress={closeOffer}>
-            <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <Pressable
+              style={styles.modalSheet}
+              onPress={(e) => e.stopPropagation()}
+            >
               <Text style={styles.modalTitle}>Send Offer</Text>
               <Text style={styles.modalSub} numberOfLines={2}>
                 {offerRequest?.title}
@@ -738,7 +773,10 @@ export default function RequestsScreen() {
                   value={chatText}
                   onChangeText={setChatText}
                 />
-                <TouchableOpacity onPress={sendChatMessage} style={styles.commentSend}>
+                <TouchableOpacity
+                  onPress={sendChatMessage}
+                  style={styles.commentSend}
+                >
                   <Ionicons name="send" size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -752,7 +790,10 @@ export default function RequestsScreen() {
           style={styles.modalOverlay}
           onPress={() => setShowLocationModal(false)}
         >
-          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={styles.modalSheet}
+            onPress={(e) => e.stopPropagation()}
+          >
             <Text style={styles.modalTitle}>Location</Text>
             <TouchableOpacity style={styles.locOption} onPress={getUserLocation}>
               <Ionicons name="navigate" size={20} color={GREEN} />
@@ -768,7 +809,10 @@ export default function RequestsScreen() {
               <Ionicons name="business" size={20} color={GREEN} />
               <Text style={styles.locOptionText}>Choose city</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.locOption} onPress={viewAllInNigeria}>
+            <TouchableOpacity
+              style={styles.locOption}
+              onPress={viewAllInNigeria}
+            >
               <Ionicons name="globe" size={20} color={GREEN} />
               <Text style={styles.locOptionText}>All Nigeria</Text>
             </TouchableOpacity>
@@ -778,7 +822,10 @@ export default function RequestsScreen() {
 
       <Modal visible={showCityPicker} transparent animationType="slide">
         <Pressable style={styles.modalOverlay} onPress={closeCityPicker}>
-          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={styles.modalSheet}
+            onPress={(e) => e.stopPropagation()}
+          >
             <Text style={styles.modalTitle}>Select city</Text>
             <TextInput
               style={styles.citySearch}
@@ -820,8 +867,17 @@ const styles = StyleSheet.create({
   },
   headerTextWrap: { flex: 1, marginRight: 12 },
   headerTitle: { fontSize: 22, fontWeight: "800", color: "#111827" },
-  headerLocationRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
-  headerSubtitle: { fontSize: 13, color: "#6B7280", marginLeft: 4, maxWidth: 180 },
+  headerLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginLeft: 4,
+    maxWidth: 180,
+  },
   dropdownIcon: { marginLeft: 2 },
   createBtn: {
     flexDirection: "row",
@@ -871,13 +927,28 @@ const styles = StyleSheet.create({
   },
   posterRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   posterAvatarWrap: { marginRight: 10 },
-  posterAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#E5E7EB" },
+  posterAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#E5E7EB",
+  },
   posterInfo: { flex: 1, minWidth: 0 },
   posterName: { fontSize: 14, fontWeight: "700", color: "#111827" },
-  locationRow: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2 },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    marginTop: 2,
+  },
   locationText: { fontSize: 12, color: "#6B7280", flex: 1 },
   timeAgo: { fontSize: 12, color: "#9CA3AF" },
-  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8 },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 8,
+  },
   cardTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#111827" },
   newBadge: {
     backgroundColor: "#DCFCE7",
@@ -894,12 +965,27 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   categoryChipText: { fontSize: 12, fontWeight: "600", color: GREEN },
-  description: { fontSize: 14, color: "#4B5563", lineHeight: 20, marginBottom: 10 },
+  description: {
+    fontSize: 14,
+    color: "#4B5563",
+    lineHeight: 20,
+    marginBottom: 10,
+  },
   engagementRow: { flexDirection: "row", gap: 16, marginBottom: 8 },
   engagementBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
   engagementText: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
-  commentPreview: { flexDirection: "row", gap: 8, marginTop: 4, marginBottom: 4 },
-  commentAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E5E7EB" },
+  commentPreview: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  commentAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#E5E7EB",
+  },
   commentBody: { flex: 1 },
   commentName: { fontSize: 13, fontWeight: "700", color: "#111827" },
   commentText: { fontSize: 13, color: "#4B5563" },
@@ -910,7 +996,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   writeCommentHintText: { fontSize: 13, color: GREEN, fontWeight: "600" },
-  viewMoreComments: { fontSize: 13, color: GREEN, fontWeight: "600", marginTop: 4 },
+  viewMoreComments: {
+    fontSize: 13,
+    color: GREEN,
+    fontWeight: "600",
+    marginTop: 4,
+  },
   sendOfferBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -923,7 +1014,12 @@ const styles = StyleSheet.create({
   },
   sendOfferText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   emptyBox: { alignItems: "center", paddingVertical: 60 },
-  emptyTitle: { fontSize: 17, fontWeight: "700", color: "#111827", marginTop: 12 },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#111827",
+    marginTop: 12,
+  },
   emptyText: { fontSize: 13, color: "#9CA3AF", marginTop: 4 },
   modalOverlay: {
     flex: 1,
@@ -937,7 +1033,12 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 36,
   },
-  modalTitle: { fontSize: 18, fontWeight: "800", color: "#111827", marginBottom: 6 },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: 6,
+  },
   modalSub: { fontSize: 14, color: "#6B7280", marginBottom: 14 },
   offerField: {
     flexDirection: "row",
@@ -951,7 +1052,12 @@ const styles = StyleSheet.create({
   naira: { fontSize: 18, fontWeight: "700", color: "#111", marginRight: 6 },
   offerInput: { flex: 1, paddingVertical: 12, fontSize: 16, color: "#111" },
   commentRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
-  commentInputRow: { flexDirection: "row", gap: 8, marginTop: 10, alignItems: "center" },
+  commentInputRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+    alignItems: "center",
+  },
   commentInput: {
     flex: 1,
     borderWidth: 1,
