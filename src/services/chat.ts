@@ -6,15 +6,20 @@
  * NOW  → mock in-memory conversations
  * LATER → apiRequest + realtime (Supabase channels / websockets)
  *
- * Booking messaging lock:
- *   Pending  → locked (waiting for professional Accept)
- *   Ongoing  → unlocked (after Accept)
+ * Booking / Offer messaging lock:
+ *   Pending  → locked (waiting for acceptor)
+ *   Accepted → unlocked
  *   Declined → locked
- * Accept / Decline UI is only for the professional on the Received side.
+ * Accept / Decline UI:
+ *   Booking → professional (Received side)
+ *   Offer   → request owner (provider who posted the job)
  */
 
 import { getProfessionalById } from "@/services/professionals";
 import type { Booking } from "@/services/bookings";
+import { recordAcceptedOfferBooking } from "@/services/bookings";
+import { getCurrentUserId } from "@/services/inAppNotifications";
+import { getLoggedInProfessionalId } from "@/services/savedProviders";
 
 export type ChatParticipant = {
   id: string;
@@ -22,6 +27,18 @@ export type ChatParticipant = {
   image: number;
   verified?: boolean;
   online?: boolean;
+};
+
+/** Rich card shown in chat for booking or offer requests */
+export type RequestCardData = {
+  kind: "booking" | "offer";
+  title: string;
+  category?: string;
+  location?: string;
+  description?: string;
+  amount?: number;
+  date?: string;
+  statusLabel: string;
 };
 
 export type ChatMessage = {
@@ -36,7 +53,8 @@ export type ChatMessage = {
     latitude?: number;
     longitude?: number;
   };
-  kind?: "text" | "location" | "location_stopped";
+  kind?: "text" | "location" | "location_stopped" | "request_card";
+  card?: RequestCardData;
 };
 
 export type Conversation = {
@@ -206,7 +224,7 @@ export async function sendMessage(
   text: string,
 ): Promise<ChatMessage> {
   if (!canSendMessage(conversationId)) {
-    throw new Error("Messaging is locked until the booking is accepted");
+    throw new Error("Messaging is locked until the request is accepted");
   }
   await new Promise((r) => setTimeout(r, 200));
 
@@ -294,12 +312,31 @@ export function canOpenSharedLocation(
   return isSharingLocation(conversationId);
 }
 
-/** Chat-side lock for booking threads (maps from Booking.status) */
+/** Chat-side lock for booking / offer threads */
 export type BookingChatStatus = "Pending" | "Accepted" | "Declined";
 
 const bookingStatusByConv: Record<string, BookingChatStatus> = {};
-const professionalIdByConv: Record<string, string> = {};
+/** Who can Accept/Decline (professional for booking, request owner for offer) */
+const acceptorIdByConv: Record<string, string> = {};
+const conversationKindByConv: Record<string, "booking" | "offer"> = {};
 const conversationIdByBookingId: Record<string, string> = {};
+/** Offer metadata for recording accepted offer into bookings */
+const offerMetaByConv: Record<
+  string,
+  {
+    requestId: string;
+    title: string;
+    category?: string;
+    location?: string;
+    amount: number;
+    offererProfessionalId: string;
+    offererName: string;
+    offererImage: number;
+    requestOwnerId: string;
+    requestOwnerName: string;
+    requestOwnerImage: number;
+  }
+> = {};
 
 function seedPendingBookingChat(input: {
   conversationId: string;
@@ -308,6 +345,10 @@ function seedPendingBookingChat(input: {
   participant: ChatParticipant;
   title: string;
   date: string;
+  location?: string;
+  amount?: number;
+  category?: string;
+  description?: string;
   lastMessage: string;
 }) {
   const {
@@ -317,6 +358,10 @@ function seedPendingBookingChat(input: {
     participant,
     title,
     date,
+    location,
+    amount,
+    category,
+    description,
     lastMessage,
   } = input;
 
@@ -338,15 +383,26 @@ function seedPendingBookingChat(input: {
       id: `sys-seed-${bookingId}`,
       conversationId: id,
       senderId: "system",
-      text: `Booking request: ${title}\nDate: ${date}\nWaiting for professional to accept.`,
+      text: `Booking request: ${title}`,
       createdAt: "Just now",
       isMine: false,
-      kind: "text",
+      kind: "request_card",
+      card: {
+        kind: "booking",
+        title,
+        category,
+        location,
+        description,
+        amount,
+        date,
+        statusLabel: "Waiting for professional to accept",
+      },
     },
   ];
 
   bookingStatusByConv[id] = "Pending";
-  professionalIdByConv[id] = String(professionalId);
+  acceptorIdByConv[id] = String(professionalId);
+  conversationKindByConv[id] = "booking";
   conversationIdByBookingId[bookingId] = id;
 }
 
@@ -363,6 +419,10 @@ seedPendingBookingChat({
   },
   title: "House Cleaning",
   date: "May 28, 2025 09:00 AM",
+  location: "Lagos",
+  amount: 15400,
+  category: "Cleaning",
+  description: "Need a thorough clean of a 3-bedroom flat before guests arrive.",
   lastMessage: "Booking request: House Cleaning",
 });
 
@@ -380,6 +440,10 @@ seedPendingBookingChat({
   },
   title: "Nail Extension",
   date: "May 25, 2025 10:00 AM",
+  location: "Lagos",
+  amount: 15400,
+  category: "Beauty",
+  description: "Full set nail extension, prefer soft gel.",
   lastMessage: "Booking request: Nail Extension",
 });
 
@@ -475,29 +539,38 @@ export function openBookingChat(
     conversations = [conv, ...conversations];
 
     if (!messagesByConv[id]) {
-      const systemText =
+      const statusLabel =
         booking.status === "Pending"
-          ? `Booking request: ${booking.title}\nDate: ${booking.date}\nWaiting for professional to accept.`
+          ? "Waiting for professional to accept"
           : booking.status === "Declined"
-            ? `Booking: ${booking.title}\nDate: ${booking.date}\nThis booking was declined.`
-            : `Booking: ${booking.title}\nDate: ${booking.date}\nStatus: Ongoing`;
+            ? "This booking was declined"
+            : "Status: Ongoing";
 
       messagesByConv[id] = [
         {
           id: `sys-${booking.id}`,
           conversationId: id,
           senderId: "system",
-          text: systemText,
+          text: `Booking: ${booking.title}`,
           createdAt: "Earlier",
           isMine: false,
-          kind: "text",
+          kind: "request_card",
+          card: {
+            kind: "booking",
+            title: booking.title,
+            location: booking.location,
+            amount: booking.amount,
+            date: booking.date,
+            statusLabel,
+          },
         },
       ];
     }
   }
 
   conversationIdByBookingId[booking.id] = id;
-  professionalIdByConv[id] = String(booking.professionalId);
+  acceptorIdByConv[id] = String(booking.professionalId);
+  conversationKindByConv[id] = "booking";
   syncChatLockFromBooking(id, booking.status);
   return conv;
 }
@@ -510,15 +583,28 @@ export function canSendMessage(conversationId: string): boolean {
   return getBookingStatus(conversationId) === "Accepted";
 }
 
-/** True when current user is the professional for this booking thread */
+/** True when current user is the one who must Accept / Decline */
 export function isProfessionalInConversation(
   conversationId: string,
   currentUserId: string,
 ): boolean {
   return (
-    String(professionalIdByConv[conversationId] ?? "") ===
-    String(currentUserId)
+    String(acceptorIdByConv[conversationId] ?? "") === String(currentUserId)
   );
+}
+
+/** Alias for clarity — works for both booking pro and offer request-owner */
+export function isAcceptorInConversation(
+  conversationId: string,
+  currentUserId: string,
+): boolean {
+  return isProfessionalInConversation(conversationId, currentUserId);
+}
+
+export function getConversationKind(
+  conversationId: string,
+): "booking" | "offer" | undefined {
+  return conversationKindByConv[conversationId];
 }
 
 export function createBookingConversation(input: {
@@ -529,6 +615,10 @@ export function createBookingConversation(input: {
   bookingTitle: string;
   bookingDate: string;
   bookingId?: string;
+  location?: string;
+  amount?: number;
+  category?: string;
+  description?: string;
 }): Conversation {
   const id = `booking-${input.professionalId}-${Date.now()}`;
 
@@ -549,7 +639,8 @@ export function createBookingConversation(input: {
   conversations = [conv, ...conversations];
   messagesByConv[id] = [];
   bookingStatusByConv[id] = "Pending";
-  professionalIdByConv[id] = String(input.professionalId);
+  acceptorIdByConv[id] = String(input.professionalId);
+  conversationKindByConv[id] = "booking";
 
   if (input.bookingId) {
     conversationIdByBookingId[input.bookingId] = id;
@@ -559,10 +650,111 @@ export function createBookingConversation(input: {
     id: `sys-${Date.now()}`,
     conversationId: id,
     senderId: "system",
-    text: `Booking request: ${input.bookingTitle}\nDate: ${input.bookingDate}\nWaiting for professional to accept.`,
+    text: `Booking request: ${input.bookingTitle}`,
     createdAt: nowLabel(),
     isMine: false,
-    kind: "text",
+    kind: "request_card",
+    card: {
+      kind: "booking",
+      title: input.bookingTitle,
+      category: input.category,
+      location: input.location,
+      description: input.description,
+      amount: input.amount,
+      date: input.bookingDate,
+      statusLabel: "Waiting for professional to accept",
+    },
+  });
+
+  return conv;
+}
+
+/**
+ * Create chat when a professional sends an offer on a service request.
+ * Messaging locked until the request owner (provider) accepts.
+ */
+export function createOfferConversation(input: {
+  requestId: string;
+  requestTitle: string;
+  requestCategory?: string;
+  requestLocation?: string;
+  requestDescription?: string;
+  amount: number;
+  /** Request owner — the one who must Accept / Decline */
+  requestOwnerId: string;
+  requestOwnerName: string;
+  requestOwnerImage: number;
+  /** Professional who sent the offer */
+  offererProfessionalId: string;
+  offererName: string;
+  offererImage: number;
+}): Conversation {
+  const id = `offer-${input.requestId}-${input.offererProfessionalId}-${Date.now()}`;
+
+  // Participant shown to current user: if current user is offerer, show request owner; else show offerer
+  const current = getCurrentUserId();
+  const iAmOfferer = String(current) === String(input.offererProfessionalId) || String(getLoggedInProfessionalId()) === String(input.offererProfessionalId);
+
+  const participant: ChatParticipant = iAmOfferer
+    ? {
+        id: String(input.requestOwnerId),
+        name: input.requestOwnerName,
+        image: input.requestOwnerImage,
+        online: true,
+      }
+    : {
+        id: String(input.offererProfessionalId),
+        name: input.offererName,
+        image: input.offererImage,
+        online: true,
+      };
+
+  const conv: Conversation = {
+    id,
+    participant,
+    lastMessage: `Offer: ₦${input.amount.toLocaleString()} on "${input.requestTitle}"`,
+    lastMessageAt: "Just now",
+    unreadCount: 1,
+  };
+
+  conversations = [conv, ...conversations];
+  messagesByConv[id] = [];
+  bookingStatusByConv[id] = "Pending";
+  // Request owner accepts the offer
+  acceptorIdByConv[id] = String(input.requestOwnerId);
+  conversationKindByConv[id] = "offer";
+
+  offerMetaByConv[id] = {
+    requestId: input.requestId,
+    title: input.requestTitle,
+    category: input.requestCategory,
+    location: input.requestLocation,
+    amount: input.amount,
+    offererProfessionalId: String(input.offererProfessionalId),
+    offererName: input.offererName,
+    offererImage: input.offererImage,
+    requestOwnerId: String(input.requestOwnerId),
+    requestOwnerName: input.requestOwnerName,
+    requestOwnerImage: input.requestOwnerImage,
+  };
+
+  messagesByConv[id].push({
+    id: `sys-offer-${Date.now()}`,
+    conversationId: id,
+    senderId: "system",
+    text: `Offer request: ${input.requestTitle}`,
+    createdAt: nowLabel(),
+    isMine: false,
+    kind: "request_card",
+    card: {
+      kind: "offer",
+      title: input.requestTitle,
+      category: input.requestCategory,
+      location: input.requestLocation,
+      description: input.requestDescription,
+      amount: input.amount,
+      statusLabel: "Waiting for provider to accept",
+    },
   });
 
   return conv;
@@ -570,15 +762,46 @@ export function createBookingConversation(input: {
 
 export function acceptBooking(
   conversationId: string,
-  professionalName: string,
+  acceptorDisplayName: string,
 ): ChatMessage {
   bookingStatusByConv[conversationId] = "Accepted";
+
+  // Update card status label if present
+  const msgs = messagesByConv[conversationId] ?? [];
+  const cardMsg = msgs.find((m) => m.kind === "request_card" && m.card);
+  if (cardMsg?.card) {
+    cardMsg.card = {
+      ...cardMsg.card,
+      statusLabel: "Accepted",
+    };
+  }
+
+  const kind = conversationKindByConv[conversationId];
+  if (kind === "offer") {
+    const meta = offerMetaByConv[conversationId];
+    if (meta) {
+      recordAcceptedOfferBooking({
+        title: meta.title,
+        amount: meta.amount,
+        location: meta.location ?? "Nigeria",
+        professionalId: meta.offererProfessionalId,
+        professionalName: meta.offererName,
+        professionalImage: meta.offererImage,
+        customerId: meta.requestOwnerId,
+        customerName: meta.requestOwnerName,
+        customerImage: meta.requestOwnerImage,
+      });
+    }
+  }
 
   const msg: ChatMessage = {
     id: `sys-accept-${Date.now()}`,
     conversationId,
     senderId: "system",
-    text: `${professionalName} accepted your booking`,
+    text:
+      kind === "offer"
+        ? `${acceptorDisplayName} accepted your offer`
+        : `${acceptorDisplayName} accepted your booking`,
     createdAt: nowLabel(),
     isMine: false,
     kind: "text",
@@ -590,15 +813,29 @@ export function acceptBooking(
 
 export function declineBooking(
   conversationId: string,
-  professionalName: string,
+  acceptorDisplayName: string,
 ): ChatMessage {
   bookingStatusByConv[conversationId] = "Declined";
+
+  const msgs = messagesByConv[conversationId] ?? [];
+  const cardMsg = msgs.find((m) => m.kind === "request_card" && m.card);
+  if (cardMsg?.card) {
+    cardMsg.card = {
+      ...cardMsg.card,
+      statusLabel: "Declined",
+    };
+  }
+
+  const kind = conversationKindByConv[conversationId];
 
   const msg: ChatMessage = {
     id: `sys-decline-${Date.now()}`,
     conversationId,
     senderId: "system",
-    text: `${professionalName} declined your booking`,
+    text:
+      kind === "offer"
+        ? `${acceptorDisplayName} declined your offer`
+        : `${acceptorDisplayName} declined your booking`,
     createdAt: nowLabel(),
     isMine: false,
     kind: "text",

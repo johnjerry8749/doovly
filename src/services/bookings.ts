@@ -7,6 +7,9 @@
  * LATER → swap function bodies to apiRequest("/bookings...")
  *
  * Keep function names and return types stable when wiring the backend.
+ *
+ * Accepted offers from service requests are recorded here as Ongoing
+ * (only accepted offers appear in booking history).
  */
 
 import {
@@ -17,13 +20,15 @@ import {
   statusColors,
   type Booking,
   type BookingStatus,
+  appendAcceptedOfferBooking,
 } from "@/data/booking";
 
 export type { Booking, BookingStatus };
 
 export { statusColors };
 
-/** Active list statuses on Bookings tab */
+/** Active list statuses on Bookings tab — includes Pending/Ongoing/Declined for classic bookings.
+ * Accepted offers are stored as Ongoing only (never Pending in this list). */
 export const BOOKING_LIST_STATUSES: BookingStatus[] = [
   "Pending",
   "Ongoing",
@@ -57,4 +62,22 @@ export function getBookingById(
 export function getProfessionalForBooking(booking: Booking) {
   // TODO backend: include professional on booking payload or GET /professionals/:id
   return getProfessionalFromData(booking);
+}
+
+/**
+ * Record an accepted service-request offer into booking history (Ongoing only).
+ * Called from chat accept flow — never stores Pending offers here.
+ */
+export function recordAcceptedOfferBooking(input: {
+  title: string;
+  amount: number;
+  location: string;
+  professionalId: string;
+  professionalName: string;
+  professionalImage: number;
+  customerId: string;
+  customerName: string;
+  customerImage: number;
+}): Booking {
+  return appendAcceptedOfferBooking(input);
 }
