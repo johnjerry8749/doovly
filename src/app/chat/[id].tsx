@@ -30,9 +30,11 @@ import {
   isProfessionalInConversation,
   acceptBooking,
   declineBooking,
+  getConversationKind,
   type ChatMessage,
   type Conversation,
   type BookingChatStatus,
+  type RequestCardData,
 } from "@/services/chat";
 import {
   addInAppNotification,
@@ -86,6 +88,94 @@ async function openMapsForLocation(location: {
   }
 }
 
+function RequestCard({ card }: { card: RequestCardData }) {
+  const isOffer = card.kind === "offer";
+  const amountText =
+    card.amount != null ? `₦${card.amount.toLocaleString()}` : null;
+
+  return (
+    <View style={styles.requestCard}>
+      <View style={styles.requestCardBadge}>
+        <Ionicons
+          name={isOffer ? "document-text" : "calendar"}
+          size={12}
+          color="#fff"
+        />
+        <Text style={styles.requestCardBadgeText}>
+          {isOffer ? "OFFER REQUEST" : "BOOKING REQUEST"}
+        </Text>
+      </View>
+
+      <Text style={styles.requestCardTitle}>{card.title}</Text>
+
+      {card.category ? (
+        <View style={styles.requestCategoryChip}>
+          <Text style={styles.requestCategoryText}>{card.category}</Text>
+        </View>
+      ) : null}
+
+      {card.location ? (
+        <View style={styles.requestMetaRow}>
+          <Ionicons name="location-outline" size={14} color={TEXT_MUTED} />
+          <Text style={styles.requestMetaText}>{card.location}</Text>
+        </View>
+      ) : null}
+
+      {card.date ? (
+        <View style={styles.requestMetaRow}>
+          <Ionicons name="calendar-outline" size={14} color={TEXT_MUTED} />
+          <Text style={styles.requestMetaText}>{card.date}</Text>
+        </View>
+      ) : null}
+
+      {card.description ? (
+        <Text style={styles.requestDescription} numberOfLines={4}>
+          {card.description}
+        </Text>
+      ) : null}
+
+      {amountText ? (
+        <Text style={styles.requestAmount}>{amountText}</Text>
+      ) : null}
+
+      <View style={styles.requestDivider} />
+
+      <View style={styles.requestStatusRow}>
+        <Ionicons
+          name={
+            card.statusLabel.toLowerCase().includes("accept")
+              ? "checkmark-circle"
+              : card.statusLabel.toLowerCase().includes("declin")
+                ? "close-circle"
+                : "time-outline"
+          }
+          size={14}
+          color={
+            card.statusLabel.toLowerCase().includes("accept")
+              ? PRIMARY
+              : card.statusLabel.toLowerCase().includes("declin")
+                ? "#DC2626"
+                : TEXT_MUTED
+          }
+        />
+        <Text
+          style={[
+            styles.requestStatusText,
+            card.statusLabel.toLowerCase().includes("accept") && {
+              color: PRIMARY,
+            },
+            card.statusLabel.toLowerCase().includes("declin") && {
+              color: "#DC2626",
+            },
+          ]}
+        >
+          {card.statusLabel}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 export default function ChatConversation() {
   const { id, initialMessage } = useLocalSearchParams<{
     id: string;
@@ -109,11 +199,12 @@ export default function ChatConversation() {
   const listRef = useRef<FlatList>(null);
   const currentUserId = getCurrentUserId();
   const loggedInProId = getLoggedInProfessionalId();
-  const isProfessional = Boolean(
-    loggedInProId &&
-      isProfessionalInConversation(conversationId, loggedInProId),
+  const isAcceptor = Boolean(
+    (loggedInProId &&
+      isProfessionalInConversation(conversationId, loggedInProId)) ||
+      isProfessionalInConversation(conversationId, currentUserId),
   );
-  /** Doovly Pro subscriber — call action gated on click */
+  const convKind = getConversationKind(conversationId);
   const isProUser = isCurrentUserPro();
 
   useEffect(() => {
@@ -126,7 +217,7 @@ export default function ChatConversation() {
   }, [conversationId]);
 
   const proDisplayName =
-    getProfessionalById(loggedInProId ?? "")?.name ?? "Professional";
+    getProfessionalById(loggedInProId ?? "")?.name ?? "You";
 
   const onSend = async () => {
     const trimmed = text.trim();
@@ -149,11 +240,14 @@ export default function ChatConversation() {
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Accepted");
 
+    const isOffer = convKind === "offer";
     addInAppNotification({
       userId: "u1",
       type: "booking",
-      title: "Booking Accepted",
-      body: `${proDisplayName} accepted your booking.`,
+      title: isOffer ? "Offer Accepted" : "Booking Accepted",
+      body: isOffer
+        ? `${proDisplayName} accepted your offer.`
+        : `${proDisplayName} accepted your booking.`,
     });
   };
 
@@ -163,18 +257,20 @@ export default function ChatConversation() {
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Declined");
 
+    const isOffer = convKind === "offer";
     addInAppNotification({
       userId: "u1",
       type: "booking",
-      title: "Booking Declined",
-      body: `${proDisplayName} declined your booking.`,
+      title: isOffer ? "Offer Declined" : "Booking Declined",
+      body: isOffer
+        ? `${proDisplayName} declined your offer.`
+        : `${proDisplayName} declined your booking.`,
     });
   };
 
   const onCall = () => {
     if (!conversation) return;
 
-    // Free users: prompt to subscribe
     if (!isProUser) {
       Alert.alert(
         "Pro feature",
@@ -190,7 +286,6 @@ export default function ChatConversation() {
       return;
     }
 
-    // Pro users: allow call
     Alert.alert(
       "Call",
       `Call ${conversation.participant.name}?\n\n(Voice call will connect when backend is ready.)`,
@@ -293,6 +388,14 @@ export default function ChatConversation() {
   }
 
   const p = conversation.participant;
+  const waitingLabel =
+    convKind === "offer"
+      ? "Waiting for provider to accept..."
+      : "Waiting for professional to accept...";
+  const declinedLabel =
+    convKind === "offer"
+      ? "This offer was declined"
+      : "This booking was declined";
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -322,7 +425,6 @@ export default function ChatConversation() {
           </Text>
         </View>
 
-        {/* Call always visible — Pro can call; free users get subscribe prompt */}
         <TouchableOpacity
           style={styles.headerAction}
           onPress={onCall}
@@ -375,7 +477,14 @@ export default function ChatConversation() {
             listRef.current?.scrollToEnd({ animated: false })
           }
           renderItem={({ item }) => {
-            // System messages (booking status, accept/decline, stop share)
+            if (item.kind === "request_card" && item.card) {
+              return (
+                <View style={styles.cardWrap}>
+                  <RequestCard card={item.card} />
+                </View>
+              );
+            }
+
             if (
               item.senderId === "system" ||
               item.kind === "location_stopped"
@@ -479,13 +588,14 @@ export default function ChatConversation() {
           }}
         />
 
-        {bookingStatus === "Pending" && isProfessional && (
+        {bookingStatus === "Pending" && isAcceptor && (
           <View style={styles.acceptRow}>
             <TouchableOpacity
               onPress={onDecline}
               style={styles.declineBtn}
               activeOpacity={0.85}
             >
+              <Ionicons name="close" size={18} color="#DC2626" />
               <Text style={styles.declineBtnText}>Decline</Text>
             </TouchableOpacity>
 
@@ -494,6 +604,7 @@ export default function ChatConversation() {
               style={styles.acceptBtn}
               activeOpacity={0.85}
             >
+              <Ionicons name="checkmark" size={18} color="#fff" />
               <Text style={styles.acceptBtnText}>Accept</Text>
             </TouchableOpacity>
           </View>
@@ -535,10 +646,9 @@ export default function ChatConversation() {
             </>
           ) : (
             <View style={styles.lockedBar}>
+              <Ionicons name="lock-closed" size={14} color={TEXT_MUTED} />
               <Text style={styles.lockedText}>
-                {bookingStatus === "Pending"
-                  ? "Waiting for professional to accept..."
-                  : "This booking was declined"}
+                {bookingStatus === "Pending" ? waitingLabel : declinedLabel}
               </Text>
             </View>
           )}
@@ -634,6 +744,96 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     flexGrow: 1,
   },
+  cardWrap: {
+    marginBottom: 16,
+    alignSelf: "stretch",
+  },
+  requestCard: {
+    backgroundColor: "#F0FDF4",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    padding: 16,
+  },
+  requestCardBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  requestCardBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#fff",
+    letterSpacing: 0.3,
+  },
+  requestCardTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: TEXT_DARK,
+    marginBottom: 8,
+    lineHeight: 24,
+  },
+  requestCategoryChip: {
+    alignSelf: "flex-start",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginBottom: 8,
+  },
+  requestCategoryText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: PRIMARY,
+  },
+  requestMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  requestMetaText: {
+    fontSize: 13,
+    color: TEXT_MUTED,
+    flex: 1,
+  },
+  requestDescription: {
+    fontSize: 13,
+    color: "#4B5563",
+    lineHeight: 19,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  requestAmount: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: PRIMARY,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  requestDivider: {
+    height: 1,
+    backgroundColor: "#BBF7D0",
+    marginVertical: 10,
+  },
+  requestStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  requestStatusText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: TEXT_MUTED,
+  },
   bubbleWrap: {
     marginBottom: 12,
     maxWidth: "80%",
@@ -724,11 +924,15 @@ const styles = StyleSheet.create({
   },
   declineBtn: {
     flex: 1,
-    height: 44,
+    height: 48,
     borderRadius: 12,
-    backgroundColor: "#FEE2E2",
+    borderWidth: 1.5,
+    borderColor: "#FECACA",
+    backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
   },
   declineBtnText: {
     color: "#DC2626",
@@ -737,11 +941,13 @@ const styles = StyleSheet.create({
   },
   acceptBtn: {
     flex: 1,
-    height: 44,
+    height: 48,
     borderRadius: 12,
     backgroundColor: PRIMARY,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
   },
   acceptBtnText: {
     color: "#FFFFFF",
@@ -759,7 +965,10 @@ const styles = StyleSheet.create({
   },
   lockedBar: {
     flex: 1,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     paddingVertical: 12,
   },
   lockedText: {
