@@ -302,16 +302,6 @@ export default function Profile() {
                 router.push("/(tab)/bookings")
               }
             />
-
-            <MenuItem
-              icon={
-                <MenuIcon name="briefcase-outline" />
-              }
-              title="Service Requests Offers"
-              onPress={() =>
-                router.push("/profile/alljoboffers")
-              }
-            />
           </View>
 
           {/* =========================
