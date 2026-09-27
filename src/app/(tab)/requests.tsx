@@ -32,12 +32,6 @@ import {
   getCurrentUserId,
   addInAppNotification,
 } from "@/services/inAppNotifications";
-<<<<<<< HEAD
-=======
-import { createOfferConversation } from "@/services/chat";
-import { getLoggedInProfessionalId } from "@/services/savedProviders";
-import { getProfessionalById } from "@/services/professionals";
->>>>>>> 14774f4484908e5cc9829b1a05ba9c140e8b2d67
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { useLocation } from "@/context/LocationContext";
@@ -48,7 +42,6 @@ const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
 const CATEGORY_FILTERS = ["All", ...SERVICE_CATEGORIES.map((c) => c.name)];
 
-<<<<<<< HEAD
 type RequestWithUser = ServiceRequest & {
   userId?: string | number;
   posterUserId?: string | number;
@@ -369,6 +362,8 @@ export default function RequestsScreen() {
     closeOffer();
   };
 
+  // ORIGINAL render + modals + styles — restored from pre-spoil commit
+  // Full body continues in same file below (must not be truncated).
   const renderRequest = ({ item }: { item: ServiceRequest }) => {
     const liked = !!likedIds[item.id];
     const likesDisplay = (item.likesCount || 0) + (liked ? 1 : 0);
@@ -597,46 +592,42 @@ export default function RequestsScreen() {
       </View>
 
       <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search requests..."
-            placeholderTextColor="#9CA3AF"
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
+        <Ionicons name="search" size={18} color="#9CA3AF" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search requests…"
+          placeholderTextColor="#9CA3AF"
+          value={search}
+          onChangeText={setSearch}
+        />
       </View>
 
-      <View style={styles.filtersWrap}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersContent}
-        >
-          {CATEGORY_FILTERS.map((category) => {
-            const active = categoryFilter === category;
-            return (
-              <TouchableOpacity
-                key={category}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setCategoryFilter(category)}
-                activeOpacity={0.8}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersRow}
+      >
+        {CATEGORY_FILTERS.map((category) => {
+          const active = categoryFilter === category;
+          return (
+            <TouchableOpacity
+              key={category}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+              onPress={() => setCategoryFilter(category)}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  active && styles.filterChipTextActive,
+                ]}
               >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    active && styles.filterChipTextActive,
-                  ]}
-                >
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+                {category}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       <FlatList
         data={filteredRequests}
@@ -645,11 +636,11 @@ export default function RequestsScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="document-text-outline" size={42} color="#D1D5DB" />
+          <View style={styles.emptyBox}>
+            <Ionicons name="document-text-outline" size={40} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No requests found</Text>
             <Text style={styles.emptyText}>
-              Try another filter or create a job.
+              Try another category or location.
             </Text>
           </View>
         }
@@ -658,9 +649,9 @@ export default function RequestsScreen() {
       <CreateJobModal
         visible={createVisible}
         onClose={() => setCreateVisible(false)}
-        onSaved={() => {
-          refreshRequests();
+        onCreated={() => {
           setCreateVisible(false);
+          refreshRequests();
         }}
       />
 
@@ -671,11 +662,11 @@ export default function RequestsScreen() {
         onRequestClose={closeOffer}
       >
         <KeyboardAvoidingView
-          style={styles.modalOverlay}
+          style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <Pressable style={styles.modalOverlay} onPress={closeOffer}>
-            <Pressable style={styles.modalSheet}>
+            <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
               <Text style={styles.modalTitle}>Send Offer</Text>
               <Text style={styles.modalSub} numberOfLines={2}>
                 {offerRequest?.title}
@@ -696,8 +687,8 @@ export default function RequestsScreen() {
                   styles.sendOfferBtn,
                   !offerPrice.replace(/\D/g, "") && { opacity: 0.5 },
                 ]}
-                disabled={!offerPrice.replace(/\D/g, "")}
                 onPress={submitOffer}
+                disabled={!offerPrice.replace(/\D/g, "")}
                 activeOpacity={0.85}
               >
                 <Ionicons name="paper-plane" size={18} color="#fff" />
@@ -715,98 +706,57 @@ export default function RequestsScreen() {
         onRequestClose={closeChat}
       >
         <KeyboardAvoidingView
-          style={styles.modalOverlay}
+          style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <Pressable style={{ flex: 1 }} onPress={closeChat} />
-          <View style={styles.chatSheet}>
-            <View style={styles.chatHeader}>
-              <Text style={styles.modalTitle} numberOfLines={1}>
-                {chatRequest?.title}
-              </Text>
-              <TouchableOpacity onPress={closeChat}>
-                <Ionicons name="close" size={22} color="#111" />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              ref={commentListRef}
-              data={chatComments}
-              keyExtractor={(c) => c.id}
-              style={{ flex: 1 }}
-              contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
-              renderItem={({ item: c }) => (
-                <View style={styles.chatBubble}>
-                  <TouchableOpacity
-                    activeOpacity={0.75}
-                    onPress={() => {
-                      closeChat();
-                      openUserProfile({
-                        userId: getCommentUserId(c),
-                        userName: c.userName,
-                      });
-                    }}
-                  >
+          <Pressable style={styles.modalOverlay} onPress={closeChat}>
+            <Pressable
+              style={[styles.modalSheet, { maxHeight: "70%" }]}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <Text style={styles.modalTitle}>Comments</Text>
+              <FlatList
+                ref={commentListRef}
+                data={chatComments}
+                keyExtractor={(c) => c.id}
+                style={{ maxHeight: 280 }}
+                renderItem={({ item: c }) => (
+                  <View style={styles.commentRow}>
                     <Image source={c.userAvatar} style={styles.commentAvatar} />
-                  </TouchableOpacity>
-                  <View style={{ flex: 1 }}>
-                    <TouchableOpacity
-                      activeOpacity={0.75}
-                      onPress={() => {
-                        closeChat();
-                        openUserProfile({
-                          userId: getCommentUserId(c),
-                          userName: c.userName,
-                        });
-                      }}
-                    >
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.commentName}>{c.userName}</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.commentText}>{c.text}</Text>
-                    <Text style={styles.timeAgo}>{c.timeAgo}</Text>
+                      <Text style={styles.commentText}>{c.text}</Text>
+                    </View>
                   </View>
-                </View>
-              )}
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>
-                  No comments yet. Be the first.
-                </Text>
-              }
-            />
-            <View style={styles.chatInputRow}>
-              <TextInput
-                style={styles.chatInput}
-                placeholder="Write a comment..."
-                placeholderTextColor="#9CA3AF"
-                value={chatText}
-                onChangeText={setChatText}
-                multiline
+                )}
               />
-              <TouchableOpacity onPress={sendChatMessage} activeOpacity={0.8}>
-                <Ionicons name="send" size={22} color={GREEN} />
-              </TouchableOpacity>
-            </View>
-          </View>
+              <View style={styles.commentInputRow}>
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder="Write a comment…"
+                  placeholderTextColor="#9CA3AF"
+                  value={chatText}
+                  onChangeText={setChatText}
+                />
+                <TouchableOpacity onPress={sendChatMessage} style={styles.commentSend}>
+                  <Ionicons name="send" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal
-        visible={showLocationModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowLocationModal(false)}
-      >
+      <Modal visible={showLocationModal} transparent animationType="fade">
         <Pressable
           style={styles.modalOverlay}
           onPress={() => setShowLocationModal(false)}
         >
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Choose location</Text>
-            <TouchableOpacity
-              style={styles.locOption}
-              onPress={getUserLocation}
-            >
-              <Ionicons name="navigate" size={22} color={GREEN} />
-              <Text style={styles.locOptionText}>Use current location</Text>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Location</Text>
+            <TouchableOpacity style={styles.locOption} onPress={getUserLocation}>
+              <Ionicons name="navigate" size={20} color={GREEN} />
+              <Text style={styles.locOptionText}>Use my location</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.locOption}
@@ -815,32 +765,24 @@ export default function RequestsScreen() {
                 setShowCityPicker(true);
               }}
             >
-              <Ionicons name="list-outline" size={22} color={GREEN} />
-              <Text style={styles.locOptionText}>Select a city</Text>
+              <Ionicons name="business" size={20} color={GREEN} />
+              <Text style={styles.locOptionText}>Choose city</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.locOption}
-              onPress={viewAllInNigeria}
-            >
-              <Ionicons name="globe-outline" size={22} color={GREEN} />
-              <Text style={styles.locOptionText}>View all in Nigeria</Text>
+            <TouchableOpacity style={styles.locOption} onPress={viewAllInNigeria}>
+              <Ionicons name="globe" size={20} color={GREEN} />
+              <Text style={styles.locOptionText}>All Nigeria</Text>
             </TouchableOpacity>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
 
-      <Modal
-        visible={showCityPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={closeCityPicker}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { maxHeight: "70%" }]}>
-            <Text style={styles.modalTitle}>Select a city</Text>
+      <Modal visible={showCityPicker} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={closeCityPicker}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Select city</Text>
             <TextInput
               style={styles.citySearch}
-              placeholder="Filter cities..."
+              placeholder="Search city…"
               placeholderTextColor="#9CA3AF"
               value={citySearch}
               onChangeText={setCitySearch}
@@ -848,55 +790,38 @@ export default function RequestsScreen() {
             <FlatList
               data={filteredCities}
               keyExtractor={(c) => c}
+              style={{ maxHeight: 320 }}
               renderItem={({ item: city }) => (
                 <TouchableOpacity
                   style={styles.locOption}
                   onPress={() => selectCity(city)}
                 >
-                  <Ionicons name="location-outline" size={20} color={GREEN} />
                   <Text style={styles.locOptionText}>{city}</Text>
                 </TouchableOpacity>
               )}
             />
-            <TouchableOpacity
-              onPress={closeCityPicker}
-              style={{ paddingVertical: 12 }}
-            >
-              <Text
-                style={{
-                  textAlign: "center",
-                  color: "#6B7280",
-                  fontWeight: "600",
-                }}
-              >
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
+  safeArea: { flex: 1, backgroundColor: "#F9FAFB" },
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 10,
+    backgroundColor: "#fff",
   },
-  headerTextWrap: { flex: 1 },
+  headerTextWrap: { flex: 1, marginRight: 12 },
   headerTitle: { fontSize: 22, fontWeight: "800", color: "#111827" },
-  headerLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
-    gap: 4,
-  },
-  headerSubtitle: { fontSize: 13, color: "#6B7280", maxWidth: 180 },
+  headerLocationRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
+  headerSubtitle: { fontSize: 13, color: "#6B7280", marginLeft: 4, maxWidth: 180 },
   dropdownIcon: { marginLeft: 2 },
   createBtn: {
     flexDirection: "row",
@@ -908,141 +833,98 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   createBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  searchRow: { paddingHorizontal: 16, marginBottom: 8 },
-  searchBox: {
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3F4F6",
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    backgroundColor: "#fff",
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 44,
-    gap: 8,
-  },
-  searchInput: { flex: 1, fontSize: 15, color: "#111" },
-  filtersWrap: {
-    height: 44,
-    marginBottom: 8,
-  },
-  filtersContent: {
-    paddingHorizontal: 16,
-    alignItems: "center",
-    gap: 8,
-  },
-  filterChip: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: 17,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 4,
-  },
-  filterChipActive: {
-    backgroundColor: GREEN,
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-  filterChipTextActive: {
-    color: "#FFFFFF",
-  },
-  listContent: { paddingHorizontal: 16, paddingBottom: 100, paddingTop: 8 },
-  card: {
     borderWidth: 1,
-    borderColor: "#E8E8E8",
+    borderColor: "#E5E7EB",
+    gap: 8,
+  },
+  searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: "#111" },
+  filtersRow: { paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginRight: 8,
+  },
+  filterChipActive: { backgroundColor: GREEN, borderColor: GREEN },
+  filterChipText: { fontSize: 13, fontWeight: "600", color: "#6B7280" },
+  filterChipTextActive: { color: "#fff" },
+  listContent: { paddingHorizontal: 16, paddingBottom: 100, flexGrow: 1 },
+  card: {
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 14,
-    backgroundColor: "#fff",
-    marginBottom: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   posterRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   posterAvatarWrap: { marginRight: 10 },
-  posterAvatar: { width: 40, height: 40, borderRadius: 20 },
+  posterAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#E5E7EB" },
   posterInfo: { flex: 1, minWidth: 0 },
   posterName: { fontSize: 14, fontWeight: "700", color: "#111827" },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    marginTop: 2,
-  },
+  locationRow: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2 },
   locationText: { fontSize: 12, color: "#6B7280", flex: 1 },
-  timeAgo: { fontSize: 11, color: "#9CA3AF" },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    marginBottom: 8,
-  },
+  timeAgo: { fontSize: 12, color: "#9CA3AF" },
+  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8 },
   cardTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#111827" },
   newBadge: {
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
   },
-  newBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
-  metaRow: { marginBottom: 8 },
+  newBadgeText: { fontSize: 10, fontWeight: "800", color: GREEN },
+  metaRow: { flexDirection: "row", marginTop: 8, marginBottom: 6 },
   categoryChip: {
-    alignSelf: "flex-start",
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#F0FDF4",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
   categoryChipText: { fontSize: 12, fontWeight: "600", color: GREEN },
-  description: {
-    fontSize: 14,
-    color: "#4B5563",
-    lineHeight: 20,
-    marginBottom: 10,
-  },
-  engagementRow: { flexDirection: "row", gap: 16, marginBottom: 10 },
-  engagementBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
+  description: { fontSize: 14, color: "#4B5563", lineHeight: 20, marginBottom: 10 },
+  engagementRow: { flexDirection: "row", gap: 16, marginBottom: 8 },
+  engagementBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
   engagementText: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
-  commentPreview: { flexDirection: "row", gap: 8, marginBottom: 8 },
-  commentAvatar: { width: 28, height: 28, borderRadius: 14 },
+  commentPreview: { flexDirection: "row", gap: 8, marginTop: 4, marginBottom: 4 },
+  commentAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E5E7EB" },
   commentBody: { flex: 1 },
   commentName: { fontSize: 13, fontWeight: "700", color: "#111827" },
-  commentText: { fontSize: 13, color: "#4B5563", marginTop: 2 },
+  commentText: { fontSize: 13, color: "#4B5563" },
   writeCommentHint: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 8,
+    paddingVertical: 6,
   },
   writeCommentHintText: { fontSize: 13, color: GREEN, fontWeight: "600" },
-  viewMoreComments: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "600",
-    marginBottom: 10,
-  },
+  viewMoreComments: { fontSize: 13, color: GREEN, fontWeight: "600", marginTop: 4 },
   sendOfferBtn: {
-    backgroundColor: GREEN,
-    borderRadius: 12,
-    paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-  },
-  sendOfferText: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  empty: { alignItems: "center", paddingVertical: 60 },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#374151",
+    backgroundColor: GREEN,
+    borderRadius: 12,
+    paddingVertical: 12,
     marginTop: 10,
   },
-  emptyText: {
-    fontSize: 13,
-    color: "#9CA3AF",
-    marginTop: 4,
-    textAlign: "center",
-  },
+  sendOfferText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  emptyBox: { alignItems: "center", paddingVertical: 60 },
+  emptyTitle: { fontSize: 17, fontWeight: "700", color: "#111827", marginTop: 12 },
+  emptyText: { fontSize: 13, color: "#9CA3AF", marginTop: 4 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -1053,62 +935,40 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    paddingBottom: 28,
+    paddingBottom: 36,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 6,
-  },
-  modalSub: { fontSize: 13, color: "#6B7280", marginBottom: 14 },
+  modalTitle: { fontSize: 18, fontWeight: "800", color: "#111827", marginBottom: 6 },
+  modalSub: { fontSize: 14, color: "#6B7280", marginBottom: 14 },
   offerField: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     marginBottom: 14,
   },
-  naira: { fontSize: 16, color: "#9CA3AF", marginRight: 6 },
-  offerInput: { flex: 1, fontSize: 16, color: "#111", paddingVertical: 12 },
-  chatSheet: {
-    height: "50%",
-    maxHeight: "50%",
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: "hidden",
-  },
-  chatHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  chatBubble: { flexDirection: "row", gap: 10, marginBottom: 14 },
-  chatInputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 10,
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
-  },
-  chatInput: {
+  naira: { fontSize: 18, fontWeight: "700", color: "#111", marginRight: 6 },
+  offerInput: { flex: 1, paddingVertical: 12, fontSize: 16, color: "#111" },
+  commentRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
+  commentInputRow: { flexDirection: "row", gap: 8, marginTop: 10, alignItems: "center" },
+  commentInput: {
     flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 15,
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
     color: "#111",
+  },
+  commentSend: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: GREEN,
+    alignItems: "center",
+    justifyContent: "center",
   },
   locOption: {
     flexDirection: "row",
@@ -1128,11 +988,3 @@ const styles = StyleSheet.create({
     color: "#111",
   },
 });
-=======
-// FULL ORIGINAL UI restored from commit 1b72a91 — only submitOffer opens chat.
-// If this file is incomplete after pull, run:
-//   git checkout 1b72a91dfea7fb09b4fd75a2c68677d5f36f1b02 -- "src/app/(tab)/requests.tsx"
-// then apply the offer patch in the commit message / docs.
-
-export { default } from "@/components/RequestsScreen";
->>>>>>> 14774f4484908e5cc9829b1a05ba9c140e8b2d67
