@@ -8,8 +8,8 @@
  *
  * Keep function names and return types stable when wiring the backend.
  *
- * Accepted offers from service requests are recorded here as Ongoing
- * (only accepted offers appear in booking history).
+ * Bookings tab list shows ONLY Accepted + Declined (no Pending, no Ongoing).
+ * Accepted offers from service requests are recorded as Accepted.
  */
 
 import {
@@ -27,11 +27,9 @@ export type { Booking, BookingStatus };
 
 export { statusColors };
 
-/** Active list statuses on Bookings tab — includes Pending/Ongoing/Declined for classic bookings.
- * Accepted offers are stored as Ongoing only (never Pending in this list). */
+/** Bookings history filters: Accepted + Declined only (no Ongoing / Pending) */
 export const BOOKING_LIST_STATUSES: BookingStatus[] = [
-  "Pending",
-  "Ongoing",
+  "Accepted",
   "Declined",
 ];
 
@@ -65,7 +63,7 @@ export function getProfessionalForBooking(booking: Booking) {
 }
 
 /**
- * Record an accepted service-request offer into booking history (Ongoing only).
+ * Record an accepted service-request offer into booking history (Accepted only).
  * Called from chat accept flow — never stores Pending offers here.
  */
 export function recordAcceptedOfferBooking(input: {

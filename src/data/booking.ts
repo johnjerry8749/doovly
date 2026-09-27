@@ -2,14 +2,17 @@
  * Bookings mock data
  * ------------------
  * Status lifecycle (UI):
- *   Pending → Ongoing   (professional accepts in chat)
+ *   Pending → Accepted  (professional accepts in chat)
  *   Pending → Declined  (professional declines in chat)
+ *
+ * Bookings history list shows ONLY Accepted + Declined
+ * (Pending stays for chat lock; not listed on Bookings tab).
  *
  * Booked   = current user is the customer (u1)
  *            professionalId must NOT be "1" (logged-in pro)
  * Received = current user is the professional (id "1")
  *
- * Accepted service-request offers are pushed as Ongoing only
+ * Accepted service-request offers are pushed as Accepted only
  * (never Pending) via appendAcceptedOfferBooking.
  *
  * LATER: replace BOOKED_JOBS / RECEIVED_JOBS with API payloads.
@@ -17,7 +20,7 @@
 
 import { PROFESSIONALS } from "@/data/professionals";
 
-export type BookingStatus = "Pending" | "Ongoing" | "Declined";
+export type BookingStatus = "Pending" | "Accepted" | "Declined";
 
 export type Booking = {
   id: string;
@@ -42,7 +45,7 @@ export const statusColors: Record<
   { bg: string; text: string }
 > = {
   Pending: { bg: "#E8F8EF", text: "#16A34A" },
-  Ongoing: { bg: "#DBEAFE", text: "#2563EB" },
+  Accepted: { bg: "#DBEAFE", text: "#2563EB" },
   Declined: { bg: "#FEE2E2", text: "#DC2626" },
 };
 
@@ -96,7 +99,9 @@ function createBooking(input: {
     professionalVerified:
       input.professionalVerified ?? professional?.verified ?? false,
     professionalImage:
-      input.professionalImage ?? professional?.image ?? require("@/assets/profile_1.jpg"),
+      input.professionalImage ??
+      professional?.image ??
+      require("@/assets/profile_1.jpg"),
     customerName: input.customerName ?? customer.name,
     customerImage: input.customerImage ?? customer.image,
     rating: input.rating,
@@ -134,7 +139,7 @@ export const BOOKED_JOBS: Booking[] = [
     reviews: 32,
     date: "May 22, 2025 02:30 PM",
     location: "Lagos",
-    status: "Ongoing",
+    status: "Accepted",
     amount: 18000,
   }),
   createBooking({
@@ -177,7 +182,7 @@ export const RECEIVED_JOBS: Booking[] = [
     reviews: 20,
     date: "May 27, 2025 02:30 PM",
     location: "Lagos",
-    status: "Ongoing",
+    status: "Accepted",
     amount: 22000,
   }),
   createBooking({
@@ -217,7 +222,7 @@ export function getProfessionalForBooking(booking: Booking) {
 }
 
 /**
- * Push an accepted service-request offer into history as Ongoing only.
+ * Push an accepted service-request offer into history as Accepted only.
  * Never stores Pending offers here.
  */
 export function appendAcceptedOfferBooking(input: {
@@ -249,7 +254,7 @@ export function appendAcceptedOfferBooking(input: {
     reviews: 0,
     date,
     location: input.location,
-    status: "Ongoing",
+    status: "Accepted",
     amount: input.amount,
     professionalName: input.professionalName,
     professionalImage: input.professionalImage,
@@ -265,7 +270,6 @@ export function appendAcceptedOfferBooking(input: {
   } else if (String(input.customerId) === "u1") {
     BOOKED_JOBS.unshift(booking);
   } else {
-    // fallback: received if pro is current, else booked
     RECEIVED_JOBS.unshift(booking);
   }
 
