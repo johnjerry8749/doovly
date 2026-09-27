@@ -32,6 +32,12 @@ import {
   getCurrentUserId,
   addInAppNotification,
 } from "@/services/inAppNotifications";
+<<<<<<< HEAD
+=======
+import { createOfferConversation } from "@/services/chat";
+import { getLoggedInProfessionalId } from "@/services/savedProviders";
+import { getProfessionalById } from "@/services/professionals";
+>>>>>>> 14774f4484908e5cc9829b1a05ba9c140e8b2d67
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { useLocation } from "@/context/LocationContext";
@@ -42,6 +48,7 @@ const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
 const CATEGORY_FILTERS = ["All", ...SERVICE_CATEGORIES.map((c) => c.name)];
 
+<<<<<<< HEAD
 type RequestWithUser = ServiceRequest & {
   userId?: string | number;
   posterUserId?: string | number;
@@ -1121,3 +1128,11 @@ const styles = StyleSheet.create({
     color: "#111",
   },
 });
+=======
+// FULL ORIGINAL UI restored from commit 1b72a91 — only submitOffer opens chat.
+// If this file is incomplete after pull, run:
+//   git checkout 1b72a91dfea7fb09b4fd75a2c68677d5f36f1b02 -- "src/app/(tab)/requests.tsx"
+// then apply the offer patch in the commit message / docs.
+
+export { default } from "@/components/RequestsScreen";
+>>>>>>> 14774f4484908e5cc9829b1a05ba9c140e8b2d67
