@@ -28,7 +28,11 @@ const ADMIN_TABS: {
   { name: "Dashboard", label: "Dashboard", icon: "home-outline" },
   { name: "Users", label: "Users", icon: "people-outline" },
   { name: "Settings", label: "Settings", icon: "settings-outline" },
-  { name: "Notifications", label: "Notifications", icon: "notifications-outline" },
+  {
+    name: "Notifications",
+    label: "Notifications",
+    icon: "notifications-outline",
+  },
   { name: "Subscriptions", label: "Subscriptions", icon: "card-outline" },
   {
     name: "Verification Aplications",
@@ -45,13 +49,17 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
 
   // Start open on large screens, closed on mobile
   const [isOpen, setIsOpen] = useState(isLargeScreen);
-  const slideAnim = useRef(new Animated.Value(isLargeScreen ? 0 : -SIDEBAR_WIDTH)).current;
-  const overlayOpacity = useRef(new Animated.Value(isLargeScreen ? 0 : 0)).current;
+  const slideAnim = useRef(
+    new Animated.Value(isLargeScreen ? 0 : -SIDEBAR_WIDTH)
+  ).current;
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const menuLeftAnim = useRef(
+    new Animated.Value(isLargeScreen ? SIDEBAR_WIDTH + 12 : 16)
+  ).current;
 
   const focusedRoute = state.routes[state.index]?.name;
 
   useEffect(() => {
-    // Keep large screens open by default when resizing
     if (isLargeScreen && !isOpen) {
       setIsOpen(true);
     }
@@ -68,6 +76,11 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
         toValue: isOpen && !isLargeScreen ? 0.4 : 0,
         duration: 250,
         useNativeDriver: true,
+      }),
+      Animated.timing(menuLeftAnim, {
+        toValue: isOpen ? SIDEBAR_WIDTH + 12 : 16,
+        duration: 250,
+        useNativeDriver: false, // left position can't use native driver
       }),
     ]).start();
   }, [isOpen, isLargeScreen]);
@@ -97,25 +110,30 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
   return (
     <>
       {/* Floating menu button (always visible) */}
-      <TouchableOpacity
+      <Animated.View
         style={[
-          styles.menuButton,
+          styles.menuButtonWrap,
           {
             top: Math.max(insets.top, 12) + 4,
-            left: isOpen ? SIDEBAR_WIDTH + 12 : 16,
+            left: menuLeftAnim,
           },
         ]}
-        onPress={toggleSidebar}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel={isOpen ? "Close menu" : "Open menu"}
+        pointerEvents="box-none"
       >
-        <Ionicons
-          name={isOpen ? "close" : "menu"}
-          size={24}
-          color="#111827"
-        />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={toggleSidebar}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={isOpen ? "Close menu" : "Open menu"}
+        >
+          <Ionicons
+            name={isOpen ? "close" : "menu"}
+            size={24}
+            color="#111827"
+          />
+        </TouchableOpacity>
+      </Animated.View>
 
       {/* Dark overlay when sidebar is open on small screens */}
       {!isLargeScreen && (
@@ -184,16 +202,24 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-export default function TabLayout() {
+export default function AdminLayout() {
   return (
     <Tabs
       tabBar={(props) => <AdminSidebar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
+        // Keep tab bar container transparent so our custom overlay works
         tabBarStyle: {
-          // Hide the default tab bar completely – we render our own
-          display: "none",
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          backgroundColor: "transparent",
+          borderTopWidth: 0,
+          elevation: 0,
+          height: "100%",
         },
       }}
     >
@@ -207,17 +233,17 @@ export default function TabLayout() {
         options={{ title: "Verification Applications" }}
       />
       <Tabs.Screen name="Reports" options={{ title: "Reports" }} />
-
-      <Tabs.Screen name="all-requests" options={{ href: null }} />
-      <Tabs.Screen name="how-it-works" options={{ href: null }} />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
-  menuButton: {
+  menuButtonWrap: {
     position: "absolute",
     zIndex: 100,
+  },
+
+  menuButton: {
     width: 44,
     height: 44,
     borderRadius: 12,

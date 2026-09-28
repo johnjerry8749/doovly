@@ -1,11 +1,12 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-
-const SIDEBAR_WIDTH = 240;
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function Dashboard() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) + 56 }]}>
       <Text style={styles.title}>Dashboard</Text>
       <Text style={styles.subtitle}>Admin overview</Text>
     </View>
@@ -15,10 +16,9 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginLeft: SIDEBAR_WIDTH,
     backgroundColor: "#F9FAFB",
-    padding: 24,
-    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingBottom: 24,
   },
   title: {
     fontSize: 24,
