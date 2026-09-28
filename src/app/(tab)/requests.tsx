@@ -622,7 +622,7 @@ export default function RequestsScreen() {
       <CreateJobModal
         visible={createVisible}
         onClose={() => setCreateVisible(false)}
-        onCreated={() => {
+        onCreate={() => {
           setCreateVisible(false);
           refreshRequests();
         }}

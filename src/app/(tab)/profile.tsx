@@ -161,7 +161,7 @@ export default function Profile() {
                 color="#6B7280"
               />
               <Text style={styles.location}>
-                {pro.location || "Lagos, Nigeria"}
+                {pro.city}
               </Text>
             </View>
           </View>
@@ -411,7 +411,7 @@ export default function Profile() {
             <TouchableOpacity
               style={styles.adminloginButton}
               activeOpacity={0.8}
-              onPress={() => {}}
+              onPress={() => router.push("./admin")}
             >
               <Ionicons
                 name="shield-outline"
