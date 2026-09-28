@@ -235,11 +235,6 @@ export default function Profile() {
             icon={<MenuIcon name="bookmark-outline" />}
             title="Saved Providers"
             onPress={() => router.push("/profile/saved_providers")}
-          />
-          <MenuItem
-            icon={<MenuIcon name="chatbubble-outline" />}
-            title="Messages"
-            onPress={() => router.push("/profile/chat")}
             isLast
           />
         </View>
