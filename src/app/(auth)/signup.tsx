@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { getErrorMessage } from "@/utils/error";
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState("");
@@ -25,6 +26,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const { termsAccepted } = useLocalSearchParams<{
     termsAccepted?: string;
@@ -38,7 +40,7 @@ export default function RegisterScreen() {
     }
   }, [termsAccepted]);
 
-  function handleCreateAccount() {
+  async function handleCreateAccount() {
     if (!fullName.trim()) {
       Alert.alert("Missing name", "Please enter your full name.");
       return;
@@ -75,20 +77,24 @@ export default function RegisterScreen() {
       return;
     }
 
-    // TODO: Connect your backend API here
-    // await api.post("/auth/register", {
-    //   fullName,
-    //   phone: `+234${phone}`,
-    //   email,
-    //   password,
-    // });
+    try {
+      setLoading(true);
 
-    Alert.alert(
-      "Account created",
-      "Your account has been created successfully.",
-    );
+      // TODO: Connect your real Supabase / backend API here
+      // const { error } = await supabase.auth.signUp({ ... });
+      // if (error) throw error;
 
-    router.replace("/(tab)/home");
+      Alert.alert(
+        "Account created",
+        "Your account has been created successfully.",
+      );
+
+      router.replace("/(tab)/home");
+    } catch (error) {
+      Alert.alert("Signup Failed", getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleGoogleSignup() {
@@ -327,9 +333,10 @@ export default function RegisterScreen() {
           <Pressable
             style={styles.createButton}
             onPress={handleCreateAccount}
+            disabled={loading}
           >
             <Text style={styles.createButtonText}>
-              Create Account
+              {loading ? "Creating..." : "Create Account"}
             </Text>
           </Pressable>
 
