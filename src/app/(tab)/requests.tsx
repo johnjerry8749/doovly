@@ -27,14 +27,13 @@ import {
   type ServiceRequest,
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
-import { listProfessionals } from "@/services/professionals";
 import {
   getCurrentUserId,
   addInAppNotification,
 } from "@/services/inAppNotifications";
 import { createOfferConversation } from "@/services/chat";
 import { getLoggedInProfessionalId } from "@/services/savedProviders";
-import { getProfessionalById } from "@/services/professionals";
+import { listProfessionals, getProfessionalById } from "@/services/professionals";
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { useLocation } from "@/context/LocationContext";
@@ -44,65 +43,53 @@ import RequestImageSlider from "@/components/RequestImageSlider";
 const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
 const CATEGORY_FILTERS = ["All", ...SERVICE_CATEGORIES.map((c) => c.name)];
-
-type RequestWithUser = ServiceRequest & {
-  userId?: string | number;
-  posterUserId?: string | number;
-  posterId?: string | number;
-  createdByUserId?: string | number;
-  professionalId?: string | number;
-};
-
-type CommentWithUser = ServiceRequestComment & {
-  userId?: string | number;
-  createdByUserId?: string | number;
-  authorId?: string | number;
-  posterUserId?: string | number;
-  professionalId?: string | number;
-};
+const PROFILE_NAV_COOLDOWN_MS = 4500;
 
 const normalize = (value?: string | number | null) =>
   String(value ?? "")
     .trim()
     .toLowerCase();
 
-const categoryMatches = (request: ServiceRequest, selectedCategory: string) => {
-  if (selectedCategory === "All") return true;
-  const selected = normalize(selectedCategory);
-  const requestCategories = [request.category, request.profession]
+const categoryMatches = (request: ServiceRequest, selected: string) => {
+  if (selected === "All") return true;
+  const sel = normalize(selected);
+  return [request.category, request.profession]
     .filter(Boolean)
-    .map((value) => normalize(value));
-  return requestCategories.some(
-    (value) =>
-      value === selected ||
-      value.includes(selected) ||
-      selected.includes(value),
+    .map(normalize)
+    .some((v) => v === sel || v.includes(sel) || sel.includes(v));
+};
+
+const getRequestUserId = (request: ServiceRequest) => {
+  const r = request as ServiceRequest & {
+    professionalId?: string | number;
+    posterUserId?: string | number;
+    posterId?: string | number;
+    createdByUserId?: string | number;
+    userId?: string | number;
+  };
+  return (
+    r.professionalId ??
+    r.posterUserId ??
+    r.posterId ??
+    r.createdByUserId ??
+    r.userId
   );
 };
 
-const getRequestUserId = (
-  request: ServiceRequest,
-): string | number | undefined => {
-  const item = request as RequestWithUser;
+const getCommentUserId = (comment: ServiceRequestComment) => {
+  const c = comment as ServiceRequestComment & {
+    professionalId?: string | number;
+    userId?: string | number;
+    createdByUserId?: string | number;
+    authorId?: string | number;
+    posterUserId?: string | number;
+  };
   return (
-    item.professionalId ??
-    item.posterUserId ??
-    item.posterId ??
-    item.createdByUserId ??
-    item.userId
-  );
-};
-
-const getCommentUserId = (
-  comment: ServiceRequestComment,
-): string | number | undefined => {
-  const item = comment as CommentWithUser;
-  return (
-    item.professionalId ??
-    item.userId ??
-    item.createdByUserId ??
-    item.authorId ??
-    item.posterUserId
+    c.professionalId ??
+    c.userId ??
+    c.createdByUserId ??
+    c.authorId ??
+    c.posterUserId
   );
 };
 
@@ -110,41 +97,35 @@ const findProfessionalForUser = (
   userId?: string | number | null,
   userName?: string | null,
 ) => {
-  const professionals = listProfessionals();
-  if (!professionals?.length) return undefined;
-  const normalizedUserId = normalize(userId);
-  const normalizedUserName = normalize(userName);
-  if (normalizedUserId) {
-    const idVariants = [
-      normalizedUserId,
-      normalizedUserId.replace(/^u/, ""),
-      `u${normalizedUserId}`,
-    ];
-    const byProfessionalId = professionals.find((p) =>
-      idVariants.includes(normalize(p.id)),
-    );
-    if (byProfessionalId) return byProfessionalId;
-    const byUserId = professionals.find((p) => {
-      const person = p as typeof p & {
+  const list = listProfessionals();
+  if (!list?.length) return undefined;
+
+  const id = normalize(userId);
+  const name = normalize(userName);
+
+  if (id) {
+    const variants = [id, id.replace(/^u/, ""), `u${id}`];
+    const byId = list.find((p) => variants.includes(normalize(p.id)));
+    if (byId) return byId;
+
+    const byUser = list.find((p) => {
+      const extra = p as typeof p & {
         userId?: string | number;
         profileId?: string | number;
       };
-      return idVariants.some(
+      return variants.some(
         (v) =>
-          normalize(person.userId) === v || normalize(person.profileId) === v,
+          normalize(extra.userId) === v || normalize(extra.profileId) === v,
       );
     });
-    if (byUserId) return byUserId;
+    if (byUser) return byUser;
   }
-  if (normalizedUserName) {
-    return professionals.find((p) => normalize(p.name) === normalizedUserName);
-  }
+
+  if (name) return list.find((p) => normalize(p.name) === name);
   return undefined;
 };
 
-/** Hard debounce: ignore rapid multi-taps stacking profile screens */
 let lastProfileNavAt = 0;
-const PROFILE_NAV_COOLDOWN_MS = 4500;
 
 const openUserProfile = ({
   userId,
@@ -153,7 +134,6 @@ const openUserProfile = ({
 }: {
   userId?: string | number | null;
   userName?: string | null;
-  /** Close modals before push so profile does not stack / multi-open */
   beforeNavigate?: () => void;
 }) => {
   const now = Date.now();
@@ -187,12 +167,6 @@ export default function RequestsScreen() {
     closeCityPicker,
   } = useLocation();
 
-  const filteredCities = useMemo(() => {
-    const query = citySearch.trim().toLowerCase();
-    if (!query) return [...NIGERIA_CITIES];
-    return NIGERIA_CITIES.filter((city) => city.toLowerCase().includes(query));
-  }, [citySearch]);
-
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
@@ -205,15 +179,13 @@ export default function RequestsScreen() {
   const [offerPrice, setOfferPrice] = useState("");
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
   const [chatText, setChatText] = useState("");
-  const [replyTo, setReplyTo] = useState<ServiceRequestComment | null>(null);
   const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
 
-  const refreshRequests = () => setAllRequests(listServiceRequests());
-
-  const getComments = (item: ServiceRequest): ServiceRequestComment[] => [
-    ...(item.comments || []),
-    ...(extraComments[item.id] || []),
-  ];
+  const filteredCities = useMemo(() => {
+    const q = citySearch.trim().toLowerCase();
+    if (!q) return [...NIGERIA_CITIES];
+    return NIGERIA_CITIES.filter((c) => c.toLowerCase().includes(q));
+  }, [citySearch]);
 
   const matchesLocationCity = (itemCity?: string, itemArea?: string) => {
     if (
@@ -221,40 +193,42 @@ export default function RequestsScreen() {
       showAllNigeria ||
       !locationName ||
       locationName === "All Nigeria" ||
-      locationName.toLowerCase().includes("unavailable") ||
-      locationName.toLowerCase().includes("click here") ||
-      locationName.toLowerCase().includes("getting")
+      /unavailable|click here|getting/i.test(locationName)
     ) {
       return true;
     }
     const city = locationName.split(",")[0].trim().toLowerCase();
     if (!city || city === "nigeria") return true;
-    const requestCity = normalize(itemCity);
-    const requestArea = normalize(itemArea);
-    if (!requestCity && !requestArea) return true;
+    const reqCity = normalize(itemCity);
+    const reqArea = normalize(itemArea);
+    if (!reqCity && !reqArea) return true;
     return (
-      requestCity.includes(city) ||
-      city.includes(requestCity) ||
-      requestArea.includes(city)
+      reqCity.includes(city) ||
+      city.includes(reqCity) ||
+      reqArea.includes(city)
     );
   };
 
   const filteredRequests = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const q = search.trim().toLowerCase();
     const seen = new Set<string>();
-    return allRequests.filter((request) => {
-      const req = request as RequestWithUser;
+
+    return allRequests.filter((req) => {
       if (seen.has(req.id)) return false;
       seen.add(req.id);
+
       const matchesSearch =
-        !query ||
-        normalize(req.title).includes(query) ||
-        normalize(req.category).includes(query) ||
-        normalize(req.profession).includes(query) ||
-        normalize(req.location).includes(query) ||
-        normalize(req.city).includes(query) ||
-        normalize(req.description).includes(query) ||
-        normalize(req.posterName).includes(query);
+        !q ||
+        [
+          req.title,
+          req.category,
+          req.profession,
+          req.location,
+          req.city,
+          req.description,
+          req.posterName,
+        ].some((f) => normalize(f).includes(q));
+
       return (
         matchesSearch &&
         categoryMatches(req, categoryFilter) &&
@@ -270,9 +244,15 @@ export default function RequestsScreen() {
     showAllNigeria,
   ]);
 
-  const toggleLike = (id: string) => {
+  const getComments = (item: ServiceRequest): ServiceRequestComment[] => [
+    ...(item.comments || []),
+    ...(extraComments[item.id] || []),
+  ];
+
+  const refreshRequests = () => setAllRequests(listServiceRequests());
+
+  const toggleLike = (id: string) =>
     setLikedIds((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
 
   const shareRequest = async (item: ServiceRequest) => {
     try {
@@ -288,39 +268,36 @@ export default function RequestsScreen() {
   const openChat = (item: ServiceRequest) => {
     setChatRequest(item);
     setChatText("");
-    setReplyTo(null);
   };
 
   const closeChat = () => {
     setChatRequest(null);
     setChatText("");
-    setReplyTo(null);
   };
 
   const sendChatMessage = () => {
     if (!chatRequest) return;
     const text = chatText.trim();
     if (!text) return;
+
     const currentUserId = getCurrentUserId();
-    const body = replyTo ? `@${replyTo.userName} ${text}` : text;
     const currentProfessional = findProfessionalForUser(currentUserId);
-    const newComment: CommentWithUser = {
+
+    const newComment: ServiceRequestComment & { userId?: string | number } = {
       id: `local-${Date.now()}`,
       userName: currentProfessional?.name || "You",
       userAvatar: currentProfessional?.image || MY_AVATAR,
-      text: body,
+      text,
       timeAgo: "Just now",
       userId: currentProfessional?.id ?? currentUserId,
     };
+
     setExtraComments((prev) => ({
       ...prev,
       [chatRequest.id]: [...(prev[chatRequest.id] || []), newComment],
     }));
     setChatText("");
-    setReplyTo(null);
-    setTimeout(() => {
-      commentListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+    setTimeout(() => commentListRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   const closeOffer = () => {
@@ -339,22 +316,15 @@ export default function RequestsScreen() {
     });
 
     if (!result?.ok) {
-      const reason = result?.reason;
-      if (reason === "own") {
-        Alert.alert(
-          "Not allowed",
-          "You cannot send an offer on your own request.",
-        );
-      } else if (reason === "already") {
-        Alert.alert(
-          "Already sent",
-          "You already sent an offer on this request.",
-        );
-      } else if (reason === "full") {
-        Alert.alert("Full", "This request is no longer accepting offers.");
-      } else {
-        Alert.alert("Error", "Could not send offer. Try again.");
-      }
+      const messages: Record<string, string> = {
+        own: "You cannot send an offer on your own request.",
+        already: "You already sent an offer on this request.",
+        full: "This request is no longer accepting offers.",
+      };
+      Alert.alert(
+        result?.reason === "own" ? "Not allowed" : result?.reason === "already" ? "Already sent" : "Error",
+        messages[result?.reason ?? ""] || "Could not send offer. Try again.",
+      );
       return;
     }
 
@@ -392,11 +362,32 @@ export default function RequestsScreen() {
 
     setAllRequests(listServiceRequests());
     closeOffer();
+    router.push({ pathname: "/chat/[id]", params: { id: conv.id } });
+  };
 
-    router.push({
-      pathname: "/chat/[id]",
-      params: { id: conv.id },
-    });
+  const renderOfferButton = (item: ServiceRequest) => {
+    const check = canSendOfferOnRequest(item);
+    if (!check.ok) {
+      if (check.reason === "already") {
+        return (
+          <View style={[styles.sendOfferBtn, { opacity: 0.55 }]}>
+            <Ionicons name="checkmark" size={18} color="#fff" />
+            <Text style={styles.sendOfferText}>Offer sent</Text>
+          </View>
+        );
+      }
+      return null;
+    }
+    return (
+      <TouchableOpacity
+        style={styles.sendOfferBtn}
+        onPress={() => setOfferRequest(item)}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="paper-plane" size={18} color="#fff" />
+        <Text style={styles.sendOfferText}>Send Offer</Text>
+      </TouchableOpacity>
+    );
   };
 
   const renderRequest = ({ item }: { item: ServiceRequest }) => {
@@ -416,9 +407,7 @@ export default function RequestsScreen() {
             openUserProfile({ userId: posterUserId, userName: item.posterName })
           }
         >
-          <View style={styles.posterAvatarWrap}>
-            <Image source={item.posterAvatar} style={styles.posterAvatar} />
-          </View>
+          <Image source={item.posterAvatar} style={styles.posterAvatar} />
           <View style={styles.posterInfo}>
             <Text style={styles.posterName} numberOfLines={1}>
               {item.posterName}
@@ -445,11 +434,7 @@ export default function RequestsScreen() {
         </View>
 
         {item.images?.length ? (
-          <RequestImageSlider
-            images={item.images}
-            height={180}
-            borderRadius={0}
-          />
+          <RequestImageSlider images={item.images} height={180} borderRadius={0} />
         ) : null}
 
         <View style={styles.metaRow}>
@@ -504,10 +489,7 @@ export default function RequestsScreen() {
                 })
               }
             >
-              <Image
-                source={firstComment.userAvatar}
-                style={styles.commentAvatar}
-              />
+              <Image source={firstComment.userAvatar} style={styles.commentAvatar} />
             </TouchableOpacity>
             <View style={styles.commentBody}>
               <TouchableOpacity
@@ -521,10 +503,7 @@ export default function RequestsScreen() {
               >
                 <Text style={styles.commentName}>{firstComment.userName}</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => openChat(item)}
-              >
+              <TouchableOpacity activeOpacity={0.8} onPress={() => openChat(item)}>
                 <Text style={styles.commentText} numberOfLines={2}>
                   {firstComment.text}
                 </Text>
@@ -537,11 +516,7 @@ export default function RequestsScreen() {
             onPress={() => openChat(item)}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={16}
-              color={GREEN}
-            />
+            <Ionicons name="chatbubble-ellipses-outline" size={16} color={GREEN} />
             <Text style={styles.writeCommentHintText}>Write a comment…</Text>
           </TouchableOpacity>
         )}
@@ -555,31 +530,7 @@ export default function RequestsScreen() {
           </TouchableOpacity>
         ) : null}
 
-        {(() => {
-          const offerCheck = canSendOfferOnRequest(item);
-          if (!offerCheck.ok) {
-            if (offerCheck.reason === "own") return null;
-            if (offerCheck.reason === "already") {
-              return (
-                <View style={[styles.sendOfferBtn, { opacity: 0.55 }]}>
-                  <Ionicons name="checkmark" size={18} color="#fff" />
-                  <Text style={styles.sendOfferText}>Offer sent</Text>
-                </View>
-              );
-            }
-            return null;
-          }
-          return (
-            <TouchableOpacity
-              style={styles.sendOfferBtn}
-              onPress={() => setOfferRequest(item)}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="paper-plane" size={18} color="#fff" />
-              <Text style={styles.sendOfferText}>Send Offer</Text>
-            </TouchableOpacity>
-          );
-        })()}
+        {renderOfferButton(item)}
       </View>
     );
   };
@@ -598,22 +549,13 @@ export default function RequestsScreen() {
           >
             <Ionicons name="location" size={14} color={GREEN} />
             {loadingLocation ? (
-              <ActivityIndicator
-                size="small"
-                color={GREEN}
-                style={{ marginLeft: 5 }}
-              />
+              <ActivityIndicator size="small" color={GREEN} style={{ marginLeft: 5 }} />
             ) : (
               <Text style={styles.headerSubtitle} numberOfLines={1}>
                 {locationName || "All Nigeria"}
               </Text>
             )}
-            <Ionicons
-              name="chevron-down"
-              size={14}
-              color="#6B7280"
-              style={styles.dropdownIcon}
-            />
+            <Ionicons name="chevron-down" size={14} color="#6B7280" style={styles.dropdownIcon} />
           </TouchableOpacity>
         </View>
         <TouchableOpacity
@@ -637,7 +579,6 @@ export default function RequestsScreen() {
             onChangeText={setSearch}
           />
         </View>
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -654,12 +595,7 @@ export default function RequestsScreen() {
                 onPress={() => setCategoryFilter(category)}
                 activeOpacity={0.8}
               >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    active && styles.filterChipTextActive,
-                  ]}
-                >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
                   {category}
                 </Text>
               </TouchableOpacity>
@@ -678,9 +614,7 @@ export default function RequestsScreen() {
           <View style={styles.emptyBox}>
             <Ionicons name="document-text-outline" size={40} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No requests found</Text>
-            <Text style={styles.emptyText}>
-              Try another category or location.
-            </Text>
+            <Text style={styles.emptyText}>Try another category or location.</Text>
           </View>
         }
       />
@@ -694,21 +628,14 @@ export default function RequestsScreen() {
         }}
       />
 
-      <Modal
-        visible={!!offerRequest}
-        transparent
-        animationType="slide"
-        onRequestClose={closeOffer}
-      >
+      {/* Offer modal */}
+      <Modal visible={!!offerRequest} transparent animationType="slide" onRequestClose={closeOffer}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <Pressable style={styles.modalOverlay} onPress={closeOffer}>
-            <Pressable
-              style={styles.modalSheet}
-              onPress={(e) => e.stopPropagation()}
-            >
+            <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
               <Text style={styles.modalTitle}>Send Offer</Text>
               <Text style={styles.modalSub} numberOfLines={2}>
                 {offerRequest?.title}
@@ -725,10 +652,7 @@ export default function RequestsScreen() {
                 />
               </View>
               <TouchableOpacity
-                style={[
-                  styles.sendOfferBtn,
-                  !offerPrice.replace(/\D/g, "") && { opacity: 0.5 },
-                ]}
+                style={[styles.sendOfferBtn, !offerPrice.replace(/\D/g, "") && { opacity: 0.5 }]}
                 onPress={submitOffer}
                 disabled={!offerPrice.replace(/\D/g, "")}
                 activeOpacity={0.85}
@@ -741,21 +665,14 @@ export default function RequestsScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal
-        visible={!!chatRequest}
-        transparent
-        animationType="slide"
-        onRequestClose={closeChat}
-      >
+      {/* Comments modal (half screen) */}
+      <Modal visible={!!chatRequest} transparent animationType="slide" onRequestClose={closeChat}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <Pressable style={styles.modalOverlay} onPress={closeChat}>
-            <Pressable
-              style={styles.commentModalSheet}
-              onPress={(e) => e.stopPropagation()}
-            >
+            <Pressable style={styles.commentModalSheet} onPress={(e) => e.stopPropagation()}>
               <View style={styles.commentModalHandle} />
               <Text style={styles.modalTitle}>Comments</Text>
               <FlatList
@@ -776,10 +693,7 @@ export default function RequestsScreen() {
                         })
                       }
                     >
-                      <Image
-                        source={c.userAvatar}
-                        style={styles.commentAvatar}
-                      />
+                      <Image source={c.userAvatar} style={styles.commentAvatar} />
                     </TouchableOpacity>
                     <View style={{ flex: 1 }}>
                       <TouchableOpacity
@@ -807,10 +721,7 @@ export default function RequestsScreen() {
                   value={chatText}
                   onChangeText={setChatText}
                 />
-                <TouchableOpacity
-                  onPress={sendChatMessage}
-                  style={styles.commentSend}
-                >
+                <TouchableOpacity onPress={sendChatMessage} style={styles.commentSend}>
                   <Ionicons name="send" size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -819,15 +730,10 @@ export default function RequestsScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Location modal */}
       <Modal visible={showLocationModal} transparent animationType="fade">
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowLocationModal(false)}
-        >
-          <Pressable
-            style={styles.modalSheet}
-            onPress={(e) => e.stopPropagation()}
-          >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowLocationModal(false)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>Location</Text>
             <TouchableOpacity style={styles.locOption} onPress={getUserLocation}>
               <Ionicons name="navigate" size={20} color={GREEN} />
@@ -843,10 +749,7 @@ export default function RequestsScreen() {
               <Ionicons name="business" size={20} color={GREEN} />
               <Text style={styles.locOptionText}>Choose city</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.locOption}
-              onPress={viewAllInNigeria}
-            >
+            <TouchableOpacity style={styles.locOption} onPress={viewAllInNigeria}>
               <Ionicons name="globe" size={20} color={GREEN} />
               <Text style={styles.locOptionText}>All Nigeria</Text>
             </TouchableOpacity>
@@ -854,12 +757,10 @@ export default function RequestsScreen() {
         </Pressable>
       </Modal>
 
+      {/* City picker */}
       <Modal visible={showCityPicker} transparent animationType="slide">
         <Pressable style={styles.modalOverlay} onPress={closeCityPicker}>
-          <Pressable
-            style={styles.modalSheet}
-            onPress={(e) => e.stopPropagation()}
-          >
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>Select city</Text>
             <TextInput
               style={styles.citySearch}
@@ -873,10 +774,7 @@ export default function RequestsScreen() {
               keyExtractor={(c) => c}
               style={{ maxHeight: 320 }}
               renderItem={({ item: city }) => (
-                <TouchableOpacity
-                  style={styles.locOption}
-                  onPress={() => selectCity(city)}
-                >
+                <TouchableOpacity style={styles.locOption} onPress={() => selectCity(city)}>
                   <Text style={styles.locOptionText}>{city}</Text>
                 </TouchableOpacity>
               )}
@@ -901,17 +799,8 @@ const styles = StyleSheet.create({
   },
   headerTextWrap: { flex: 1, marginRight: 12 },
   headerTitle: { fontSize: 22, fontWeight: "800", color: "#111827" },
-  headerLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginLeft: 4,
-    maxWidth: 180,
-  },
+  headerLocationRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
+  headerSubtitle: { fontSize: 13, color: "#6B7280", marginLeft: 4, maxWidth: 180 },
   dropdownIcon: { marginLeft: 2 },
   createBtn: {
     flexDirection: "row",
@@ -923,11 +812,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   createBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  topControls: {
-    backgroundColor: "#F9FAFB",
-    paddingBottom: 4,
-    zIndex: 2,
-  },
+  topControls: { backgroundColor: "#F9FAFB", paddingBottom: 4, zIndex: 2 },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -942,16 +827,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: "#111" },
-  filtersScroll: {
-    maxHeight: 44,
-    marginBottom: 6,
-  },
-  filtersRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    alignItems: "center",
-    gap: 8,
-  },
+  filtersScroll: { maxHeight: 44, marginBottom: 6 },
+  filtersRow: { paddingHorizontal: 16, paddingVertical: 4, alignItems: "center", gap: 8 },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -964,12 +841,7 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: GREEN, borderColor: GREEN },
   filterChipText: { fontSize: 13, fontWeight: "600", color: "#6B7280" },
   filterChipTextActive: { color: "#fff" },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 100,
-    flexGrow: 1,
-  },
+  listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100, flexGrow: 1 },
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -979,82 +851,31 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   posterRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  posterAvatarWrap: { marginRight: 10 },
-  posterAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#E5E7EB",
-  },
+  posterAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#E5E7EB", marginRight: 10 },
   posterInfo: { flex: 1, minWidth: 0 },
   posterName: { fontSize: 14, fontWeight: "700", color: "#111827" },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    marginTop: 2,
-  },
+  locationRow: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2 },
   locationText: { fontSize: 12, color: "#6B7280", flex: 1 },
   timeAgo: { fontSize: 12, color: "#9CA3AF" },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    marginBottom: 8,
-  },
+  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8 },
   cardTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#111827" },
-  newBadge: {
-    backgroundColor: "#DCFCE7",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
+  newBadge: { backgroundColor: "#DCFCE7", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   newBadgeText: { fontSize: 10, fontWeight: "800", color: GREEN },
   metaRow: { flexDirection: "row", marginTop: 8, marginBottom: 6 },
-  categoryChip: {
-    backgroundColor: "#F0FDF4",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
+  categoryChip: { backgroundColor: "#F0FDF4", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   categoryChipText: { fontSize: 12, fontWeight: "600", color: GREEN },
-  description: {
-    fontSize: 14,
-    color: "#4B5563",
-    lineHeight: 20,
-    marginBottom: 10,
-  },
+  description: { fontSize: 14, color: "#4B5563", lineHeight: 20, marginBottom: 10 },
   engagementRow: { flexDirection: "row", gap: 16, marginBottom: 8 },
   engagementBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
   engagementText: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
-  commentPreview: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  commentAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#E5E7EB",
-  },
+  commentPreview: { flexDirection: "row", gap: 8, marginTop: 4, marginBottom: 4 },
+  commentAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E5E7EB" },
   commentBody: { flex: 1 },
   commentName: { fontSize: 13, fontWeight: "700", color: "#111827" },
   commentText: { fontSize: 13, color: "#4B5563" },
-  writeCommentHint: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 6,
-  },
+  writeCommentHint: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 },
   writeCommentHintText: { fontSize: 13, color: GREEN, fontWeight: "600" },
-  viewMoreComments: {
-    fontSize: 13,
-    color: GREEN,
-    fontWeight: "600",
-    marginTop: 4,
-  },
+  viewMoreComments: { fontSize: 13, color: GREEN, fontWeight: "600", marginTop: 4 },
   sendOfferBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1067,18 +888,9 @@ const styles = StyleSheet.create({
   },
   sendOfferText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   emptyBox: { alignItems: "center", paddingVertical: 60 },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#111827",
-    marginTop: 12,
-  },
+  emptyTitle: { fontSize: 17, fontWeight: "700", color: "#111827", marginTop: 12 },
   emptyText: { fontSize: 13, color: "#9CA3AF", marginTop: 4 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
   modalSheet: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
@@ -1086,12 +898,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 36,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 6,
-  },
+  modalTitle: { fontSize: 18, fontWeight: "800", color: "#111827", marginBottom: 6 },
   modalSub: { fontSize: 14, color: "#6B7280", marginBottom: 14 },
   offerField: {
     flexDirection: "row",
@@ -1105,12 +912,7 @@ const styles = StyleSheet.create({
   naira: { fontSize: 18, fontWeight: "700", color: "#111", marginRight: 6 },
   offerInput: { flex: 1, paddingVertical: 12, fontSize: 16, color: "#111" },
   commentRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
-  commentInputRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 10,
-    alignItems: "center",
-  },
+  commentInputRow: { flexDirection: "row", gap: 8, marginTop: 10, alignItems: "center" },
   commentInput: {
     flex: 1,
     borderWidth: 1,
@@ -1129,12 +931,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  locOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-  },
+  locOption: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14 },
   locOptionText: { fontSize: 15, fontWeight: "600", color: "#111827" },
   citySearch: {
     borderWidth: 1,
@@ -1164,8 +961,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#D1D5DB",
     marginBottom: 12,
   },
-  commentList: {
-    flex: 1,
-    marginBottom: 8,
-  },
+  commentList: { flex: 1, marginBottom: 8 },
 });
