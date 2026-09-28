@@ -9,14 +9,16 @@ import {
   Animated,
   Pressable,
   useWindowDimensions,
+  Alert,
 } from "react-native";
-import { Tabs } from "expo-router";
+import { Tabs, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const GREEN = "#159447";
 const INACTIVE = "#6B7280";
+const DANGER = "#EF4444";
 const SIDEBAR_BG = "#FFFFFF";
 const SIDEBAR_WIDTH = 240;
 
@@ -27,19 +29,19 @@ const ADMIN_TABS: {
 }[] = [
   { name: "Dashboard", label: "Dashboard", icon: "home-outline" },
   { name: "Users", label: "Users", icon: "people-outline" },
-  { name: "Settings", label: "Settings", icon: "settings-outline" },
+  {
+    name: "Verification Aplications",
+    label: "Verification Applications",
+    icon: "checkmark-circle-outline",
+  },
   {
     name: "Notifications",
     label: "Notifications",
     icon: "notifications-outline",
   },
   { name: "Subscriptions", label: "Subscriptions", icon: "card-outline" },
-  {
-    name: "Verification Aplications",
-    label: "Verification Applications",
-    icon: "checkmark-circle-outline",
-  },
   { name: "Reports", label: "Reports", icon: "bar-chart-outline" },
+  { name: "Settings", label: "Settings", icon: "settings-outline" },
 ];
 
 function AdminSidebar({ state, navigation }: BottomTabBarProps) {
@@ -47,14 +49,13 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
   const { width: windowWidth } = useWindowDimensions();
   const isLargeScreen = windowWidth >= 768;
 
-  // Start open on large screens, closed on mobile
   const [isOpen, setIsOpen] = useState(isLargeScreen);
   const slideAnim = useRef(
-    new Animated.Value(isLargeScreen ? 0 : -SIDEBAR_WIDTH)
+    new Animated.Value(isLargeScreen ? 0 : -SIDEBAR_WIDTH),
   ).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const menuLeftAnim = useRef(
-    new Animated.Value(isLargeScreen ? SIDEBAR_WIDTH + 12 : 16)
+    new Animated.Value(isLargeScreen ? SIDEBAR_WIDTH + 12 : 16),
   ).current;
 
   const focusedRoute = state.routes[state.index]?.name;
@@ -80,7 +81,7 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
       Animated.timing(menuLeftAnim, {
         toValue: isOpen ? SIDEBAR_WIDTH + 12 : 16,
         duration: 250,
-        useNativeDriver: false, // left position can't use native driver
+        useNativeDriver: false,
       }),
     ]).start();
   }, [isOpen, isLargeScreen]);
@@ -100,16 +101,30 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
 
     if (!event.defaultPrevented) {
       navigation.navigate(routeName);
-      // Auto-close on mobile after navigation
       if (!isLargeScreen) {
         closeSidebar();
       }
     }
   };
 
+  const handleLogout = () => {
+    Alert.alert("Log Out Admin", "Exit the admin panel?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: () => {
+          closeSidebar();
+          // Leave admin and return to main app (profile / home)
+          router.replace("/(tab)/profile");
+        },
+      },
+    ]);
+  };
+
   return (
     <>
-      {/* Floating menu button (always visible) */}
+      {/* Floating menu button */}
       <Animated.View
         style={[
           styles.menuButtonWrap,
@@ -135,7 +150,7 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Dark overlay when sidebar is open on small screens */}
+      {/* Overlay on small screens */}
       {!isLargeScreen && (
         <Animated.View
           pointerEvents={isOpen ? "auto" : "none"}
@@ -161,7 +176,6 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
           },
         ]}
       >
-        {/* Brand / Logo area */}
         <View style={styles.brand}>
           <View style={styles.logoCircle}>
             <Ionicons name="shield-checkmark" size={22} color="#FFFFFF" />
@@ -196,6 +210,20 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
               </TouchableOpacity>
             );
           })}
+
+          {/* Separator + Log Out (action, not a route) */}
+          <View style={styles.separator} />
+
+          <TouchableOpacity
+            style={styles.logoutItem}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Log Out Admin"
+          >
+            <Ionicons name="log-out-outline" size={22} color={DANGER} />
+            <Text style={styles.logoutLabel}>Log-Out Admin</Text>
+          </TouchableOpacity>
         </ScrollView>
       </Animated.View>
     </>
@@ -209,7 +237,6 @@ export default function AdminLayout() {
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
-        // Keep tab bar container transparent so our custom overlay works
         tabBarStyle: {
           position: "absolute",
           left: 0,
@@ -225,14 +252,14 @@ export default function AdminLayout() {
     >
       <Tabs.Screen name="Dashboard" options={{ title: "Dashboard" }} />
       <Tabs.Screen name="Users" options={{ title: "Users" }} />
-      <Tabs.Screen name="Settings" options={{ title: "Settings" }} />
-      <Tabs.Screen name="Notifications" options={{ title: "Notifications" }} />
-      <Tabs.Screen name="Subscriptions" options={{ title: "Subscriptions" }} />
       <Tabs.Screen
         name="Verification Aplications"
         options={{ title: "Verification Applications" }}
       />
+      <Tabs.Screen name="Notifications" options={{ title: "Notifications" }} />
+      <Tabs.Screen name="Subscriptions" options={{ title: "Subscriptions" }} />
       <Tabs.Screen name="Reports" options={{ title: "Reports" }} />
+      <Tabs.Screen name="Settings" options={{ title: "Settings" }} />
     </Tabs>
   );
 }
@@ -334,6 +361,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 8,
     gap: 4,
+    paddingBottom: 16,
   },
 
   navItem: {
@@ -348,6 +376,30 @@ const styles = StyleSheet.create({
   navLabel: {
     fontSize: 14,
     fontWeight: "600",
+    flex: 1,
+  },
+
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 12,
+    marginHorizontal: 8,
+  },
+
+  logoutItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: "#FEF2F2",
+  },
+
+  logoutLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: DANGER,
     flex: 1,
   },
 });
