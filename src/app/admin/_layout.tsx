@@ -44,7 +44,6 @@ const ADMIN_TABS: {
   { name: "Reports", label: "Reports", icon: "bar-chart-outline" },
   { name: "Settings", label: "Settings", icon: "settings-outline" },
 
-  { name: "Log-Out Admin", label: "Log-Out Admin", icon: "bar-chart-outline" },
 ];
 
 function AdminSidebar({ state, navigation }: BottomTabBarProps) {
