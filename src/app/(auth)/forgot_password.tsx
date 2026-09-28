@@ -13,13 +13,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { getErrorMessage } from "@/utils/error";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [method, setMethod] = useState<"phone" | "email">("phone");
   const [contact, setContact] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (!contact.trim()) {
       Alert.alert(
         "Missing Information",
@@ -30,13 +32,25 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    // TODO: Call your backend password-reset API here
-    Alert.alert(
-      "Request Sent",
-      method === "phone"
-        ? "We have sent a reset link to your phone number."
-        : "We have sent a reset link to your email address.",
-    );
+    try {
+      setLoading(true);
+
+      // TODO: Call your real Supabase / backend password-reset API here
+      // Example:
+      // const { error } = await supabase.auth.resetPasswordForEmail(contact);
+      // if (error) throw error;
+
+      Alert.alert(
+        "Request Sent",
+        method === "phone"
+          ? "We have sent a reset link to your phone number."
+          : "We have sent a reset link to your email address.",
+      );
+    } catch (error) {
+      Alert.alert("Reset Failed", getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -148,8 +162,11 @@ export default function ForgotPasswordScreen() {
             style={styles.primaryButton}
             onPress={handleReset}
             activeOpacity={0.85}
+            disabled={loading}
           >
-            <Text style={styles.primaryButtonText}>Send Reset Link</Text>
+            <Text style={styles.primaryButtonText}>
+              {loading ? "Sending..." : "Send Reset Link"}
+            </Text>
           </TouchableOpacity>
 
           {/* Back to Login */}
