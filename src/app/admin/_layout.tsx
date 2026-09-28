@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,9 @@ import {
   StyleSheet,
   Platform,
   ScrollView,
+  Animated,
+  Pressable,
+  useWindowDimensions,
 } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -37,7 +40,40 @@ const ADMIN_TABS: {
 
 function AdminSidebar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  const isLargeScreen = windowWidth >= 768;
+
+  // Start open on large screens, closed on mobile
+  const [isOpen, setIsOpen] = useState(isLargeScreen);
+  const slideAnim = useRef(new Animated.Value(isLargeScreen ? 0 : -SIDEBAR_WIDTH)).current;
+  const overlayOpacity = useRef(new Animated.Value(isLargeScreen ? 0 : 0)).current;
+
   const focusedRoute = state.routes[state.index]?.name;
+
+  useEffect(() => {
+    // Keep large screens open by default when resizing
+    if (isLargeScreen && !isOpen) {
+      setIsOpen(true);
+    }
+  }, [isLargeScreen]);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: isOpen ? 0 : -SIDEBAR_WIDTH,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: isOpen && !isLargeScreen ? 0.4 : 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [isOpen, isLargeScreen]);
+
+  const toggleSidebar = () => setIsOpen((prev) => !prev);
+  const closeSidebar = () => setIsOpen(false);
 
   const goTo = (routeName: string) => {
     const route = state.routes.find((item) => item.name === routeName);
@@ -51,56 +87,100 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
 
     if (!event.defaultPrevented) {
       navigation.navigate(routeName);
+      // Auto-close on mobile after navigation
+      if (!isLargeScreen) {
+        closeSidebar();
+      }
     }
   };
 
   return (
-    <View
-      style={[
-        styles.sidebar,
-        {
-          paddingTop: Math.max(insets.top, 16),
-          paddingBottom: Math.max(insets.bottom, 16),
-        },
-      ]}
-    >
-      {/* Brand / Logo area */}
-      <View style={styles.brand}>
-        <View style={styles.logoCircle}>
-          <Ionicons name="shield-checkmark" size={22} color="#FFFFFF" />
-        </View>
-        <Text style={styles.brandText}>Admin</Text>
-      </View>
-
-      <ScrollView
-        style={styles.navScroll}
-        contentContainerStyle={styles.navContent}
-        showsVerticalScrollIndicator={false}
+    <>
+      {/* Floating menu button (always visible) */}
+      <TouchableOpacity
+        style={[
+          styles.menuButton,
+          {
+            top: Math.max(insets.top, 12) + 4,
+            left: isOpen ? SIDEBAR_WIDTH + 12 : 16,
+          },
+        ]}
+        onPress={toggleSidebar}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={isOpen ? "Close menu" : "Open menu"}
       >
-        {ADMIN_TABS.map((tab) => {
-          const focused = focusedRoute === tab.name;
-          const color = focused ? GREEN : INACTIVE;
-          const bg = focused ? "rgba(21, 148, 71, 0.12)" : "transparent";
+        <Ionicons
+          name={isOpen ? "close" : "menu"}
+          size={24}
+          color="#111827"
+        />
+      </TouchableOpacity>
 
-          return (
-            <TouchableOpacity
-              key={tab.name}
-              style={[styles.navItem, { backgroundColor: bg }]}
-              onPress={() => goTo(tab.name)}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityState={{ selected: focused }}
-              accessibilityLabel={tab.label}
-            >
-              <Ionicons name={tab.icon} size={22} color={color} />
-              <Text style={[styles.navLabel, { color }]} numberOfLines={1}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
+      {/* Dark overlay when sidebar is open on small screens */}
+      {!isLargeScreen && (
+        <Animated.View
+          pointerEvents={isOpen ? "auto" : "none"}
+          style={[
+            styles.overlay,
+            {
+              opacity: overlayOpacity,
+            },
+          ]}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeSidebar} />
+        </Animated.View>
+      )}
+
+      {/* Sidebar */}
+      <Animated.View
+        style={[
+          styles.sidebar,
+          {
+            paddingTop: Math.max(insets.top, 16),
+            paddingBottom: Math.max(insets.bottom, 16),
+            transform: [{ translateX: slideAnim }],
+          },
+        ]}
+      >
+        {/* Brand / Logo area */}
+        <View style={styles.brand}>
+          <View style={styles.logoCircle}>
+            <Ionicons name="shield-checkmark" size={22} color="#FFFFFF" />
+          </View>
+          <Text style={styles.brandText}>Admin</Text>
+        </View>
+
+        <ScrollView
+          style={styles.navScroll}
+          contentContainerStyle={styles.navContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {ADMIN_TABS.map((tab) => {
+            const focused = focusedRoute === tab.name;
+            const color = focused ? GREEN : INACTIVE;
+            const bg = focused ? "rgba(21, 148, 71, 0.12)" : "transparent";
+
+            return (
+              <TouchableOpacity
+                key={tab.name}
+                style={[styles.navItem, { backgroundColor: bg }]}
+                onPress={() => goTo(tab.name)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ selected: focused }}
+                accessibilityLabel={tab.label}
+              >
+                <Ionicons name={tab.icon} size={22} color={color} />
+                <Text style={[styles.navLabel, { color }]} numberOfLines={1}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </Animated.View>
+    </>
   );
 }
 
@@ -111,21 +191,12 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
-        // Make the tab bar sit on the left instead of bottom
         tabBarStyle: {
-          position: "absolute",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: SIDEBAR_WIDTH,
-          height: "100%",
-          borderTopWidth: 0,
-          elevation: 0,
-          backgroundColor: "transparent",
+          // Hide the default tab bar completely – we render our own
+          display: "none",
         },
       }}
     >
-      {/* Map your actual screen files here */}
       <Tabs.Screen name="Dashboard" options={{ title: "Dashboard" }} />
       <Tabs.Screen name="Users" options={{ title: "Users" }} />
       <Tabs.Screen name="Settings" options={{ title: "Settings" }} />
@@ -137,7 +208,6 @@ export default function TabLayout() {
       />
       <Tabs.Screen name="Reports" options={{ title: "Reports" }} />
 
-      {/* Keep any hidden routes */}
       <Tabs.Screen name="all-requests" options={{ href: null }} />
       <Tabs.Screen name="how-it-works" options={{ href: null }} />
     </Tabs>
@@ -145,6 +215,38 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  menuButton: {
+    position: "absolute",
+    zIndex: 100,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 6,
+      },
+      web: {
+        // @ts-ignore
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+      },
+    }),
+  },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+    zIndex: 90,
+  },
+
   sidebar: {
     position: "absolute",
     left: 0,
@@ -154,19 +256,20 @@ const styles = StyleSheet.create({
     backgroundColor: SIDEBAR_BG,
     borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: "#E5E7EB",
+    zIndex: 95,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOffset: { width: 4, height: 0 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.12,
         shadowRadius: 12,
       },
       android: {
-        elevation: 8,
+        elevation: 12,
       },
       web: {
         // @ts-ignore
-        boxShadow: "4px 0 16px rgba(0,0,0,0.06)",
+        boxShadow: "4px 0 16px rgba(0,0,0,0.08)",
       },
     }),
   },
