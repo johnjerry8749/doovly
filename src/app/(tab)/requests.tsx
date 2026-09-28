@@ -142,16 +142,19 @@ const findProfessionalForUser = (
   return undefined;
 };
 
-/** Hard debounce: ignore rapid multi-taps (2–10x) stacking profile screens */
+/** Hard debounce: ignore rapid multi-taps stacking profile screens */
 let lastProfileNavAt = 0;
 const PROFILE_NAV_COOLDOWN_MS = 4500;
 
 const openUserProfile = ({
   userId,
   userName,
+  beforeNavigate,
 }: {
   userId?: string | number | null;
   userName?: string | null;
+  /** Close modals before push so profile does not stack / multi-open */
+  beforeNavigate?: () => void;
 }) => {
   const now = Date.now();
   if (now - lastProfileNavAt < PROFILE_NAV_COOLDOWN_MS) return;
@@ -160,6 +163,7 @@ const openUserProfile = ({
   if (!professional) return;
 
   lastProfileNavAt = now;
+  beforeNavigate?.();
   router.push({
     pathname: "/professional/[id]",
     params: { id: String(professional.id), from: "requests" },
@@ -361,7 +365,6 @@ export default function RequestsScreen() {
       body: `Someone sent an offer of ₦${amountNum.toLocaleString()} on "${offerRequest.title}".`,
     });
 
-    // First feature: open chat with request + offer amount (pending provider accept)
     const offererProId = getLoggedInProfessionalId() ?? getCurrentUserId();
     const offererPro = getProfessionalById(String(offererProId));
     const locationLabel = [offerRequest.location, offerRequest.city]
@@ -623,43 +626,47 @@ export default function RequestsScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchRow}>
-        <Ionicons name="search" size={18} color="#9CA3AF" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search requests…"
-          placeholderTextColor="#9CA3AF"
-          value={search}
-          onChangeText={setSearch}
-        />
-      </View>
+      <View style={styles.topControls}>
+        <View style={styles.searchRow}>
+          <Ionicons name="search" size={18} color="#9CA3AF" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search requests…"
+            placeholderTextColor="#9CA3AF"
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filtersRow}
-      >
-        {CATEGORY_FILTERS.map((category) => {
-          const active = categoryFilter === category;
-          return (
-            <TouchableOpacity
-              key={category}
-              style={[styles.filterChip, active && styles.filterChipActive]}
-              onPress={() => setCategoryFilter(category)}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  active && styles.filterChipTextActive,
-                ]}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filtersScroll}
+          contentContainerStyle={styles.filtersRow}
+          keyboardShouldPersistTaps="handled"
+        >
+          {CATEGORY_FILTERS.map((category) => {
+            const active = categoryFilter === category;
+            return (
+              <TouchableOpacity
+                key={category}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setCategoryFilter(category)}
+                activeOpacity={0.8}
               >
-                {category}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    active && styles.filterChipTextActive,
+                  ]}
+                >
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       <FlatList
         data={filteredRequests}
@@ -746,20 +753,47 @@ export default function RequestsScreen() {
         >
           <Pressable style={styles.modalOverlay} onPress={closeChat}>
             <Pressable
-              style={[styles.modalSheet, { maxHeight: "70%" }]}
+              style={styles.commentModalSheet}
               onPress={(e) => e.stopPropagation()}
             >
+              <View style={styles.commentModalHandle} />
               <Text style={styles.modalTitle}>Comments</Text>
               <FlatList
                 ref={commentListRef}
                 data={chatComments}
                 keyExtractor={(c) => c.id}
-                style={{ maxHeight: 280 }}
+                style={styles.commentList}
+                keyboardShouldPersistTaps="handled"
                 renderItem={({ item: c }) => (
                   <View style={styles.commentRow}>
-                    <Image source={c.userAvatar} style={styles.commentAvatar} />
+                    <TouchableOpacity
+                      activeOpacity={0.75}
+                      onPress={() =>
+                        openUserProfile({
+                          userId: getCommentUserId(c),
+                          userName: c.userName,
+                          beforeNavigate: closeChat,
+                        })
+                      }
+                    >
+                      <Image
+                        source={c.userAvatar}
+                        style={styles.commentAvatar}
+                      />
+                    </TouchableOpacity>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.commentName}>{c.userName}</Text>
+                      <TouchableOpacity
+                        activeOpacity={0.75}
+                        onPress={() =>
+                          openUserProfile({
+                            userId: getCommentUserId(c),
+                            userName: c.userName,
+                            beforeNavigate: closeChat,
+                          })
+                        }
+                      >
+                        <Text style={styles.commentName}>{c.userName}</Text>
+                      </TouchableOpacity>
                       <Text style={styles.commentText}>{c.text}</Text>
                     </View>
                   </View>
@@ -889,12 +923,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   createBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  topControls: {
+    backgroundColor: "#F9FAFB",
+    paddingBottom: 4,
+    zIndex: 2,
+  },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 16,
     marginTop: 8,
-    marginBottom: 8,
+    marginBottom: 10,
     backgroundColor: "#fff",
     borderRadius: 12,
     paddingHorizontal: 12,
@@ -903,7 +942,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: "#111" },
-  filtersRow: { paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
+  filtersScroll: {
+    maxHeight: 44,
+    marginBottom: 6,
+  },
+  filtersRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    alignItems: "center",
+    gap: 8,
+  },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -916,7 +964,12 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: GREEN, borderColor: GREEN },
   filterChipText: { fontSize: 13, fontWeight: "600", color: "#6B7280" },
   filterChipTextActive: { color: "#fff" },
-  listContent: { paddingHorizontal: 16, paddingBottom: 100, flexGrow: 1 },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 100,
+    flexGrow: 1,
+  },
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -1092,5 +1145,27 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontSize: 15,
     color: "#111",
+  },
+  commentModalSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+    paddingTop: 10,
+    height: "50%",
+    maxHeight: "50%",
+  },
+  commentModalHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D1D5DB",
+    marginBottom: 12,
+  },
+  commentList: {
+    flex: 1,
+    marginBottom: 8,
   },
 });
