@@ -471,7 +471,11 @@ export default function Profile() {
             <TouchableOpacity
               style={styles.adminloginButton}
               activeOpacity={0.8}
-              onPress={() => {}}
+              onPress={() =>
+                router.push(
+                  "/admin/index",
+                )
+              }
             >
               <Ionicons
                 name="shield-outline"
