@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Alert } from 'react-native';
+import { getErrorMessage } from '@/utils/error';
 
 type CreateBookingInput = {
   professionalId: string;
@@ -74,10 +75,7 @@ export function useCreateBooking() {
         queryClient.setQueryData(['my-bookings'], context.previousBookings);
       }
 
-      Alert.alert(
-        'Booking failed',
-        error?.message || 'Please check your connection and try again.'
-      );
+      Alert.alert('Booking failed', getErrorMessage(error));
     },
 
     onSuccess: () => {
