@@ -35,9 +35,9 @@ const SIDE_TABS: {
     icon: "briefcase-outline",
   },
   {
-    name: "bookings",
-    label: "Bookings",
-    icon: "calendar-outline",
+    name: "Chat",
+    label: "Chat",
+    icon: "chatbubble-outline",
   },
   {
     name: "profile",
@@ -169,9 +169,9 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="bookings"
+        name="Chat"
         options={{
-          title: "Bookings",
+          title: "Chat",
         }}
       />
 
