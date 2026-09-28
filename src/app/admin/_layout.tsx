@@ -35,11 +35,6 @@ const ADMIN_TABS: {
     icon: "checkmark-circle-outline",
   },
   {
-    name: "Verification Aplications",
-    label: "Verification Applications",
-    icon: "checkmark-circle-outline",
-  },
-  {
     name: "Notifications",
     label: "Notifications",
     icon: "notifications-outline",
