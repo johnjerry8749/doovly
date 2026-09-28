@@ -119,13 +119,11 @@ export default function Profile() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 40 }}
         >
-          {/* Profile header */}
           <View style={styles.profileHeader}>
             <Image source={pro.image} style={styles.avatar} />
             <Text style={styles.name}>{pro.name}</Text>
             <Text style={styles.subLabel}>
               {pro.profession || "Professional"}
-              {role === "admin" ? " · Admin" : ""}
             </Text>
             <TouchableOpacity
               style={styles.editBtn}
@@ -192,12 +190,11 @@ export default function Profile() {
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
 
-          {/* ADMIN: only visible when professional.role === "admin" */}
           {role === "admin" && (
             <TouchableOpacity
               style={styles.adminloginButton}
               activeOpacity={0.8}
-              onPress={() => router.push("/admin")}
+              onPress={() => {}}
             >
               <Ionicons name="shield-outline" size={20} color="#FFFFFF" />
               <Text style={styles.adminloginText}>Admin Login</Text>
