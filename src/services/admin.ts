@@ -3,24 +3,20 @@
  * -------------
  * Screens import from here for admin-only helpers.
  *
- * NOW  → mock role check
- * LATER → Supabase role / claims (e.g. profiles.role === "admin")
+ * Role source: getCurrentUserRole() (professional.role === "admin")
+ * LATER → Supabase profiles.role / JWT claims
  */
 
-import { getCurrentUserId } from "@/services/inAppNotifications";
-
-/** Mock admin user ids — replace with real role from backend */
-const ADMIN_USER_IDS = new Set(["u1", "1", "admin"]);
+import { getCurrentUserRole } from "@/services/savedProviders";
 
 export type AdminRole = "admin" | "user";
 
-export function getAdminRole(userId?: string | null): AdminRole {
-  const id = String(userId ?? getCurrentUserId() ?? "");
-  return ADMIN_USER_IDS.has(id) ? "admin" : "user";
+export function getAdminRole(): AdminRole {
+  return getCurrentUserRole();
 }
 
-export function isAdmin(userId?: string | null): boolean {
-  return getAdminRole(userId) === "admin";
+export function isAdmin(): boolean {
+  return getCurrentUserRole() === "admin";
 }
 
 export type AdminStats = {
