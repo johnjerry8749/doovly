@@ -17,6 +17,7 @@ import { useState } from "react";
 import * as Google from "expo-auth-session/providers/google";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as WebBrowser from "expo-web-browser";
+import { getErrorMessage } from "@/utils/error";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -47,7 +48,7 @@ export default function Login() {
         router.replace("/(tab)/home");
       }
     } catch (error) {
-      Alert.alert("Google login failed. Please try again.");
+      Alert.alert("Google login failed", getErrorMessage(error));
       console.log(error);
     } finally {
       setLoading(false);
@@ -74,7 +75,7 @@ export default function Login() {
       if (error.code === "ERR_REQUEST_CANCELED") {
         // User cancelled
       } else {
-        Alert.alert("Apple login failed. Please try again.");
+        Alert.alert("Apple login failed", getErrorMessage(error));
         console.log(error);
       }
     } finally {
@@ -83,15 +84,30 @@ export default function Login() {
   };
 
   // ========== NORMAL LOGIN ==========
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!phone || !password) {
-      Alert.alert("Please enter phone number and password");
+      Alert.alert("Missing fields", "Please enter phone number and password");
       return;
     }
 
-    // TODO: Call your backend login API here
-    console.log("Login with:", phone, password);
-    router.replace("/(tab)/home");
+    try {
+      setLoading(true);
+
+      // TODO: Replace this block with real Supabase auth when ready:
+      // const { error } = await supabase.auth.signInWithPassword({
+      //   phone: `+234${phone.replace(/\s/g, "")}`,
+      //   password,
+      // });
+      // if (error) throw error;
+
+      // Temporary mock success (remove when real API is wired)
+      console.log("Login with:", phone, password);
+      router.replace("/(tab)/home");
+    } catch (error) {
+      Alert.alert("Login Failed", getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
