@@ -57,10 +57,8 @@ function MenuItem({
     >
       <View style={styles.menuLeft}>
         <View style={styles.iconWrapper}>{icon}</View>
-
         <Text style={styles.menuTitle}>{title}</Text>
       </View>
-
       <View style={styles.menuRight}>
         {rightText ? (
           <View style={[styles.rightBadge, { backgroundColor: badgeBg }]}>
@@ -69,13 +67,11 @@ function MenuItem({
             </Text>
           </View>
         ) : null}
-
         {badge ? (
           <View style={styles.notificationBadge}>
             <Text style={styles.notificationBadgeText}>{badge}</Text>
           </View>
         ) : null}
-
         <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
       </View>
     </TouchableOpacity>
@@ -115,27 +111,20 @@ export default function Profile() {
     );
   }
 
-  const goToSubscription = () => {
-    router.push({
-      pathname: "/profile/subscription/[id]",
-      params: { id: String(pro.id) },
-    });
-  };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
       <View style={{ flex: 1 }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={{ paddingBottom: 40 }}
         >
-          {/* Header / avatar section - keep existing structure from app */}
+          {/* Profile header */}
           <View style={styles.profileHeader}>
             <Image source={pro.image} style={styles.avatar} />
             <Text style={styles.name}>{pro.name}</Text>
-            <Text style={styles.roleLabel}>
-              {isPro ? "Professional" : "User"}
+            <Text style={styles.subLabel}>
+              {pro.profession || "Professional"}
               {role === "admin" ? " · Admin" : ""}
             </Text>
             <TouchableOpacity
@@ -148,24 +137,44 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
 
-          {/* Simplified menu — full original menus may differ; Admin is the critical path */}
           <Text style={styles.sectionTitle}>Account</Text>
           <View style={styles.card}>
             <MenuItem
               icon={<MenuIcon name="briefcase-outline" />}
-              title="My services"
+              title="Add Service"
               onPress={() => router.push("/profile/addservice")}
             />
             <MenuItem
               icon={<MenuIcon name="calendar-outline" />}
-              title="My bookings"
+              title="My Bookings"
               onPress={() => router.push("/(tab)/bookings")}
+            />
+            <MenuItem
+              icon={<MenuIcon name="images-outline" />}
+              title="Portfolio Gallery"
+              onPress={() => router.push("/profile/portfolio_gallery")}
             />
             <MenuItem
               icon={<MenuIcon name="chatbubble-outline" />}
               title="Messages"
               onPress={() => router.push("/profile/chat")}
             />
+            <MenuItem
+              icon={<MenuIcon name="bookmark-outline" />}
+              title="Saved providers"
+              onPress={() => router.push("/profile/saved_providers")}
+            />
+            <MenuItem
+              icon={<MenuIcon name="shield-checkmark-outline" />}
+              title="Verification"
+              rightText={pro.verified ? "Verified" : "Not Verified"}
+              rightColor={pro.verified ? PRIMARY : "#6B7280"}
+              onPress={() => router.push("/profile/verification")}
+            />
+          </View>
+
+          <Text style={styles.sectionTitle}>Preferences & Support</Text>
+          <View style={styles.card}>
             <MenuItem
               icon={<MenuIcon name="settings-outline" />}
               title="Settings"
@@ -183,15 +192,12 @@ export default function Profile() {
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
 
-          {/* ADMIN — only if role is admin */}
+          {/* ADMIN: only visible when professional.role === "admin" */}
           {role === "admin" && (
             <TouchableOpacity
               style={styles.adminloginButton}
               activeOpacity={0.8}
-              onPress={() => {
-                // role already gated; open dashboard
-                router.push("/admin");
-              }}
+              onPress={() => router.push("/admin")}
             >
               <Ionicons name="shield-outline" size={20} color="#FFFFFF" />
               <Text style={styles.adminloginText}>Admin Login</Text>
@@ -217,13 +223,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
   },
-  emptyText: {
-    fontSize: 15,
-    color: "#6B7280",
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
+  emptyText: { fontSize: 15, color: "#6B7280" },
   profileHeader: {
     alignItems: "center",
     paddingVertical: 24,
@@ -242,11 +242,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#111827",
   },
-  roleLabel: {
-    marginTop: 4,
-    fontSize: 13,
-    color: "#6B7280",
-  },
+  subLabel: { marginTop: 4, fontSize: 13, color: "#6B7280" },
   editBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -257,11 +253,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#F0FDF4",
   },
-  editBtnText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: PRIMARY,
-  },
+  editBtnText: { fontSize: 13, fontWeight: "700", color: PRIMARY },
   sectionTitle: {
     fontSize: 13,
     fontWeight: "700",
@@ -287,14 +279,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  menuLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  iconWrapper: {
-    marginRight: 12,
-  },
+  menuLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+  iconWrapper: { marginRight: 12 },
   iconBg: {
     width: 36,
     height: 36,
@@ -303,25 +289,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  menuTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  menuRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+  menuTitle: { fontSize: 15, fontWeight: "600", color: "#111827" },
+  menuRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   rightBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
   },
-  rightBadgeText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
+  rightBadgeText: { fontSize: 12, fontWeight: "700" },
   notificationBadge: {
     minWidth: 20,
     height: 20,
@@ -331,11 +306,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 5,
   },
-  notificationBadgeText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "700",
-  },
+  notificationBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -347,11 +318,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#FEF2F2",
   },
-  logoutText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#EF4444",
-  },
+  logoutText: { fontSize: 15, fontWeight: "700", color: "#EF4444" },
   adminloginButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -363,12 +330,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: PRIMARY,
   },
-  adminloginText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  bottomSpace: {
-    height: 40,
-  },
+  adminloginText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  bottomSpace: { height: 40 },
 });
