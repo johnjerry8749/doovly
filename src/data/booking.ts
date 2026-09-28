@@ -5,8 +5,7 @@
  *   Pending → Accepted  (professional accepts in chat)
  *   Pending → Declined  (professional declines in chat)
  *
- * Bookings history list shows ONLY Accepted + Declined
- * (Pending stays for chat lock; not listed on Bookings tab).
+ * Bookings history list shows Pending + Accepted + Declined.
  *
  * Booked   = current user is the customer (u1)
  *            professionalId must NOT be "1" (logged-in pro)
