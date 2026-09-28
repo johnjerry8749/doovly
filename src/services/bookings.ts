@@ -8,7 +8,7 @@
  *
  * Keep function names and return types stable when wiring the backend.
  *
- * Bookings tab list shows ONLY Accepted + Declined (no Pending, no Ongoing).
+ * Bookings tab list shows Pending + Accepted + Declined.
  * Accepted offers from service requests are recorded as Accepted.
  */
 
@@ -27,8 +27,9 @@ export type { Booking, BookingStatus };
 
 export { statusColors };
 
-/** Bookings history filters: Accepted + Declined only (no Ongoing / Pending) */
+/** Bookings history filters: Pending + Accepted + Declined */
 export const BOOKING_LIST_STATUSES: BookingStatus[] = [
+  "Pending",
   "Accepted",
   "Declined",
 ];
