@@ -6,7 +6,7 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
-import { Tabs } from "expo-router";
+import { Tabs, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,7 +17,7 @@ const INACTIVE = "#6B7280";
 /**
  * Bottom navigation:
  *
- * Home | Services | + Requests | Bookings | Profile
+ * Home | Services | + Requests | Chat | Profile
  */
 const SIDE_TABS: {
   name: string;
@@ -54,6 +54,12 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const focusedRoute = state.routes[state.index]?.name;
 
   const goTo = (routeName: string) => {
+    // Chat tab → open authenticated user chat list
+    if (routeName === "Chat") {
+      router.push("/profile/chat");
+      return;
+    }
+
     const route = state.routes.find((item) => item.name === routeName);
 
     if (!route) {
@@ -168,10 +174,13 @@ export default function TabLayout() {
         }}
       />
 
+      {/* Keep screen registered so the custom tab bar stays stable;
+          actual navigation is handled in goTo → /profile/chat */}
       <Tabs.Screen
         name="Chat"
         options={{
           title: "Chat",
+          href: null,
         }}
       />
 
