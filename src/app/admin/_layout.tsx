@@ -27,19 +27,22 @@ const ADMIN_TABS: {
 }[] = [
   { name: "Dashboard", label: "Dashboard", icon: "home-outline" },
   { name: "Users", label: "Users", icon: "people-outline" },
-  { name: "Settings", label: "Settings", icon: "settings-outline" },
+  {
+    name: "Verification Aplications",
+    label: "Verification Applications",
+    icon: "checkmark-circle-outline",
+  },
   {
     name: "Notifications",
     label: "Notifications",
     icon: "notifications-outline",
   },
   { name: "Subscriptions", label: "Subscriptions", icon: "card-outline" },
-  {
-    name: "Verification Aplications",
-    label: "Verification Applications",
-    icon: "checkmark-circle-outline",
-  },
+
   { name: "Reports", label: "Reports", icon: "bar-chart-outline" },
+  { name: "Settings", label: "Settings", icon: "settings-outline" },
+
+  { name: "Log-Out Admin", label: "Log-Out Admin", icon: "bar-chart-outline" },
 ];
 
 function AdminSidebar({ state, navigation }: BottomTabBarProps) {
@@ -50,11 +53,11 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
   // Start open on large screens, closed on mobile
   const [isOpen, setIsOpen] = useState(isLargeScreen);
   const slideAnim = useRef(
-    new Animated.Value(isLargeScreen ? 0 : -SIDEBAR_WIDTH)
+    new Animated.Value(isLargeScreen ? 0 : -SIDEBAR_WIDTH),
   ).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const menuLeftAnim = useRef(
-    new Animated.Value(isLargeScreen ? SIDEBAR_WIDTH + 12 : 16)
+    new Animated.Value(isLargeScreen ? SIDEBAR_WIDTH + 12 : 16),
   ).current;
 
   const focusedRoute = state.routes[state.index]?.name;
