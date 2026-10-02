@@ -1,22 +1,25 @@
 /**
  * My Service Requests (Profile)
  * ----------------------------
- * Shows ONLY posts created by the authenticated user.
- * Each card has Edit + Delete (owner-only; enforced in the service layer too).
- * Tap the card body to open the same Requests-tab comments UI.
- *
- * NOW  → listMyServiceRequests / deleteServiceRequest from mock service
- * LATER → same function names, swap service bodies to API
+ * Same card layout as the Requests feed, scoped to the auth user's posts.
+ * • 3-dot menu (top-right) → Edit / Delete
+ * • Tap comments to open the same half-sheet comments UI (read + reply)
+ * Does not auto-open comments on card press.
  */
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
   Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -25,27 +28,40 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
+  addServiceRequestComment,
   deleteServiceRequest,
   listMyServiceRequests,
   type ServiceRequest,
+  type ServiceRequestComment,
 } from "@/services/serviceRequests";
-import CreateJobModal from "@/components/CreateJobModal"; // adjust path if needed
+import { getLoggedInProfessionalId } from "@/services/savedProviders";
+import { getProfessionalById } from "@/services/professionals";
+import CreateJobModal from "@/components/CreateJobModal";
+import RequestImageSlider from "@/components/RequestImageSlider";
 
 const GREEN = "#159447";
 const TEXT = "#111827";
 const MUTED = "#6B7280";
+const MY_AVATAR = require("@/assets/profile_1.jpg");
 
 export default function MyServiceRequestsScreen() {
   const router = useRouter();
   const [requests, setRequests] = useState<ServiceRequest[]>(() =>
     listMyServiceRequests(),
   );
+  const [extraComments, setExtraComments] = useState<
+    Record<string, ServiceRequestComment[]>
+  >({});
+  const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
 
-  // Modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRequest, setEditingRequest] = useState<ServiceRequest | null>(
     null,
   );
+
+  const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
+  const [chatText, setChatText] = useState("");
+  const commentListRef = useRef<FlatList>(null);
 
   const refresh = useCallback(() => {
     setRequests(listMyServiceRequests());
@@ -74,7 +90,6 @@ export default function MyServiceRequestsScreen() {
 
   const handleSaved = (_request: ServiceRequest) => {
     refresh();
-    // modal closes itself via onClose after save
   };
 
   const onDelete = (item: ServiceRequest) => {
@@ -88,89 +103,226 @@ export default function MyServiceRequestsScreen() {
           style: "destructive",
           onPress: () => {
             const ok = deleteServiceRequest(item.id);
-            if (ok) refresh();
-            else
+            if (ok) {
+              if (chatRequest?.id === item.id) {
+                setChatRequest(null);
+                setChatText("");
+              }
+              refresh();
+            } else {
               Alert.alert(
                 "Could not delete",
                 "Only your own posts can be deleted.",
               );
+            }
           },
         },
       ],
     );
   };
 
-  /** Open this request on the Requests tab (same comments UI as feed). */
-  const openOnRequestsPage = (item: ServiceRequest) => {
-    router.push({
-      pathname: "/(tab)/requests",
-      params: { openRequestId: item.id },
-    });
+  /** 3-dot menu: Edit / Delete only */
+  const openMenu = (item: ServiceRequest) => {
+    Alert.alert(item.title, undefined, [
+      {
+        text: "Edit",
+        onPress: () => openEdit(item),
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => onDelete(item),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
+  const getComments = (item: ServiceRequest): ServiceRequestComment[] => [
+    ...(item.comments || []),
+    ...(extraComments[item.id] || []),
+  ];
+
+  const openChat = (item: ServiceRequest) => {
+    setChatRequest(item);
+    setChatText("");
+  };
+
+  const closeChat = () => {
+    setChatRequest(null);
+    setChatText("");
+  };
+
+  const sendChatMessage = () => {
+    if (!chatRequest) return;
+    const text = chatText.trim();
+    if (!text) return;
+
+    const proId = getLoggedInProfessionalId();
+    const pro = proId ? getProfessionalById(proId) : undefined;
+    const userName = pro?.name || "You";
+    const userAvatar = (pro?.image as typeof MY_AVATAR) || MY_AVATAR;
+
+    const newComment: ServiceRequestComment = {
+      id: `local-${Date.now()}`,
+      userName,
+      userAvatar,
+      text,
+      timeAgo: "Just now",
+    };
+
+    addServiceRequestComment({
+      requestId: chatRequest.id,
+      text,
+      userName,
+      userAvatar,
+    });
+
+    setExtraComments((prev) => ({
+      ...prev,
+      [chatRequest.id]: [...(prev[chatRequest.id] || []), newComment],
+    }));
+    setChatText("");
+    setTimeout(
+      () => commentListRef.current?.scrollToEnd({ animated: true }),
+      100,
+    );
+  };
+
+  const toggleLike = (id: string) =>
+    setLikedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+
   const renderItem = ({ item }: { item: ServiceRequest }) => {
-    const cover = item.images?.[0];
-    const commentCount = item.comments?.length ?? 0;
+    const liked = !!likedIds[item.id];
+    const likesDisplay = (item.likesCount || 0) + (liked ? 1 : 0);
+    const comments = getComments(item);
+    const commentCount = comments.length;
+    const firstComment = comments[0];
 
     return (
       <View style={styles.card}>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => openOnRequestsPage(item)}
-        >
-          <View style={styles.cardTop}>
-            <View style={styles.cardTopText}>
-              <Text style={styles.cardTitle} numberOfLines={2}>
-                {item.title}
+        {/* Poster row + 3-dot menu (owner actions) */}
+        <View style={styles.posterRow}>
+          <Image source={item.posterAvatar} style={styles.posterAvatar} />
+          <View style={styles.posterInfo}>
+            <Text style={styles.posterName} numberOfLines={1}>
+              {item.posterName}
+            </Text>
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={13} color={MUTED} />
+              <Text style={styles.locationText} numberOfLines={1}>
+                {item.location}, {item.city}
               </Text>
-              <Text style={styles.meta} numberOfLines={1}>
-                {item.category} · {item.location}, {item.city}
-              </Text>
-              <Text style={styles.timeAgo}>{item.timeAgo}</Text>
-            </View>
-            {cover ? (
-              <Image source={cover} style={styles.thumb} resizeMode="cover" />
-            ) : null}
-          </View>
-
-          <Text style={styles.description} numberOfLines={3}>
-            {item.description}
-          </Text>
-
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Ionicons name="heart-outline" size={16} color={MUTED} />
-              <Text style={styles.statText}>{item.likesCount ?? 0}</Text>
-            </View>
-            <View style={styles.stat}>
-              <Ionicons name="chatbubble-outline" size={15} color={MUTED} />
-              <Text style={styles.statText}>{commentCount}</Text>
             </View>
           </View>
-        </TouchableOpacity>
-
-        <View style={styles.actionsRow}>
+          <Text style={styles.timeAgo}>{item.timeAgo}</Text>
           <TouchableOpacity
-            style={styles.editBtn}
-            onPress={() => openEdit(item)}
-            activeOpacity={0.8}
+            style={styles.menuBtn}
+            onPress={() => openMenu(item)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
           >
-            <Ionicons name="pencil" size={16} color={GREEN} />
-            <Text style={styles.editBtnText}>Edit</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={() => onDelete(item)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="trash-outline" size={16} color="#EF4444" />
-            <Text style={styles.deleteBtnText}>Delete</Text>
+            <Ionicons name="ellipsis-vertical" size={18} color={MUTED} />
           </TouchableOpacity>
         </View>
+
+        <View style={styles.titleRow}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {item.title}
+          </Text>
+          {item.isNew ? (
+            <View style={styles.newBadge}>
+              <Text style={styles.newBadgeText}>NEW</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {item.images?.length ? (
+          <RequestImageSlider
+            images={item.images}
+            height={180}
+            borderRadius={0}
+          />
+        ) : null}
+
+        <View style={styles.metaRow}>
+          <View style={styles.categoryChip}>
+            <Text style={styles.categoryChipText}>{item.category}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.description} numberOfLines={3}>
+          {item.description}
+        </Text>
+
+        <View style={styles.engagementRow}>
+          <TouchableOpacity
+            style={styles.engagementBtn}
+            onPress={() => toggleLike(item.id)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={liked ? "heart" : "heart-outline"}
+              size={20}
+              color={liked ? "#EF4444" : MUTED}
+            />
+            <Text style={styles.engagementText}>{likesDisplay}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.engagementBtn}
+            onPress={() => openChat(item)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chatbubble-outline" size={18} color={MUTED} />
+            <Text style={styles.engagementText}>{commentCount}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {firstComment ? (
+          <View style={styles.commentPreview}>
+            <Image
+              source={firstComment.userAvatar}
+              style={styles.commentAvatar}
+            />
+            <View style={styles.commentBody}>
+              <Text style={styles.commentName}>{firstComment.userName}</Text>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => openChat(item)}
+              >
+                <Text style={styles.commentText} numberOfLines={2}>
+                  {firstComment.text}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.writeCommentHint}
+            onPress={() => openChat(item)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={16}
+              color={GREEN}
+            />
+            <Text style={styles.writeCommentHintText}>Write a comment…</Text>
+          </TouchableOpacity>
+        )}
+
+        {commentCount > 1 ? (
+          <TouchableOpacity onPress={() => openChat(item)} activeOpacity={0.7}>
+            <Text style={styles.viewMoreComments}>
+              View {commentCount - 1} more comment
+              {commentCount - 1 === 1 ? "" : "s"}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   };
+
+  const chatComments = chatRequest ? getComments(chatRequest) : [];
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -206,7 +358,7 @@ export default function MyServiceRequestsScreen() {
             <Ionicons name="document-text-outline" size={40} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No requests yet</Text>
             <Text style={styles.emptySub}>
-              Posts you create will show here. Only you can edit or delete them.
+              Posts you create will show here. Use the ⋯ menu to edit or delete.
             </Text>
             <TouchableOpacity
               style={styles.emptyCreate}
@@ -219,13 +371,74 @@ export default function MyServiceRequestsScreen() {
         }
       />
 
-      {/* Modal lives here — not a route */}
       <CreateJobModal
         visible={modalVisible}
         onClose={closeModal}
         request={editingRequest}
         onSaved={handleSaved}
       />
+
+      {/* Comments sheet — same pattern as Requests tab */}
+      <Modal
+        visible={!!chatRequest}
+        transparent
+        animationType="slide"
+        onRequestClose={closeChat}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <Pressable style={styles.modalOverlay} onPress={closeChat}>
+            <Pressable
+              style={styles.commentModalSheet}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={styles.commentModalHandle} />
+              <Text style={styles.modalTitle} numberOfLines={1}>
+                {chatRequest?.title ?? "Comments"}
+              </Text>
+              <FlatList
+                ref={commentListRef}
+                data={chatComments}
+                keyExtractor={(c) => c.id}
+                style={styles.commentList}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                  <Text style={styles.emptyText}>No comments yet</Text>
+                }
+                renderItem={({ item: c }) => (
+                  <View style={styles.commentRow}>
+                    <Image
+                      source={c.userAvatar}
+                      style={styles.commentAvatar}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.commentName}>{c.userName}</Text>
+                      <Text style={styles.commentText}>{c.text}</Text>
+                    </View>
+                  </View>
+                )}
+              />
+              <View style={styles.commentInputRow}>
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder="Write a comment…"
+                  placeholderTextColor="#9CA3AF"
+                  value={chatText}
+                  onChangeText={setChatText}
+                />
+                <TouchableOpacity
+                  onPress={sendChatMessage}
+                  style={styles.commentSend}
+                >
+                  <Ionicons name="send" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -269,105 +482,105 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   listContent: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 8,
     paddingBottom: 32,
     flexGrow: 1,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: "#E5E7EB",
   },
-  cardTop: {
+  posterRow: {
     flexDirection: "row",
-    gap: 12,
+    alignItems: "center",
+    marginBottom: 10,
   },
-  cardTopText: {
-    flex: 1,
-    minWidth: 0,
+  posterAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#E5E7EB",
+    marginRight: 10,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: TEXT,
-  },
-  meta: {
-    marginTop: 4,
-    fontSize: 13,
-    color: MUTED,
-  },
-  timeAgo: {
+  posterInfo: { flex: 1, minWidth: 0 },
+  posterName: { fontSize: 14, fontWeight: "700", color: TEXT },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
     marginTop: 2,
-    fontSize: 12,
-    color: "#9CA3AF",
   },
-  thumb: {
-    width: 64,
-    height: 64,
-    borderRadius: 10,
+  locationText: { fontSize: 12, color: MUTED, flex: 1 },
+  timeAgo: { fontSize: 12, color: "#9CA3AF", marginRight: 4 },
+  menuBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 8,
+  },
+  cardTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: TEXT },
+  newBadge: {
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  newBadgeText: { fontSize: 10, fontWeight: "800", color: GREEN },
+  metaRow: { flexDirection: "row", marginTop: 8, marginBottom: 6 },
+  categoryChip: {
+    backgroundColor: "#F0FDF4",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  categoryChipText: { fontSize: 12, fontWeight: "600", color: GREEN },
+  description: {
+    fontSize: 14,
+    color: "#4B5563",
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  engagementRow: { flexDirection: "row", gap: 16, marginBottom: 8 },
+  engagementBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
+  engagementText: { fontSize: 13, color: MUTED, fontWeight: "600" },
+  commentPreview: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  commentAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "#E5E7EB",
   },
-  description: {
-    marginTop: 10,
-    fontSize: 14,
-    color: "#374151",
-    lineHeight: 20,
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 16,
-    marginTop: 12,
-  },
-  stat: {
+  commentBody: { flex: 1 },
+  commentName: { fontSize: 13, fontWeight: "700", color: TEXT },
+  commentText: { fontSize: 13, color: "#4B5563" },
+  writeCommentHint: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
+    paddingVertical: 6,
   },
-  statText: {
+  writeCommentHintText: { fontSize: 13, color: GREEN, fontWeight: "600" },
+  viewMoreComments: {
     fontSize: 13,
-    color: MUTED,
-  },
-  actionsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-  },
-  editBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: GREEN,
-    backgroundColor: "#F0FDF4",
-  },
-  editBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
     color: GREEN,
-  },
-  deleteBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#FECACA",
-    backgroundColor: "#FEF2F2",
-  },
-  deleteBtnText: {
-    fontSize: 14,
     fontWeight: "600",
-    color: "#EF4444",
+    marginTop: 4,
   },
   empty: {
     flex: 1,
@@ -400,5 +613,66 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
     fontSize: 14,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    textAlign: "center",
+    marginTop: 24,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: TEXT,
+    marginBottom: 6,
+  },
+  commentModalSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+    paddingTop: 10,
+    height: "50%",
+    maxHeight: "50%",
+  },
+  commentModalHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D1D5DB",
+    marginBottom: 12,
+  },
+  commentList: { flex: 1, marginBottom: 8 },
+  commentRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
+  commentInputRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+    alignItems: "center",
+  },
+  commentInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#111",
+  },
+  commentSend: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: GREEN,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
