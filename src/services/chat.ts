@@ -127,6 +127,31 @@ let conversations: Conversation[] = [
   },
 ];
 
+type UnreadCountListener = (count: number) => void;
+
+const unreadCountListeners = new Set<UnreadCountListener>();
+
+export function getTotalUnreadCount(): number {
+  return conversations.reduce(
+    (total, conversation) => total + conversation.unreadCount,
+    0,
+  );
+}
+
+function notifyUnreadCountListeners() {
+  const count = getTotalUnreadCount();
+  unreadCountListeners.forEach((listener) => listener(count));
+}
+
+export function subscribeToUnreadCount(
+  listener: UnreadCountListener,
+): () => void {
+  unreadCountListeners.add(listener);
+  listener(getTotalUnreadCount());
+
+  return () => unreadCountListeners.delete(listener);
+}
+
 const messagesByConv: Record<string, ChatMessage[]> = {
   c1: [
     {
@@ -203,6 +228,8 @@ function pushMessage(conversationId: string, msg: ChatMessage) {
     conv.lastMessageAt = msg.createdAt;
     conv.unreadCount = 0;
   }
+
+  notifyUnreadCountListeners();
 }
 
 export function listConversations(): Conversation[] {
@@ -244,7 +271,10 @@ export async function sendMessage(
 
 export function markConversationRead(conversationId: string) {
   const conv = conversations.find((c) => c.id === conversationId);
-  if (conv) conv.unreadCount = 0;
+  if (conv) {
+    conv.unreadCount = 0;
+    notifyUnreadCountListeners();
+  }
 }
 
 export function isSharingLocation(conversationId: string): boolean {
@@ -377,6 +407,7 @@ function seedPendingBookingChat(input: {
     },
     ...conversations,
   ];
+  notifyUnreadCountListeners();
 
   messagesByConv[id] = [
     {
@@ -471,6 +502,7 @@ export function getOrCreateConversationForProfessional(
   };
 
   conversations = [conv, ...conversations];
+  notifyUnreadCountListeners();
   if (!messagesByConv[id]) messagesByConv[id] = [];
   return conv;
 }
@@ -531,6 +563,7 @@ export function openBookingChat(
       unreadCount: 0,
     };
     conversations = [conv, ...conversations];
+    notifyUnreadCountListeners();
 
     if (!messagesByConv[id]) {
       const statusLabel =
@@ -629,6 +662,7 @@ export function createBookingConversation(input: {
   };
 
   conversations = [conv, ...conversations];
+  notifyUnreadCountListeners();
   messagesByConv[id] = [];
   bookingStatusByConv[id] = "Pending";
   acceptorIdByConv[id] = String(input.professionalId);
@@ -705,6 +739,7 @@ export function createOfferConversation(input: {
   };
 
   conversations = [conv, ...conversations];
+  notifyUnreadCountListeners();
   messagesByConv[id] = [];
   bookingStatusByConv[id] = "Pending";
   acceptorIdByConv[id] = String(input.requestOwnerId);

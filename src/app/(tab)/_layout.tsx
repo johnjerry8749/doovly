@@ -1,4 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import {
+  getTotalUnreadCount,
+  subscribeToUnreadCount,
+} from "@/services/chat";
 import {
   View,
   Text,
@@ -8,11 +12,25 @@ import {
 } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const GREEN = "#159447";
 const INACTIVE = "#6B7280";
+
+type BottomTabBarProps = {
+  state: {
+    index: number;
+    routes: { key: string; name: string }[];
+  };
+  navigation: {
+    emit: (event: {
+      type: "tabPress";
+      target: string;
+      canPreventDefault: true;
+    }) => { defaultPrevented: boolean };
+    navigate: (routeName: string) => void;
+  };
+};
 
 /**
  * Bottom navigation:
@@ -50,6 +68,9 @@ const CENTER_TAB = "requests";
 
 function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const [unreadCount, setUnreadCount] = useState(getTotalUnreadCount);
+
+  useEffect(() => subscribeToUnreadCount(setUnreadCount), []);
 
   const focusedRoute = state.routes[state.index]?.name;
 
@@ -91,9 +112,52 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
         accessibilityState={{
           selected: focused,
         }}
-        accessibilityLabel={tab.label}
+        accessibilityLabel={
+          tab.name === "Chat" && unreadCount > 0
+            ? `${tab.label}, ${unreadCount} unread messages`
+            : tab.label
+        }
       >
-        <Ionicons name={tab.icon} size={22} color={color} />
+        <View
+          style={{
+            position: "relative",
+            width: 22,
+            height: 24,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons name={tab.icon} size={22} color={color} />
+          {tab.name === "Chat" && unreadCount > 0 && (
+            <View
+              style={{
+                position: "absolute",
+                top: -6,
+                right: -11,
+                minWidth: 18,
+                height: 18,
+                borderRadius: 9,
+                paddingHorizontal: 4,
+                backgroundColor: "#DC2626",
+                borderWidth: 1.5,
+                borderColor: "#FFFFFF",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#FFFFFF",
+                  fontSize: 10,
+                  fontWeight: "700",
+                  lineHeight: 12,
+                }}
+              >
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Text>
+            </View>
+          )}
+        </View>
 
         <Text style={[styles.tabLabel, { color }]}>{tab.label}</Text>
       </TouchableOpacity>
