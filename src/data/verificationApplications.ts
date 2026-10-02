@@ -1,7 +1,10 @@
 /**
  * Mock verification applications for admin panel.
+ * Built from src/data/professionals.ts so names match the rest of the app.
  * Swap list/update in services/verificationApplications.ts to apiRequest when backend is ready.
  */
+
+import { PROFESSIONALS } from "@/data/professionals";
 
 export type VerificationStatus = "Pending" | "Verified" | "Rejected";
 
@@ -20,6 +23,7 @@ export type VerificationDocument = {
 
 export type VerificationApplication = {
   id: string;
+  professionalId: string;
   name: string;
   profession: string;
   location: string;
@@ -32,41 +36,33 @@ export type VerificationApplication = {
   documents: VerificationDocument[];
 };
 
-const AVATAR_1 = require("@/assets/profile_1.jpg");
-const AVATAR_2 = require("@/assets/profile_2.jpg");
-const AVATAR_3 = require("@/assets/profile_3.jpg");
-const AVATAR_4 = require("@/assets/profile_4.jpg");
-
-/** Sample image assets used as mock document previews */
-const DOC_PREVIEW_ID = require("@/assets/profile_1.jpg");
-const DOC_PREVIEW_LICENSE = require("@/assets/profile_2.jpg");
-const DOC_PREVIEW_CERT = require("@/assets/profile_3.jpg");
-const DOC_PREVIEW_PHOTO = require("@/assets/profile_4.jpg");
-
-const defaultDocs = (prefix: string): VerificationDocument[] => [
+const defaultDocs = (
+  prefix: string,
+  avatar: number | { uri: string },
+): VerificationDocument[] => [
   {
     id: `${prefix}-gov`,
     title: "Government ID",
-    fileName: "aadhar_card.pdf",
+    fileName: "government_id.pdf",
     type: "pdf",
     uploaded: true,
-    preview: DOC_PREVIEW_ID,
+    preview: avatar,
   },
   {
     id: `${prefix}-lic`,
-    title: "Medical License",
-    fileName: "medical_license.pdf",
+    title: "Professional License",
+    fileName: "professional_license.pdf",
     type: "pdf",
     uploaded: true,
-    preview: DOC_PREVIEW_LICENSE,
+    preview: avatar,
   },
   {
     id: `${prefix}-cert`,
     title: "Professional Certificate",
-    fileName: "degree_certificate.pdf",
+    fileName: "certificate.pdf",
     type: "pdf",
     uploaded: true,
-    preview: DOC_PREVIEW_CERT,
+    preview: avatar,
   },
   {
     id: `${prefix}-photo`,
@@ -74,116 +70,50 @@ const defaultDocs = (prefix: string): VerificationDocument[] => [
     fileName: "profile_photo.jpg",
     type: "image",
     uploaded: true,
-    preview: DOC_PREVIEW_PHOTO,
+    preview: avatar,
   },
 ];
 
-let MOCK_APPLICATIONS: VerificationApplication[] = [
-  {
-    id: "va-1",
-    name: "Dr. Aisha Rahman",
-    profession: "General Physician",
-    location: "Bengaluru, Karnataka",
-    avatar: AVATAR_1,
-    status: "Pending",
-    submittedOn: "Jan 12, 2025",
-    email: "aisha.rahman@email.com",
-    phone: "+91 98765 43210",
-    experience: "5+ Years",
-    documents: defaultDocs("va-1"),
-  },
-  {
-    id: "va-2",
-    name: "Dr. Arjun Mehta",
-    profession: "Orthopedic Surgeon",
-    location: "Pune, Maharashtra",
-    avatar: AVATAR_2,
-    status: "Pending",
-    submittedOn: "Jan 10, 2025",
-    email: "arjun.mehta@email.com",
-    phone: "+91 91234 56789",
-    experience: "8+ Years",
-    documents: defaultDocs("va-2"),
-  },
-  {
-    id: "va-3",
-    name: "Dr. Sophia Lee",
-    profession: "Dentist",
-    location: "Toronto, ON",
-    avatar: AVATAR_3,
-    status: "Verified",
-    submittedOn: "Jan 8, 2025",
-    email: "sophia.lee@email.com",
-    phone: "+1 416 555 0192",
-    experience: "6+ Years",
-    documents: defaultDocs("va-3"),
-  },
-  {
-    id: "va-4",
-    name: "Michael Chen",
-    profession: "Physiotherapist",
-    location: "Vancouver, BC",
-    avatar: AVATAR_4,
-    status: "Verified",
-    submittedOn: "Jan 5, 2025",
-    email: "michael.chen@email.com",
-    phone: "+1 604 555 0144",
-    experience: "4+ Years",
-    documents: defaultDocs("va-4"),
-  },
-  {
-    id: "va-5",
-    name: "Priya Patel",
-    profession: "Nutritionist",
-    location: "Calgary, AB",
-    avatar: AVATAR_1,
-    status: "Verified",
-    submittedOn: "Jan 3, 2025",
-    email: "priya.patel@email.com",
-    phone: "+1 403 555 0188",
-    experience: "3+ Years",
-    documents: defaultDocs("va-5"),
-  },
-  {
-    id: "va-6",
-    name: "James Wilson",
-    profession: "Mental Health Counselor",
-    location: "Montreal, QC",
-    avatar: AVATAR_2,
-    status: "Verified",
-    submittedOn: "Dec 28, 2024",
-    email: "james.wilson@email.com",
-    phone: "+1 514 555 0167",
-    experience: "7+ Years",
-    documents: defaultDocs("va-6"),
-  },
-  {
-    id: "va-7",
-    name: "Emily Davis",
-    profession: "Dermatologist",
-    location: "Ottawa, ON",
-    avatar: AVATAR_3,
-    status: "Verified",
-    submittedOn: "Dec 20, 2024",
-    email: "emily.davis@email.com",
-    phone: "+1 613 555 0111",
-    experience: "9+ Years",
-    documents: defaultDocs("va-7"),
-  },
-  {
-    id: "va-8",
-    name: "David Okoro",
-    profession: "Cardiologist",
-    location: "Toronto, ON",
-    avatar: AVATAR_4,
-    status: "Verified",
-    submittedOn: "Dec 15, 2024",
-    email: "david.okoro@email.com",
-    phone: "+1 647 555 0133",
-    experience: "12+ Years",
-    documents: defaultDocs("va-8"),
-  },
-];
+/** Rough experience labels from bio when present */
+function experienceFromBio(bio?: string): string {
+  if (!bio) return "3+ Years";
+  const m = bio.match(/(\d+)\+?\s*years?/i);
+  if (m) return `${m[1]}+ Years`;
+  return "3+ Years";
+}
+
+function buildFromProfessionals(): VerificationApplication[] {
+  return PROFESSIONALS.map((p, index) => {
+    // verified:true → Verified; verified:false → Pending
+    const status: VerificationStatus = p.verified ? "Verified" : "Pending";
+
+    const submitted = new Date(2025, 0, 12 - index * 3);
+    const submittedOn = submitted.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    const phoneLocal = `080${String(30000000 + Number(p.id) * 1111111).slice(0, 8)}`;
+
+    return {
+      id: `va-${p.id}`,
+      professionalId: p.id,
+      name: p.name,
+      profession: p.profession,
+      location: p.city,
+      avatar: p.image,
+      status,
+      submittedOn,
+      email: `${p.name.toLowerCase().replace(/\s+/g, ".")}@email.com`,
+      phone: `+234 ${phoneLocal}`,
+      experience: experienceFromBio(p.bio),
+      documents: defaultDocs(`va-${p.id}`, p.image),
+    };
+  });
+}
+
+let MOCK_APPLICATIONS: VerificationApplication[] = buildFromProfessionals();
 
 export function getMockVerificationApplications(): VerificationApplication[] {
   return [...MOCK_APPLICATIONS];
