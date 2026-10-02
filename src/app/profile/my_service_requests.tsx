@@ -3,6 +3,7 @@
  * ----------------------------
  * Shows ONLY posts created by the authenticated user.
  * Each card has Edit + Delete (owner-only; enforced in the service layer too).
+ * Tap the card body to open the same Requests-tab comments UI.
  *
  * NOW  → listMyServiceRequests / deleteServiceRequest from mock service
  * LATER → same function names, swap service bodies to API
@@ -99,41 +100,54 @@ export default function MyServiceRequestsScreen() {
     );
   };
 
+  /** Open this request on the Requests tab (same comments UI as feed). */
+  const openOnRequestsPage = (item: ServiceRequest) => {
+    router.push({
+      pathname: "/(tab)/requests",
+      params: { openRequestId: item.id },
+    });
+  };
+
   const renderItem = ({ item }: { item: ServiceRequest }) => {
     const cover = item.images?.[0];
     const commentCount = item.comments?.length ?? 0;
 
     return (
       <View style={styles.card}>
-        <View style={styles.cardTop}>
-          <View style={styles.cardTopText}>
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {item.title}
-            </Text>
-            <Text style={styles.meta} numberOfLines={1}>
-              {item.category} · {item.location}, {item.city}
-            </Text>
-            <Text style={styles.timeAgo}>{item.timeAgo}</Text>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => openOnRequestsPage(item)}
+        >
+          <View style={styles.cardTop}>
+            <View style={styles.cardTopText}>
+              <Text style={styles.cardTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+              <Text style={styles.meta} numberOfLines={1}>
+                {item.category} · {item.location}, {item.city}
+              </Text>
+              <Text style={styles.timeAgo}>{item.timeAgo}</Text>
+            </View>
+            {cover ? (
+              <Image source={cover} style={styles.thumb} resizeMode="cover" />
+            ) : null}
           </View>
-          {cover ? (
-            <Image source={cover} style={styles.thumb} resizeMode="cover" />
-          ) : null}
-        </View>
 
-        <Text style={styles.description} numberOfLines={3}>
-          {item.description}
-        </Text>
+          <Text style={styles.description} numberOfLines={3}>
+            {item.description}
+          </Text>
 
-        <View style={styles.statsRow}>
-          <View style={styles.stat}>
-            <Ionicons name="heart-outline" size={16} color={MUTED} />
-            <Text style={styles.statText}>{item.likesCount ?? 0}</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.stat}>
+              <Ionicons name="heart-outline" size={16} color={MUTED} />
+              <Text style={styles.statText}>{item.likesCount ?? 0}</Text>
+            </View>
+            <View style={styles.stat}>
+              <Ionicons name="chatbubble-outline" size={15} color={MUTED} />
+              <Text style={styles.statText}>{commentCount}</Text>
+            </View>
           </View>
-          <View style={styles.stat}>
-            <Ionicons name="chatbubble-outline" size={15} color={MUTED} />
-            <Text style={styles.statText}>{commentCount}</Text>
-          </View>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.actionsRow}>
           <TouchableOpacity
