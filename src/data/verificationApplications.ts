@@ -11,6 +11,11 @@ export type VerificationDocument = {
   fileName: string;
   type: "pdf" | "image" | "other";
   uploaded: boolean;
+  /**
+   * Mock preview asset (local require) or remote URL string.
+   * Later: set to API-provided file/preview URL.
+   */
+  preview?: number | { uri: string };
 };
 
 export type VerificationApplication = {
@@ -32,6 +37,12 @@ const AVATAR_2 = require("@/assets/profile_2.jpg");
 const AVATAR_3 = require("@/assets/profile_3.jpg");
 const AVATAR_4 = require("@/assets/profile_4.jpg");
 
+/** Sample image assets used as mock document previews */
+const DOC_PREVIEW_ID = require("@/assets/profile_1.jpg");
+const DOC_PREVIEW_LICENSE = require("@/assets/profile_2.jpg");
+const DOC_PREVIEW_CERT = require("@/assets/profile_3.jpg");
+const DOC_PREVIEW_PHOTO = require("@/assets/profile_4.jpg");
+
 const defaultDocs = (prefix: string): VerificationDocument[] => [
   {
     id: `${prefix}-gov`,
@@ -39,6 +50,7 @@ const defaultDocs = (prefix: string): VerificationDocument[] => [
     fileName: "aadhar_card.pdf",
     type: "pdf",
     uploaded: true,
+    preview: DOC_PREVIEW_ID,
   },
   {
     id: `${prefix}-lic`,
@@ -46,6 +58,7 @@ const defaultDocs = (prefix: string): VerificationDocument[] => [
     fileName: "medical_license.pdf",
     type: "pdf",
     uploaded: true,
+    preview: DOC_PREVIEW_LICENSE,
   },
   {
     id: `${prefix}-cert`,
@@ -53,6 +66,7 @@ const defaultDocs = (prefix: string): VerificationDocument[] => [
     fileName: "degree_certificate.pdf",
     type: "pdf",
     uploaded: true,
+    preview: DOC_PREVIEW_CERT,
   },
   {
     id: `${prefix}-photo`,
@@ -60,6 +74,7 @@ const defaultDocs = (prefix: string): VerificationDocument[] => [
     fileName: "profile_photo.jpg",
     type: "image",
     uploaded: true,
+    preview: DOC_PREVIEW_PHOTO,
   },
 ];
 

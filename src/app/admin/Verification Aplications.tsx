@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Modal,
   Pressable,
   Platform,
-  Alert,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -30,6 +30,7 @@ const AMBER = "#D97706";
 const RED = "#EF4444";
 const GRAY = "#6B7280";
 const BORDER = "#E5E7EB";
+const { height: SCREEN_H } = Dimensions.get("window");
 
 type FilterTab = "All" | "Pending" | "Verified";
 
@@ -44,7 +45,10 @@ export default function VerificationApplications() {
   const [detailApp, setDetailApp] = useState<VerificationApplication | null>(
     null,
   );
-  const [menuAppId, setMenuAppId] = useState<string | null>(null);
+  /** Row action menu — rendered in a Modal so it never sits under the next cards */
+  const [menuApp, setMenuApp] = useState<VerificationApplication | null>(null);
+  /** Full-screen document preview */
+  const [previewDoc, setPreviewDoc] = useState<VerificationDocument | null>(null);
 
   const stats = useMemo(
     () => getVerificationStats(applications),
@@ -120,9 +124,11 @@ export default function VerificationApplications() {
     });
     refresh();
     if (detailApp?.id === id) {
-      setDetailApp(listVerificationApplications().find((a) => a.id === id) ?? null);
+      setDetailApp(
+        listVerificationApplications().find((a) => a.id === id) ?? null,
+      );
     }
-    setMenuAppId(null);
+    setMenuApp(null);
   };
 
   const rejectOne = (id: string) => {
@@ -134,7 +140,7 @@ export default function VerificationApplications() {
     });
     refresh();
     if (detailApp?.id === id) setDetailApp(null);
-    setMenuAppId(null);
+    setMenuApp(null);
   };
 
   const bulkVerify = () => {
@@ -159,7 +165,7 @@ export default function VerificationApplications() {
 
   const openDocuments = (app: VerificationApplication) => {
     setDetailApp(app);
-    setMenuAppId(null);
+    setMenuApp(null);
   };
 
   const statusBadge = (status: VerificationStatus) => {
@@ -202,14 +208,6 @@ export default function VerificationApplications() {
     );
   };
 
-  const onViewDocument = (doc: VerificationDocument) => {
-    Alert.alert(
-      doc.title,
-      `Mock preview: ${doc.fileName}\n\nWire this to open the real file URL from your API later.`,
-      [{ text: "OK" }],
-    );
-  };
-
   return (
     <View
       style={[
@@ -227,7 +225,6 @@ export default function VerificationApplications() {
           Review and verify professional documents
         </Text>
 
-        {/* Tabs + search */}
         <View style={styles.toolbar}>
           <View style={styles.tabs}>
             {(["All", "Pending", "Verified"] as FilterTab[]).map((tab) => {
@@ -244,7 +241,7 @@ export default function VerificationApplications() {
                   style={[styles.tab, active && styles.tabActive]}
                   onPress={() => {
                     setFilter(tab);
-                    setMenuAppId(null);
+                    setMenuApp(null);
                   }}
                   activeOpacity={0.8}
                 >
@@ -268,7 +265,6 @@ export default function VerificationApplications() {
           </View>
         </View>
 
-        {/* Bulk actions (when pending items exist / selected) */}
         {pendingInView.length > 0 && (
           <View style={styles.bulkBar}>
             <TouchableOpacity
@@ -324,11 +320,9 @@ export default function VerificationApplications() {
           </View>
         )}
 
-        {/* Application list */}
         <View style={styles.listWrap}>
           {filtered.map((item) => {
             const isSelected = selectedIds.has(item.id);
-            const menuOpen = menuAppId === item.id;
             return (
               <View key={item.id} style={styles.cardWrap}>
                 <TouchableOpacity
@@ -383,48 +377,14 @@ export default function VerificationApplications() {
                     style={styles.moreBtn}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     onPress={() =>
-                      setMenuAppId((prev) =>
-                        prev === item.id ? null : item.id,
+                      setMenuApp((prev) =>
+                        prev?.id === item.id ? null : item,
                       )
                     }
                   >
                     <Ionicons name="ellipsis-vertical" size={18} color={GRAY} />
                   </TouchableOpacity>
                 </TouchableOpacity>
-
-                {menuOpen && (
-                  <View style={styles.menuDropdown}>
-                    <TouchableOpacity
-                      style={styles.menuItem}
-                      onPress={() => openDocuments(item)}
-                    >
-                      <Ionicons name="document-text-outline" size={18} color="#374151" />
-                      <Text style={styles.menuItemText}>View Documents</Text>
-                    </TouchableOpacity>
-                    {item.status === "Pending" && (
-                      <>
-                        <TouchableOpacity
-                          style={styles.menuItem}
-                          onPress={() => verifyOne(item.id)}
-                        >
-                          <Ionicons name="checkmark" size={18} color={GREEN} />
-                          <Text style={[styles.menuItemText, { color: GREEN }]}>
-                            Verify User
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.menuItem}
-                          onPress={() => rejectOne(item.id)}
-                        >
-                          <Ionicons name="close" size={18} color={RED} />
-                          <Text style={[styles.menuItemText, { color: RED }]}>
-                            Reject User
-                          </Text>
-                        </TouchableOpacity>
-                      </>
-                    )}
-                  </View>
-                )}
               </View>
             );
           })}
@@ -435,6 +395,73 @@ export default function VerificationApplications() {
           )}
         </View>
       </ScrollView>
+
+      {/* ========== Row action menu (Modal = always above list) ========== */}
+      <Modal
+        visible={!!menuApp}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuApp(null)}
+      >
+        <Pressable style={styles.menuOverlay} onPress={() => setMenuApp(null)}>
+          <View style={styles.menuCard}>
+            {menuApp && (
+              <>
+                <View style={styles.menuHeader}>
+                  <Image
+                    source={menuApp.avatar as any}
+                    style={styles.menuAvatar}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.menuName} numberOfLines={1}>
+                      {menuApp.name}
+                    </Text>
+                    <Text style={styles.menuProfession} numberOfLines={1}>
+                      {menuApp.profession}
+                    </Text>
+                  </View>
+                  {statusBadge(menuApp.status)}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => openDocuments(menuApp)}
+                >
+                  <Ionicons
+                    name="document-text-outline"
+                    size={18}
+                    color="#374151"
+                  />
+                  <Text style={styles.menuItemText}>View Documents</Text>
+                </TouchableOpacity>
+
+                {menuApp.status === "Pending" && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      onPress={() => verifyOne(menuApp.id)}
+                    >
+                      <Ionicons name="checkmark" size={18} color={GREEN} />
+                      <Text style={[styles.menuItemText, { color: GREEN }]}>
+                        Verify User
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      onPress={() => rejectOne(menuApp.id)}
+                    >
+                      <Ionicons name="close" size={18} color={RED} />
+                      <Text style={[styles.menuItemText, { color: RED }]}>
+                        Reject User
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* ========== Verification Documents panel ========== */}
       <Modal
@@ -482,7 +509,9 @@ export default function VerificationApplications() {
                     </Text>
                     <View style={styles.locationRow}>
                       <Ionicons name="location-outline" size={13} color={GRAY} />
-                      <Text style={styles.locationText}>{detailApp.location}</Text>
+                      <Text style={styles.locationText}>
+                        {detailApp.location}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -490,7 +519,7 @@ export default function VerificationApplications() {
                 <View style={styles.metaGrid}>
                   <View style={styles.metaItem}>
                     <Ionicons name="mail-outline" size={16} color={GRAY} />
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={styles.metaLabel}>Email</Text>
                       <Text style={styles.metaValue} numberOfLines={1}>
                         {detailApp.email}
@@ -508,14 +537,18 @@ export default function VerificationApplications() {
                     <Ionicons name="calendar-outline" size={16} color={GRAY} />
                     <View>
                       <Text style={styles.metaLabel}>Submitted On</Text>
-                      <Text style={styles.metaValue}>{detailApp.submittedOn}</Text>
+                      <Text style={styles.metaValue}>
+                        {detailApp.submittedOn}
+                      </Text>
                     </View>
                   </View>
                   <View style={styles.metaItem}>
                     <Ionicons name="briefcase-outline" size={16} color={GRAY} />
                     <View>
                       <Text style={styles.metaLabel}>Experience</Text>
-                      <Text style={styles.metaValue}>{detailApp.experience}</Text>
+                      <Text style={styles.metaValue}>
+                        {detailApp.experience}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -533,13 +566,17 @@ export default function VerificationApplications() {
                     </View>
                     {doc.uploaded && (
                       <View style={styles.uploadedBadge}>
-                        <Ionicons name="checkmark-circle" size={14} color={GREEN} />
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={14}
+                          color={GREEN}
+                        />
                         <Text style={styles.uploadedText}>Uploaded</Text>
                       </View>
                     )}
                     <TouchableOpacity
                       style={styles.viewDocBtn}
-                      onPress={() => onViewDocument(doc)}
+                      onPress={() => setPreviewDoc(doc)}
                       activeOpacity={0.8}
                     >
                       <Text style={styles.viewDocText}>View</Text>
@@ -573,13 +610,106 @@ export default function VerificationApplications() {
         </Pressable>
       </Modal>
 
-      {/* Tap outside to close row menu */}
-      {menuAppId && (
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={() => setMenuAppId(null)}
-        />
-      )}
+      {/* ========== Document preview (shows uploaded file) ========== */}
+      <Modal
+        visible={!!previewDoc}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPreviewDoc(null)}
+      >
+        <View style={styles.previewOverlay}>
+          <View
+            style={[
+              styles.previewHeader,
+              { paddingTop: Math.max(insets.top, 12) },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.previewClose}
+              onPress={() => setPreviewDoc(null)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close" size={22} color="#111827" />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.previewTitle} numberOfLines={1}>
+                {previewDoc?.title}
+              </Text>
+              <Text style={styles.previewFileName} numberOfLines={1}>
+                {previewDoc?.fileName}
+              </Text>
+            </View>
+            {previewDoc?.uploaded && (
+              <View style={styles.uploadedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color={GREEN} />
+                <Text style={styles.uploadedText}>Uploaded</Text>
+              </View>
+            )}
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.previewBody}
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+          >
+            {previewDoc?.type === "pdf" ? (
+              <View style={styles.pdfSheet}>
+                <View style={styles.pdfBadge}>
+                  <MaterialCommunityIcons
+                    name="file-pdf-box"
+                    size={18}
+                    color="#DC2626"
+                  />
+                  <Text style={styles.pdfBadgeText}>PDF document</Text>
+                </View>
+                {previewDoc.preview ? (
+                  <Image
+                    source={previewDoc.preview as any}
+                    style={styles.pdfImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={styles.pdfPlaceholder}>
+                    <MaterialCommunityIcons
+                      name="file-pdf-box"
+                      size={64}
+                      color="#DC2626"
+                    />
+                    <Text style={styles.pdfPlaceholderTitle}>
+                      {previewDoc.fileName}
+                    </Text>
+                    <Text style={styles.pdfPlaceholderSub}>
+                      Document uploaded — preview will load from API URL later
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.pdfFooter}>
+                  <Text style={styles.pdfFooterText}>
+                    {previewDoc.title} · {previewDoc.fileName}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.imageSheet}>
+                {previewDoc?.preview ? (
+                  <Image
+                    source={previewDoc.preview as any}
+                    style={styles.imagePreview}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={styles.pdfPlaceholder}>
+                    <Ionicons name="image-outline" size={64} color="#9CA3AF" />
+                    <Text style={styles.pdfPlaceholderTitle}>
+                      {previewDoc?.fileName}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -726,7 +856,6 @@ const styles = StyleSheet.create({
   },
   cardWrap: {
     position: "relative",
-    zIndex: 1,
   },
   userCard: {
     flexDirection: "row",
@@ -812,44 +941,6 @@ const styles = StyleSheet.create({
     padding: 4,
   },
 
-  menuDropdown: {
-    position: "absolute",
-    right: 12,
-    top: 52,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: BORDER,
-    paddingVertical: 6,
-    minWidth: 180,
-    zIndex: 50,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-      },
-      android: { elevation: 8 },
-      web: {
-        // @ts-ignore
-        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-      },
-    }),
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-  },
-  menuItemText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-  },
-
   emptyText: {
     textAlign: "center",
     color: GRAY,
@@ -857,7 +948,74 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Modal / side panel
+  // Row menu modal (always on top of list)
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  menuCard: {
+    width: "100%",
+    maxWidth: 320,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    paddingVertical: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+      },
+      android: { elevation: 12 },
+      web: {
+        // @ts-ignore
+        boxShadow: "0 12px 32px rgba(0,0,0,0.16)",
+      },
+    }),
+  },
+  menuHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: BORDER,
+    marginBottom: 4,
+  },
+  menuAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#E5E7EB",
+  },
+  menuName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  menuProfession: {
+    fontSize: 12,
+    color: GRAY,
+    marginTop: 1,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  menuItemText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#374151",
+  },
+
+  // Documents panel
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
@@ -1048,5 +1206,123 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#fff",
+  },
+
+  // Document preview
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: "#0F172A",
+  },
+  previewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: BORDER,
+  },
+  previewClose: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  previewTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  previewFileName: {
+    fontSize: 12,
+    color: GRAY,
+    marginTop: 2,
+  },
+  previewBody: {
+    padding: 16,
+    alignItems: "center",
+    minHeight: SCREEN_H * 0.7,
+    justifyContent: "center",
+  },
+  pdfSheet: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    overflow: "hidden",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+      },
+      android: { elevation: 6 },
+    }),
+  },
+  pdfBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#FEF2F2",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#FECACA",
+  },
+  pdfBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#DC2626",
+  },
+  pdfImage: {
+    width: "100%",
+    height: SCREEN_H * 0.5,
+    backgroundColor: "#F8FAFC",
+  },
+  pdfPlaceholder: {
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    gap: 10,
+  },
+  pdfPlaceholderTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
+    textAlign: "center",
+  },
+  pdfPlaceholderSub: {
+    fontSize: 13,
+    color: GRAY,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  pdfFooter: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: BORDER,
+    backgroundColor: "#F9FAFB",
+  },
+  pdfFooterText: {
+    fontSize: 12,
+    color: GRAY,
+    fontWeight: "500",
+  },
+  imageSheet: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  imagePreview: {
+    width: "100%",
+    height: SCREEN_H * 0.55,
+    backgroundColor: "#0F172A",
   },
 });
