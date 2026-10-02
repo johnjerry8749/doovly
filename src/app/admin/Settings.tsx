@@ -181,7 +181,9 @@ export default function Settings() {
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
-              <Text style={styles.preview}>{formatNaira(Number(monthlyStr) || 0)} / month</Text>
+              <Text style={styles.preview}>
+                {formatNaira(Number(monthlyStr) || 0)} / month
+              </Text>
             </View>
             <View style={styles.priceField}>
               <Text style={styles.fieldLabel}>Yearly (NGN)</Text>
@@ -196,7 +198,9 @@ export default function Settings() {
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
-              <Text style={styles.preview}>{formatNaira(Number(yearlyStr) || 0)} / year</Text>
+              <Text style={styles.preview}>
+                {formatNaira(Number(yearlyStr) || 0)} / year
+              </Text>
             </View>
           </View>
 
@@ -223,7 +227,7 @@ export default function Settings() {
             style={styles.textInput}
             value={plansState.promoTitle}
             onChangeText={(t) =>
-              setPlansState((prev) => ({ ...prev, promoSubtitle: t }))
+              setPlansState((prev) => ({ ...prev, promoTitle: t }))
             }
           />
           <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Subtitle</Text>
@@ -262,12 +266,18 @@ export default function Settings() {
                 value={f.label}
                 onChangeText={(t) => updateFeature("basic", f.id, t)}
               />
-              <TouchableOpacity onPress={() => removeFeature("basic", f.id)} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => removeFeature("basic", f.id)}
+                hitSlop={8}
+              >
                 <Ionicons name="trash-outline" size={18} color="#EF4444" />
               </TouchableOpacity>
             </View>
           ))}
-          <TouchableOpacity style={styles.addBtn} onPress={() => addFeature("basic")}>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => addFeature("basic")}
+          >
             <Ionicons name="add" size={18} color={GREEN} />
             <Text style={styles.addBtnText}>Add feature</Text>
           </TouchableOpacity>
@@ -304,12 +314,18 @@ export default function Settings() {
                 value={f.label}
                 onChangeText={(t) => updateFeature("pro", f.id, t)}
               />
-              <TouchableOpacity onPress={() => removeFeature("pro", f.id)} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => removeFeature("pro", f.id)}
+                hitSlop={8}
+              >
                 <Ionicons name="trash-outline" size={18} color="#EF4444" />
               </TouchableOpacity>
             </View>
           ))}
-          <TouchableOpacity style={styles.addBtn} onPress={() => addFeature("pro")}>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => addFeature("pro")}
+          >
             <Ionicons name="add" size={18} color={GREEN} />
             <Text style={styles.addBtnText}>Add feature</Text>
           </TouchableOpacity>
@@ -331,7 +347,8 @@ export default function Settings() {
         </TouchableOpacity>
 
         <Text style={styles.footerNote}>
-          Changes apply to the user Subscription screen and dashboard Pro revenue.
+          Changes apply to the user Subscription screen and dashboard Pro
+          revenue.
         </Text>
       </ScrollView>
     </View>
