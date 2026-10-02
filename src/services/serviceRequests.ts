@@ -14,7 +14,10 @@ import {
   type ServiceRequestComment,
   type ServiceRequestIcon,
 } from "@/data/serviceRequests";
-import { getCurrentUserId } from "@/services/inAppNotifications";
+import {
+  getCurrentUserId,
+  addInAppNotification,
+} from "@/services/inAppNotifications";
 
 export type { ServiceRequest, ServiceRequestComment, ServiceRequestIcon };
 
@@ -87,42 +90,36 @@ export function listServiceRequests(): ServiceRequest[] {
 export function listMyServiceRequests(): ServiceRequest[] {
   const uid = getCurrentUserId();
   return uniqueById(
-    SERVICE_REQUESTS.filter((r) => String(r.createdByUserId) === String(uid)),
+    SERVICE_REQUESTS.filter(
+      (r) => String(r.createdByUserId) === String(uid),
+    ),
   );
 }
 
 export function listServiceRequestsByCity(city: string): ServiceRequest[] {
-  // TODO backend: return apiRequest(`/service-requests?city=...`)
-  const key = city.trim().toLowerCase();
-  if (!key || key === "all nigeria" || key === "nigeria") {
-    return uniqueById(SERVICE_REQUESTS);
-  }
-  const filtered = SERVICE_REQUESTS.filter(
-    (r) =>
-      r.city.toLowerCase().includes(key) ||
-      key.includes(r.city.toLowerCase()) ||
-      r.location.toLowerCase().includes(key),
+  const c = city.trim().toLowerCase();
+  if (!c) return listServiceRequests();
+  return listServiceRequests().filter(
+    (r) => r.city.trim().toLowerCase() === c,
   );
-  return uniqueById(filtered.length > 0 ? filtered : SERVICE_REQUESTS);
 }
 
 export function getServiceRequestById(
   id: string,
 ): ServiceRequest | undefined {
-  // TODO backend: return apiRequest(`/service-requests/${id}`)
   return getFromData(id);
 }
 
 export function listRecentServiceRequests(limit = 5): ServiceRequest[] {
-  return uniqueById(SERVICE_REQUESTS).slice(0, limit);
+  return listServiceRequests().slice(0, limit);
 }
 
 export function createServiceRequest(
   input: CreateServiceRequestInput,
 ): ServiceRequest {
-  // TODO backend: POST /service-requests
+  // TODO backend: return apiRequest("/service-requests", { method: "POST", body })
   const request: ServiceRequest = {
-    id: `local-${Date.now()}`,
+    id: `sr-${Date.now()}`,
     title: input.title.trim(),
     category: input.category,
     profession: input.category,
@@ -131,7 +128,7 @@ export function createServiceRequest(
     timeAgo: "Just now",
     icon: input.icon,
     iconBackground: input.iconBackground,
-    images: input.images.length ? input.images : [DEFAULT_AVATAR],
+    images: input.images.slice(0, 4),
     description: input.description.trim(),
     isNew: true,
     createdByUserId: getCurrentUserId(),
@@ -139,7 +136,7 @@ export function createServiceRequest(
     posterAvatar: DEFAULT_AVATAR,
     posterVerified: false,
     likesCount: 0,
-    maxOffers: Math.min(20, Math.max(1, Math.floor(input.maxOffers) || 5)),
+    maxOffers: input.maxOffers,
     offersCount: 0,
     offeredByUserIds: [],
     comments: [],
@@ -148,19 +145,14 @@ export function createServiceRequest(
   return request;
 }
 
-/**
- * Update own request only.
- * NOW  → mutates mock row if createdByUserId matches current user
- * LATER → PATCH /service-requests/:id
- */
 export function updateServiceRequest(
   id: string,
   input: UpdateServiceRequestInput,
 ): ServiceRequest | null {
+  // TODO backend: PATCH /service-requests/:id
   const request = getFromData(id);
   if (!request) return null;
   if (!isOwnServiceRequest(request)) return null;
-
   if (input.title !== undefined) request.title = input.title.trim();
   if (input.description !== undefined)
     request.description = input.description.trim();
@@ -170,31 +162,21 @@ export function updateServiceRequest(
   }
   if (input.location !== undefined) request.location = input.location.trim();
   if (input.city !== undefined) request.city = input.city.trim();
-  if (input.images !== undefined && input.images.length > 0) {
-    request.images = input.images;
-  }
+  if (input.images !== undefined) request.images = input.images.slice(0, 4);
   if (input.icon !== undefined) request.icon = input.icon;
   if (input.iconBackground !== undefined)
     request.iconBackground = input.iconBackground;
-
-  // TODO backend: return apiRequest(`/service-requests/${id}`, { method: "PATCH", body: input })
   return request;
 }
 
-/**
- * Delete own request only.
- * NOW  → removes from mock array if owned by current user
- * LATER → DELETE /service-requests/:id
- */
 export function deleteServiceRequest(id: string): boolean {
+  // TODO backend: DELETE /service-requests/:id
   const request = getFromData(id);
   if (!request) return false;
   if (!isOwnServiceRequest(request)) return false;
-
-  const index = SERVICE_REQUESTS.findIndex((r) => r.id === String(id));
-  if (index < 0) return false;
-  SERVICE_REQUESTS.splice(index, 1);
-  // TODO backend: await apiRequest(`/service-requests/${id}`, { method: "DELETE" })
+  const idx = SERVICE_REQUESTS.findIndex((r) => r.id === id);
+  if (idx < 0) return false;
+  SERVICE_REQUESTS.splice(idx, 1);
   return true;
 }
 
@@ -202,6 +184,7 @@ export function addServiceRequestComment(
   input: AddCommentInput,
 ): ServiceRequestComment | null {
   // TODO backend: POST /service-requests/:id/comments
+  // Server should also create an in-app + push notification for the owner.
   const request = getFromData(input.requestId);
   if (!request) return null;
   const comment: ServiceRequestComment = {
@@ -212,6 +195,23 @@ export function addServiceRequestComment(
     timeAgo: "Just now",
   };
   request.comments = [...(request.comments || []), comment];
+
+  // Notify owner when someone else comments (mock + same shape for API later)
+  const ownerId = String(request.createdByUserId || "");
+  const actorId = String(getCurrentUserId());
+  if (ownerId && ownerId !== actorId) {
+    const preview =
+      comment.text.length > 80
+        ? `${comment.text.slice(0, 80)}…`
+        : comment.text;
+    addInAppNotification({
+      userId: ownerId,
+      type: "message",
+      title: "New comment on your request",
+      body: `${comment.userName} on "${request.title}": ${preview}`,
+    });
+  }
+
   return comment;
 }
 
