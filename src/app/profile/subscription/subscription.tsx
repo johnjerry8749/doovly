@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -21,19 +21,21 @@ const PRIMARY = "#159447";
 const LIGHT_GREEN = "#E8F5E9";
 const TEXT_DARK = "#111827";
 const TEXT_MUTED = "#6B7280";
+const BORDER = "#E5E7EB";
 
 function formatNaira(n: number) {
-  return `₦${n.toLocaleString("en-NG")}`;
+  return `₦${n.toLocaleString("en-NG", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
 }
 
-function FeatureRow({ label }: { label: string }) {
-  return (
-    <View style={styles.featureRow}>
-      <Ionicons name="checkmark-circle" size={18} color={PRIMARY} />
-      <Text style={styles.featureText}>{label}</Text>
-    </View>
-  );
-}
+type CompareRow = {
+  id: string;
+  label: string;
+  free: boolean;
+  pro: boolean;
+};
 
 export default function Subscription() {
   const [plansState, setPlansState] = useState<SubscriptionPlansState>(() =>
@@ -48,492 +50,324 @@ export default function Subscription() {
   );
 
   const pro = plansState.plans.find((p) => p.id === "pro")!;
+  const basic = plansState.plans.find((p) => p.id === "basic")!;
 
-  const proPrice =
+  const price =
     period === "monthly" ? pro.monthlyPrice : pro.yearlyPrice;
-  const proPeriodLabel = period === "monthly" ? "/ month" : "/ year";
+  const periodWord = period === "monthly" ? "monthly" : "yearly";
+
+  /** Merge Basic + Pro features into comparison rows */
+  const rows: CompareRow[] = useMemo(() => {
+    const basicLabels = new Set(basic.features.map((f) => f.label.toLowerCase()));
+    const seen = new Set<string>();
+    const out: CompareRow[] = [];
+
+    // Free features first
+    for (const f of basic.features) {
+      const key = f.label.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        id: f.id,
+        label: f.label,
+        free: true,
+        pro: true,
+      });
+    }
+    // Pro-only features
+    for (const f of pro.features) {
+      const key = f.label.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        id: f.id,
+        label: f.label,
+        free: basicLabels.has(key),
+        pro: true,
+      });
+    }
+    return out;
+  }, [basic.features, pro.features]);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
 
+      {/* Header */}
       <View style={styles.header}>
+        <View style={{ width: 40 }} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Get Doovly Pro</Text>
+          <Text style={styles.headerSubtitle}>
+            {plansState.promoSubtitle || "Do more with advanced tools"}
+          </Text>
+        </View>
         <TouchableOpacity
-          style={styles.backBtn}
+          style={styles.closeBtn}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={22} color={PRIMARY} />
+          <Ionicons name="close" size={20} color={TEXT_DARK} />
         </TouchableOpacity>
-        <View style={styles.headerTitles}>
-          <Text style={styles.headerTitle}>Subscription</Text>
-          <Text style={styles.headerSubtitle}>
-            Choose a plan that fits your needs
-          </Text>
-        </View>
-        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        <View style={styles.banner}>
-          <View style={styles.bannerIcon}>
-            <Ionicons name="ribbon" size={22} color="#F59E0B" />
-          </View>
-          <View style={styles.bannerTextCol}>
-            <Text style={styles.bannerTitle}>{plansState.promoTitle}</Text>
-            <Text style={styles.bannerSubtitle}>{plansState.promoSubtitle}</Text>
-          </View>
-          <Ionicons name="rocket" size={28} color={PRIMARY} />
-        </View>
-
-        <View style={styles.periodRow}>
-          <View style={styles.periodToggle}>
-            <TouchableOpacity
-              style={[
-                styles.periodBtn,
-                period === "monthly" && styles.periodBtnActive,
-              ]}
-              onPress={() => setPeriod("monthly")}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.periodBtnText,
-                  period === "monthly" && styles.periodBtnTextActive,
-                ]}
-              >
-                Monthly
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.periodBtn,
-                period === "yearly" && styles.periodBtnActive,
-              ]}
-              onPress={() => setPeriod("yearly")}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.periodBtnText,
-                  period === "yearly" && styles.periodBtnTextActive,
-                ]}
-              >
-                Yearly
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {plansState.yearlySavePercent > 0 && (
-            <View style={styles.saveBadge}>
-              <Text style={styles.saveBadgeText}>
-                Save up to {plansState.yearlySavePercent}% with yearly plan
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Pro only */}
-        <View style={styles.planCardPro}>
-          {pro.popular && (
-            <View style={styles.popularBadge}>
-              <Text style={styles.popularText}>Popular</Text>
-            </View>
-          )}
-
-          <View style={styles.planIconPro}>
-            <Ionicons name="ribbon" size={28} color="#FFFFFF" />
-          </View>
-          <Text style={styles.planName}>{pro.name}</Text>
-          <Text style={styles.planTagline}>{pro.tagline}</Text>
-
-          <View style={styles.pricePills}>
-            <TouchableOpacity
-              style={[
-                styles.pricePill,
-                period === "monthly" && styles.pricePillActive,
-              ]}
-              onPress={() => setPeriod("monthly")}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.pricePillMain,
-                  period === "monthly" && styles.pricePillMainActive,
-                ]}
-              >
-                {formatNaira(pro.monthlyPrice)}
-              </Text>
-              <Text
-                style={[
-                  styles.pricePillSub,
-                  period === "monthly" && styles.pricePillSubActive,
-                ]}
-              >
-                / month
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.pricePill,
-                period === "yearly" && styles.pricePillActive,
-              ]}
-              onPress={() => setPeriod("yearly")}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.pricePillMain,
-                  period === "yearly" && styles.pricePillMainActive,
-                ]}
-              >
-                {formatNaira(pro.yearlyPrice)}
-              </Text>
-              <Text
-                style={[
-                  styles.pricePillSub,
-                  period === "yearly" && styles.pricePillSubActive,
-                ]}
-              >
-                / year
-              </Text>
-              {plansState.yearlySavePercent > 0 && (
-                <Text style={styles.pricePillSave}>
-                  Save {plansState.yearlySavePercent}%
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.selectedPrice}>
-            {formatNaira(proPrice)}{" "}
-            <Text style={styles.selectedPricePeriod}>{proPeriodLabel}</Text>
-          </Text>
-
-          <View style={styles.featuresList}>
-            {pro.features.map((f) => (
-              <FeatureRow key={f.id} label={f.label} />
-            ))}
-          </View>
-
+        {/* Monthly / Yearly toggle (like Go / Plus) */}
+        <View style={styles.periodToggle}>
           <TouchableOpacity
-            style={styles.upgradeBtn}
+            style={[
+              styles.periodSegment,
+              period === "monthly" && styles.periodSegmentActive,
+            ]}
+            onPress={() => setPeriod("monthly")}
             activeOpacity={0.85}
-            onPress={() => {
-              // TODO: payment flow — uses proPrice + period from plans mock/API
-            }}
           >
-            <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
+            <Text
+              style={[
+                styles.periodSegmentText,
+                period === "monthly" && styles.periodSegmentTextActive,
+              ]}
+            >
+              Monthly
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.periodSegment,
+              period === "yearly" && styles.periodSegmentActive,
+            ]}
+            onPress={() => setPeriod("yearly")}
+            activeOpacity={0.85}
+          >
+            <Text
+              style={[
+                styles.periodSegmentText,
+                period === "yearly" && styles.periodSegmentTextActive,
+              ]}
+            >
+              Yearly
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>What you get with Pro</Text>
-        <Text style={styles.sectionSubtitle}>
-          Powerful tools to help you get more jobs and grow faster.
-        </Text>
+        {/* Features comparison table */}
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableHeaderLabel, { flex: 1 }]}>Features</Text>
+            <Text style={styles.colHeader}>Free</Text>
+            <Text style={[styles.colHeader, styles.colHeaderPro]}>Pro</Text>
+          </View>
 
-        <View style={styles.benefitsGrid}>
-          <View style={styles.benefitCard}>
-            <View style={[styles.benefitIcon, { backgroundColor: "#D1FAE5" }]}>
-              <Ionicons name="rocket" size={18} color={PRIMARY} />
+          {rows.map((row, index) => (
+            <View
+              key={row.id}
+              style={[
+                styles.tableRow,
+                index === rows.length - 1 && styles.tableRowLast,
+              ]}
+            >
+              <Text style={styles.featureLabel}>{row.label}</Text>
+              <View style={styles.colCell}>
+                {row.free ? (
+                  <Ionicons name="checkmark" size={18} color={TEXT_MUTED} />
+                ) : (
+                  <Text style={styles.dash}>—</Text>
+                )}
+              </View>
+              <View style={styles.colCell}>
+                {row.pro ? (
+                  <Ionicons name="checkmark" size={18} color={PRIMARY} />
+                ) : (
+                  <Text style={styles.dash}>—</Text>
+                )}
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.benefitTitle}>Priority Visibility</Text>
-              <Text style={styles.benefitDesc}>Get noticed by more clients</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-          </View>
-          <View style={styles.benefitCard}>
-            <View style={[styles.benefitIcon, { backgroundColor: "#DBEAFE" }]}>
-              <Ionicons name="bar-chart" size={18} color="#2563EB" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.benefitTitle}>More Opportunities</Text>
-              <Text style={styles.benefitDesc}>Access exclusive job requests</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-          </View>
-          <View style={styles.benefitCard}>
-            <View style={[styles.benefitIcon, { backgroundColor: "#FFEDD5" }]}>
-              <Ionicons name="briefcase" size={18} color="#EA580C" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.benefitTitle}>Advanced Analytics</Text>
-              <Text style={styles.benefitDesc}>
-                Track your views, applications and earnings
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-          </View>
-          <View style={styles.benefitCard}>
-            <View style={[styles.benefitIcon, { backgroundColor: "#EDE9FE" }]}>
-              <Ionicons name="star" size={18} color="#7C3AED" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.benefitTitle}>Portfolio Boost</Text>
-              <Text style={styles.benefitDesc}>
-                Showcase your best work and stand out
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-          </View>
+          ))}
         </View>
 
-        <View style={styles.trustRow}>
-          <View style={styles.trustItem}>
-            <Ionicons name="shield-checkmark-outline" size={14} color={PRIMARY} />
-            <Text style={styles.trustText}>Cancel anytime</Text>
-          </View>
-          <View style={styles.trustItem}>
-            <Ionicons name="lock-closed-outline" size={14} color={PRIMARY} />
-            <Text style={styles.trustText}>Secure payment</Text>
-          </View>
-          <View style={styles.trustItem}>
-            <Ionicons name="card-outline" size={14} color={PRIMARY} />
-            <Text style={styles.trustText}>Multiple payment options</Text>
-          </View>
-        </View>
-
-        <View style={{ height: 28 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Sticky upgrade CTA — price updates with period */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.upgradeBtn}
+          activeOpacity={0.85}
+          onPress={() => {
+            // TODO: payment — amount = price, period from mock/API
+          }}
+        >
+          <Text style={styles.upgradeBtnText}>
+            Upgrade for {formatNaira(price)}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.footerNote}>
+          Auto-renews {periodWord}. Cancel anytime.
+        </Text>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#FFFFFF" },
+  safe: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
   header: {
-    minHeight: 48,
     flexDirection: "row",
+    alignItems: "flex-start",
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  headerCenter: {
+    flex: 1,
     alignItems: "center",
     paddingHorizontal: 8,
-    paddingVertical: 6,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitles: { flex: 1, alignItems: "center" },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: TEXT_DARK,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: TEXT_MUTED,
-    marginTop: 2,
-  },
-  headerSpacer: { width: 40 },
-  content: { paddingHorizontal: 16, paddingBottom: 16 },
-
-  banner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: LIGHT_GREEN,
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 8,
-    marginBottom: 16,
-    gap: 10,
-  },
-  bannerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bannerTextCol: { flex: 1 },
-  bannerTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: TEXT_DARK,
-    marginBottom: 3,
-  },
-  bannerSubtitle: { fontSize: 12, color: TEXT_MUTED, lineHeight: 17 },
-
-  periodRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 16,
-  },
-  periodToggle: {
-    flexDirection: "row",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 24,
-    padding: 4,
-  },
-  periodBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  periodBtnActive: { backgroundColor: PRIMARY },
-  periodBtnText: { fontSize: 13, fontWeight: "600", color: TEXT_MUTED },
-  periodBtnTextActive: { color: "#FFFFFF" },
-  saveBadge: {
-    backgroundColor: LIGHT_GREEN,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  saveBadgeText: { fontSize: 11, fontWeight: "700", color: PRIMARY },
-
-  planCardPro: {
-    borderColor: PRIMARY,
-    backgroundColor: "#F0FDF4",
-    borderWidth: 1.5,
-    borderRadius: 16,
-    padding: 18,
-    paddingTop: 22,
-    marginBottom: 24,
-  },
-  popularBadge: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    backgroundColor: PRIMARY,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  popularText: { fontSize: 11, fontWeight: "700", color: "#FFFFFF" },
-  planIconPro: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: PRIMARY,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-    marginBottom: 12,
-  },
-  planName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "800",
     color: TEXT_DARK,
     textAlign: "center",
   },
-  planTagline: {
+  headerSubtitle: {
     fontSize: 13,
     color: TEXT_MUTED,
     textAlign: "center",
-    marginTop: 4,
-    marginBottom: 14,
+    marginTop: 6,
+    lineHeight: 18,
   },
-  pricePills: {
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+
+  periodToggle: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 12,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 28,
+    padding: 4,
+    marginBottom: 20,
+    alignSelf: "center",
+    minWidth: 220,
   },
-  pricePill: {
+  periodSegment: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 12,
     paddingVertical: 10,
-    paddingHorizontal: 8,
-    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    alignItems: "center",
   },
-  pricePillActive: {
-    borderColor: PRIMARY,
-    backgroundColor: "#ECFDF5",
+  periodSegmentActive: {
+    backgroundColor: PRIMARY,
   },
-  pricePillMain: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: TEXT_DARK,
-    textAlign: "center",
-  },
-  pricePillMainActive: { color: PRIMARY },
-  pricePillSub: {
-    fontSize: 11,
+  periodSegmentText: {
+    fontSize: 14,
+    fontWeight: "600",
     color: TEXT_MUTED,
-    textAlign: "center",
-    marginTop: 2,
   },
-  pricePillSubActive: { color: PRIMARY },
-  pricePillSave: {
-    fontSize: 11,
+  periodSegmentTextActive: {
+    color: "#FFFFFF",
+  },
+
+  table: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
+  },
+  tableHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: BORDER,
+    backgroundColor: "#F9FAFB",
+  },
+  tableHeaderLabel: {
+    fontSize: 14,
     fontWeight: "700",
-    color: "#DC2626",
-    textAlign: "center",
-    marginTop: 4,
+    color: TEXT_MUTED,
   },
-  selectedPrice: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: PRIMARY,
+  colHeader: {
+    width: 52,
     textAlign: "center",
-    marginBottom: 14,
-  },
-  selectedPricePeriod: {
     fontSize: 13,
     fontWeight: "600",
     color: TEXT_MUTED,
   },
-  featuresList: { gap: 10, marginBottom: 16 },
-  featureRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  featureText: { fontSize: 14, color: TEXT_DARK, flex: 1 },
+  colHeaderPro: {
+    color: PRIMARY,
+    fontWeight: "800",
+  },
+  tableRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: BORDER,
+  },
+  tableRowLast: {
+    borderBottomWidth: 0,
+  },
+  featureLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    color: TEXT_DARK,
+    paddingRight: 8,
+    lineHeight: 20,
+  },
+  colCell: {
+    width: 52,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dash: {
+    fontSize: 16,
+    color: "#D1D5DB",
+    fontWeight: "600",
+  },
+
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: BORDER,
+    backgroundColor: "#FFFFFF",
+  },
   upgradeBtn: {
     backgroundColor: PRIMARY,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 28,
+    paddingVertical: 16,
     alignItems: "center",
+    justifyContent: "center",
   },
   upgradeBtnText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
   },
-
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: TEXT_DARK,
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
+  footerNote: {
+    fontSize: 12,
     color: TEXT_MUTED,
-    marginBottom: 12,
+    textAlign: "center",
+    marginTop: 10,
   },
-  benefitsGrid: { gap: 10, marginBottom: 20 },
-  benefitCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E5E7EB",
-  },
-  benefitIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  benefitTitle: { fontSize: 13, fontWeight: "700", color: TEXT_DARK },
-  benefitDesc: { fontSize: 11, color: TEXT_MUTED, marginTop: 2 },
-
-  trustRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 12,
-    paddingTop: 4,
-  },
-  trustItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  trustText: { fontSize: 11, color: TEXT_MUTED, fontWeight: "500" },
 });
