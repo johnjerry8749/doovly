@@ -23,6 +23,7 @@ import {
   type VerificationStatus,
   type SubscriptionTier,
 } from "@/services/admin/users";
+import { sendInAppToUser } from "@/services/admin/notifications";
 
 const GREEN = "#159447";
 const GRAY = "#6B7280";
@@ -128,18 +129,31 @@ export default function Users() {
     setEditVisible(false);
   };
 
-  const sendInAppNotif = () => {
+  const sendInAppNotif = async () => {
+    if (!selected) return;
     if (!notifTitle.trim() || !notifMessage.trim()) {
       Alert.alert("Missing fields", "Please enter a title and message.");
       return;
     }
-    Alert.alert(
-      "Notification sent",
-      `In-app message sent to ${selected?.name}.`,
-    );
-    setNotifVisible(false);
-    setNotifTitle("");
-    setNotifMessage("");
+    try {
+      await sendInAppToUser({
+        userId: selected.id,
+        title: notifTitle,
+        message: notifMessage,
+      });
+      Alert.alert(
+        "Notification sent",
+        `In-app message sent to ${selected.name}. Open Notifications in the app to see it.`,
+      );
+      setNotifVisible(false);
+      setNotifTitle("");
+      setNotifMessage("");
+    } catch (e: any) {
+      Alert.alert(
+        "Send failed",
+        e?.message || "Could not send in-app notification.",
+      );
+    }
   };
 
   const verificationBadge = (status: VerificationStatus) => {
@@ -261,7 +275,6 @@ export default function Users() {
         )}
       </ScrollView>
 
-      {/* User detail modal */}
       <Modal
         visible={!!selected}
         transparent
@@ -273,10 +286,7 @@ export default function Users() {
             style={styles.modalCard}
             onPress={(e) => e.stopPropagation()}
           >
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              bounces={false}
-            >
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
               <View style={styles.modalHeader}>
                 <View style={styles.modalUserRow}>
                   <View style={styles.avatarWrap}>
@@ -291,7 +301,8 @@ export default function Users() {
                   <View style={{ flex: 1 }}>
                     <View style={styles.nameRow}>
                       <Text style={styles.modalName}>{selected?.name}</Text>
-                      {selected && verificationBadge(selected.verificationStatus)}
+                      {selected &&
+                        verificationBadge(selected.verificationStatus)}
                       {selected && proBadge(selected.subscription)}
                     </View>
                     <Text style={styles.modalProfession}>
@@ -318,7 +329,6 @@ export default function Users() {
                 </View>
               </View>
 
-              {/* Tabs */}
               <View style={styles.tabs}>
                 {(
                   [
@@ -433,7 +443,6 @@ export default function Users() {
                 </View>
               )}
 
-              {/* Action buttons */}
               <View style={styles.actionsGrid}>
                 <TouchableOpacity
                   style={[styles.actionCard, styles.actionDanger]}
@@ -501,7 +510,6 @@ export default function Users() {
         </Pressable>
       </Modal>
 
-      {/* Edit profile modal */}
       <Modal
         visible={editVisible}
         transparent
@@ -601,7 +609,6 @@ export default function Users() {
         </Pressable>
       </Modal>
 
-      {/* In-app notification modal */}
       <Modal
         visible={notifVisible}
         transparent
@@ -625,9 +632,7 @@ export default function Users() {
                 <Ionicons name="close" size={22} color="#111827" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.fieldLabel}>
-              To: {selected?.name}
-            </Text>
+            <Text style={styles.fieldLabel}>To: {selected?.name}</Text>
             <Field
               label="Title"
               value={notifTitle}
@@ -882,7 +887,12 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
   },
   infoLabel: { fontSize: 11, color: GRAY, fontWeight: "600" },
-  infoValue: { fontSize: 13, color: "#111827", fontWeight: "600", marginTop: 2 },
+  infoValue: {
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: "600",
+    marginTop: 2,
+  },
 
   placeholderBox: {
     backgroundColor: "#F9FAFB",
