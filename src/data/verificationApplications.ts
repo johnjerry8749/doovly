@@ -32,7 +32,6 @@ export type VerificationApplication = {
   submittedOn: string;
   email: string;
   phone: string;
-  experience: string;
   documents: VerificationDocument[];
 };
 
@@ -74,17 +73,8 @@ const defaultDocs = (
   },
 ];
 
-/** Rough experience labels from bio when present */
-function experienceFromBio(bio?: string): string {
-  if (!bio) return "3+ Years";
-  const m = bio.match(/(\d+)\+?\s*years?/i);
-  if (m) return `${m[1]}+ Years`;
-  return "3+ Years";
-}
-
 function buildFromProfessionals(): VerificationApplication[] {
   return PROFESSIONALS.map((p, index) => {
-    // verified:true → Verified; verified:false → Pending
     const status: VerificationStatus = p.verified ? "Verified" : "Pending";
 
     const submitted = new Date(2025, 0, 12 - index * 3);
@@ -93,8 +83,6 @@ function buildFromProfessionals(): VerificationApplication[] {
       day: "numeric",
       year: "numeric",
     });
-
-    const phoneLocal = `080${String(30000000 + Number(p.id) * 1111111).slice(0, 8)}`;
 
     return {
       id: `va-${p.id}`,
@@ -105,9 +93,8 @@ function buildFromProfessionals(): VerificationApplication[] {
       avatar: p.image,
       status,
       submittedOn,
-      email: `${p.name.toLowerCase().replace(/\s+/g, ".")}@email.com`,
-      phone: `+234 ${phoneLocal}`,
-      experience: experienceFromBio(p.bio),
+      email: p.email,
+      phone: p.phone,
       documents: defaultDocs(`va-${p.id}`, p.image),
     };
   });

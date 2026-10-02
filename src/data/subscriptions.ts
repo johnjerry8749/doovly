@@ -71,7 +71,7 @@ function buildFromProfessionals(): SubscriptionUser[] {
       statusLabel,
       startDate,
       endDate: isExpired ? fmt(new Date(2026, 7, 12)) : endDate,
-      email: `${p.name.toLowerCase().replace(/\s+/g, ".")}@email.com`,
+      email: p.email,
     };
   });
 }

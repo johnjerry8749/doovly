@@ -49,6 +49,8 @@ export type Professional = {
   latitude: number;
   longitude: number;
   role: string;
+  email: string;
+  phone: string;
   /** Short about text from Edit Profile */
   bio?: string;
 
@@ -84,6 +86,8 @@ export const PROFESSIONALS: Professional[] = [
     latitude: 6.5244,
     longitude: 3.3792,
     role: "admin",
+    email: "john.chukwuemeka@email.com",
+    phone: "+234 803 111 2201",
     bio: "Experienced plumber with 8+ years fixing residential and commercial systems across Lagos.",
 
     services: [
@@ -183,6 +187,8 @@ export const PROFESSIONALS: Professional[] = [
     latitude: 6.6018,
     longitude: 3.3515,
     role: "user",
+    email: "chioma.eze@email.com",
+    phone: "+234 802 222 3302",
     bio: "Creative nail tech specializing in gel extensions and bridal nail art.",
 
     services: [
@@ -274,6 +280,8 @@ export const PROFESSIONALS: Professional[] = [
     latitude: 9.0765,
     longitude: 7.3986,
     role: "user",
+    email: "ikechukwu.obi@email.com",
+    phone: "+234 805 333 4403",
     bio: "Mobile mechanic for engine diagnostics, brakes, and same-day repairs.",
 
     services: [
@@ -365,6 +373,8 @@ export const PROFESSIONALS: Professional[] = [
     latitude: 6.4281,
     longitude: 3.4219,
     role: "user",
+    email: "blessing.joy@email.com",
+    phone: "+234 806 444 5504",
     bio: "Certified massage therapist focused on deep tissue and full-body relaxation.",
 
     services: [
@@ -447,6 +457,8 @@ export const PROFESSIONALS: Professional[] = [
     latitude: 4.8156,
     longitude: 7.0498,
     role: "user",
+    email: "emeka.okoro@email.com",
+    phone: "+234 807 555 6605",
     bio: "Licensed electrician for home wiring, fault finding, and lighting installs.",
 
     services: [
@@ -538,6 +550,8 @@ export const PROFESSIONALS: Professional[] = [
     latitude: 9.0579,
     longitude: 7.4951,
     role: "user",
+    email: "aisha.bello@email.com",
+    phone: "+234 809 666 7706",
     bio: "Sharp fades and beard trims with a clean, professional finish every time.",
 
     services: [
