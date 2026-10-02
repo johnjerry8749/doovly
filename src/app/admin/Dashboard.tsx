@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   getDashboardStats,
   type DashboardStats,
-} from "@/services/dashboard";
+} from "@/services/admin/dashboard";
 
 const GREEN = "#159447";
 const GRAY = "#6B7280";
@@ -29,7 +29,6 @@ type StatCardProps = {
 };
 
 function MiniSpark({ color }: { color: string }) {
-  // Simple decorative sparkline bars (mock visual only)
   const heights = [4, 7, 5, 9, 6, 11, 8, 12, 9, 14];
   return (
     <View style={styles.sparkRow}>
@@ -93,7 +92,6 @@ export default function Dashboard() {
           </TouchableOpacity>
         </View>
 
-        {/* Top stats row */}
         <View style={styles.statsGrid}>
           <StatCard
             icon="people"
@@ -129,7 +127,6 @@ export default function Dashboard() {
           />
         </View>
 
-        {/* Second stats row */}
         <View style={styles.statsGrid}>
           <StatCard
             icon="cash"
@@ -157,7 +154,6 @@ export default function Dashboard() {
           />
         </View>
 
-        {/* Overview chart */}
         <View style={styles.chartCard}>
           <View style={styles.chartHeader}>
             <Text style={styles.chartTitle}>Overview</Text>
@@ -199,30 +195,16 @@ export default function Dashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F9FAFB",
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
+  container: { flex: 1, backgroundColor: "#F9FAFB" },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   headerRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
     marginBottom: 18,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  subtitle: {
-    fontSize: 14,
-    color: GRAY,
-    marginTop: 4,
-  },
+  title: { fontSize: 24, fontWeight: "700", color: "#111827" },
+  subtitle: { fontSize: 14, color: GRAY, marginTop: 4 },
   dateChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -241,7 +223,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     flexShrink: 1,
   },
-
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -265,10 +246,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
       },
       android: { elevation: 2 },
-      web: {
-        // @ts-ignore
-        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-      },
+      web: { boxShadow: "0 1px 4px rgba(0,0,0,0.06)" } as any,
     }),
   },
   statIcon: {
@@ -279,12 +257,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 10,
   },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: GRAY,
-    marginBottom: 4,
-  },
+  statLabel: { fontSize: 12, fontWeight: "600", color: GRAY, marginBottom: 4 },
   statValue: {
     fontSize: 22,
     fontWeight: "800",
@@ -297,11 +270,7 @@ const styles = StyleSheet.create({
     gap: 2,
     height: 16,
   },
-  sparkBar: {
-    width: 4,
-    borderRadius: 2,
-  },
-
+  sparkBar: { width: 4, borderRadius: 2 },
   chartCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -309,19 +278,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: BORDER,
     marginTop: 4,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-      },
-      android: { elevation: 2 },
-      web: {
-        // @ts-ignore
-        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-      },
-    }),
   },
   chartHeader: {
     flexDirection: "row",
@@ -329,11 +285,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 16,
   },
-  chartTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-  },
+  chartTitle: { fontSize: 16, fontWeight: "700", color: "#111827" },
   chartRange: {
     flexDirection: "row",
     alignItems: "center",
@@ -345,24 +297,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
   },
-  chartRangeText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: GRAY,
-  },
-  chartArea: {
-    flexDirection: "row",
-    height: 140,
-  },
-  yAxis: {
-    width: 28,
-    justifyContent: "space-between",
-    paddingBottom: 4,
-  },
-  yLabel: {
-    fontSize: 10,
-    color: "#9CA3AF",
-  },
+  chartRangeText: { fontSize: 12, fontWeight: "600", color: GRAY },
+  chartArea: { flexDirection: "row", height: 140 },
+  yAxis: { width: 28, justifyContent: "space-between", paddingBottom: 4 },
+  yLabel: { fontSize: 10, color: "#9CA3AF" },
   barsWrap: {
     flex: 1,
     flexDirection: "row",
@@ -370,11 +308,7 @@ const styles = StyleSheet.create({
     gap: 3,
     paddingLeft: 4,
   },
-  barCol: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-end",
-  },
+  barCol: { flex: 1, alignItems: "center", justifyContent: "flex-end" },
   bar: {
     width: "80%",
     maxWidth: 12,
@@ -389,9 +323,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingLeft: 28,
   },
-  xLabel: {
-    fontSize: 10,
-    color: "#9CA3AF",
-    fontWeight: "500",
-  },
+  xLabel: { fontSize: 10, color: "#9CA3AF", fontWeight: "500" },
 });

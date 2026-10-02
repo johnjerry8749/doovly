@@ -1,16 +1,16 @@
 /**
- * Subscription plans service
- * -------------------------
- * Screens import ONLY from here.
+ * User-facing subscription plans (read-only)
+ * -----------------------------------------
+ * Profile Subscription screen imports from here.
  *
- * NOW  → mock (src/data/subscriptionPlans.ts)
- * LATER → apiRequest GET/PUT /admin/subscription-plans
+ * Admin edits live in @/services/admin/subscriptionPlans
+ * Both share the same mock data (src/data/subscriptionPlans.ts).
+ *
+ * LATER: GET /subscription-plans (public) vs admin PUT routes.
  */
 
 import {
   getMockSubscriptionPlans,
-  updateMockSubscriptionPlans,
-  updateProPrices as updateMockProPrices,
   getProMonthlyPrice as getMockProMonthlyPrice,
   type SubscriptionPlansState,
   type SubscriptionPlanConfig,
@@ -25,24 +25,10 @@ export type {
   BillingPeriod,
 };
 
+/** Public plan catalog for the upgrade screen. */
 export function getSubscriptionPlans(): SubscriptionPlansState {
-  // TODO: return apiRequest<SubscriptionPlansState>("/admin/subscription-plans")
+  // TODO: return apiRequest<SubscriptionPlansState>("/subscription-plans")
   return getMockSubscriptionPlans();
-}
-
-export function saveSubscriptionPlans(
-  state: SubscriptionPlansState,
-): SubscriptionPlansState {
-  // TODO: return apiRequest("/admin/subscription-plans", { method: "PUT", body: state })
-  return updateMockSubscriptionPlans(state);
-}
-
-export function updateProPrices(
-  monthlyPrice: number,
-  yearlyPrice: number,
-): SubscriptionPlansState {
-  // TODO: apiRequest PUT /admin/subscription-plans/pro/prices
-  return updateMockProPrices(monthlyPrice, yearlyPrice);
 }
 
 export function getProMonthlyPrice(): number {
