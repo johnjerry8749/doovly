@@ -41,14 +41,12 @@ export default function Subscription() {
   );
   const [period, setPeriod] = useState<BillingPeriod>("monthly");
 
-  // Reload when screen is focused so Admin Settings changes apply immediately
   useFocusEffect(
     useCallback(() => {
       setPlansState(getSubscriptionPlans());
     }, []),
   );
 
-  const basic = plansState.plans.find((p) => p.id === "basic")!;
   const pro = plansState.plans.find((p) => p.id === "pro")!;
 
   const proPrice =
@@ -80,7 +78,6 @@ export default function Subscription() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        {/* Promo banner from admin-editable mock */}
         <View style={styles.banner}>
           <View style={styles.bannerIcon}>
             <Ionicons name="ribbon" size={22} color="#F59E0B" />
@@ -92,11 +89,13 @@ export default function Subscription() {
           <Ionicons name="rocket" size={28} color={PRIMARY} />
         </View>
 
-        {/* Monthly / Yearly toggle */}
         <View style={styles.periodRow}>
           <View style={styles.periodToggle}>
             <TouchableOpacity
-              style={[styles.periodBtn, period === "monthly" && styles.periodBtnActive]}
+              style={[
+                styles.periodBtn,
+                period === "monthly" && styles.periodBtnActive,
+              ]}
               onPress={() => setPeriod("monthly")}
               activeOpacity={0.85}
             >
@@ -110,7 +109,10 @@ export default function Subscription() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.periodBtn, period === "yearly" && styles.periodBtnActive]}
+              style={[
+                styles.periodBtn,
+                period === "yearly" && styles.periodBtnActive,
+              ]}
               onPress={() => setPeriod("yearly")}
               activeOpacity={0.85}
             >
@@ -133,121 +135,100 @@ export default function Subscription() {
           )}
         </View>
 
-        {/* Plans */}
-        <View style={styles.plansRow}>
-          {/* Basic */}
-          <View style={styles.planCard}>
-            <View style={styles.planIconFree}>
-              <Ionicons name="person" size={28} color="#9CA3AF" />
+        {/* Pro only */}
+        <View style={styles.planCardPro}>
+          {pro.popular && (
+            <View style={styles.popularBadge}>
+              <Text style={styles.popularText}>Popular</Text>
             </View>
-            <Text style={styles.planName}>{basic.name}</Text>
-            <Text style={styles.planTagline}>{basic.tagline}</Text>
-            <Text style={styles.planPrice}>{formatNaira(basic.monthlyPrice)}</Text>
-            <Text style={styles.planPeriod}>/ month</Text>
+          )}
 
-            <View style={styles.featuresList}>
-              {basic.features.map((f) => (
-                <FeatureRow key={f.id} label={f.label} />
-              ))}
-            </View>
-
-            <View style={styles.currentPlanBtn}>
-              <Text style={styles.currentPlanText}>Current Plan</Text>
-            </View>
+          <View style={styles.planIconPro}>
+            <Ionicons name="ribbon" size={28} color="#FFFFFF" />
           </View>
+          <Text style={styles.planName}>{pro.name}</Text>
+          <Text style={styles.planTagline}>{pro.tagline}</Text>
 
-          {/* Pro */}
-          <View style={[styles.planCard, styles.planCardPro]}>
-            {pro.popular && (
-              <View style={styles.popularBadge}>
-                <Text style={styles.popularText}>Popular</Text>
-              </View>
-            )}
-
-            <View style={styles.planIconPro}>
-              <Ionicons name="ribbon" size={26} color="#FFFFFF" />
-            </View>
-            <Text style={styles.planName}>{pro.name}</Text>
-            <Text style={styles.planTagline}>{pro.tagline}</Text>
-
-            <View style={styles.pricePills}>
-              <View
-                style={[
-                  styles.pricePill,
-                  period === "monthly" && styles.pricePillActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.pricePillMain,
-                    period === "monthly" && styles.pricePillMainActive,
-                  ]}
-                >
-                  {formatNaira(pro.monthlyPrice)}
-                </Text>
-                <Text
-                  style={[
-                    styles.pricePillSub,
-                    period === "monthly" && styles.pricePillSubActive,
-                  ]}
-                >
-                  / month
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.pricePill,
-                  period === "yearly" && styles.pricePillActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.pricePillMain,
-                    period === "yearly" && styles.pricePillMainActive,
-                  ]}
-                >
-                  {formatNaira(pro.yearlyPrice)}
-                </Text>
-                <Text
-                  style={[
-                    styles.pricePillSub,
-                    period === "yearly" && styles.pricePillSubActive,
-                  ]}
-                >
-                  / year
-                </Text>
-                {plansState.yearlySavePercent > 0 && (
-                  <Text style={styles.pricePillSave}>
-                    Save {plansState.yearlySavePercent}%
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            <Text style={styles.selectedPrice}>
-              {formatNaira(proPrice)}{" "}
-              <Text style={styles.selectedPricePeriod}>{proPeriodLabel}</Text>
-            </Text>
-
-            <View style={styles.featuresList}>
-              {pro.features.map((f) => (
-                <FeatureRow key={f.id} label={f.label} />
-              ))}
-            </View>
-
+          <View style={styles.pricePills}>
             <TouchableOpacity
-              style={styles.upgradeBtn}
+              style={[
+                styles.pricePill,
+                period === "monthly" && styles.pricePillActive,
+              ]}
+              onPress={() => setPeriod("monthly")}
               activeOpacity={0.85}
-              onPress={() => {
-                // TODO: payment flow — will use proPrice + period from plans mock/API
-              }}
             >
-              <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
+              <Text
+                style={[
+                  styles.pricePillMain,
+                  period === "monthly" && styles.pricePillMainActive,
+                ]}
+              >
+                {formatNaira(pro.monthlyPrice)}
+              </Text>
+              <Text
+                style={[
+                  styles.pricePillSub,
+                  period === "monthly" && styles.pricePillSubActive,
+                ]}
+              >
+                / month
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.pricePill,
+                period === "yearly" && styles.pricePillActive,
+              ]}
+              onPress={() => setPeriod("yearly")}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={[
+                  styles.pricePillMain,
+                  period === "yearly" && styles.pricePillMainActive,
+                ]}
+              >
+                {formatNaira(pro.yearlyPrice)}
+              </Text>
+              <Text
+                style={[
+                  styles.pricePillSub,
+                  period === "yearly" && styles.pricePillSubActive,
+                ]}
+              >
+                / year
+              </Text>
+              {plansState.yearlySavePercent > 0 && (
+                <Text style={styles.pricePillSave}>
+                  Save {plansState.yearlySavePercent}%
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
+
+          <Text style={styles.selectedPrice}>
+            {formatNaira(proPrice)}{" "}
+            <Text style={styles.selectedPricePeriod}>{proPeriodLabel}</Text>
+          </Text>
+
+          <View style={styles.featuresList}>
+            {pro.features.map((f) => (
+              <FeatureRow key={f.id} label={f.label} />
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={styles.upgradeBtn}
+            activeOpacity={0.85}
+            onPress={() => {
+              // TODO: payment flow — uses proPrice + period from plans mock/API
+            }}
+          >
+            <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* What you get */}
         <Text style={styles.sectionTitle}>What you get with Pro</Text>
         <Text style={styles.sectionSubtitle}>
           Powerful tools to help you get more jobs and grow faster.
@@ -406,82 +387,59 @@ const styles = StyleSheet.create({
   },
   saveBadgeText: { fontSize: 11, fontWeight: "700", color: PRIMARY },
 
-  plansRow: { flexDirection: "row", gap: 12, marginBottom: 24 },
-  planCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    padding: 14,
-    paddingTop: 18,
-  },
   planCardPro: {
     borderColor: PRIMARY,
     backgroundColor: "#F0FDF4",
     borderWidth: 1.5,
+    borderRadius: 16,
+    padding: 18,
+    paddingTop: 22,
+    marginBottom: 24,
   },
   popularBadge: {
     position: "absolute",
-    top: 10,
-    right: 10,
+    top: 12,
+    right: 12,
     backgroundColor: PRIMARY,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 10,
   },
-  popularText: { fontSize: 10, fontWeight: "700", color: "#FFFFFF" },
-  planIconFree: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-    marginBottom: 10,
-  },
+  popularText: { fontSize: 11, fontWeight: "700", color: "#FFFFFF" },
   planIconPro: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: PRIMARY,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   planName: {
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: "800",
     color: TEXT_DARK,
     textAlign: "center",
   },
   planTagline: {
-    fontSize: 12,
+    fontSize: 13,
     color: TEXT_MUTED,
     textAlign: "center",
-    marginTop: 2,
-    marginBottom: 8,
+    marginTop: 4,
+    marginBottom: 14,
   },
-  planPrice: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: TEXT_DARK,
-    textAlign: "center",
-  },
-  planPeriod: {
-    fontSize: 12,
-    color: TEXT_MUTED,
-    textAlign: "center",
+  pricePills: {
+    flexDirection: "row",
+    gap: 10,
     marginBottom: 12,
   },
-  pricePills: { gap: 6, marginBottom: 8 },
   pricePill: {
+    flex: 1,
     borderWidth: 1,
     borderColor: "#D1D5DB",
-    borderRadius: 10,
-    paddingVertical: 6,
+    borderRadius: 12,
+    paddingVertical: 10,
     paddingHorizontal: 8,
     backgroundColor: "#FFFFFF",
   },
@@ -490,59 +448,49 @@ const styles = StyleSheet.create({
     backgroundColor: "#ECFDF5",
   },
   pricePillMain: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "800",
     color: TEXT_DARK,
     textAlign: "center",
   },
   pricePillMainActive: { color: PRIMARY },
   pricePillSub: {
-    fontSize: 10,
+    fontSize: 11,
     color: TEXT_MUTED,
-    textAlign: "center",
-  },
-  pricePillSubActive: { color: PRIMARY },
-  pricePillSave: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#DC2626",
     textAlign: "center",
     marginTop: 2,
   },
+  pricePillSubActive: { color: PRIMARY },
+  pricePillSave: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#DC2626",
+    textAlign: "center",
+    marginTop: 4,
+  },
   selectedPrice: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
     color: PRIMARY,
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 14,
   },
   selectedPricePeriod: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
     color: TEXT_MUTED,
   },
-  featuresList: { gap: 8, marginBottom: 14 },
-  featureRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  featureText: { fontSize: 12, color: TEXT_DARK, flex: 1 },
-  currentPlanBtn: {
-    backgroundColor: "#F3F4F6",
-    borderRadius: 10,
-    paddingVertical: 11,
-    alignItems: "center",
-  },
-  currentPlanText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#9CA3AF",
-  },
+  featuresList: { gap: 10, marginBottom: 16 },
+  featureRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  featureText: { fontSize: 14, color: TEXT_DARK, flex: 1 },
   upgradeBtn: {
     backgroundColor: PRIMARY,
-    borderRadius: 10,
-    paddingVertical: 11,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: "center",
   },
   upgradeBtnText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "700",
     color: "#FFFFFF",
   },
