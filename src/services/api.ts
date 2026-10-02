@@ -2,6 +2,14 @@
  * Base API client.
  * When you add a backend, set API_URL and implement real fetch here.
  * Screens should NOT call fetch directly — only services/* should.
+ *
+ * Mock ↔ DB parity is ready:
+ *   - supabase/migrations/001 + 002 + seed.sql
+ *   - src/lib/ids.ts (mock id ↔ UUID)
+ *   - src/lib/mappers.ts (status casing, images)
+ *   - supabase/PARITY.md
+ * Prefer Supabase client (@/lib/supabase) for first swap; or this helper
+ * when EXPO_PUBLIC_API_URL points at a custom API.
  */
 
 // TODO: replace with your real API base URL (e.g. https://api.doovly.com)

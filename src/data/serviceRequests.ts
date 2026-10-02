@@ -1,9 +1,9 @@
 /**
  * Shared service-request mock data.
- * Avatars & comment faces use the same local assets as professionals
- * (@/assets/profile_*.jpg) — no external image URLs.
+ * DB parity: service_requests + comments + offers (seed mock_id 1–7, 11)
+ * Avatars use local @/assets/profile_*.jpg; seed uses mock:// + image_keys.
  *
- * Later: replace with API / DB responses (image URLs or asset ids).
+ * Later: replace with API / DB responses (Cloudinary URLs).
  */
 
 import type { MaterialCommunityIcons } from "@expo/vector-icons";

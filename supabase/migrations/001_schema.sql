@@ -1,7 +1,7 @@
 -- ============================================================
 -- Doovly schema
--- One file. Matches src/data/* and the app flow.
--- mock_id = current app id ("1", "u1", "b1"). id = production UUID.
+-- One migration. Replaces 001_initial_schema.sql + 002_mock_parity.sql.
+-- mock_id = app id ("1", "u1", "b1"). id = production UUID.
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -22,7 +22,7 @@ CREATE TABLE public.profiles (
   is_online         BOOLEAN NOT NULL DEFAULT FALSE,
   last_active_at    TIMESTAMPTZ,
   last_active_label TEXT,
-  member_since      DATE,
+  member_since      TIMESTAMPTZ,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -51,6 +51,8 @@ CREATE TABLE public.professionals (
   review_count     INTEGER NOT NULL DEFAULT 0,
   avatar_url       TEXT,
   avatar_key       TEXT,
+  email            TEXT,
+  phone            TEXT,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -75,6 +77,9 @@ CREATE TABLE public.services (
 );
 
 CREATE INDEX idx_services_professional ON public.services (professional_id);
+CREATE UNIQUE INDEX idx_services_mock
+  ON public.services (professional_id, mock_id)
+  WHERE mock_id IS NOT NULL;
 
 -- ------------------------------------------------------------
 -- PORTFOLIO
@@ -83,14 +88,15 @@ CREATE TABLE public.portfolio_items (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   professional_id UUID NOT NULL REFERENCES public.professionals(id) ON DELETE CASCADE,
   mock_id         TEXT,
-  description     TEXT NOT NULL,
-  image_key       TEXT NOT NULL,
+  description     TEXT NOT NULL DEFAULT '',
+  image_key       TEXT,
   image_url       TEXT,
   sort_order      INTEGER NOT NULL DEFAULT 0,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX portfolio_items_mock_key
+CREATE INDEX idx_portfolio_professional ON public.portfolio_items (professional_id);
+CREATE UNIQUE INDEX idx_portfolio_mock
   ON public.portfolio_items (professional_id, mock_id)
   WHERE mock_id IS NOT NULL;
 
@@ -104,32 +110,40 @@ CREATE TABLE public.reviews (
   mock_id         TEXT,
   user_name       TEXT NOT NULL,
   comment         TEXT NOT NULL,
+  display_date    TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_reviews_professional ON public.reviews (professional_id);
+CREATE UNIQUE INDEX idx_reviews_mock
+  ON public.reviews (professional_id, mock_id)
+  WHERE mock_id IS NOT NULL;
 
 -- ------------------------------------------------------------
 -- BOOKINGS
 -- ------------------------------------------------------------
 CREATE TABLE public.bookings (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  mock_id         TEXT,
-  customer_id     UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  professional_id UUID NOT NULL REFERENCES public.professionals(id) ON DELETE CASCADE,
-  title           TEXT NOT NULL,
-  service_name    TEXT,
-  status          TEXT NOT NULL DEFAULT 'pending'
-                  CHECK (status IN ('pending', 'accepted', 'declined', 'completed', 'cancelled')),
-  amount          NUMERIC(12,2),
-  location        TEXT,
-  address         TEXT,
-  notes           TEXT,
-  scheduled_at    TIMESTAMPTZ,
-  rating          NUMERIC(3,2),
-  reviews_count   INTEGER DEFAULT 0,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mock_id                TEXT,
+  customer_id            UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  professional_id        UUID NOT NULL REFERENCES public.professionals(id) ON DELETE CASCADE,
+  title                  TEXT NOT NULL,
+  service_name           TEXT,
+  professional_name      TEXT,
+  customer_name          TEXT,
+  professional_verified  BOOLEAN NOT NULL DEFAULT FALSE,
+  status                 TEXT NOT NULL DEFAULT 'pending'
+                         CHECK (status IN ('pending', 'accepted', 'declined', 'completed', 'cancelled')),
+  amount                 NUMERIC(12,2),
+  location               TEXT,
+  address                TEXT,
+  notes                  TEXT,
+  display_date           TEXT,
+  scheduled_at           TIMESTAMPTZ,
+  rating                 NUMERIC(3,2),
+  reviews_count          INTEGER DEFAULT 0,
+  created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX bookings_mock_id_key ON public.bookings (mock_id) WHERE mock_id IS NOT NULL;
@@ -153,6 +167,8 @@ CREATE TABLE public.service_requests (
   icon              TEXT NOT NULL DEFAULT 'briefcase-outline',
   icon_background   TEXT DEFAULT '#E8F5E9',
   images            TEXT[] NOT NULL DEFAULT '{}',
+  image_keys        TEXT[] NOT NULL DEFAULT '{}',
+  time_ago          TEXT,
   is_new            BOOLEAN NOT NULL DEFAULT TRUE,
   created_by        UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   poster_name       TEXT NOT NULL,
@@ -179,6 +195,7 @@ CREATE TABLE public.service_request_comments (
   user_name       TEXT NOT NULL,
   user_avatar_url TEXT,
   text            TEXT NOT NULL,
+  time_ago        TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -186,17 +203,22 @@ CREATE INDEX idx_sr_comments_request ON public.service_request_comments (request
 
 CREATE TABLE public.service_request_offers (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  mock_id         TEXT UNIQUE,
+  mock_id         TEXT,
   request_id      UUID NOT NULL REFERENCES public.service_requests(id) ON DELETE CASCADE,
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   professional_id UUID REFERENCES public.professionals(id) ON DELETE SET NULL,
-  amount          NUMERIC(12,2) NOT NULL,
+  amount          NUMERIC(12,2),
   message         TEXT,
   status          TEXT NOT NULL DEFAULT 'pending'
-                  CHECK (status IN ('pending', 'accepted', 'declined')),
+                  CHECK (status IN ('pending', 'accepted', 'declined', 'withdrawn')),
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (request_id, user_id)
 );
+
+CREATE UNIQUE INDEX idx_sr_offers_mock
+  ON public.service_request_offers (request_id, mock_id)
+  WHERE mock_id IS NOT NULL;
+CREATE INDEX idx_sr_offers_request ON public.service_request_offers (request_id);
 
 CREATE TABLE public.service_request_likes (
   request_id UUID NOT NULL REFERENCES public.service_requests(id) ON DELETE CASCADE,
@@ -220,6 +242,7 @@ CREATE TABLE public.notifications (
   body       TEXT NOT NULL,
   unread     BOOLEAN NOT NULL DEFAULT TRUE,
   avatar_url TEXT,
+  time_label TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -233,11 +256,12 @@ CREATE TABLE public.admin_notifications (
   title         TEXT NOT NULL,
   message       TEXT NOT NULL,
   channels      TEXT[] NOT NULL DEFAULT '{}',
-  sent_to       TEXT NOT NULL CHECK (sent_to IN ('all', 'verified', 'subscribed', 'free')),
-  sent_to_label TEXT NOT NULL,
-  status        TEXT NOT NULL CHECK (status IN ('Sent', 'Scheduled', 'Failed')),
+  sent_to       TEXT NOT NULL DEFAULT 'all' CHECK (sent_to IN ('all', 'verified', 'subscribed', 'free')),
+  sent_to_label TEXT NOT NULL DEFAULT 'All Users',
+  status        TEXT NOT NULL DEFAULT 'sent' CHECK (status IN ('sent', 'scheduled', 'failed')),
   link          TEXT,
   sent_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_by    UUID REFERENCES public.profiles(id) ON DELETE SET NULL
 );
 
@@ -260,52 +284,68 @@ CREATE TABLE public.cities (
 );
 
 CREATE TABLE public.service_categories (
-  name       TEXT PRIMARY KEY,
-  icon       TEXT NOT NULL,
-  sort_order INTEGER NOT NULL DEFAULT 0
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mock_id    TEXT UNIQUE,
+  name       TEXT NOT NULL UNIQUE,
+  icon       TEXT NOT NULL DEFAULT 'briefcase-outline',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ------------------------------------------------------------
 -- SUBSCRIPTIONS
 -- ------------------------------------------------------------
 CREATE TABLE public.subscription_plans (
-  id            TEXT PRIMARY KEY,
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mock_id       TEXT UNIQUE NOT NULL,
   name          TEXT NOT NULL,
-  tagline       TEXT NOT NULL,
+  tagline       TEXT NOT NULL DEFAULT '',
   monthly_price NUMERIC(12,2) NOT NULL DEFAULT 0,
   yearly_price  NUMERIC(12,2) NOT NULL DEFAULT 0,
   popular       BOOLEAN NOT NULL DEFAULT FALSE,
-  sort_order    INTEGER NOT NULL DEFAULT 0
+  sort_order    INTEGER NOT NULL DEFAULT 0,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE public.subscription_plan_features (
-  id         TEXT PRIMARY KEY,
-  plan_id    TEXT NOT NULL REFERENCES public.subscription_plans(id) ON DELETE CASCADE,
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mock_id    TEXT,
+  plan_id    UUID NOT NULL REFERENCES public.subscription_plans(id) ON DELETE CASCADE,
   label      TEXT NOT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE TABLE public.app_settings (
-  id                  TEXT PRIMARY KEY,
-  promo_title         TEXT NOT NULL,
-  promo_subtitle      TEXT NOT NULL,
+CREATE UNIQUE INDEX idx_plan_features_mock
+  ON public.subscription_plan_features (plan_id, mock_id)
+  WHERE mock_id IS NOT NULL;
+
+CREATE TABLE public.subscription_plan_meta (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  promo_title         TEXT NOT NULL DEFAULT '',
+  promo_subtitle      TEXT NOT NULL DEFAULT '',
   yearly_save_percent INTEGER NOT NULL DEFAULT 0,
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE public.user_subscriptions (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  mock_id         TEXT UNIQUE,
-  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  professional_id UUID REFERENCES public.professionals(id) ON DELETE CASCADE,
-  plan            TEXT NOT NULL CHECK (plan IN ('Pro', 'Free')),
-  status          TEXT NOT NULL CHECK (status IN ('Active', 'Expired', 'Cancelled')),
-  status_label    TEXT NOT NULL,
-  start_date      DATE NOT NULL,
-  end_date        DATE,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE public.professional_subscriptions (
+  id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mock_id                TEXT UNIQUE,
+  professional_id        UUID NOT NULL REFERENCES public.professionals(id) ON DELETE CASCADE,
+  user_id                UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  plan_id                UUID REFERENCES public.subscription_plans(id) ON DELETE SET NULL,
+  plan_code              TEXT NOT NULL DEFAULT 'free' CHECK (plan_code IN ('free', 'pro')),
+  status                 TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired', 'cancelled')),
+  status_label           TEXT,
+  start_date             DATE,
+  end_date               DATE,
+  revenuecat_app_user_id TEXT,
+  store_product_id       TEXT,
+  created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_pro_subs_professional ON public.professional_subscriptions (professional_id);
 
 -- ------------------------------------------------------------
 -- VERIFICATION
@@ -314,42 +354,58 @@ CREATE TABLE public.verification_applications (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   mock_id         TEXT UNIQUE,
   professional_id UUID NOT NULL REFERENCES public.professionals(id) ON DELETE CASCADE,
-  user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  status          TEXT NOT NULL CHECK (status IN ('Pending', 'Verified', 'Rejected')),
-  submitted_on    DATE NOT NULL,
+  user_id         UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  status          TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'verified', 'rejected')),
+  submitted_on    DATE,
+  email           TEXT,
+  phone           TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX idx_verification_apps_pro ON public.verification_applications (professional_id);
+
 CREATE TABLE public.verification_documents (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  mock_id        TEXT UNIQUE,
+  mock_id        TEXT,
   application_id UUID NOT NULL REFERENCES public.verification_applications(id) ON DELETE CASCADE,
   title          TEXT NOT NULL,
   file_name      TEXT NOT NULL,
-  doc_type       TEXT NOT NULL CHECK (doc_type IN ('pdf', 'image', 'other')),
-  uploaded       BOOLEAN NOT NULL DEFAULT TRUE,
+  doc_type       TEXT NOT NULL DEFAULT 'other' CHECK (doc_type IN ('pdf', 'image', 'other')),
+  uploaded       BOOLEAN NOT NULL DEFAULT FALSE,
   preview_key    TEXT,
   file_url       TEXT,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX idx_verification_docs_mock
+  ON public.verification_documents (application_id, mock_id)
+  WHERE mock_id IS NOT NULL;
+
 -- ------------------------------------------------------------
 -- CHAT
 -- ------------------------------------------------------------
 CREATE TABLE public.conversations (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  mock_id         TEXT UNIQUE,
-  booking_id      UUID REFERENCES public.bookings(id) ON DELETE SET NULL,
-  last_message    TEXT,
-  last_message_at TIMESTAMPTZ,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mock_id            TEXT UNIQUE,
+  participant_a      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  participant_b      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  booking_id         UUID REFERENCES public.bookings(id) ON DELETE SET NULL,
+  service_request_id UUID REFERENCES public.service_requests(id) ON DELETE SET NULL,
+  last_message       TEXT NOT NULL DEFAULT '',
+  last_message_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT conversations_distinct_participants CHECK (participant_a <> participant_b)
 );
 
-CREATE TABLE public.conversation_members (
+CREATE INDEX idx_conversations_a ON public.conversations (participant_a);
+CREATE INDEX idx_conversations_b ON public.conversations (participant_b);
+
+CREATE TABLE public.conversation_reads (
   conversation_id UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
   user_id         UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   unread_count    INTEGER NOT NULL DEFAULT 0,
+  last_read_at    TIMESTAMPTZ,
   PRIMARY KEY (conversation_id, user_id)
 );
 
@@ -358,17 +414,20 @@ CREATE TABLE public.messages (
   mock_id         TEXT,
   conversation_id UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
   sender_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  body            TEXT NOT NULL,
+  text            TEXT NOT NULL DEFAULT '',
   kind            TEXT NOT NULL DEFAULT 'text'
                   CHECK (kind IN ('text', 'location', 'location_stopped', 'request_card')),
+  location_label  TEXT,
+  latitude        DOUBLE PRECISION,
+  longitude       DOUBLE PRECISION,
+  card            JSONB,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX messages_conv_mock_key
+CREATE INDEX idx_messages_conversation ON public.messages (conversation_id, created_at);
+CREATE UNIQUE INDEX idx_messages_mock
   ON public.messages (conversation_id, mock_id)
   WHERE mock_id IS NOT NULL;
-
-CREATE INDEX idx_messages_conversation ON public.messages (conversation_id, created_at);
 
 -- ------------------------------------------------------------
 -- FUNCTIONS + TRIGGERS
@@ -395,16 +454,20 @@ CREATE TRIGGER bookings_updated_at
   BEFORE UPDATE ON public.bookings
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE TRIGGER user_subscriptions_updated_at
-  BEFORE UPDATE ON public.user_subscriptions
+CREATE TRIGGER subscription_plans_updated_at
+  BEFORE UPDATE ON public.subscription_plans
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER subscription_plan_meta_updated_at
+  BEFORE UPDATE ON public.subscription_plan_meta
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER professional_subscriptions_updated_at
+  BEFORE UPDATE ON public.professional_subscriptions
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 CREATE TRIGGER verification_applications_updated_at
   BEFORE UPDATE ON public.verification_applications
-  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-CREATE TRIGGER app_settings_updated_at
-  BEFORE UPDATE ON public.app_settings
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -413,17 +476,27 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  next_role TEXT;
 BEGIN
-  INSERT INTO public.profiles (id, full_name, phone, email, role, city)
+  next_role := COALESCE(NEW.raw_user_meta_data ->> 'role', 'user');
+  IF next_role NOT IN ('user', 'admin', 'professional') THEN
+    next_role := 'user';
+  END IF;
+
+  INSERT INTO public.profiles (id, full_name, phone, email, role, city, mock_id)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data ->> 'full_name', split_part(COALESCE(NEW.email, 'user'), '@', 1)),
+    COALESCE(NEW.raw_user_meta_data ->> 'full_name', NEW.email, 'User'),
     NEW.phone,
     NEW.email,
-    'user',
-    NEW.raw_user_meta_data ->> 'city'
+    next_role,
+    NEW.raw_user_meta_data ->> 'city',
+    NEW.raw_user_meta_data ->> 'mock_id'
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    email = COALESCE(EXCLUDED.email, public.profiles.email),
+    full_name = COALESCE(NULLIF(EXCLUDED.full_name, ''), public.profiles.full_name);
   RETURN NEW;
 END;
 $$;
@@ -445,6 +518,32 @@ AS $$
   );
 $$;
 
+CREATE OR REPLACE VIEW public.v_professionals_app AS
+SELECT
+  p.id,
+  p.mock_id,
+  COALESCE(pr.full_name, '') AS name,
+  p.profession,
+  p.city,
+  p.price_from AS "priceFrom",
+  p.avatar_url AS image_url,
+  p.is_verified AS verified,
+  p.subscribed,
+  p.latitude,
+  p.longitude,
+  pr.role,
+  COALESCE(p.email, pr.email) AS email,
+  COALESCE(p.phone, pr.phone) AS phone,
+  p.bio,
+  p.rating,
+  p.review_count,
+  p.user_id,
+  p.is_available,
+  p.created_at,
+  p.updated_at
+FROM public.professionals p
+JOIN public.profiles pr ON pr.id = p.user_id;
+
 -- ------------------------------------------------------------
 -- RLS
 -- ------------------------------------------------------------
@@ -465,12 +564,12 @@ ALTER TABLE public.cities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.service_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plan_features ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscription_plan_meta ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.professional_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.verification_applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.verification_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.conversation_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conversation_reads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Public can view profiles"
@@ -591,10 +690,10 @@ CREATE POLICY "Users can manage own saved providers"
 CREATE POLICY "Public can view cities"
   ON public.cities FOR SELECT USING (true);
 
-CREATE POLICY "Public can view categories"
+CREATE POLICY "Public can view service categories"
   ON public.service_categories FOR SELECT USING (true);
 
-CREATE POLICY "Public can view plans"
+CREATE POLICY "Public can view subscription plans"
   ON public.subscription_plans FOR SELECT USING (true);
 
 CREATE POLICY "Admins can update plans"
@@ -608,22 +707,20 @@ CREATE POLICY "Admins can manage plan features"
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
-CREATE POLICY "Public can view app settings"
-  ON public.app_settings FOR SELECT USING (true);
+CREATE POLICY "Public can view plan meta"
+  ON public.subscription_plan_meta FOR SELECT USING (true);
 
-CREATE POLICY "Admins can update app settings"
-  ON public.app_settings FOR UPDATE USING (public.is_admin());
+CREATE POLICY "Admins can update plan meta"
+  ON public.subscription_plan_meta FOR UPDATE USING (public.is_admin());
 
-CREATE POLICY "Users can view own subscription"
-  ON public.user_subscriptions FOR SELECT
-  USING (auth.uid() = user_id OR public.is_admin());
-
-CREATE POLICY "Admins can update subscriptions"
-  ON public.user_subscriptions FOR UPDATE USING (public.is_admin());
+CREATE POLICY "Public can view professional subscriptions"
+  ON public.professional_subscriptions FOR SELECT USING (true);
 
 CREATE POLICY "Users can view related verification"
   ON public.verification_applications FOR SELECT
-  USING (auth.uid() = user_id OR public.is_admin());
+  USING (auth.uid() = user_id OR public.is_admin() OR auth.uid() IN (
+    SELECT user_id FROM public.professionals WHERE id = professional_id
+  ));
 
 CREATE POLICY "Admins can update verification"
   ON public.verification_applications FOR UPDATE USING (public.is_admin());
@@ -632,45 +729,50 @@ CREATE POLICY "Users can view related verification docs"
   ON public.verification_documents FOR SELECT
   USING (
     public.is_admin()
-    OR auth.uid() IN (
-      SELECT user_id FROM public.verification_applications WHERE id = application_id
+    OR EXISTS (
+      SELECT 1 FROM public.verification_applications va
+      JOIN public.professionals p ON p.id = va.professional_id
+      WHERE va.id = application_id
+        AND (va.user_id = auth.uid() OR p.user_id = auth.uid())
     )
   );
 
-CREATE POLICY "Members can view conversations"
+CREATE POLICY "Users can view own conversations"
   ON public.conversations FOR SELECT
   USING (
     public.is_admin()
-    OR auth.uid() IN (
-      SELECT user_id FROM public.conversation_members WHERE conversation_id = id
-    )
+    OR auth.uid() = participant_a
+    OR auth.uid() = participant_b
   );
 
-CREATE POLICY "Members can view membership"
-  ON public.conversation_members FOR SELECT
-  USING (
-    public.is_admin()
-    OR auth.uid() IN (
-      SELECT cm.user_id FROM public.conversation_members cm
-      WHERE cm.conversation_id = conversation_id
-    )
-  );
+CREATE POLICY "Users can insert conversations they join"
+  ON public.conversations FOR INSERT
+  WITH CHECK (auth.uid() = participant_a OR auth.uid() = participant_b);
 
-CREATE POLICY "Members can view messages"
+CREATE POLICY "Users manage own conversation reads"
+  ON public.conversation_reads FOR ALL
+  USING (auth.uid() = user_id OR public.is_admin())
+  WITH CHECK (auth.uid() = user_id OR public.is_admin());
+
+CREATE POLICY "Users can view messages in own conversations"
   ON public.messages FOR SELECT
   USING (
     public.is_admin()
-    OR auth.uid() IN (
-      SELECT user_id FROM public.conversation_members WHERE conversation_id = messages.conversation_id
+    OR EXISTS (
+      SELECT 1 FROM public.conversations c
+      WHERE c.id = conversation_id
+        AND (c.participant_a = auth.uid() OR c.participant_b = auth.uid())
     )
   );
 
-CREATE POLICY "Members can send messages"
+CREATE POLICY "Users can send messages in own conversations"
   ON public.messages FOR INSERT
   WITH CHECK (
     auth.uid() = sender_id
-    AND auth.uid() IN (
-      SELECT user_id FROM public.conversation_members WHERE conversation_id = messages.conversation_id
+    AND EXISTS (
+      SELECT 1 FROM public.conversations c
+      WHERE c.id = conversation_id
+        AND (c.participant_a = auth.uid() OR c.participant_b = auth.uid())
     )
   );
 

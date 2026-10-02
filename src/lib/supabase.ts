@@ -1,13 +1,20 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Replace these with your real values from the Supabase dashboard
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+// Set real values in .env (see .env.example)
+const SUPABASE_URL =
+  process.env.EXPO_PUBLIC_SUPABASE_URL || "https://your-project.supabase.co";
+const SUPABASE_ANON_KEY =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "your-anon-key";
 
+/**
+ * Supabase client — ready for API swap.
+ * Session persists via AsyncStorage (React Native).
+ * Seed users (password123): see supabase/seed.sql + src/lib/ids.ts
+ */
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    // Recommended for React Native
-    storage: undefined, // you can later plug AsyncStorage / MMKV here if needed
+    storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
