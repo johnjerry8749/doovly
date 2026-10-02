@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,12 +8,15 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
 import {
   listAdminNotifications,
   sendAdminNotification,
+  resolveAudienceUsers,
   type AdminNotification,
   type NotificationChannel,
   type NotificationAudience,
@@ -83,7 +86,9 @@ const CHANNEL_OPTIONS: {
 
 export default function Notifications() {
   const insets = useSafeAreaInsets();
-  const [history, setHistory] = useState(() => listAdminNotifications());
+  const [history, setHistory] = useState<AdminNotification[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [sending, setSending] = useState(false);
   const [audience, setAudience] = useState<NotificationAudience>("all");
   const [channels, setChannels] = useState<NotificationChannel[]>([
     "in-app",
@@ -98,6 +103,29 @@ export default function Notifications() {
   const [channelFilter, setChannelFilter] = useState<
     "all" | NotificationChannel
   >("all");
+
+  const loadHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const rows = await listAdminNotifications();
+      setHistory(rows);
+    } catch (e) {
+      console.warn("[Admin Notifications] failed to load history", e);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory();
+    }, [loadHistory]),
+  );
+
+  const audienceCount = useMemo(
+    () => resolveAudienceUsers(audience).length,
+    [audience, history],
+  );
 
   const filteredHistory = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -119,7 +147,7 @@ export default function Notifications() {
     );
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!title.trim()) {
       Alert.alert("Missing title", "Please enter a notification title.");
       return;
@@ -133,19 +161,38 @@ export default function Notifications() {
       return;
     }
 
-    sendAdminNotification({
-      title,
-      message,
-      channels,
-      sentTo: audience,
-      link: showLink ? link : undefined,
-    });
-    setHistory(listAdminNotifications());
-    setTitle("");
-    setMessage("");
-    setLink("");
-    setShowLink(false);
-    Alert.alert("Sent", "Notification has been sent successfully.");
+    setSending(true);
+    try {
+      const result = await sendAdminNotification({
+        title,
+        message,
+        channels,
+        sentTo: audience,
+        link: showLink ? link : undefined,
+      });
+
+      await loadHistory();
+      setTitle("");
+      setMessage("");
+      setLink("");
+      setShowLink(false);
+
+      const inAppNote =
+        channels.includes("in-app") && result.inAppRecipientCount > 0
+          ? `\nIn-app delivered to ${result.inAppRecipientCount} user(s). Open the app Notifications screen to see it.`
+          : channels.includes("in-app")
+            ? "\nNo matching users for this audience (check Verified / Pro / Free filters)."
+            : "";
+
+      Alert.alert("Sent", `Notification recorded successfully.${inAppNote}`);
+    } catch (e: any) {
+      Alert.alert(
+        "Send failed",
+        e?.message || "Could not send notification. Check API / mock setup.",
+      );
+    } finally {
+      setSending(false);
+    }
   };
 
   const channelIcon = (ch: NotificationChannel) => {
@@ -191,7 +238,6 @@ export default function Notifications() {
           Send and manage notifications to your users
         </Text>
 
-        {/* Send Notification card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
@@ -225,10 +271,7 @@ export default function Notifications() {
                 >
                   <View style={styles.radioRow}>
                     <View
-                      style={[
-                        styles.radio,
-                        active && styles.radioActive,
-                      ]}
+                      style={[styles.radio, active && styles.radioActive]}
                     >
                       {active && <View style={styles.radioDot} />}
                     </View>
@@ -251,6 +294,9 @@ export default function Notifications() {
               );
             })}
           </View>
+          <Text style={styles.audienceHint}>
+            ~{audienceCount} user(s) match this audience (mock)
+          </Text>
 
           <Text style={styles.sectionLabel}>Channels</Text>
           <View style={styles.channelRow}>
@@ -342,16 +388,22 @@ export default function Notifications() {
           )}
 
           <TouchableOpacity
-            style={styles.sendBtn}
+            style={[styles.sendBtn, sending && { opacity: 0.7 }]}
             onPress={handleSend}
             activeOpacity={0.85}
+            disabled={sending}
           >
-            <Ionicons name="paper-plane" size={18} color="#fff" />
-            <Text style={styles.sendBtnText}>Send Notification</Text>
+            {sending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="paper-plane" size={18} color="#fff" />
+                <Text style={styles.sendBtnText}>Send Notification</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 
-        {/* Notification History */}
         <View style={styles.card}>
           <View style={styles.historyHeader}>
             <View style={styles.cardHeaderLeft}>
@@ -405,7 +457,6 @@ export default function Notifications() {
             </TouchableOpacity>
           </View>
 
-          {/* Table header */}
           <View style={styles.tableHeader}>
             <Text style={[styles.th, { width: 28 }]}>#</Text>
             <Text style={[styles.th, { flex: 1.2 }]}>Title</Text>
@@ -416,68 +467,72 @@ export default function Notifications() {
             <Text style={[styles.th, { width: 72 }]}>Status</Text>
           </View>
 
-          {filteredHistory.map((n, index) => {
-            const st = statusStyle(n.status);
-            return (
-              <View key={n.id} style={styles.tableRow}>
-                <Text style={[styles.td, { width: 28, color: GRAY }]}>
-                  {index + 1}
-                </Text>
-                <Text
-                  style={[styles.td, { flex: 1.2, fontWeight: "700" }]}
-                  numberOfLines={1}
-                >
-                  {n.title}
-                </Text>
-                <Text
-                  style={[styles.td, { flex: 1.4, color: GRAY }]}
-                  numberOfLines={1}
-                >
-                  {n.message}
-                </Text>
-                <View style={[styles.channelIcons, { width: 72 }]}>
-                  {n.channels.map((ch) => (
-                    <Ionicons
-                      key={ch}
-                      name={channelIcon(ch)}
-                      size={14}
-                      color={channelColor(ch)}
-                    />
-                  ))}
-                </View>
-                <Text
-                  style={[styles.td, { flex: 0.9, fontSize: 11 }]}
-                  numberOfLines={1}
-                >
-                  {n.sentToLabel}
-                </Text>
-                <Text
-                  style={[styles.td, { flex: 1, fontSize: 11, color: GRAY }]}
-                  numberOfLines={2}
-                >
-                  {n.dateTime}
-                </Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: st.bg, width: 72 },
-                  ]}
-                >
+          {loadingHistory ? (
+            <ActivityIndicator style={{ marginVertical: 20 }} color={GREEN} />
+          ) : (
+            filteredHistory.map((n, index) => {
+              const st = statusStyle(n.status);
+              return (
+                <View key={n.id} style={styles.tableRow}>
+                  <Text style={[styles.td, { width: 28, color: GRAY }]}>
+                    {index + 1}
+                  </Text>
+                  <Text
+                    style={[styles.td, { flex: 1.2, fontWeight: "700" }]}
+                    numberOfLines={1}
+                  >
+                    {n.title}
+                  </Text>
+                  <Text
+                    style={[styles.td, { flex: 1.4, color: GRAY }]}
+                    numberOfLines={1}
+                  >
+                    {n.message}
+                  </Text>
+                  <View style={[styles.channelIcons, { width: 72 }]}>
+                    {n.channels.map((ch) => (
+                      <Ionicons
+                        key={ch}
+                        name={channelIcon(ch)}
+                        size={14}
+                        color={channelColor(ch)}
+                      />
+                    ))}
+                  </View>
+                  <Text
+                    style={[styles.td, { flex: 0.9, fontSize: 11 }]}
+                    numberOfLines={1}
+                  >
+                    {n.sentToLabel}
+                  </Text>
+                  <Text
+                    style={[styles.td, { flex: 1, fontSize: 11, color: GRAY }]}
+                    numberOfLines={2}
+                  >
+                    {n.dateTime}
+                  </Text>
                   <View
                     style={[
-                      styles.statusDot,
-                      { backgroundColor: st.color },
+                      styles.statusBadge,
+                      { backgroundColor: st.bg, width: 72 },
                     ]}
-                  />
-                  <Text style={[styles.statusText, { color: st.color }]}>
-                    {st.label}
-                  </Text>
+                  >
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: st.color },
+                      ]}
+                    />
+                    <Text style={[styles.statusText, { color: st.color }]}>
+                      {st.label}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            );
-          })}
+              );
+            })
+          )}
 
-          {filteredHistory.length === 0 && (
+          {!loadingHistory && filteredHistory.length === 0 && (
             <Text style={styles.empty}>No notifications found.</Text>
           )}
         </View>
@@ -549,12 +604,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 4,
   },
+  audienceHint: {
+    fontSize: 11,
+    color: GRAY,
+    marginBottom: 12,
+    marginTop: -4,
+  },
 
   audienceRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginBottom: 14,
+    marginBottom: 8,
   },
   audienceCard: {
     width: "47%",
@@ -570,7 +631,12 @@ const styles = StyleSheet.create({
     borderColor: GREEN,
     backgroundColor: "#ECFDF5",
   },
-  radioRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
+  radioRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+  },
   radio: {
     width: 16,
     height: 16,
