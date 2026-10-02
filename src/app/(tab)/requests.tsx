@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,14 +17,13 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   listServiceRequests,
   canSendOfferOnRequest,
   submitServiceRequestOffer,
-  addServiceRequestComment,
   type ServiceRequest,
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
@@ -179,8 +178,6 @@ export default function RequestsScreen() {
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
   const [offerPrice, setOfferPrice] = useState("");
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
-  const { openRequestId } = useLocalSearchParams<{ openRequestId?: string | string[] }>();
-  const openedFromProfileRef = useRef<string | null>(null);
   const [chatText, setChatText] = useState("");
   const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
 
@@ -278,25 +275,6 @@ export default function RequestsScreen() {
     setChatText("");
   };
 
-  // Profile → My requests: open the same comments sheet as on this page
-  useEffect(() => {
-    const raw = openRequestId;
-    const id = Array.isArray(raw) ? raw[0] : raw;
-    if (!id) return;
-    if (openedFromProfileRef.current === id) return;
-    const found =
-      allRequests.find((r) => r.id === String(id)) ||
-      listServiceRequests().find((r) => r.id === String(id));
-    if (!found) return;
-    openedFromProfileRef.current = String(id);
-    openChat(found);
-    try {
-      router.setParams({ openRequestId: undefined as unknown as string });
-    } catch {
-      /* ignore */
-    }
-  }, [openRequestId, allRequests]);
-
   const sendChatMessage = () => {
     if (!chatRequest) return;
     const text = chatText.trim();
@@ -304,33 +282,21 @@ export default function RequestsScreen() {
 
     const currentUserId = getCurrentUserId();
     const currentProfessional = findProfessionalForUser(currentUserId);
-    const userName = currentProfessional?.name || "You";
-    const userAvatar = currentProfessional?.image || MY_AVATAR;
 
     const newComment: ServiceRequestComment & { userId?: string | number } = {
       id: `local-${Date.now()}`,
-      userName,
-      userAvatar,
+      userName: currentProfessional?.name || "You",
+      userAvatar: currentProfessional?.image || MY_AVATAR,
       text,
       timeAgo: "Just now",
       userId: currentProfessional?.id ?? currentUserId,
     };
-
-    // Persist on shared mock (API later) so Profile comment counts stay in sync
-    addServiceRequestComment({
-      requestId: chatRequest.id,
-      text,
-      userName,
-      userAvatar,
-    });
 
     setExtraComments((prev) => ({
       ...prev,
       [chatRequest.id]: [...(prev[chatRequest.id] || []), newComment],
     }));
     setChatText("");
-    // Owner notification is handled inside addServiceRequestComment
-
     setTimeout(() => commentListRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
