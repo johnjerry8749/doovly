@@ -8,10 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
-  KeyboardAvoidingView,
   Keyboard,
-  findNodeHandle,
-  UIManager,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -53,31 +50,6 @@ export default function Settings() {
   const [yearlySaveStr, setYearlySaveStr] = useState(
     String(plansState.yearlySavePercent),
   );
-
-  /** Scroll only enough so the focused input sits just above the keyboard */
-  const ensureVisible = (target: View | TextInput | null) => {
-    if (!target || !scrollRef.current) return;
-    const scrollNode = findNodeHandle(scrollRef.current);
-    const targetNode = findNodeHandle(target as any);
-    if (!scrollNode || !targetNode) return;
-
-    // Small delay so keyboard height is applied first
-    setTimeout(() => {
-      UIManager.measureLayout(
-        targetNode,
-        scrollNode,
-        () => {},
-        (_x, y, _w, h) => {
-          // Keep a bit of space under the field; don't jump to top
-          scrollRef.current?.scrollResponderScrollNativeHandleToKeyboard?.(
-            targetNode,
-            80 + h,
-            true,
-          );
-        },
-      );
-    }, 100);
-  };
 
   const updatePlan = (
     planId: "basic" | "pro",
@@ -177,245 +149,234 @@ export default function Settings() {
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
-      <KeyboardAvoidingView
+      <ScrollView
+        ref={scrollRef}
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? topPad : 0}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: 24 + insets.bottom },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        // Native inset only — no KeyboardAvoidingView (avoids huge white gap)
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        contentInsetAdjustmentBehavior="never"
       >
-        <ScrollView
-          ref={scrollRef}
-          style={styles.flex}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingBottom: 32 + insets.bottom },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          // iOS: let the system inset the scroll view for the keyboard
-          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
-          // Avoid large empty white gaps
-          contentInsetAdjustmentBehavior="never"
-        >
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>
-            Configure profile subscription plans and pricing
-          </Text>
+        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.subtitle}>
+          Configure profile subscription plans and pricing
+        </Text>
 
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
-                <Ionicons name="pricetag" size={18} color={GREEN} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>Pro subscription pricing</Text>
-                <Text style={styles.cardHint}>
-                  Amounts shown on the user Subscription screen
-                </Text>
-              </View>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
+              <Ionicons name="pricetag" size={18} color={GREEN} />
             </View>
-
-            <View style={styles.priceRow}>
-              <View style={styles.priceField}>
-                <Text style={styles.fieldLabel}>Monthly (NGN)</Text>
-                <View style={styles.inputWrap}>
-                  <Text style={styles.currency}>₦</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={monthlyStr}
-                    onChangeText={setMonthlyStr}
-                    keyboardType="number-pad"
-                    placeholder="2500"
-                    placeholderTextColor="#9CA3AF"
-                    returnKeyType="done"
-                    onSubmitEditing={Keyboard.dismiss}
-                  />
-                </View>
-                <Text style={styles.preview}>
-                  {formatNaira(Number(monthlyStr) || 0)} / month
-                </Text>
-              </View>
-              <View style={styles.priceField}>
-                <Text style={styles.fieldLabel}>Yearly (NGN)</Text>
-                <View style={styles.inputWrap}>
-                  <Text style={styles.currency}>₦</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={yearlyStr}
-                    onChangeText={setYearlyStr}
-                    keyboardType="number-pad"
-                    placeholder="25000"
-                    placeholderTextColor="#9CA3AF"
-                    returnKeyType="done"
-                    onSubmitEditing={Keyboard.dismiss}
-                  />
-                </View>
-                <Text style={styles.preview}>
-                  {formatNaira(Number(yearlyStr) || 0)} / year
-                </Text>
-              </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>Pro subscription pricing</Text>
+              <Text style={styles.cardHint}>
+                Amounts shown on the user Subscription screen
+              </Text>
             </View>
+          </View>
 
-            <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>Yearly save badge (%)</Text>
-              <View style={[styles.inputWrap, { maxWidth: 120 }]}>
+          <View style={styles.priceRow}>
+            <View style={styles.priceField}>
+              <Text style={styles.fieldLabel}>Monthly (NGN)</Text>
+              <View style={styles.inputWrap}>
+                <Text style={styles.currency}>₦</Text>
                 <TextInput
                   style={styles.input}
-                  value={yearlySaveStr}
-                  onChangeText={setYearlySaveStr}
+                  value={monthlyStr}
+                  onChangeText={setMonthlyStr}
                   keyboardType="number-pad"
-                  placeholder="17"
+                  placeholder="2500"
                   placeholderTextColor="#9CA3AF"
                   returnKeyType="done"
                   onSubmitEditing={Keyboard.dismiss}
                 />
-                <Text style={styles.currency}>%</Text>
               </View>
+              <Text style={styles.preview}>
+                {formatNaira(Number(monthlyStr) || 0)} / month
+              </Text>
             </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Promo banner</Text>
-            <Text style={styles.fieldLabel}>Title</Text>
-            <TextInput
-              style={styles.textInput}
-              value={plansState.promoTitle}
-              onChangeText={(t) =>
-                setPlansState((prev) => ({ ...prev, promoTitle: t }))
-              }
-              returnKeyType="next"
-            />
-            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Subtitle</Text>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              value={plansState.promoSubtitle}
-              onChangeText={(t) =>
-                setPlansState((prev) => ({ ...prev, promoSubtitle: t }))
-              }
-              multiline
-              textAlignVertical="top"
-            />
-          </View>
-
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={[styles.iconCircle, { backgroundColor: "#F3F4F6" }]}>
-                <Ionicons name="person-outline" size={18} color={GRAY} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>Basic plan</Text>
-                <Text style={styles.cardHint}>Free · features list</Text>
-              </View>
-            </View>
-            <Text style={styles.fieldLabel}>Tagline</Text>
-            <TextInput
-              style={styles.textInput}
-              value={basic.tagline}
-              onChangeText={(t) => updatePlan("basic", { tagline: t })}
-              onFocus={(e) => ensureVisible(e.target as any)}
-            />
-            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Features</Text>
-            {basic.features.map((f) => (
-              <View key={f.id} style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={18} color={GREEN} />
+            <View style={styles.priceField}>
+              <Text style={styles.fieldLabel}>Yearly (NGN)</Text>
+              <View style={styles.inputWrap}>
+                <Text style={styles.currency}>₦</Text>
                 <TextInput
-                  style={styles.featureInput}
-                  value={f.label}
-                  onChangeText={(t) => updateFeature("basic", f.id, t)}
-                  onFocus={(e) => ensureVisible(e.target as any)}
+                  style={styles.input}
+                  value={yearlyStr}
+                  onChangeText={setYearlyStr}
+                  keyboardType="number-pad"
+                  placeholder="25000"
+                  placeholderTextColor="#9CA3AF"
                   returnKeyType="done"
-                  blurOnSubmit
+                  onSubmitEditing={Keyboard.dismiss}
                 />
-                <TouchableOpacity
-                  onPress={() => removeFeature("basic", f.id)}
-                  hitSlop={8}
-                >
-                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                </TouchableOpacity>
               </View>
-            ))}
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => addFeature("basic")}
-            >
-              <Ionicons name="add" size={18} color={GREEN} />
-              <Text style={styles.addBtnText}>Add feature</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.card, styles.proCard]}>
-            <View style={styles.cardHeader}>
-              <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
-                <Ionicons name="ribbon" size={18} color={GREEN} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>Pro plan</Text>
-                <Text style={styles.cardHint}>
-                  {formatNaira(Number(monthlyStr) || 0)}/mo ·{" "}
-                  {formatNaira(Number(yearlyStr) || 0)}/yr
-                </Text>
-              </View>
-              <View style={styles.popularBadge}>
-                <Text style={styles.popularText}>Popular</Text>
-              </View>
+              <Text style={styles.preview}>
+                {formatNaira(Number(yearlyStr) || 0)} / year
+              </Text>
             </View>
-            <Text style={styles.fieldLabel}>Tagline</Text>
-            <TextInput
-              style={styles.textInput}
-              value={pro.tagline}
-              onChangeText={(t) => updatePlan("pro", { tagline: t })}
-              onFocus={(e) => ensureVisible(e.target as any)}
-            />
-            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Features</Text>
-            {pro.features.map((f) => (
-              <View key={f.id} style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={18} color={GREEN} />
-                <TextInput
-                  style={styles.featureInput}
-                  value={f.label}
-                  onChangeText={(t) => updateFeature("pro", f.id, t)}
-                  onFocus={(e) => ensureVisible(e.target as any)}
-                  returnKeyType="done"
-                  blurOnSubmit
-                />
-                <TouchableOpacity
-                  onPress={() => removeFeature("pro", f.id)}
-                  hitSlop={8}
-                >
-                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
-            ))}
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => addFeature("pro")}
-            >
-              <Ionicons name="add" size={18} color={GREEN} />
-              <Text style={styles.addBtnText}>Add feature</Text>
-            </TouchableOpacity>
           </View>
 
+          <View style={styles.fieldBlock}>
+            <Text style={styles.fieldLabel}>Yearly save badge (%)</Text>
+            <View style={[styles.inputWrap, { maxWidth: 120 }]}>
+              <TextInput
+                style={styles.input}
+                value={yearlySaveStr}
+                onChangeText={setYearlySaveStr}
+                keyboardType="number-pad"
+                placeholder="17"
+                placeholderTextColor="#9CA3AF"
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+              <Text style={styles.currency}>%</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Promo banner</Text>
+          <Text style={styles.fieldLabel}>Title</Text>
+          <TextInput
+            style={styles.textInput}
+            value={plansState.promoTitle}
+            onChangeText={(t) =>
+              setPlansState((prev) => ({ ...prev, promoTitle: t }))
+            }
+            returnKeyType="next"
+          />
+          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Subtitle</Text>
+          <TextInput
+            style={[styles.textInput, styles.textArea]}
+            value={plansState.promoSubtitle}
+            onChangeText={(t) =>
+              setPlansState((prev) => ({ ...prev, promoSubtitle: t }))
+            }
+            multiline
+            textAlignVertical="top"
+          />
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconCircle, { backgroundColor: "#F3F4F6" }]}>
+              <Ionicons name="person-outline" size={18} color={GRAY} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>Basic plan</Text>
+              <Text style={styles.cardHint}>Free · features list</Text>
+            </View>
+          </View>
+          <Text style={styles.fieldLabel}>Tagline</Text>
+          <TextInput
+            style={styles.textInput}
+            value={basic.tagline}
+            onChangeText={(t) => updatePlan("basic", { tagline: t })}
+          />
+          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Features</Text>
+          {basic.features.map((f) => (
+            <View key={f.id} style={styles.featureRow}>
+              <Ionicons name="checkmark-circle" size={18} color={GREEN} />
+              <TextInput
+                style={styles.featureInput}
+                value={f.label}
+                onChangeText={(t) => updateFeature("basic", f.id, t)}
+                returnKeyType="done"
+                blurOnSubmit
+              />
+              <TouchableOpacity
+                onPress={() => removeFeature("basic", f.id)}
+                hitSlop={8}
+              >
+                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          ))}
           <TouchableOpacity
-            style={[styles.saveBtn, savedFlash && styles.saveBtnDone]}
-            onPress={handleSave}
-            activeOpacity={0.85}
+            style={styles.addBtn}
+            onPress={() => addFeature("basic")}
           >
-            <Ionicons
-              name={savedFlash ? "checkmark-circle" : "save-outline"}
-              size={20}
-              color="#fff"
-            />
-            <Text style={styles.saveBtnText}>
-              {savedFlash ? "Saved" : "Save subscription settings"}
-            </Text>
+            <Ionicons name="add" size={18} color={GREEN} />
+            <Text style={styles.addBtnText}>Add feature</Text>
           </TouchableOpacity>
+        </View>
 
-          <Text style={styles.footerNote}>
-            Changes apply to the user Subscription screen and dashboard Pro
-            revenue.
+        <View style={[styles.card, styles.proCard]}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
+              <Ionicons name="ribbon" size={18} color={GREEN} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>Pro plan</Text>
+              <Text style={styles.cardHint}>
+                {formatNaira(Number(monthlyStr) || 0)}/mo ·{" "}
+                {formatNaira(Number(yearlyStr) || 0)}/yr
+              </Text>
+            </View>
+            <View style={styles.popularBadge}>
+              <Text style={styles.popularText}>Popular</Text>
+            </View>
+          </View>
+          <Text style={styles.fieldLabel}>Tagline</Text>
+          <TextInput
+            style={styles.textInput}
+            value={pro.tagline}
+            onChangeText={(t) => updatePlan("pro", { tagline: t })}
+          />
+          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Features</Text>
+          {pro.features.map((f) => (
+            <View key={f.id} style={styles.featureRow}>
+              <Ionicons name="checkmark-circle" size={18} color={GREEN} />
+              <TextInput
+                style={styles.featureInput}
+                value={f.label}
+                onChangeText={(t) => updateFeature("pro", f.id, t)}
+                returnKeyType="done"
+                blurOnSubmit
+              />
+              <TouchableOpacity
+                onPress={() => removeFeature("pro", f.id)}
+                hitSlop={8}
+              >
+                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => addFeature("pro")}
+          >
+            <Ionicons name="add" size={18} color={GREEN} />
+            <Text style={styles.addBtnText}>Add feature</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.saveBtn, savedFlash && styles.saveBtnDone]}
+          onPress={handleSave}
+          activeOpacity={0.85}
+        >
+          <Ionicons
+            name={savedFlash ? "checkmark-circle" : "save-outline"}
+            size={20}
+            color="#fff"
+          />
+          <Text style={styles.saveBtnText}>
+            {savedFlash ? "Saved" : "Save subscription settings"}
           </Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </TouchableOpacity>
+
+        <Text style={styles.footerNote}>
+          Changes apply to the user Subscription screen and dashboard Pro
+          revenue.
+        </Text>
+      </ScrollView>
     </View>
   );
 }
