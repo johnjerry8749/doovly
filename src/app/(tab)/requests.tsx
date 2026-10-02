@@ -24,6 +24,7 @@ import {
   listServiceRequests,
   canSendOfferOnRequest,
   submitServiceRequestOffer,
+  addServiceRequestComment,
   type ServiceRequest,
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
@@ -170,9 +171,6 @@ export default function RequestsScreen() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
-  const [extraComments, setExtraComments] = useState<
-    Record<string, ServiceRequestComment[]>
-  >({});
   const [allRequests, setAllRequests] = useState(() => listServiceRequests());
   const [createVisible, setCreateVisible] = useState(false);
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
@@ -244,10 +242,8 @@ export default function RequestsScreen() {
     showAllNigeria,
   ]);
 
-  const getComments = (item: ServiceRequest): ServiceRequestComment[] => [
-    ...(item.comments || []),
-    ...(extraComments[item.id] || []),
-  ];
+  const getComments = (item: ServiceRequest): ServiceRequestComment[] =>
+    item.comments || [];
 
   const refreshRequests = () => setAllRequests(listServiceRequests());
 
@@ -282,20 +278,16 @@ export default function RequestsScreen() {
 
     const currentUserId = getCurrentUserId();
     const currentProfessional = findProfessionalForUser(currentUserId);
-
-    const newComment: ServiceRequestComment & { userId?: string | number } = {
-      id: `local-${Date.now()}`,
+    const comment = addServiceRequestComment({
+      requestId: chatRequest.id,
+      text,
       userName: currentProfessional?.name || "You",
       userAvatar: currentProfessional?.image || MY_AVATAR,
-      text,
-      timeAgo: "Just now",
-      userId: currentProfessional?.id ?? currentUserId,
-    };
+    });
+    if (!comment) return;
 
-    setExtraComments((prev) => ({
-      ...prev,
-      [chatRequest.id]: [...(prev[chatRequest.id] || []), newComment],
-    }));
+    refreshRequests();
+    setChatRequest({ ...chatRequest });
     setChatText("");
     setTimeout(() => commentListRef.current?.scrollToEnd({ animated: true }), 100);
   };

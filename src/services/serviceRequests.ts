@@ -186,19 +186,21 @@ export function addServiceRequestComment(
   // TODO backend: POST /service-requests/:id/comments
   // Server should also create an in-app + push notification for the owner.
   const request = getFromData(input.requestId);
-  if (!request) return null;
+  const text = input.text.trim();
+  if (!request || !text) return null;
+  const actorId = String(getCurrentUserId());
   const comment: ServiceRequestComment = {
     id: `c-${Date.now()}`,
+    userId: actorId,
     userName: input.userName?.trim() || "You",
     userAvatar: input.userAvatar || DEFAULT_AVATAR,
-    text: input.text.trim(),
+    text,
     timeAgo: "Just now",
   };
   request.comments = [...(request.comments || []), comment];
 
   // Notify owner when someone else comments (mock + same shape for API later)
   const ownerId = String(request.createdByUserId || "");
-  const actorId = String(getCurrentUserId());
   if (ownerId && ownerId !== actorId) {
     const preview =
       comment.text.length > 80
