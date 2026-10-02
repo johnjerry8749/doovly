@@ -10,7 +10,8 @@ import {
   Platform,
   KeyboardAvoidingView,
   Keyboard,
-  TouchableWithoutFeedback,
+  findNodeHandle,
+  UIManager,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -53,14 +54,29 @@ export default function Settings() {
     String(plansState.yearlySavePercent),
   );
 
-  const scrollToInput = (y: number) => {
-    // Extra offset so focused field sits above the keyboard
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({
-        y: Math.max(0, y - 80),
-        animated: true,
-      });
-    });
+  /** Scroll only enough so the focused input sits just above the keyboard */
+  const ensureVisible = (target: View | TextInput | null) => {
+    if (!target || !scrollRef.current) return;
+    const scrollNode = findNodeHandle(scrollRef.current);
+    const targetNode = findNodeHandle(target as any);
+    if (!scrollNode || !targetNode) return;
+
+    // Small delay so keyboard height is applied first
+    setTimeout(() => {
+      UIManager.measureLayout(
+        targetNode,
+        scrollNode,
+        () => {},
+        (_x, y, _w, h) => {
+          // Keep a bit of space under the field; don't jump to top
+          scrollRef.current?.scrollResponderScrollNativeHandleToKeyboard?.(
+            targetNode,
+            80 + h,
+            true,
+          );
+        },
+      );
+    }, 100);
   };
 
   const updatePlan = (
@@ -158,22 +174,28 @@ export default function Settings() {
   };
 
   const topPad = Math.max(insets.top, 12) + 56;
-  const bottomPad = 120 + Math.max(insets.bottom, 16);
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { paddingTop: topPad }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? topPad : 24}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+    <View style={[styles.container, { paddingTop: topPad }]}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? topPad : 0}
+      >
         <ScrollView
           ref={scrollRef}
+          style={styles.flex}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: 32 + insets.bottom },
+          ]}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
+          keyboardDismissMode="on-drag"
+          // iOS: let the system inset the scroll view for the keyboard
           automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          // Avoid large empty white gaps
+          contentInsetAdjustmentBehavior="never"
         >
           <Text style={styles.title}>Settings</Text>
           <Text style={styles.subtitle}>
@@ -275,12 +297,7 @@ export default function Settings() {
             />
           </View>
 
-          <View
-            style={styles.card}
-            onLayout={(e) => {
-              (styles as any)._basicY = e.nativeEvent.layout.y;
-            }}
-          >
+          <View style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={[styles.iconCircle, { backgroundColor: "#F3F4F6" }]}>
                 <Ionicons name="person-outline" size={18} color={GRAY} />
@@ -295,19 +312,17 @@ export default function Settings() {
               style={styles.textInput}
               value={basic.tagline}
               onChangeText={(t) => updatePlan("basic", { tagline: t })}
-              onFocus={() => scrollToInput((styles as any)._basicY ?? 0)}
+              onFocus={(e) => ensureVisible(e.target as any)}
             />
             <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Features</Text>
-            {basic.features.map((f, index) => (
+            {basic.features.map((f) => (
               <View key={f.id} style={styles.featureRow}>
                 <Ionicons name="checkmark-circle" size={18} color={GREEN} />
                 <TextInput
                   style={styles.featureInput}
                   value={f.label}
                   onChangeText={(t) => updateFeature("basic", f.id, t)}
-                  onFocus={() =>
-                    scrollToInput(((styles as any)._basicY ?? 0) + 120 + index * 48)
-                  }
+                  onFocus={(e) => ensureVisible(e.target as any)}
                   returnKeyType="done"
                   blurOnSubmit
                 />
@@ -328,12 +343,7 @@ export default function Settings() {
             </TouchableOpacity>
           </View>
 
-          <View
-            style={[styles.card, styles.proCard]}
-            onLayout={(e) => {
-              (styles as any)._proY = e.nativeEvent.layout.y;
-            }}
-          >
+          <View style={[styles.card, styles.proCard]}>
             <View style={styles.cardHeader}>
               <View style={[styles.iconCircle, { backgroundColor: "#D1FAE5" }]}>
                 <Ionicons name="ribbon" size={18} color={GREEN} />
@@ -354,19 +364,17 @@ export default function Settings() {
               style={styles.textInput}
               value={pro.tagline}
               onChangeText={(t) => updatePlan("pro", { tagline: t })}
-              onFocus={() => scrollToInput((styles as any)._proY ?? 400)}
+              onFocus={(e) => ensureVisible(e.target as any)}
             />
             <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Features</Text>
-            {pro.features.map((f, index) => (
+            {pro.features.map((f) => (
               <View key={f.id} style={styles.featureRow}>
                 <Ionicons name="checkmark-circle" size={18} color={GREEN} />
                 <TextInput
                   style={styles.featureInput}
                   value={f.label}
                   onChangeText={(t) => updateFeature("pro", f.id, t)}
-                  onFocus={() =>
-                    scrollToInput(((styles as any)._proY ?? 400) + 120 + index * 48)
-                  }
+                  onFocus={(e) => ensureVisible(e.target as any)}
                   returnKeyType="done"
                   blurOnSubmit
                 />
@@ -407,13 +415,14 @@ export default function Settings() {
             revenue.
           </Text>
         </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9FAFB" },
+  flex: { flex: 1 },
   scroll: { paddingHorizontal: 20 },
   title: { fontSize: 24, fontWeight: "700", color: "#111827" },
   subtitle: { fontSize: 14, color: GRAY, marginTop: 4, marginBottom: 18 },
