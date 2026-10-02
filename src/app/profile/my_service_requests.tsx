@@ -326,7 +326,7 @@ export default function MyServiceRequestsScreen() {
         >
           <Ionicons name="chevron-back" size={22} color={TEXT} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Service Requests</Text>
+        <Text style={styles.headerTitle}>My Service Requests</Text>
         <TouchableOpacity
           style={styles.createBtn}
           onPress={openCreate}
