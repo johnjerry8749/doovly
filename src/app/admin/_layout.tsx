@@ -12,8 +12,8 @@ import {
   Alert,
 } from "react-native";
 import { Tabs, router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const GREEN = "#159447";
@@ -54,11 +54,9 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
   const [isOpen, setIsOpen] = useState(isLargeScreen);
   const slideAnim = useRef(
     new Animated.Value(isLargeScreen ? 0 : -SIDEBAR_WIDTH),
-    new Animated.Value(isLargeScreen ? 0 : -SIDEBAR_WIDTH),
   ).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const menuLeftAnim = useRef(
-    new Animated.Value(isLargeScreen ? SIDEBAR_WIDTH + 12 : 16),
     new Animated.Value(isLargeScreen ? SIDEBAR_WIDTH + 12 : 16),
   ).current;
 
@@ -299,7 +297,7 @@ const styles = StyleSheet.create({
   },
 
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "#000",
     zIndex: 90,
   },
