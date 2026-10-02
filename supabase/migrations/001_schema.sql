@@ -1,7 +1,5 @@
 -- ============================================================
 -- Doovly schema
--- One migration. Replaces 001_initial_schema.sql + 002_mock_parity.sql.
--- mock_id = app id ("1", "u1", "b1"). id = production UUID.
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
