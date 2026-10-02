@@ -66,20 +66,20 @@ const CHANNEL_OPTIONS: {
 }[] = [
   {
     key: "in-app",
-    label: "In-App Notification",
-    desc: "Send notification in app",
+    label: "In-App + System",
+    desc: "Inbox list + device banner (push on API)",
     icon: "phone-portrait-outline",
   },
   {
     key: "email",
     label: "Email",
-    desc: "Send via email",
+    desc: "Send via email (API only)",
     icon: "mail-outline",
   },
   {
     key: "sms",
     label: "SMS",
-    desc: "Send via SMS",
+    desc: "Send via SMS (API only)",
     icon: "chatbubble-outline",
   },
 ];
@@ -177,14 +177,30 @@ export default function Notifications() {
       setLink("");
       setShowLink(false);
 
-      const inAppNote =
-        channels.includes("in-app") && result.inAppRecipientCount > 0
-          ? `\nIn-app delivered to ${result.inAppRecipientCount} user(s). Open the app Notifications screen to see it.`
-          : channels.includes("in-app")
-            ? "\nNo matching users for this audience (check Verified / Pro / Free filters)."
-            : "";
+      const parts: string[] = ["Notification recorded."];
+      if (channels.includes("in-app")) {
+        if (result.inAppRecipientCount > 0) {
+          parts.push(
+            `In-app delivered to ${result.inAppRecipientCount} user(s).`,
+          );
+        } else {
+          parts.push(
+            "No matching users for this audience (check Verified / Pro / Free).",
+          );
+        }
+        if (result.systemNotificationShown) {
+          parts.push("System banner shown on this device.");
+        } else if (result.inAppRecipientCount > 0) {
+          parts.push(
+            "No system banner (you are not in this audience on this device, or permission denied).",
+          );
+        }
+      }
+      if (channels.includes("email") || channels.includes("sms")) {
+        parts.push("Email/SMS need a backend provider when you swap to API.");
+      }
 
-      Alert.alert("Sent", `Notification recorded successfully.${inAppNote}`);
+      Alert.alert("Sent", parts.join("\n"));
     } catch (e: any) {
       Alert.alert(
         "Send failed",
@@ -247,8 +263,8 @@ export default function Notifications() {
               <View>
                 <Text style={styles.cardTitle}>Send Notification</Text>
                 <Text style={styles.cardSubtitle}>
-                  Send notifications to selected users via in-app, email, and
-                  SMS.
+                  In-app inbox + system banner on this device (remote push via
+                  API later).
                 </Text>
               </View>
             </View>
@@ -295,7 +311,8 @@ export default function Notifications() {
             })}
           </View>
           <Text style={styles.audienceHint}>
-            ~{audienceCount} user(s) match this audience (mock)
+            ~{audienceCount} user(s) match this audience (mock). Use All or Free
+            to include the logged-in mock user.
           </Text>
 
           <Text style={styles.sectionLabel}>Channels</Text>
