@@ -2,7 +2,7 @@
  * Admin dashboard mock stats
  * -------------------------
  * Built from professionals, subscriptions, service requests, bookings.
- * Revenue = active Pro subscription count × PRO_MONTHLY_PRICE_NGN
+ * Revenue = active Pro subscription count × Pro monthly price (from subscriptionPlans)
  *
  * Later: replace getDashboardStats() body with apiRequest("/admin/dashboard")
  */
@@ -11,26 +11,22 @@ import { PROFESSIONALS } from "@/data/professionals";
 import { getMockSubscriptions } from "@/data/subscriptions";
 import { SERVICE_REQUESTS } from "@/data/serviceRequests";
 import { BOOKED_JOBS, RECEIVED_JOBS } from "@/data/booking";
-
-/** Mock Pro plan price (NGN / month). Swap when pricing comes from API. */
-export const PRO_MONTHLY_PRICE_NGN = 5000;
+import { getProMonthlyPrice } from "@/data/subscriptionPlans";
 
 export type DashboardStats = {
   totalUsers: number;
   totalVerifiedUsers: number;
   totalProSubUsers: number;
   openRequests: number;
-  /** Revenue from Pro subscriptions (active Pro count × plan price) */
+  /** Revenue from Pro subscriptions (active Pro count × plan monthly price) */
   totalRevenueFromPro: number;
   totalPostRequests: number;
   totalBookings: number;
-  /** Daily activity counts for Overview chart (last 30 days) */
   overviewSeries: { label: string; value: number }[];
   dateRangeLabel: string;
 };
 
 function buildOverviewSeries(): { label: string; value: number }[] {
-  // Deterministic mock bars for Sep 1–30 (seeded from mock sizes)
   const base = PROFESSIONALS.length * 8 + SERVICE_REQUESTS.length * 3;
   const series: { label: string; value: number }[] = [];
   for (let day = 1; day <= 30; day++) {
@@ -62,8 +58,8 @@ export function computeDashboardStats(): DashboardStats {
   const totalPostRequests = requests.length;
   const totalBookings = bookings.length;
 
-  // Revenue strictly from Pro subscriptions
-  const totalRevenueFromPro = totalProSubUsers * PRO_MONTHLY_PRICE_NGN;
+  const proMonthly = getProMonthlyPrice();
+  const totalRevenueFromPro = totalProSubUsers * proMonthly;
 
   return {
     totalUsers,
