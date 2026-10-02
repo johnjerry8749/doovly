@@ -327,5 +327,3 @@ INSERT INTO public.messages (mock_id, conversation_id, sender_id, text, kind) VA
   ('m1','d1000000-0000-0000-0000-000000000003','22222222-2222-2222-2222-222222222222','Can you come tomorrow?','text'),
   ('m1','d1000000-0000-0000-0000-000000000004','33333333-3333-3333-3333-333333333333','Thanks, see you then.','text');
 
--- DONE
--- Login: john@doovly.test / password123 (admin + pro 1)
