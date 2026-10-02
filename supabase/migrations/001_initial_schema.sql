@@ -1,6 +1,7 @@
 -- ============================================================
--- Doovly – Initial Schema
--- Matches src/data/* mock shapes 100% for clean mock → real swap
+-- Doovly – Initial Schema (core tables)
+-- Full mock parity = 001 + 002_mock_parity.sql + seed.sql
+-- App mappers: src/lib/ids.ts, src/lib/mappers.ts
 -- ============================================================
 
 -- Extensions

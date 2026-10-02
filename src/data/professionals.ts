@@ -1,12 +1,13 @@
 /**
  * Shared professionals mock data.
  *
- * Later:
- * Replace this file with API / database data.
+ * DB parity: supabase/seed.sql + migrations 001/002
+ * UUID map: src/lib/ids.ts (professional "1"…"6")
+ * Image keys: mock://profile_N.jpg → src/lib/mappers.ts
  *
- * Star rule:
- * Every 10 reviews = 1 star.
- * Maximum = 5 stars.
+ * Later: replace this file with API / database data.
+ *
+ * Star rule: every 10 reviews = 1 star (max 5).
  */
 
 // =========================

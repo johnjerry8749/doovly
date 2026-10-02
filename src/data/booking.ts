@@ -1,6 +1,9 @@
 /**
  * Bookings mock data
  * ------------------
+ * DB parity: public.bookings (mock_id b1–b3, r1–r3) — see seed.sql
+ * Status in DB is lowercase; map with bookingStatusToApp/ToDb in src/lib/mappers.ts
+ *
  * Status lifecycle (UI):
  *   Pending → Accepted  (professional accepts in chat)
  *   Pending → Declined  (professional declines in chat)
@@ -8,11 +11,7 @@
  * Bookings history list shows Pending + Accepted + Declined.
  *
  * Booked   = current user is the customer (u1)
- *            professionalId must NOT be "1" (logged-in pro)
  * Received = current user is the professional (id "1")
- *
- * Accepted service-request offers are pushed as Accepted only
- * (never Pending) via appendAcceptedOfferBooking.
  *
  * LATER: replace BOOKED_JOBS / RECEIVED_JOBS with API payloads.
  */
