@@ -12,7 +12,7 @@ export function getErrorMessage(error: any): string {
     "";
 
   if (msg.includes("Invalid login credentials")) {
-    return "Wrong phone number or password";
+    return "Wrong Email or password";
   }
   if (
     msg.includes("Email not confirmed") ||
