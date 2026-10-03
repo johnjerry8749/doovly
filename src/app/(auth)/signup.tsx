@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getErrorMessage } from "@/utils/error";
+import { supabase } from "@/lib/supabase";
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState("");
@@ -40,62 +41,141 @@ export default function RegisterScreen() {
     }
   }, [termsAccepted]);
 
-  async function handleCreateAccount() {
-    if (!fullName.trim()) {
-      Alert.alert("Missing name", "Please enter your full name.");
-      return;
+//HANDLE SIGNUP SESSION
+async function handleCreateAccount() {
+  const cleanName = fullName.trim();
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanPhone = phone.replace(/\D/g, "");
+
+  if (!cleanName) {
+    Alert.alert(
+      "Missing name",
+      "Please enter your full name.",
+    );
+    return;
+  }
+
+  if (!cleanPhone) {
+    Alert.alert(
+      "Missing phone number",
+      "Please enter your phone number.",
+    );
+    return;
+  }
+
+  if (cleanPhone.length !== 10) {
+    Alert.alert(
+      "Invalid phone number",
+      "Please enter a valid Nigerian phone number.",
+    );
+    return;
+  }
+
+  if (!cleanEmail) {
+    Alert.alert(
+      "Missing email",
+      "Please enter your email address.",
+    );
+    return;
+  }
+
+  if (!password) {
+    Alert.alert(
+      "Missing password",
+      "Please enter a password.",
+    );
+    return;
+  }
+
+  if (password.length < 5) {
+    Alert.alert(
+      "Weak password",
+      "Your password must contain at least 5 characters.",
+    );
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    Alert.alert(
+      "Password mismatch",
+      "Your passwords do not match.",
+    );
+    return;
+  }
+
+  if (!acceptedTerms) {
+    Alert.alert(
+      "Terms required",
+      "Please accept the Terms & Conditions and Privacy Policy.",
+    );
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const formattedPhone = `+234${cleanPhone}`;
+
+    const { data, error } =
+      await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: {
+            full_name: cleanName,
+            phone: formattedPhone,
+          },
+        },
+      });
+
+    if (error) {
+      throw error;
     }
 
-    if (!phone.trim()) {
-      Alert.alert("Missing phone number", "Please enter your phone number.");
-      return;
-    }
-
-    if (!password) {
-      Alert.alert("Missing password", "Please enter a password.");
-      return;
-    }
-
-    if (password.length < 8) {
-      Alert.alert(
-        "Weak password",
-        "Your password must contain at least 8 characters.",
+    if (!data.user) {
+      throw new Error(
+        "Account could not be created. Please try again.",
       );
-      return;
     }
 
-    if (password !== confirmPassword) {
-      Alert.alert("Password mismatch", "Your passwords do not match.");
-      return;
-    }
-
-    if (!acceptedTerms) {
-      Alert.alert(
-        "Terms required",
-        "Please accept the Terms & Conditions and Privacy Policy.",
-      );
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // TODO: Connect your real Supabase / backend API here
-      // const { error } = await supabase.auth.signUp({ ... });
-      // if (error) throw error;
-
+    /*
+     * If email confirmation is enabled in Supabase,
+     * there will be no active session yet.
+     */
+    if (!data.session) {
       Alert.alert(
         "Account created",
-        "Your account has been created successfully.",
+        "Your account has been created. Please check your email to confirm your account before logging in.",
+        [
+          {
+            text: "OK",
+            onPress: () =>
+              router.replace("/(auth)/login"),
+          },
+        ],
       );
 
-      router.replace("/(tab)/home");
-    } catch (error) {
-      Alert.alert("Signup Failed", getErrorMessage(error));
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    /*
+     * If email confirmation is disabled,
+     * Supabase gives us a session immediately.
+     */
+    router.replace("/(tab)/home");
+  } catch (error) {
+    console.error("Signup error:", error);
+
+    Alert.alert(
+      "Signup failed",
+      getErrorMessage(error),
+    );
+  } finally {
+    setLoading(false);
   }
+}
+
+
 
   function handleGoogleSignup() {
     Alert.alert("Google signup", "Connect Google authentication here.");
@@ -228,11 +308,7 @@ export default function RegisterScreen() {
               style={styles.eyeButton}
             >
               <Ionicons
-                name={
-                  showPassword
-                    ? "eye-off-outline"
-                    : "eye-outline"
-                }
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
                 size={22}
                 color="#6B7280"
               />
@@ -258,17 +334,11 @@ export default function RegisterScreen() {
             />
 
             <Pressable
-              onPress={() =>
-                setShowConfirmPassword((prev) => !prev)
-              }
+              onPress={() => setShowConfirmPassword((prev) => !prev)}
               style={styles.eyeButton}
             >
               <Ionicons
-                name={
-                  showConfirmPassword
-                    ? "eye-off-outline"
-                    : "eye-outline"
-                }
+                name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
                 size={22}
                 color="#6B7280"
               />
@@ -277,9 +347,7 @@ export default function RegisterScreen() {
 
           {/* Terms */}
           <Pressable
-            onPress={() =>
-              setAcceptedTerms((prev) => !prev)
-            }
+            onPress={() => setAcceptedTerms((prev) => !prev)}
             android_ripple={null}
             style={({ pressed }) => [
               styles.termsRow,
@@ -289,17 +357,10 @@ export default function RegisterScreen() {
             ]}
           >
             <View
-              style={[
-                styles.checkbox,
-                acceptedTerms && styles.checkboxChecked,
-              ]}
+              style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}
             >
               {acceptedTerms && (
-                <Ionicons
-                  name="checkmark"
-                  size={16}
-                  color="#FFFFFF"
-                />
+                <Ionicons name="checkmark" size={16} color="#FFFFFF" />
               )}
             </View>
 
@@ -307,22 +368,14 @@ export default function RegisterScreen() {
               I agree to the{" "}
               <Text
                 style={styles.greenText}
-                onPress={() =>
-                  router.push(
-                    "/(auth)/terms_condition",
-                  )
-                }
+                onPress={() => router.push("/(auth)/terms_condition")}
               >
                 Terms & Conditions
               </Text>{" "}
               and{" "}
               <Text
                 style={styles.greenText}
-                onPress={() =>
-                  router.push(
-                    "/(auth)/terms_condition",
-                  )
-                }
+                onPress={() => router.push("/(auth)/terms_condition")}
               >
                 Privacy Policy
               </Text>
@@ -366,18 +419,10 @@ export default function RegisterScreen() {
 
           {/* Login Link */}
           <View style={styles.loginRow}>
-            <Text style={styles.loginText}>
-              Already have an account?{" "}
-            </Text>
+            <Text style={styles.loginText}>Already have an account? </Text>
 
-            <Pressable
-              onPress={() =>
-                router.push("/(auth)/login")
-              }
-            >
-              <Text style={styles.loginLink}>
-                Login
-              </Text>
+            <Pressable onPress={() => router.push("/(auth)/login")}>
+              <Text style={styles.loginLink}>Login</Text>
             </Pressable>
           </View>
         </ScrollView>
