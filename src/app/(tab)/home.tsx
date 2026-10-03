@@ -221,28 +221,6 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-        {/* SEARCH */}
-        <View style={styles.searchContainer}>
-          <Ionicons
-            name="search-outline"
-            size={27}
-            color="#555"
-          />
-
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search for a service..."
-            placeholderTextColor="#888"
-          />
-
-          <TouchableOpacity activeOpacity={0.7}>
-            <Ionicons
-              name="options-outline"
-              size={28}
-              color="#159447"
-            />
-          </TouchableOpacity>
-        </View>
 
         {/* BANNER */}
         <View style={styles.bannerContainer}>
