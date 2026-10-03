@@ -20,9 +20,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
+import * as ImagePicker from "expo-image-picker";
 import {
   getProfileForEdit,
   updateProfile,
+  updateAvatar,
   type ProfileEditData,
 } from "@/services/profile";
 
@@ -41,6 +43,8 @@ const DEFAULT_AVATAR = require("@/assets/images/icon.png");
 
 export default function EditProfile() {
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
 
   const [profile, setProfile] = useState<ProfileEditData | null>(null);
 
@@ -122,6 +126,60 @@ export default function EditProfile() {
     setProfessionPickerVisible(false);
   };
 
+  const handlePickAvatar = async () => {
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permission.granted) {
+        Alert.alert(
+          "Permission needed",
+          "Allow photo library access to change your profile picture.",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+
+      if (result.canceled || !result.assets?.[0]?.uri) {
+        return;
+      }
+
+      const uri = result.assets[0].uri;
+      setLocalAvatarUri(uri);
+      setUploadingAvatar(true);
+
+      const upload = await updateAvatar(uri);
+
+      if (!upload.ok) {
+        Alert.alert("Upload failed", upload.error);
+        setLocalAvatarUri(null);
+        return;
+      }
+
+      setProfile((prev) =>
+        prev
+          ? { ...prev, image: { uri: upload.url } }
+          : prev,
+      );
+      setLocalAvatarUri(upload.url);
+    } catch (error) {
+      console.error("Avatar pick/upload error:", error);
+      Alert.alert(
+        "Upload failed",
+        "Could not upload your photo. Please try again.",
+      );
+      setLocalAvatarUri(null);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert("Name required", "Please enter your full name.");
@@ -165,7 +223,9 @@ export default function EditProfile() {
     }
   };
 
-  const avatarSource = (profile?.image as any) ?? DEFAULT_AVATAR;
+  const avatarSource = localAvatarUri
+    ? { uri: localAvatarUri }
+    : ((profile?.image as any) ?? DEFAULT_AVATAR);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -211,12 +271,18 @@ export default function EditProfile() {
               <TouchableOpacity
                 style={styles.cameraBtn}
                 activeOpacity={0.8}
+                onPress={handlePickAvatar}
+                disabled={uploadingAvatar}
               >
-                <Ionicons
-                  name="camera"
-                  size={18}
-                  color="#FFFFFF"
-                />
+                {uploadingAvatar ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons
+                    name="camera"
+                    size={18}
+                    color="#FFFFFF"
+                  />
+                )}
               </TouchableOpacity>
             </View>
           </View>
