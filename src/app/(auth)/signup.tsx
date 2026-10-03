@@ -418,17 +418,55 @@ async function handleCreateAccount() {
           </View>
          
 
-          {/* Google Button */}
-          <Pressable
-            style={styles.googleButton}
-            onPress={handleGoogleSignup}
-          >
-            <Text style={styles.googleLogo}>G</Text>
-            <Text style={styles.googleButtonText}>
-              Continue with Google
-            </Text>
-          </Pressable>
-          {/* 
+          <View style={styles.socialButtonsRow}>
+            <Pressable
+              style={[styles.googleButton, styles.socialButtonHalf]}
+              onPress={handleGoogleSignup}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Google"
+            >
+              <Text style={styles.googleLogo}>G</Text>
+              <Text style={[styles.googleButtonText, styles.socialButtonTextCompact]}>
+                Google
+              </Text>
+            </Pressable>
+
+            {Platform.OS === "ios" && (
+              <Pressable
+                style={[
+                  styles.googleButton,
+                  styles.socialButtonHalf,
+                  styles.appleButton,
+                ]}
+                onPress={() =>
+                  Alert.alert(
+                    "Apple Sign-In",
+                    "Apple sign-in is not configured yet.",
+                  )
+                }
+                disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Apple"
+              >
+                <Ionicons
+                  name="logo-apple"
+                  size={20}
+                  color="#FFFFFF"
+                  style={styles.appleLogo}
+                />
+                <Text
+                  style={[
+                    styles.googleButtonText,
+                    styles.socialButtonTextCompact,
+                    styles.appleButtonText,
+                  ]}
+                >
+                  Apple
+                </Text>
+              </Pressable>
+            )}
+          </View>
 
           {/* Login Link */}
           <View style={styles.loginRow}>
@@ -667,6 +705,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FFFFFF",
+  },
+
+  socialButtonsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+
+  socialButtonHalf: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
+
+  socialButtonTextCompact: {
+    fontSize: 14,
+  },
+
+  appleButton: {
+    backgroundColor: "#000000",
+    borderColor: "#000000",
+  },
+
+  appleButtonText: {
+    color: "#FFFFFF",
+  },
+
+  appleLogo: {
+    marginRight: 6,
   },
 
   googleLogo: {

@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
 import { getErrorMessage } from "@/utils/error";
 import { supabase } from "@/lib/supabase";
@@ -168,37 +169,57 @@ export default function Login() {
             <View style={styles.line} />
           </View>
 
-          {/* Google Button */}
-          <TouchableOpacity
-              style={styles.socialButton}
-              onPress={handleGoogleLogin}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-            <Image
-              source={{
-                uri: "https://developers.google.com/identity/images/g-logo.png",
-              }}
-              style={styles.socialIcon}
-            />
-            <Text style={styles.socialButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
-
-          {/* Apple Button (only shows on iOS) */}
-          {Platform.OS === "ios" && (
+          <View style={styles.socialButtonsRow}>
             <TouchableOpacity
-              style={styles.socialButton}
+              style={[styles.socialButton, styles.socialButtonCompact]}
               onPress={handleGoogleLogin}
               disabled={loading}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Google"
             >
-            
-              <Text style={styles.appleIcon}></Text>
-              <Text style={[styles.socialButtonText, { color: "#fff" }]}>
-                Continue with Apple
+              <Image
+                source={{
+                  uri: "https://developers.google.com/identity/images/g-logo.png",
+                }}
+                style={[styles.socialIcon, styles.socialIconCompact]}
+              />
+              <Text style={[styles.socialButtonText, styles.socialButtonTextCompact]}>
+                Google
               </Text>
             </TouchableOpacity>
-          )}
+
+            {Platform.OS === "ios" && (
+              <TouchableOpacity
+                style={[
+                  styles.socialButton,
+                  styles.socialButtonCompact,
+                  styles.appleButton,
+                ]}
+                onPress={() =>
+                  Alert.alert(
+                    "Apple Sign-In",
+                    "Apple sign-in is not configured yet.",
+                  )
+                }
+                disabled={loading}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Apple"
+              >
+                <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
+                <Text
+                  style={[
+                    styles.socialButtonText,
+                    styles.socialButtonTextCompact,
+                    { color: "#FFFFFF" },
+                  ]}
+                >
+                  Apple
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* Register Link */}
           <TouchableOpacity
@@ -311,6 +332,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginVertical: 28,
   },
+  socialButtonsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
   line: {
     flex: 1,
     height: 1,
@@ -331,15 +356,28 @@ const styles = StyleSheet.create({
     height: 52,
     marginBottom: 14,
   },
+  socialButtonCompact: {
+    flex: 1,
+    paddingHorizontal: 8,
+    marginBottom: 0,
+  },
   socialIcon: {
     width: 22,
     height: 22,
     marginRight: 12,
   },
+  socialIconCompact: {
+    width: 18,
+    height: 18,
+    marginRight: 6,
+  },
   socialButtonText: {
     fontSize: 16,
     fontWeight: "500",
     color: "#111827",
+  },
+  socialButtonTextCompact: {
+    fontSize: 14,
   },
   appleButton: {
     backgroundColor: "#000000",
@@ -349,10 +387,6 @@ const styles = StyleSheet.create({
     width: 170,
     height: 170,
     borderRadius: 90,
-  },
-  appleIcon: {
-    fontSize: 20,
-    marginRight: 10,
   },
   registerContainer: {
     marginTop: 24,
