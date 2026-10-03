@@ -20,7 +20,6 @@ import { signInWithGoogle } from "@/services/auth/googleAuth";
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -46,28 +45,11 @@ export default function RegisterScreen() {
 async function handleCreateAccount() {
   const cleanName = fullName.trim();
   const cleanEmail = email.trim().toLowerCase();
-  const cleanPhone = phone.replace(/\D/g, "");
 
   if (!cleanName) {
     Alert.alert(
       "Missing name",
       "Please enter your full name.",
-    );
-    return;
-  }
-
-  if (!cleanPhone) {
-    Alert.alert(
-      "Missing phone number",
-      "Please enter your phone number.",
-    );
-    return;
-  }
-
-  if (cleanPhone.length !== 10) {
-    Alert.alert(
-      "Invalid phone number",
-      "Please enter a valid Nigerian phone number.",
     );
     return;
   }
@@ -115,8 +97,6 @@ async function handleCreateAccount() {
   try {
     setLoading(true);
 
-    const formattedPhone = `+234${cleanPhone}`;
-
     const { data, error } =
       await supabase.auth.signUp({
         email: cleanEmail,
@@ -124,7 +104,6 @@ async function handleCreateAccount() {
         options: {
           data: {
             full_name: cleanName,
-            phone: formattedPhone,
           },
         },
       });
@@ -250,32 +229,6 @@ async function handleCreateAccount() {
               value={fullName}
               onChangeText={setFullName}
               autoCapitalize="words"
-            />
-          </View>
-
-          {/* Phone Number */}
-          <View style={styles.phoneContainer}>
-            <Ionicons
-              name="call-outline"
-              size={22}
-              color="#16A34A"
-              style={styles.phoneIcon}
-            />
-
-            <View style={styles.countryCode}>
-              <Text style={styles.flag}>🇳🇬</Text>
-              <Text style={styles.codeText}>+234</Text>
-            </View>
-
-            <View style={styles.verticalLine} />
-
-            <TextInput
-              style={styles.phoneInput}
-              placeholder="Phone Number"
-              placeholderTextColor="#9CA3AF"
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
             />
           </View>
 
@@ -490,7 +443,7 @@ const styles = StyleSheet.create({
 
   container: {
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: -15,
     paddingBottom: 3,
   },
 
@@ -498,7 +451,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     justifyContent: "center",
-    marginBottom: 3,
+    marginBottom: -3,
   },
 
   logoContainer: {
@@ -579,53 +532,6 @@ const styles = StyleSheet.create({
   eyeButton: {
     paddingLeft: 10,
     paddingVertical: 8,
-  },
-
-  phoneContainer: {
-    height: 58,
-    borderWidth: 1.3,
-    borderColor: "#E5E7EB",
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 11,
-    backgroundColor: "#FFFFFF",
-  },
-
-  phoneIcon: {
-    marginLeft: 16,
-    marginRight: 12,
-  },
-
-  countryCode: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  flag: {
-    fontSize: 20,
-  },
-
-  codeText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-  },
-
-  verticalLine: {
-    width: 1,
-    height: 28,
-    backgroundColor: "#E5E7EB",
-    marginHorizontal: 12,
-  },
-
-  phoneInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#111827",
-    paddingVertical: 0,
-    paddingRight: 12,
   },
 
   termsRow: {
