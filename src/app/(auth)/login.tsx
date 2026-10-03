@@ -140,7 +140,7 @@ export default function Login() {
 
             <TextInput
               style={styles.passwordInput}
-              placeholder="Enter your password"
+              placeholder="Enter password"
               placeholderTextColor="#9CA3AF"
               secureTextEntry
               value={password}
