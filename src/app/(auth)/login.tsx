@@ -14,8 +14,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import * as Google from "expo-auth-session/providers/google";
-import * as AppleAuthentication from "expo-apple-authentication";
 import * as WebBrowser from "expo-web-browser";
 import { getErrorMessage } from "@/utils/error";
 import { supabase } from "@/lib/supabase";
@@ -28,61 +26,6 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ========== GOOGLE LOGIN ==========
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    // Replace these later with your real Client IDs from Google Cloud Console
-    expoClientId: "YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com",
-    iosClientId: "YOUR_IOS_CLIENT_ID.apps.googleusercontent.com",
-    androidClientId: "YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com",
-    webClientId: "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com",
-  });
-
-  const handleGoogleLogin = async () => {
-    try {
-      setLoading(true);
-      const result = await promptAsync();
-
-      if (result?.type === "success") {
-        // Successfully logged in with Google
-        console.log("Google Login Success:", result.authentication);
-        // TODO: Send the token to your backend
-        router.replace("/(tab)/home");
-      }
-    } catch (error) {
-      Alert.alert("Google login failed", getErrorMessage(error));
-      console.log(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ========== APPLE LOGIN ==========
-  const handleAppleLogin = async () => {
-    try {
-      setLoading(true);
-
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-
-      // Successfully logged in with Apple
-      console.log("Apple Login Success:", credential);
-      // TODO: Send credential.identityToken to your backend
-      router.replace("/(tab)/home");
-    } catch (error: any) {
-      if (error.code === "ERR_REQUEST_CANCELED") {
-        // User cancelled
-      } else {
-        Alert.alert("Apple login failed", getErrorMessage(error));
-        console.log(error);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ========== NORMAL LOGIN ==========
 
@@ -414,3 +357,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 });
+function promptAsync() {
+  throw new Error("Function not implemented.");
+}
+
