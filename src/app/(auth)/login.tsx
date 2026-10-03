@@ -18,12 +18,13 @@ import * as Google from "expo-auth-session/providers/google";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as WebBrowser from "expo-web-browser";
 import { getErrorMessage } from "@/utils/error";
+import { supabase } from "@/lib/supabase";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Login() {
   const router = useRouter();
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -84,31 +85,45 @@ export default function Login() {
   };
 
   // ========== NORMAL LOGIN ==========
-  const handleLogin = async () => {
-    if (!phone || !password) {
-      Alert.alert("Missing fields", "Please enter phone number and password");
+
+  async function handleLogin() {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      Alert.alert("Missing email", "Please enter your email address.");
+      return;
+    }
+
+    if (!password) {
+      Alert.alert("Missing password", "Please enter your password.");
       return;
     }
 
     try {
       setLoading(true);
 
-      // TODO: Replace this block with real Supabase auth when ready:
-      // const { error } = await supabase.auth.signInWithPassword({
-      //   phone: `+234${phone.replace(/\s/g, "")}`,
-      //   password,
-      // });
-      // if (error) throw error;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
 
-      // Temporary mock success (remove when real API is wired)
-      console.log("Login with:", phone, password);
+      if (error) {
+        throw error;
+      }
+
+      if (!data.session || !data.user) {
+        throw new Error("Login was not completed. Please try again.");
+      }
+
       router.replace("/(tab)/home");
     } catch (error) {
-      Alert.alert("Login Failed", getErrorMessage(error));
+      console.error("Login error:", error);
+
+      Alert.alert("Login failed", getErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -133,21 +148,22 @@ export default function Login() {
             </Text>
           </View>
 
-          {/* Phone Input */}
+          {/* Email Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={styles.phoneInput}>
-              <Text style={styles.countryCode}>+234</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="801 234 5678"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-              />
-            </View>
+            <Text style={styles.label}>Email Address</Text>
+
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="you@example.com"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={email}
+              onChangeText={setEmail}
+            />
           </View>
+
           {/* Password Input */}
           <View style={styles.inputContainer}>
             <View style={styles.row}>
