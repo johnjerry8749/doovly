@@ -17,6 +17,7 @@ import {
   getLoggedInProfessionalId,
 } from "@/services/savedProviders";
 import { PROFESSIONALS } from "@/data/professionals";
+import { uploadImage, UPLOAD_FOLDERS } from "@/services/cloudinary";
 
 // =====================================================
 // TYPES
@@ -247,6 +248,54 @@ export async function updateProfile(
   mockBio = input.bio.trim() || mockBio;
 
   return { ok: true };
+}
+
+/**
+ * Upload avatar local URI to Cloudinary, then save URL on profiles
+ * (+ professionals.avatar_url when present).
+ */
+export async function updateAvatar(
+  localUri: string,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  try {
+    const url = await uploadImage(localUri, UPLOAD_FOLDERS.avatars);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { ok: false, error: "Not logged in" };
+    }
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        avatar_url: url,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+
+    if (profileError) {
+      return { ok: false, error: profileError.message };
+    }
+
+    // Keep professional avatar in sync when the user is a pro
+    await supabase
+      .from("professionals")
+      .update({
+        avatar_url: url,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", user.id);
+
+    return { ok: true, url };
+  } catch (e) {
+    console.warn("updateAvatar error:", e);
+    const message =
+      e instanceof Error ? e.message : "Could not upload photo.";
+    return { ok: false, error: message };
+  }
 }
 
 // =====================================================
