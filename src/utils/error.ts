@@ -36,5 +36,13 @@ export function getErrorMessage(error: any): string {
     return "Please log in to continue";
   }
 
+  // Generic Supabase Edge Function failure — prefer a friendlier fallback
+  if (
+    msg.includes("Edge Function returned a non-2xx status code") ||
+    msg.includes("FunctionsHttpError")
+  ) {
+    return "Something went wrong while processing your request. Please check your input and try again.";
+  }
+
   return msg || "Something went wrong. Please try again.";
 }

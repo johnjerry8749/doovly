@@ -28,7 +28,36 @@ type ResetResponse =
   | {
       status: "rate_limited";
       retry_after_seconds?: number;
+    }
+  | {
+      error?: string;
     };
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+/**
+ * Try to extract a clean message from a Supabase FunctionsHttpError.
+ * The edge function returns JSON like { error: "Enter a valid email address" }.
+ */
+async function getFunctionsErrorMessage(error: unknown): Promise<string | null> {
+  try {
+    const ctx = (error as { context?: Response })?.context;
+    if (ctx && typeof ctx.json === "function") {
+      const body = await ctx.json();
+      if (typeof body?.error === "string" && body.error.trim()) {
+        return body.error.trim();
+      }
+      if (typeof body?.message === "string" && body.message.trim()) {
+        return body.message.trim();
+      }
+    }
+  } catch {
+    // ignore parse failures
+  }
+  return null;
+}
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -43,6 +72,14 @@ export default function ForgotPasswordScreen() {
       Alert.alert(
         "Missing Information",
         "Please enter your email address.",
+      );
+      return;
+    }
+
+    if (!isValidEmail(cleanEmail)) {
+      Alert.alert(
+        "Invalid Email",
+        "Please enter a valid email address (e.g. you@example.com).",
       );
       return;
     }
@@ -77,6 +114,13 @@ export default function ForgotPasswordScreen() {
           return;
         }
 
+        // Prefer the friendly message returned by the Edge Function (e.g. 400 invalid email)
+        const functionMessage = await getFunctionsErrorMessage(error);
+        if (functionMessage) {
+          Alert.alert("Reset Failed", functionMessage);
+          return;
+        }
+
         throw error;
       }
 
@@ -106,8 +150,15 @@ export default function ForgotPasswordScreen() {
       }
 
       if (data?.status !== "sent") {
+        // Edge function may return { error: "..." } with 200 in some edge cases
+        const maybeError =
+          data && typeof (data as { error?: string }).error === "string"
+            ? (data as { error: string }).error
+            : null;
+
         throw new Error(
-          "Unable to process the password reset request.",
+          maybeError ??
+            "Unable to process the password reset request.",
         );
       }
 
@@ -369,4 +420,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
