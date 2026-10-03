@@ -1,4 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,30 +46,30 @@ function isValidEmail(email: string): boolean {
 }
 
 Deno.serve(async (request: Request) => {
-  /*
-   * CORS preflight
-   */
+  // -----------------------------------------
+  // CORS
+  // -----------------------------------------
   if (request.method === "OPTIONS") {
     return new Response("ok", {
       headers: corsHeaders,
     });
   }
 
-  /*
-   * Only POST is allowed.
-   */
+  // -----------------------------------------
+  // ONLY POST REQUESTS
+  // -----------------------------------------
   if (request.method !== "POST") {
     return jsonResponse(
       {
-        error: "Method not allowed",
+        error: "Something went wrong. Please try again.",
       },
       405,
     );
   }
 
-  /*
-   * Read and validate request body.
-   */
+  // -----------------------------------------
+  // READ EMAIL
+  // -----------------------------------------
   let email = "";
 
   try {
@@ -80,12 +81,15 @@ Deno.serve(async (request: Request) => {
   } catch {
     return jsonResponse(
       {
-        error: "Invalid request body",
+        error: "Please enter your email address and try again.",
       },
       400,
     );
   }
 
+  // -----------------------------------------
+  // VALIDATE EMAIL
+  // -----------------------------------------
   if (
     !email ||
     email.length > 320 ||
@@ -93,18 +97,15 @@ Deno.serve(async (request: Request) => {
   ) {
     return jsonResponse(
       {
-        error: "Enter a valid email address",
+        error: "Please enter a valid email address.",
       },
       400,
     );
   }
 
-  /*
-   * Supabase environment variables.
-   *
-   * These are available to the Edge Function.
-   * NEVER put SUPABASE_SERVICE_ROLE_KEY in the Expo app.
-   */
+  // -----------------------------------------
+  // SUPABASE ENVIRONMENT VARIABLES
+  // -----------------------------------------
   const supabaseUrl =
     Deno.env.get("SUPABASE_URL");
 
@@ -120,22 +121,21 @@ Deno.serve(async (request: Request) => {
     !serviceRoleKey
   ) {
     console.error(
-      "Password reset function is missing Supabase environment variables.",
+      "Password reset function is missing required environment variables.",
     );
 
     return jsonResponse(
       {
-        error: "Password reset is unavailable",
+        error:
+          "We’re having trouble processing your request right now. Please try again later.",
       },
       500,
     );
   }
 
-  /*
-   * Admin client.
-   *
-   * This client is ONLY inside the Edge Function.
-   */
+  // -----------------------------------------
+  // ADMIN CLIENT
+  // -----------------------------------------
   const adminClient = createClient(
     supabaseUrl,
     serviceRoleKey,
@@ -147,12 +147,9 @@ Deno.serve(async (request: Request) => {
     },
   );
 
-  /*
-   * Public Auth client.
-   *
-   * Used to request the normal Supabase password
-   * reset email.
-   */
+  // -----------------------------------------
+  // AUTH CLIENT
+  // -----------------------------------------
   const authClient = createClient(
     supabaseUrl,
     anonKey,
@@ -164,19 +161,10 @@ Deno.serve(async (request: Request) => {
     },
   );
 
-  /*
-   * --------------------------------------------------
-   * RATE LIMIT
-   * --------------------------------------------------
-   *
-   * 3 attempts per email every 15 minutes.
-   *
-   * Your existing database function expects:
-   *
-   * p_email_hash
-   * p_limit
-   * p_window_seconds
-   */
+  // -----------------------------------------
+  // RATE LIMIT
+  // 3 attempts per 15 minutes
+  // -----------------------------------------
   const emailHash = await sha256(
     `email:${email}`,
   );
@@ -195,13 +183,14 @@ Deno.serve(async (request: Request) => {
 
   if (rateLimitError) {
     console.error(
-      "Password reset rate-limit check failed:",
+      "Password reset rate-limit error:",
       rateLimitError.message,
     );
 
     return jsonResponse(
       {
-        error: "Password reset is unavailable",
+        error:
+          "We couldn’t process your request right now. Please try again later.",
       },
       500,
     );
@@ -212,43 +201,45 @@ Deno.serve(async (request: Request) => {
 
   if (!rateLimit) {
     console.error(
-      "Password reset rate-limit returned no data.",
+      "Password reset rate-limit returned no result.",
     );
 
     return jsonResponse(
       {
-        error: "Password reset is unavailable",
+        error:
+          "We couldn’t process your request right now. Please try again later.",
       },
       500,
     );
   }
 
+  // -----------------------------------------
+  // TOO MANY ATTEMPTS
+  // -----------------------------------------
   if (!rateLimit.allowed) {
+    const retryAfter =
+      rateLimit.retry_after_seconds || 900;
+
+    const minutes = Math.ceil(
+      retryAfter / 60,
+    );
+
     return jsonResponse(
       {
         status: "rate_limited",
-        retry_after_seconds:
-          rateLimit.retry_after_seconds ?? 900,
+        retry_after_seconds: retryAfter,
+        error:
+          minutes === 1
+            ? "Too many attempts. Please try again in about 1 minute."
+            : `Too many attempts. Please try again in about ${minutes} minutes.`,
       },
       429,
     );
   }
 
-  /*
-   * --------------------------------------------------
-   * CHECK WHETHER EMAIL EXISTS IN DOOVLY
-   * --------------------------------------------------
-   *
-   * Your public.profiles table already contains:
-   *
-   * id
-   * email
-   * full_name
-   * ...
-   *
-   * We use the service-role client here so the mobile
-   * application never gets direct access to this lookup.
-   */
+  // -----------------------------------------
+  // CHECK IF EMAIL IS REGISTERED
+  // -----------------------------------------
   const {
     data: profile,
     error: profileError,
@@ -260,67 +251,63 @@ Deno.serve(async (request: Request) => {
 
   if (profileError) {
     console.error(
-      "Password reset account lookup failed:",
+      "Password reset account lookup error:",
       profileError.message,
     );
 
     return jsonResponse(
       {
-        error: "Password reset is unavailable",
+        error:
+          "We couldn’t check this email right now. Please try again later.",
       },
       500,
     );
   }
 
-  /*
-   * Email is not registered in Doovly.
-   */
+  // -----------------------------------------
+  // EMAIL NOT REGISTERED
+  // -----------------------------------------
   if (!profile) {
     return jsonResponse({
       status: "not_registered",
+      error:
+        "This email address is not registered with Doovly.",
     });
   }
 
-  /*
-   * --------------------------------------------------
-   * SEND PASSWORD RESET EMAIL
-   * --------------------------------------------------
-   */
-  const redirectTo =
-    Deno.env.get(
-      "PASSWORD_RESET_REDIRECT_URL",
-    ) ??
-    "doovly://auth/reset-password";
-
+  // -----------------------------------------
+  // SEND PASSWORD RESET OTP
+  // -----------------------------------------
   const {
     error: resetError,
   } =
     await authClient.auth.resetPasswordForEmail(
       email,
-      {
-        redirectTo,
-      },
     );
 
   if (resetError) {
+    // Keep the technical error in server logs
+    // but NEVER send it to the user.
     console.error(
-      "Supabase password reset email failed:",
+      "Supabase password reset email error:",
       resetError.message,
     );
 
     return jsonResponse(
       {
-        error: "Could not send the reset email",
+        error:
+          "We couldn’t send your verification code. Please try again in a moment.",
       },
       500,
     );
   }
 
-  /*
-   * Everything succeeded.
-   */
+  // -----------------------------------------
+  // SUCCESS
+  // -----------------------------------------
   return jsonResponse({
     status: "sent",
+    message:
+      "A 6-digit verification code has been sent to your email address.",
   });
 });
-
