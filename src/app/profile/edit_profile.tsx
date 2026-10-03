@@ -26,7 +26,7 @@ import {
   updateProfile,
   updateAvatar,
   type ProfileEditData,
-} from "@/services/profile";
+} from "@/services/profile/profile";
 
 import {
   listCities,

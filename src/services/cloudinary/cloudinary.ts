@@ -16,8 +16,11 @@
  *   doovly/chat          – chat media
  */
 
-const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ?? "";
-const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? "";
+const CLOUD_NAME =
+  process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ?? "";
+
+const UPLOAD_PRESET =
+  process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? "";
 
 /** Allowed Cloudinary folder paths for this app */
 export type UploadFolder =
@@ -53,8 +56,9 @@ function assertConfig() {
 }
 
 /**
- * Upload a local image URI (from expo-image-picker) to Cloudinary.
- * Returns the secure CDN URL to store in your DB / mock data.
+ * Upload one local image URI to Cloudinary.
+ *
+ * Returns the secure Cloudinary URL.
  */
 export async function uploadImage(
   localUri: string,
@@ -65,7 +69,7 @@ export async function uploadImage(
 }
 
 /**
- * Same as uploadImage but returns full Cloudinary response metadata.
+ * Upload one image and return the complete Cloudinary response.
  */
 export async function uploadImageFull(
   localUri: string,
@@ -73,43 +77,61 @@ export async function uploadImageFull(
 ): Promise<CloudinaryUploadResult> {
   assertConfig();
 
-  const ext = localUri.split(".").pop()?.toLowerCase() || "jpg";
-  const mime =
-    ext === "png"
+  const extension =
+    localUri.split(".").pop()?.split("?")[0].toLowerCase() || "jpg";
+
+  const mimeType =
+    extension === "png"
       ? "image/png"
-      : ext === "webp"
+      : extension === "webp"
         ? "image/webp"
         : "image/jpeg";
 
-  const form = new FormData();
-  form.append("file", {
-    uri: localUri,
-    type: mime,
-    name: `upload.${ext === "png" || ext === "webp" ? ext : "jpg"}`,
-  } as unknown as Blob);
-  form.append("upload_preset", UPLOAD_PRESET);
-  form.append("folder", folder);
+  const fileExtension =
+    extension === "png" || extension === "webp"
+      ? extension
+      : "jpg";
 
-  const res = await fetch(
+  const formData = new FormData();
+
+  formData.append("file", {
+    uri: localUri,
+    type: mimeType,
+    name: `upload.${fileExtension}`,
+  } as unknown as Blob);
+
+  formData.append("upload_preset", UPLOAD_PRESET);
+  formData.append("folder", folder);
+
+  const response = await fetch(
     `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
     {
       method: "POST",
-      body: form,
+      body: formData,
     },
   );
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `Cloudinary upload failed (${res.status})`);
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+
+    throw new Error(
+      errorText || `Cloudinary upload failed (${response.status})`,
+    );
   }
 
-  const data = (await res.json()) as CloudinaryUploadResult;
+  const data = (await response.json()) as CloudinaryUploadResult;
+
+  if (!data.secure_url) {
+    throw new Error("Cloudinary did not return an image URL.");
+  }
+
   return data;
 }
 
 /**
- * Upload multiple local URIs. Continues on individual failures and returns
- * only successful URLs (order matches successful inputs).
+ * Upload multiple local images.
+ *
+ * Failed uploads are ignored and only successful URLs are returned.
  */
 export async function uploadImages(
   localUris: string[],
@@ -118,12 +140,19 @@ export async function uploadImages(
   const results = await Promise.allSettled(
     localUris.map((uri) => uploadImage(uri, folder)),
   );
+
   return results
-    .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
-    .map((r) => r.value);
+    .filter(
+      (result): result is PromiseFulfilledResult<string> =>
+        result.status === "fulfilled",
+    )
+    .map((result) => result.value);
 }
 
-/** Whether Cloudinary env vars are present (useful for UI hints). */
+/**
+ * Check whether Cloudinary is configured.
+ */
 export function isCloudinaryConfigured(): boolean {
   return Boolean(CLOUD_NAME && UPLOAD_PRESET);
 }
+
