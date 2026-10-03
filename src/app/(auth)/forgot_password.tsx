@@ -1,46 +1,138 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Alert,
   Image,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+
+import { supabase } from "@/lib/supabase";
 import { getErrorMessage } from "@/utils/error";
+
+type ResetResponse =
+  | {
+      status: "sent";
+    }
+  | {
+      status: "not_registered";
+    }
+  | {
+      status: "rate_limited";
+      retry_after_seconds?: number;
+    };
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleReset = async () => {
     const cleanEmail = email.trim().toLowerCase();
+
     if (!cleanEmail) {
-      Alert.alert("Missing Information", "Please enter your email address.");
+      Alert.alert(
+        "Missing Information",
+        "Please enter your email address.",
+      );
       return;
     }
 
     try {
       setLoading(true);
 
-      // TODO: Call your real Supabase / backend password-reset API here
-      // Example:
-      // const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
-      // if (error) throw error;
+      const { data, error } =
+        await supabase.functions.invoke<ResetResponse>(
+          "request-password-reset",
+          {
+            body: {
+              email: cleanEmail,
+            },
+          },
+        );
+
+      if (error) {
+        const status = (
+          error as {
+            context?: {
+              status?: number;
+            };
+          }
+        ).context?.status;
+
+        if (status === 429) {
+          Alert.alert(
+            "Too Many Attempts",
+            "You have reached the password reset limit. Please wait 15 minutes before trying again.",
+          );
+          return;
+        }
+
+        throw error;
+      }
+
+      if (data?.status === "not_registered") {
+        Alert.alert(
+          "Email Not Registered",
+          "This email is not registered in Doovly.",
+        );
+        return;
+      }
+
+      if (data?.status === "rate_limited") {
+        const retrySeconds =
+          data.retry_after_seconds ?? 900;
+
+        const retryMinutes = Math.ceil(
+          retrySeconds / 60,
+        );
+
+        Alert.alert(
+          "Too Many Attempts",
+          `You have reached the password reset limit. Please try again in about ${retryMinutes} minute${
+            retryMinutes === 1 ? "" : "s"
+          }.`,
+        );
+        return;
+      }
+
+      if (data?.status !== "sent") {
+        throw new Error(
+          "Unable to process the password reset request.",
+        );
+      }
 
       Alert.alert(
-        "Request Sent",
-        "We have sent a reset link to your email address.",
+        "Reset Link Sent",
+        "A password reset link has been sent to your email address. Please check your inbox and spam folder.",
+        [
+          {
+            text: "Back to Login",
+            onPress: () => {
+              router.replace("/(auth)/login");
+            },
+          },
+        ],
       );
     } catch (error) {
-      Alert.alert("Reset Failed", getErrorMessage(error));
+      console.error(
+        "Password reset error:",
+        error,
+      );
+
+      Alert.alert(
+        "Reset Failed",
+        getErrorMessage(error),
+      );
     } finally {
       setLoading(false);
     }
@@ -49,70 +141,109 @@ export default function ForgotPasswordScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboard}
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : "height"
+        }
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           {/* Back Button */}
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
+            activeOpacity={0.7}
+            disabled={loading}
           >
             <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
 
-          <Text style={styles.title}>Forgot Password?</Text>
+          {/* Title */}
+          <Text style={styles.title}>
+            Forgot Password?
+          </Text>
 
           {/* Logo */}
-          <Text style={styles.logo}>Doovly</Text>
+          <Text style={styles.logo}>
+            Doovly
+          </Text>
 
-          {/* Padlock Illustration */}
+          {/* Padlock */}
           <Image
-            source={require("@/assets/images/padlock.jpg")} // make sure this path is correct
+            source={require("@/assets/images/padlock.jpg")}
             style={styles.padlockImage}
             resizeMode="contain"
           />
 
-          <Text style={styles.heading}>Reset your password</Text>
-
-          <Text style={styles.description}>
-            Enter your email address and we'll send you a link to reset your
-            password.
+          {/* Heading */}
+          <Text style={styles.heading}>
+            Reset your password
           </Text>
 
-          {/* Input */}
-          <TextInput
-            style={styles.input}
-            placeholder="Email Address"
-            placeholderTextColor="#9CA3AF"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={email}
-            onChangeText={setEmail}
-          />
+          <Text style={styles.description}>
+            Enter the email address connected to
+            your Doovly account and we'll send you
+            a secure link to reset your password.
+          </Text>
 
-          {/* Send Reset Link */}
+          {/* Email */}
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              placeholder="Email Address"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+              value={email}
+              onChangeText={setEmail}
+              editable={!loading}
+              returnKeyType="done"
+              onSubmitEditing={handleReset}
+            />
+          </View>
+
+          {/* Reset Button */}
           <TouchableOpacity
-            style={styles.primaryButton}
+            style={[
+              styles.primaryButton,
+              loading &&
+                styles.primaryButtonDisabled,
+            ]}
             onPress={handleReset}
             activeOpacity={0.85}
             disabled={loading}
           >
-            <Text style={styles.primaryButtonText}>
-              {loading ? "Sending..." : "Send Reset Link"}
-            </Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text
+                style={styles.primaryButtonText}
+              >
+                Send Reset Link
+              </Text>
+            )}
           </TouchableOpacity>
 
-          {/* Back to Login */}
+          {/* Login */}
           <TouchableOpacity
             style={styles.loginButton}
-            onPress={() => router.replace("/(auth)/login")}
+            onPress={() =>
+              router.replace("/(auth)/login")
+            }
+            disabled={loading}
+            activeOpacity={0.7}
           >
-            <Text style={styles.loginText}>← Back to Login</Text>
+            <Text style={styles.loginText}>
+              ← Back to Login
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -125,11 +256,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
+
+  keyboard: {
+    flex: 1,
+  },
+
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
     paddingBottom: 40,
     alignItems: "center",
   },
+
   backButton: {
     alignSelf: "flex-start",
     width: 44,
@@ -137,37 +275,44 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 8,
   },
+
   backText: {
     fontSize: 36,
     color: "#16A34A",
     fontWeight: "300",
     marginTop: -4,
   },
+
   title: {
     fontSize: 24,
     fontWeight: "700",
     color: "#111827",
-    marginBottom: 12,
+    marginBottom: 8,
   },
+
   logo: {
     fontSize: 28,
     fontWeight: "800",
     color: "#16A34A",
     marginTop: 8,
   },
+
   padlockImage: {
     width: 220,
     height: 220,
     marginTop: 20,
     marginBottom: 8,
   },
+
   heading: {
     fontSize: 22,
     fontWeight: "700",
     color: "#111827",
     textAlign: "center",
   },
+
   description: {
+    width: "100%",
     fontSize: 15,
     color: "#6B7280",
     textAlign: "center",
@@ -175,6 +320,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 8,
   },
+
+  inputWrapper: {
+    width: "100%",
+    marginTop: 18,
+  },
+
   input: {
     width: "100%",
     height: 54,
@@ -184,8 +335,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     color: "#111827",
-    marginTop: 18,
+    backgroundColor: "#FFFFFF",
   },
+
   primaryButton: {
     width: "100%",
     height: 54,
@@ -195,18 +347,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 24,
   },
+
+  primaryButtonDisabled: {
+    opacity: 0.7,
+  },
+
   primaryButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
   },
+
   loginButton: {
     marginTop: 28,
     padding: 10,
   },
+
   loginText: {
     color: "#16A34A",
     fontSize: 15,
     fontWeight: "600",
   },
 });
+

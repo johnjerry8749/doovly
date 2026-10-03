@@ -778,3 +778,78 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated, service_role;
+
+CREATE TABLE public.password_reset_rate_limits (
+  key_hash         TEXT PRIMARY KEY CHECK (key_hash ~ '^[0-9a-f]{64}$'),
+  window_started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  request_count    INTEGER NOT NULL DEFAULT 0 CHECK (request_count >= 0)
+);
+
+ALTER TABLE public.password_reset_rate_limits ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.password_reset_rate_limits FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.password_reset_rate_limits TO service_role;
+
+CREATE OR REPLACE FUNCTION public.auth_email_exists(p_email TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM auth.users
+    WHERE lower(email) = lower(p_email)
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.auth_email_exists(TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.auth_email_exists(TEXT) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.consume_password_reset_rate_limit(
+  p_key_hash TEXT,
+  p_max_attempts INTEGER DEFAULT 3,
+  p_window_seconds INTEGER DEFAULT 3600
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  current_attempts INTEGER;
+BEGIN
+  IF p_key_hash !~ '^[0-9a-f]{64}$' OR p_max_attempts < 1 OR p_window_seconds < 1 THEN
+    RETURN FALSE;
+  END IF;
+
+  DELETE FROM public.password_reset_rate_limits
+  WHERE window_started_at < now() - INTERVAL '1 day';
+
+  INSERT INTO public.password_reset_rate_limits AS limits (
+    key_hash,
+    window_started_at,
+    request_count
+  )
+  VALUES (p_key_hash, now(), 1)
+  ON CONFLICT (key_hash) DO UPDATE SET
+    window_started_at = CASE
+      WHEN limits.window_started_at + p_window_seconds * INTERVAL '1 second' <= now()
+        THEN now()
+      ELSE limits.window_started_at
+    END,
+    request_count = CASE
+      WHEN limits.window_started_at + p_window_seconds * INTERVAL '1 second' <= now()
+        THEN 1
+      ELSE limits.request_count + 1
+    END
+  RETURNING request_count INTO current_attempts;
+
+  RETURN current_attempts <= p_max_attempts;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.consume_password_reset_rate_limit(TEXT, INTEGER, INTEGER)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.consume_password_reset_rate_limit(TEXT, INTEGER, INTEGER)
+  TO service_role;
