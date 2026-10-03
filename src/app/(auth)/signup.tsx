@@ -16,6 +16,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getErrorMessage } from "@/utils/error";
 import { supabase } from "@/lib/supabase";
+import { signInWithGoogle } from "@/services/auth/googleAuth";
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState("");
@@ -176,10 +177,23 @@ async function handleCreateAccount() {
 }
 
 
+// ========== GOOGLE SIGNUP ==========
+  const handleGoogleSignup = async () => {
+  try {
+    setLoading(true);
 
-  function handleGoogleSignup() {
-    Alert.alert("Google signup", "Connect Google authentication here.");
+    await signInWithGoogle();
+
+    router.replace("/(tab)/home");
+  } catch (error) {
+    Alert.alert(
+      "Google Sign-Up",
+      getErrorMessage(error),
+    );
+  } finally {
+    setLoading(false);
   }
+};
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -394,7 +408,7 @@ async function handleCreateAccount() {
           </Pressable>
 
           {/* Divider */}
-          {/* 
+          
           <View style={styles.dividerRow}>
             <View style={styles.divider} />
             <Text style={styles.orText}>
@@ -402,10 +416,9 @@ async function handleCreateAccount() {
             </Text>
             <View style={styles.divider} />
           </View>
-          */}
+         
 
           {/* Google Button */}
-          {/*
           <Pressable
             style={styles.googleButton}
             onPress={handleGoogleSignup}
@@ -415,7 +428,7 @@ async function handleCreateAccount() {
               Continue with Google
             </Text>
           </Pressable>
-          */}
+          {/* 
 
           {/* Login Link */}
           <View style={styles.loginRow}>

@@ -17,6 +17,7 @@ import { useState } from "react";
 import * as WebBrowser from "expo-web-browser";
 import { getErrorMessage } from "@/utils/error";
 import { supabase } from "@/lib/supabase";
+import { signInWithGoogle } from "@/services/auth/googleAuth";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -67,6 +68,24 @@ export default function Login() {
       setLoading(false);
     }
   }
+  
+    // ========== GOOGLE LOGIN ==========
+  const handleGoogleLogin = async () => {
+  try {
+    setLoading(true);
+
+    await signInWithGoogle();
+
+    router.replace("/(tab)/home");
+  } catch (error) {
+    Alert.alert(
+      "Google Sign-In",
+      getErrorMessage(error),
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -151,11 +170,11 @@ export default function Login() {
 
           {/* Google Button */}
           <TouchableOpacity
-            style={styles.socialButton}
-            onPress={handleGoogleLogin}
-            activeOpacity={0.8}
-            disabled={loading}
-          >
+              style={styles.socialButton}
+              onPress={handleGoogleLogin}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
             <Image
               source={{
                 uri: "https://developers.google.com/identity/images/g-logo.png",
@@ -168,11 +187,12 @@ export default function Login() {
           {/* Apple Button (only shows on iOS) */}
           {Platform.OS === "ios" && (
             <TouchableOpacity
-              style={[styles.socialButton, styles.appleButton]}
-              onPress={handleAppleLogin}
-              activeOpacity={0.8}
+              style={styles.socialButton}
+              onPress={handleGoogleLogin}
               disabled={loading}
+              activeOpacity={0.8}
             >
+            
               <Text style={styles.appleIcon}></Text>
               <Text style={[styles.socialButtonText, { color: "#fff" }]}>
                 Continue with Apple
