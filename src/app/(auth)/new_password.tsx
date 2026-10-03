@@ -40,7 +40,7 @@ export default function NewPasswordScreen() {
     if (next.length < 5) {
       Alert.alert(
         "Weak Password",
-        "Password must be at least 8 characters.",
+        "Password must be at least 5 characters.",
       );
       return;
     }
