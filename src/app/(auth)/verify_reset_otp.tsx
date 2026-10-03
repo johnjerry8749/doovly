@@ -241,10 +241,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   otpInput: {
-    letterSpacing: 8,
     textAlign: "center",
-    fontSize: 22,
-    fontWeight: "700",
+    letterSpacing: 2,
   },
   primaryButton: {
     width: "100%",
