@@ -17,18 +17,13 @@ import { getErrorMessage } from "@/utils/error";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const [method, setMethod] = useState<"phone" | "email">("phone");
-  const [contact, setContact] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleReset = async () => {
-    if (!contact.trim()) {
-      Alert.alert(
-        "Missing Information",
-        method === "phone"
-          ? "Please enter your phone number."
-          : "Please enter your email address.",
-      );
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      Alert.alert("Missing Information", "Please enter your email address.");
       return;
     }
 
@@ -37,14 +32,12 @@ export default function ForgotPasswordScreen() {
 
       // TODO: Call your real Supabase / backend password-reset API here
       // Example:
-      // const { error } = await supabase.auth.resetPasswordForEmail(contact);
+      // const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
       // if (error) throw error;
 
       Alert.alert(
         "Request Sent",
-        method === "phone"
-          ? "We have sent a reset link to your phone number."
-          : "We have sent a reset link to your email address.",
+        "We have sent a reset link to your email address.",
       );
     } catch (error) {
       Alert.alert("Reset Failed", getErrorMessage(error));
@@ -86,76 +79,21 @@ export default function ForgotPasswordScreen() {
           <Text style={styles.heading}>Reset your password</Text>
 
           <Text style={styles.description}>
-            Enter your phone number or email address and we'll send you a link
-            to reset your password.
+            Enter your email address and we'll send you a link to reset your
+            password.
           </Text>
 
-          {/* Method Selector */}
-          <View style={styles.methodContainer}>
-            <TouchableOpacity
-              style={[
-                styles.methodButton,
-                method === "phone" && styles.activeMethod,
-              ]}
-              onPress={() => {
-                setMethod("phone");
-                setContact("");
-              }}
-            >
-              <Text
-                style={[
-                  styles.methodText,
-                  method === "phone" && styles.activeMethodText,
-                ]}
-              >
-                Phone Number
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.methodButton,
-                method === "email" && styles.activeMethod,
-              ]}
-              onPress={() => {
-                setMethod("email");
-                setContact("");
-              }}
-            >
-              <Text
-                style={[
-                  styles.methodText,
-                  method === "email" && styles.activeMethodText,
-                ]}
-              >
-                Email Address
-              </Text>
-            </TouchableOpacity>
-          </View>
           {/* Input */}
-          {method === "phone" ? (
-            <View style={styles.phoneInput}>
-              <Text style={styles.countryCode}>+234</Text>
-              <TextInput
-                style={styles.phoneTextInput}
-                placeholder="801 234 5678"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="phone-pad"
-                value={contact}
-                onChangeText={setContact}
-              />
-            </View>
-          ) : (
-            <TextInput
-              style={styles.input}
-              placeholder="Email Address"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={contact}
-              onChangeText={setContact}
-            />
-          )}
+          <TextInput
+            style={styles.input}
+            placeholder="Email Address"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={email}
+            onChangeText={setEmail}
+          />
 
           {/* Send Reset Link */}
           <TouchableOpacity
@@ -237,34 +175,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 8,
   },
-  methodContainer: {
-    width: "100%",
-    height: 52,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
-    flexDirection: "row",
-    padding: 4,
-    marginTop: 28,
-  },
-  methodButton: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 10,
-  },
-  activeMethod: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#16A34A",
-  },
-  methodText: {
-    fontSize: 14,
-    color: "#6B7280",
-    fontWeight: "600",
-  },
-  activeMethodText: {
-    color: "#16A34A",
-  },
   input: {
     width: "100%",
     height: 54,
@@ -298,28 +208,5 @@ const styles = StyleSheet.create({
     color: "#16A34A",
     fontSize: 15,
     fontWeight: "600",
-  },
-  phoneInput: {
-    width: "100%",
-    height: 54,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    marginTop: 18,
-  },
-  countryCode: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#111827",
-    marginRight: 10,
-  },
-  phoneTextInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#111827",
-    height: "100%",
   },
 });
