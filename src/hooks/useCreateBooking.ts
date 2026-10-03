@@ -36,6 +36,7 @@ export function useCreateBooking() {
           customer_id: user.id,
           professional_id: input.professionalId,
           service_name: input.serviceName,
+          title: input.serviceName,
           scheduled_at: input.scheduledAt,
           amount: input.price,
           address: input.address,
