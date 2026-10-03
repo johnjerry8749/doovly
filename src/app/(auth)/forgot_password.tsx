@@ -79,7 +79,7 @@ export default function ForgotPasswordScreen() {
     if (!isValidEmail(cleanEmail)) {
       Alert.alert(
         "Invalid Email",
-        "Please enter a valid email address (e.g. you@example.com).",
+        "Please enter a valid email address.",
       );
       return;
     }
