@@ -114,7 +114,6 @@ export default function ForgotPasswordScreen() {
           return;
         }
 
-        // Prefer the friendly message returned by the Edge Function (e.g. 400 invalid email)
         const functionMessage = await getFunctionsErrorMessage(error);
         if (functionMessage) {
           Alert.alert("Reset Failed", functionMessage);
@@ -150,7 +149,6 @@ export default function ForgotPasswordScreen() {
       }
 
       if (data?.status !== "sent") {
-        // Edge function may return { error: "..." } with 200 in some edge cases
         const maybeError =
           data && typeof (data as { error?: string }).error === "string"
             ? (data as { error: string }).error
@@ -162,18 +160,10 @@ export default function ForgotPasswordScreen() {
         );
       }
 
-      Alert.alert(
-        "Reset Link Sent",
-        "A password reset link has been sent to your email address. Please check your inbox and spam folder.",
-        [
-          {
-            text: "Back to Login",
-            onPress: () => {
-              router.replace("/(auth)/login");
-            },
-          },
-        ],
-      );
+      router.push({
+        pathname: "/(auth)/verify_reset_otp",
+        params: { email: cleanEmail },
+      });
     } catch (error) {
       console.error(
         "Password reset error:",
@@ -204,7 +194,6 @@ export default function ForgotPasswordScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Back Button */}
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
@@ -214,24 +203,20 @@ export default function ForgotPasswordScreen() {
             <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
 
-          {/* Title */}
           <Text style={styles.title}>
             Forgot Password?
           </Text>
 
-          {/* Logo */}
           <Text style={styles.logo}>
             Doovly
           </Text>
 
-          {/* Padlock */}
           <Image
             source={require("@/assets/images/padlock.jpg")}
             style={styles.padlockImage}
             resizeMode="contain"
           />
 
-          {/* Heading */}
           <Text style={styles.heading}>
             Reset your password
           </Text>
@@ -239,10 +224,9 @@ export default function ForgotPasswordScreen() {
           <Text style={styles.description}>
             Enter the email address connected to
             your Doovly account and we'll send you
-            a secure link to reset your password.
+            a 6-digit code to reset your password.
           </Text>
 
-          {/* Email */}
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.input}
@@ -261,7 +245,6 @@ export default function ForgotPasswordScreen() {
             />
           </View>
 
-          {/* Reset Button */}
           <TouchableOpacity
             style={[
               styles.primaryButton,
@@ -278,12 +261,11 @@ export default function ForgotPasswordScreen() {
               <Text
                 style={styles.primaryButtonText}
               >
-                Send Reset Link
+                Send Reset Code
               </Text>
             )}
           </TouchableOpacity>
 
-          {/* Login */}
           <TouchableOpacity
             style={styles.loginButton}
             onPress={() =>
