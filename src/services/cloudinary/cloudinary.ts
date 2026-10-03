@@ -1,7 +1,7 @@
 /**
  * Cloudinary image upload service
  * ------------------------------
- * Screens / other services import from @/services/cloudinary
+ * Screens / other services import from @/services/cloudinary/cloudinary
  *
  * Setup:
  * 1. Create a Cloudinary account → Dashboard → copy Cloud Name
@@ -15,6 +15,8 @@
  *   doovly/requests      – service request attachments
  *   doovly/chat          – chat media
  */
+
+import { Platform } from "react-native";
 
 const CLOUD_NAME =
   process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME ?? "";
@@ -55,6 +57,78 @@ function assertConfig() {
   }
 }
 
+function getMimeAndName(localUri: string): {
+  mimeType: string;
+  fileName: string;
+} {
+  const clean = localUri.split("?")[0] ?? localUri;
+  const extension =
+    clean.split(".").pop()?.toLowerCase() || "jpg";
+
+  const mimeType =
+    extension === "png"
+      ? "image/png"
+      : extension === "webp"
+        ? "image/webp"
+        : extension === "heic" || extension === "heif"
+          ? "image/heic"
+          : "image/jpeg";
+
+  const fileExtension =
+    extension === "png" || extension === "webp"
+      ? extension
+      : "jpg";
+
+  return {
+    mimeType,
+    fileName: `upload.${fileExtension}`,
+  };
+}
+
+/**
+ * Build a FormData part that works on React Native / Expo.
+ *
+ * Avoids "unsupported FormData part" by preferring a real Blob
+ * (via fetch on the local file URI). Falls back to the classic
+ * RN { uri, type, name } object when needed.
+ */
+async function appendImageFile(
+  formData: FormData,
+  localUri: string,
+): Promise<void> {
+  const { mimeType, fileName } = getMimeAndName(localUri);
+
+  // Prefer real Blob — works with RN's FormData on modern Expo
+  try {
+    const fileRes = await fetch(localUri);
+    const blob = await fileRes.blob();
+
+    // Some RN versions need type forced on the blob
+    const typedBlob =
+      blob.type && blob.type !== "application/octet-stream"
+        ? blob
+        : blob.slice(0, blob.size, mimeType);
+
+    formData.append("file", typedBlob, fileName);
+    return;
+  } catch {
+    // Fall through to RN file descriptor
+  }
+
+  // Classic React Native FormData file descriptor
+  // (required on some Android content:// URIs)
+  const uri =
+    Platform.OS === "ios" && localUri.startsWith("file://")
+      ? localUri
+      : localUri;
+
+  formData.append("file", {
+    uri,
+    type: mimeType,
+    name: fileName,
+  } as any);
+}
+
 /**
  * Upload one local image URI to Cloudinary.
  *
@@ -77,32 +151,18 @@ export async function uploadImageFull(
 ): Promise<CloudinaryUploadResult> {
   assertConfig();
 
-  const extension =
-    localUri.split(".").pop()?.split("?")[0].toLowerCase() || "jpg";
-
-  const mimeType =
-    extension === "png"
-      ? "image/png"
-      : extension === "webp"
-        ? "image/webp"
-        : "image/jpeg";
-
-  const fileExtension =
-    extension === "png" || extension === "webp"
-      ? extension
-      : "jpg";
+  if (!localUri?.trim()) {
+    throw new Error("No image URI provided.");
+  }
 
   const formData = new FormData();
 
-  formData.append("file", {
-    uri: localUri,
-    type: mimeType,
-    name: `upload.${fileExtension}`,
-  } as unknown as Blob);
+  await appendImageFile(formData, localUri);
 
   formData.append("upload_preset", UPLOAD_PRESET);
   formData.append("folder", folder);
 
+  // Do NOT set Content-Type — fetch must add the multipart boundary
   const response = await fetch(
     `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
     {
@@ -155,4 +215,3 @@ export async function uploadImages(
 export function isCloudinaryConfigured(): boolean {
   return Boolean(CLOUD_NAME && UPLOAD_PRESET);
 }
-
