@@ -168,7 +168,7 @@ export default function CreateJobModal({
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSave || saving) return;
 
     setSaving(true);
@@ -187,7 +187,7 @@ export default function CreateJobModal({
       };
 
       if (isEditing && request) {
-        const updated = updateServiceRequest(request.id, payload);
+        const updated = await updateServiceRequest(request.id, payload);
 
         if (!updated) {
           Alert.alert(
@@ -202,7 +202,7 @@ export default function CreateJobModal({
         return;
       }
 
-      const created = createServiceRequest(payload);
+      const created = await createServiceRequest(payload);
       onSaved?.(created);
       onClose();
     } catch (error) {
@@ -545,12 +545,9 @@ export default function CreateJobModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
+  overlay: { flex: 1, justifyContent: "flex-end" },
   backdrop: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
   modal: {
@@ -569,19 +566,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  headerTextWrap: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: TEXT,
-  },
-  subtitle: {
-    marginTop: 3,
-    fontSize: 13,
-    color: MUTED,
-  },
+  headerTextWrap: { flex: 1 },
+  title: { fontSize: 20, fontWeight: "800", color: TEXT },
+  subtitle: { marginTop: 3, fontSize: 13, color: MUTED },
   closeButton: {
     width: 38,
     height: 38,
@@ -590,24 +577,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  content: {
-    padding: 20,
-    paddingBottom: 35,
-  },
-  field: {
-    marginBottom: 17,
-  },
+  content: { padding: 20, paddingBottom: 35 },
+  field: { marginBottom: 17 },
   hintText: {
     fontSize: 12,
     color: "#6B7280",
     marginBottom: 8,
     marginTop: -4,
   },
-  offerCountRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 16,
-  },
+  offerCountRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
   offerCountChip: {
     minWidth: 48,
     height: 40,
@@ -623,14 +601,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#ECFDF5",
     borderColor: "#16A34A",
   },
-  offerCountChipText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#374151",
-  },
-  offerCountChipTextSelected: {
-    color: "#16A34A",
-  },
+  offerCountChipText: { fontSize: 15, fontWeight: "700", color: "#374151" },
+  offerCountChipTextSelected: { color: "#16A34A" },
   label: {
     fontSize: 13,
     fontWeight: "700",
@@ -647,11 +619,7 @@ const styles = StyleSheet.create({
     color: TEXT,
     backgroundColor: "#FFFFFF",
   },
-  textArea: {
-    minHeight: 115,
-    paddingTop: 13,
-    paddingBottom: 13,
-  },
+  textArea: { minHeight: 115, paddingTop: 13, paddingBottom: 13 },
   counter: {
     textAlign: "right",
     marginTop: 4,
@@ -669,118 +637,63 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "#FFFFFF",
   },
-  pickerText: {
-    flex: 1,
-    fontSize: 14,
-    color: TEXT,
-  },
-  placeholderText: {
-    color: "#9CA3AF",
-  },
+  pickerText: { flex: 1, fontSize: 14, color: TEXT, marginRight: 8 },
+  placeholderText: { color: "#9CA3AF" },
   dropdown: {
-    marginTop: -9,
-    marginBottom: 17,
+    marginTop: -10,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    maxHeight: 180,
     overflow: "hidden",
   },
-  dropdownScroll: {
-    maxHeight: 230,
-  },
+  dropdownScroll: { maxHeight: 180 },
   dropdownItem: {
-    minHeight: 45,
-    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  dropdownText: {
-    fontSize: 14,
-    color: TEXT,
-  },
-  dropdownTextActive: {
-    color: GREEN,
-    fontWeight: "700",
-  },
-  imagesRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 4,
-  },
-  thumbWrap: {
-    width: 88,
-    height: 88,
-    borderRadius: 12,
-    overflow: "hidden",
-    backgroundColor: "#E5E7EB",
-    position: "relative",
-  },
-  thumb: {
-    width: "100%",
-    height: "100%",
-  },
+  dropdownText: { fontSize: 14, color: TEXT },
+  dropdownTextActive: { color: GREEN, fontWeight: "700" },
+  imagesRow: { gap: 10, paddingVertical: 4 },
+  thumbWrap: { position: "relative" },
+  thumb: { width: 72, height: 72, borderRadius: 10, backgroundColor: "#E5E7EB" },
   thumbRemove: {
     position: "absolute",
-    top: 6,
-    right: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.65)",
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#EF4444",
     alignItems: "center",
     justifyContent: "center",
-  },
-  addThumb: {
-    width: 88,
-    height: 88,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-    borderStyle: "dashed",
-    backgroundColor: "#F0FDF4",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 2,
-  },
-  addThumbText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: GREEN,
   },
   uploadBox: {
-    marginTop: 10,
     borderWidth: 1,
-    borderColor: "#BBF7D0",
+    borderColor: "#E5E7EB",
     borderStyle: "dashed",
     borderRadius: 14,
-    backgroundColor: "#F0FDF4",
     paddingVertical: 22,
     alignItems: "center",
+    backgroundColor: "#F9FAFB",
   },
   uploadIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "#ECFDF5",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
   },
-  uploadTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: TEXT,
-  },
-  uploadSub: {
-    marginTop: 2,
-    fontSize: 12,
-    color: MUTED,
-  },
+  uploadTitle: { fontSize: 14, fontWeight: "700", color: TEXT },
+  uploadSub: { fontSize: 12, color: MUTED, marginTop: 2 },
   saveButton: {
     marginTop: 8,
     height: 52,
@@ -791,25 +704,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
+  saveButtonDisabled: { opacity: 0.55 },
+  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   cancelButton: {
-    marginTop: 10,
+    marginTop: 12,
     height: 48,
     borderRadius: 14,
-    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
   },
-  cancelButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#374151",
-  },
+  cancelButtonText: { fontSize: 15, fontWeight: "600", color: MUTED },
 });

@@ -19,11 +19,6 @@ import { supabase } from "@/lib/supabase";
 import { isUuid, tryToUuid } from "@/lib/ids";
 import { resolveImageSource } from "@/lib/mappers";
 
-
-/* =========================================================
-   TYPES
-   ========================================================= */
-
 export type ProService = {
   id: string;
   name: string;
@@ -51,30 +46,22 @@ export type CompletedProject = {
 export type Professional = {
   id: string;
   userId?: string;
-
   name: string;
   profession: string;
   bio: string;
   city: string;
-
   priceFrom: string;
   priceFromValue: number;
-
   image: ImageSourcePropType | string;
-
   verified: boolean;
   isAvailable: boolean;
   subscribed: boolean;
-
   latitude?: number;
   longitude?: number;
-
   rating: number;
   reviewCount: number;
-
   email?: string;
   phone?: string;
-
   services: ProService[];
   portfolio: CompletedProject[];
   reviews: ProReview[];
@@ -99,66 +86,19 @@ export type ServiceInput = {
   icon?: string;
 };
 
-/* =========================================================
-   DEFAULTS / SELECTS
-   ========================================================= */
-
 const DEFAULT_AVATAR = require("@/assets/images/icon.png");
 
 const PROFESSIONAL_SELECT = `
-  id,
-  user_id,
-  profession,
-  bio,
-  city,
-  price_from,
-  price_from_value,
-  is_verified,
-  is_available,
-  subscribed,
-  latitude,
-  longitude,
-  rating,
-  review_count,
-  avatar_url,
-  email,
-  phone,
-  created_at
+  id, user_id, profession, bio, city, price_from, price_from_value,
+  is_verified, is_available, subscribed, latitude, longitude,
+  rating, review_count, avatar_url, email, phone, created_at
 `;
 
-const PROFILE_SELECT = `
-  id,
-  full_name,
-  phone,
-  email,
-  avatar_url,
-  city
-`;
+const PROFILE_SELECT = `id, full_name, phone, email, avatar_url, city`;
 
-const SERVICE_SELECT = `
-  id,
-  professional_id,
-  name,
-  description,
-  price,
-  price_value,
-  icon,
-  created_at
-`;
+const SERVICE_SELECT = `id, professional_id, name, description, price, price_value, icon, created_at`;
 
-const REVIEW_SELECT = `
-  id,
-  professional_id,
-  user_id,
-  user_name,
-  comment,
-  display_date,
-  created_at
-`;
-
-/* =========================================================
-   DATABASE ROW TYPES
-   ========================================================= */
+const REVIEW_SELECT = `id, professional_id, user_id, user_name, comment, display_date, created_at`;
 
 type ProfessionalRow = {
   id: string;
@@ -223,13 +163,6 @@ type CityRow = {
   sort_order: number | null;
 };
 
-/* =========================================================
-   HELPERS
-   ========================================================= */
-
-/**
- * Calculate distance between two coordinates in kilometres.
- */
 export function getDistanceKm(
   lat1: number,
   lon1: number,
@@ -237,35 +170,25 @@ export function getDistanceKm(
   lon2: number,
 ): number {
   const earthRadiusKm = 6371;
-
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
-
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) *
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLon / 2) ** 2;
-
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
   return earthRadiusKm * c;
 }
 
-/**
- * Existing Doovly star rule:
- * every 10 reviews = 1 star, maximum 5 stars.
- */
 export function starsFromReviewCount(reviewCount: number): number {
   return Math.min(5, Math.floor(Math.max(0, reviewCount) / 10));
 }
 
-/**
- * Format Nigerian currency.
- */
 function formatNaira(value: number): string {
   return `₦${Number(value || 0).toLocaleString("en-NG")}`;
 }
+
 
 /**
  * Get avatar (https URL, mock:// seed key, or default asset).
@@ -275,14 +198,14 @@ function getAvatar(
 ): ImageSourcePropType | string {
   const resolved = resolveImageSource(avatarUrl?.trim() || null);
   return resolved ?? DEFAULT_AVATAR;
+
+function getAvatar(avatarUrl?: string | null): ImageSourcePropType | string {
+  return avatarUrl?.trim() ? avatarUrl : DEFAULT_AVATAR;
+
 }
 
-/**
- * Map Supabase service row to app service.
- */
 function mapService(row: ServiceRow): ProService {
   const priceValue = Number(row.price_value ?? 0);
-
   return {
     id: row.id,
     name: row.name ?? "",
@@ -293,9 +216,6 @@ function mapService(row: ServiceRow): ProService {
   };
 }
 
-/**
- * Map Supabase review row to app review.
- */
 function mapReview(row: ReviewRow): ProReview {
   const displayDate =
     row.display_date?.trim() ||
@@ -306,7 +226,6 @@ function mapReview(row: ReviewRow): ProReview {
           year: "numeric",
         })
       : undefined);
-
   return {
     id: row.id,
     userId: row.user_id ?? undefined,
@@ -316,10 +235,6 @@ function mapReview(row: ReviewRow): ProReview {
   };
 }
 
-/**
- * Map Supabase professional + profile data
- * to the existing app Professional shape.
- */
 function mapProfessional(
   row: ProfessionalRow,
   profile: ProfileRow | undefined,
@@ -327,102 +242,39 @@ function mapProfessional(
   reviews: ProReview[],
 ): Professional {
   const priceFromValue = Number(row.price_from_value ?? 0);
-
-  const reviewCount = Number(
-    row.review_count ?? reviews.length,
-  );
-
-  const profileName =
-    profile?.full_name?.trim() ||
-    "Professional";
-
+  const reviewCount = Number(row.review_count ?? reviews.length);
+  const profileName = profile?.full_name?.trim() || "Professional";
   const avatarUrl =
-    row.avatar_url?.trim() ||
-    profile?.avatar_url?.trim() ||
-    null;
-
-  const email =
-    row.email?.trim() ||
-    profile?.email?.trim() ||
-    undefined;
-
-  const phone =
-    row.phone?.trim() ||
-    profile?.phone?.trim() ||
-    undefined;
-
-  const city =
-    row.city?.trim() ||
-    profile?.city?.trim() ||
-    "";
+    row.avatar_url?.trim() || profile?.avatar_url?.trim() || null;
+  const email = row.email?.trim() || profile?.email?.trim() || undefined;
+  const phone = row.phone?.trim() || profile?.phone?.trim() || undefined;
+  const city = row.city?.trim() || profile?.city?.trim() || "";
 
   return {
     id: row.id,
-
     userId: row.user_id,
-
     name: profileName,
-
     profession: row.profession?.trim() || "",
-
     bio: row.bio?.trim() || "",
-
     city,
-
-    priceFrom:
-      row.price_from?.trim() ||
-      formatNaira(priceFromValue),
-
+    priceFrom: row.price_from?.trim() || formatNaira(priceFromValue),
     priceFromValue,
-
     image: getAvatar(avatarUrl),
-
     verified: Boolean(row.is_verified),
-
     isAvailable: Boolean(row.is_available),
-
     subscribed: Boolean(row.subscribed),
-
-    latitude:
-      row.latitude !== null
-        ? Number(row.latitude)
-        : undefined,
-
-    longitude:
-      row.longitude !== null
-        ? Number(row.longitude)
-        : undefined,
-
+    latitude: row.latitude !== null ? Number(row.latitude) : undefined,
+    longitude: row.longitude !== null ? Number(row.longitude) : undefined,
     rating: Number(row.rating ?? 0),
-
     reviewCount,
-
     email,
-
     phone,
-
     services,
-
-    /*
-     * Portfolio will be connected when the real
-     * professional portfolio table is created.
-     */
     portfolio: [],
-
     reviews,
   };
 }
 
-/* =========================================================
-   LOAD ALL PROFESSIONAL DATA
-   ========================================================= */
-
-/**
- * Loads professionals, profiles, services and reviews.
- *
- * This avoids making one Supabase request for every
- * professional relation.
- */
 async function loadProfessionalData(): Promise<Professional[]> {
   const [
     professionalsResult,
@@ -434,113 +286,54 @@ async function loadProfessionalData(): Promise<Professional[]> {
       .from("professionals")
       .select(PROFESSIONAL_SELECT)
       .order("created_at", { ascending: false }),
-
-    supabase
-      .from("profiles")
-      .select(PROFILE_SELECT),
-
+    supabase.from("profiles").select(PROFILE_SELECT),
     supabase
       .from("services")
       .select(SERVICE_SELECT)
       .order("created_at", { ascending: true }),
-
     supabase
       .from("reviews")
       .select(REVIEW_SELECT)
       .order("created_at", { ascending: false }),
   ]);
 
-  if (professionalsResult.error) {
-    throw professionalsResult.error;
-  }
+  if (professionalsResult.error) throw professionalsResult.error;
+  if (profilesResult.error) throw profilesResult.error;
+  if (servicesResult.error) throw servicesResult.error;
+  if (reviewsResult.error) throw reviewsResult.error;
 
-  if (profilesResult.error) {
-    throw profilesResult.error;
-  }
-
-  if (servicesResult.error) {
-    throw servicesResult.error;
-  }
-
-  if (reviewsResult.error) {
-    throw reviewsResult.error;
-  }
-
-  const professionalRows =
-    (professionalsResult.data ?? []) as ProfessionalRow[];
-
-  const profileRows =
-    (profilesResult.data ?? []) as ProfileRow[];
-
-  const serviceRows =
-    (servicesResult.data ?? []) as ServiceRow[];
-
-  const reviewRows =
-    (reviewsResult.data ?? []) as ReviewRow[];
+  const professionalRows = (professionalsResult.data ?? []) as ProfessionalRow[];
+  const profileRows = (profilesResult.data ?? []) as ProfileRow[];
+  const serviceRows = (servicesResult.data ?? []) as ServiceRow[];
+  const reviewRows = (reviewsResult.data ?? []) as ReviewRow[];
 
   const profilesById = new Map<string, ProfileRow>();
-
   for (const profile of profileRows) {
     profilesById.set(profile.id, profile);
   }
 
-  const servicesByProfessionalId =
-    new Map<string, ProService[]>();
-
+  const servicesByProfessionalId = new Map<string, ProService[]>();
   for (const service of serviceRows) {
-    const existing =
-      servicesByProfessionalId.get(service.professional_id) ?? [];
-
+    const existing = servicesByProfessionalId.get(service.professional_id) ?? [];
     existing.push(mapService(service));
-
-    servicesByProfessionalId.set(
-      service.professional_id,
-      existing,
-    );
+    servicesByProfessionalId.set(service.professional_id, existing);
   }
 
-  const reviewsByProfessionalId =
-    new Map<string, ProReview[]>();
-
+  const reviewsByProfessionalId = new Map<string, ProReview[]>();
   for (const review of reviewRows) {
-    const existing =
-      reviewsByProfessionalId.get(review.professional_id) ?? [];
-
+    const existing = reviewsByProfessionalId.get(review.professional_id) ?? [];
     existing.push(mapReview(review));
-
-    reviewsByProfessionalId.set(
-      review.professional_id,
-      existing,
-    );
+    reviewsByProfessionalId.set(review.professional_id, existing);
   }
 
   return professionalRows.map((professional) => {
     const profile = profilesById.get(professional.user_id);
-
-    const services =
-      servicesByProfessionalId.get(professional.id) ?? [];
-
-    const reviews =
-      reviewsByProfessionalId.get(professional.id) ?? [];
-
-    return mapProfessional(
-      professional,
-      profile,
-      services,
-      reviews,
-    );
+    const services = servicesByProfessionalId.get(professional.id) ?? [];
+    const reviews = reviewsByProfessionalId.get(professional.id) ?? [];
+    return mapProfessional(professional, profile, services, reviews);
   });
 }
 
-/* =========================================================
-   PROFESSIONALS
-   ========================================================= */
-
-/**
- * List all professionals.
- *
- * Home / Search.
- */
 export async function listProfessionals(): Promise<Professional[]> {
   try {
     return await loadProfessionalData();
@@ -550,32 +343,16 @@ export async function listProfessionals(): Promise<Professional[]> {
   }
 }
 
-/**
- * Filter professionals by city.
- *
- * "All Nigeria" and "Nigeria" return all professionals.
- *
- * Cities themselves come from the Supabase cities table.
- */
 export async function listProfessionalsByCity(
   city: string,
 ): Promise<Professional[]> {
   const professionals = await listProfessionals();
-
   const key = city.trim().toLowerCase();
-
-  if (
-    !key ||
-    key === "all nigeria" ||
-    key === "nigeria"
-  ) {
+  if (!key || key === "all nigeria" || key === "nigeria") {
     return professionals;
   }
-
   return professionals.filter((professional) => {
-    const professionalCity =
-      professional.city.trim().toLowerCase();
-
+    const professionalCity = professional.city.trim().toLowerCase();
     return professionalCity === key;
   });
 }
@@ -662,6 +439,13 @@ export async function getProfessionalById(
   if (!professionalId) {
     return undefined;
   }
+=======
+export async function getProfessionalById(
+  id: string,
+): Promise<Professional | undefined> {
+  const professionalId = id.trim();
+  if (!professionalId) return undefined;
+>>>>>>> eb79e4e2e9be81ad08c0745039d29d24433849e2
 
   try {
     const { data, error } = await supabase
@@ -674,18 +458,52 @@ export async function getProfessionalById(
       console.error("getProfessionalById error:", error);
       throw error;
     }
+    if (!data) return undefined;
 
-    if (!data) {
-      return undefined;
-    }
+    const professional = data as ProfessionalRow;
 
     return hydrateProfessional(data as ProfessionalRow);
+    const [profileResult, servicesResult, reviewsResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select(PROFILE_SELECT)
+        .eq("id", professional.user_id)
+        .maybeSingle(),
+      supabase
+        .from("services")
+        .select(SERVICE_SELECT)
+        .eq("professional_id", professional.id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("reviews")
+        .select(REVIEW_SELECT)
+        .eq("professional_id", professional.id)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    if (profileResult.error) throw profileResult.error;
+    if (servicesResult.error) throw servicesResult.error;
+    if (reviewsResult.error) throw reviewsResult.error;
+
+    const profile = profileResult.data as ProfileRow | null;
+    const services = (servicesResult.data ?? []).map((row) =>
+      mapService(row as ServiceRow),
+    );
+    const reviews = (reviewsResult.data ?? []).map((row) =>
+      mapReview(row as ReviewRow),
+    );
+
+    return mapProfessional(
+      professional,
+      profile ?? undefined,
+      services,
+      reviews,
+    );
   } catch (error) {
     console.error("getProfessionalById error:", error);
     throw error;
   }
 }
-
 /**
  * Professional profile for the currently authenticated Supabase user.
  * Prefer this on the Profile tab over hard-coded mock professional ids.
@@ -740,29 +558,22 @@ export async function getMyProfessional(): Promise<Professional | undefined> {
 export async function listServiceCategories(): Promise<
   ServiceCategory[]
 > {
+}
+
+export async function listServiceCategories(): Promise<ServiceCategory[]> {
   const { data, error } = await supabase
     .from("service_categories")
     .select("id, name, icon, sort_order")
     .order("sort_order", { ascending: true });
 
   if (error) {
-    console.error(
-      "listServiceCategories error:",
-      error,
-    );
-
+    console.error("listServiceCategories error:", error);
     throw error;
   }
 
-  const rows =
-    (data ?? []) as ServiceCategoryRow[];
-
+  const rows = (data ?? []) as ServiceCategoryRow[];
   return [
-    {
-      name: "All",
-      icon: "apps",
-    },
-
+    { name: "All", icon: "apps" },
     ...rows.map((row) => ({
       id: row.id,
       name: row.name,
@@ -772,16 +583,6 @@ export async function listServiceCategories(): Promise<
   ];
 }
 
-/* =========================================================
-   CITIES
-   ========================================================= */
-
-/**
- * Get all cities directly from Supabase.
- *
- * No NIGERIA_CITIES constant.
- * No local city fallback.
- */
 export async function listCities(): Promise<CityOption[]> {
   const { data, error } = await supabase
     .from("cities")
@@ -794,64 +595,30 @@ export async function listCities(): Promise<CityOption[]> {
   }
 
   const rows = (data ?? []) as CityRow[];
-
   return rows.map((row) => ({
     name: row.name,
     sort_order: Number(row.sort_order ?? 0),
   }));
 }
 
-/* =========================================================
-   REVIEWS
-   ========================================================= */
-
-/**
- * Add a review for a professional.
- *
- * professionalId MUST be the real professionals.id UUID.
- */
 export async function addReview(
   professionalId: string,
-  payload: {
-    userName: string;
-    comment: string;
-    userId?: string;
-  },
+  payload: { userName: string; comment: string; userId?: string },
 ): Promise<ProReview> {
-  const cleanProfessionalId =
-    professionalId.trim();
+  const cleanProfessionalId = professionalId.trim();
+  if (!cleanProfessionalId) throw new Error("Professional ID is required.");
 
-  if (!cleanProfessionalId) {
-    throw new Error("Professional ID is required.");
-  }
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
 
-  const { data: authData, error: authError } =
-    await supabase.auth.getUser();
-
-  if (authError) {
-    throw authError;
-  }
-
-  const authenticatedUserId =
-    authData.user?.id;
-
+  const authenticatedUserId = authData.user?.id;
   if (!authenticatedUserId) {
-    throw new Error(
-      "You must be signed in to add a review.",
-    );
+    throw new Error("You must be signed in to add a review.");
   }
 
-  const userName =
-    payload.userName.trim() || "Anonymous";
-
-  const comment =
-    payload.comment.trim();
-
-  if (!comment) {
-    throw new Error(
-      "Review comment cannot be empty.",
-    );
-  }
+  const userName = payload.userName.trim() || "Anonymous";
+  const comment = payload.comment.trim();
+  if (!comment) throw new Error("Review comment cannot be empty.");
 
   const { data, error } = await supabase
     .from("reviews")
@@ -860,14 +627,11 @@ export async function addReview(
       user_id: authenticatedUserId,
       user_name: userName,
       comment,
-      display_date: new Date().toLocaleDateString(
-        "en-US",
-        {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        },
-      ),
+      display_date: new Date().toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
     })
     .select(REVIEW_SELECT)
     .single();
@@ -880,24 +644,49 @@ export async function addReview(
   return mapReview(data as ReviewRow);
 }
 
-/* =========================================================
-   MY SERVICES
-   ========================================================= */
+/** Resolve auth user's professionals.id UUID (or keep given UUID). */
+async function resolveProfessionalId(
+  professionalId?: string | null,
+): Promise<string | null> {
+  const given = String(professionalId ?? "").trim();
+  const looksLikeUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      given,
+    );
 
-/**
- * List services belonging to a professional.
- *
- * professionalId MUST be the real professionals.id UUID.
- */
+  if (looksLikeUuid) return given;
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) return null;
+
+  const { data, error } = await supabase
+    .from("professionals")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("resolveProfessionalId error:", error.message);
+    return null;
+  }
+
+  return data?.id ? String(data.id) : null;
+}
+
+export async function getMyProfessionalId(): Promise<string | null> {
+  return resolveProfessionalId(null);
+}
+
 export async function listMyServices(
-  professionalId: string,
+  professionalId?: string,
 ): Promise<ProService[]> {
   const cleanProfessionalId =
-    professionalId.trim();
-
-  if (!cleanProfessionalId) {
-    return [];
-  }
+    (await resolveProfessionalId(professionalId)) ?? "";
+  if (!cleanProfessionalId) return [];
 
   const { data, error } = await supabase
     .from("services")
@@ -910,62 +699,34 @@ export async function listMyServices(
     throw error;
   }
 
-  return (data ?? []).map((row) =>
-    mapService(row as ServiceRow),
-  );
+  return (data ?? []).map((row) => mapService(row as ServiceRow));
 }
 
-/**
- * Create a service.
- *
- * professionalId MUST be the real professionals.id UUID.
- */
 export async function createMyService(
-  professionalId: string,
+  professionalId: string | undefined,
   input: ServiceInput,
 ): Promise<ProService> {
   const cleanProfessionalId =
-    professionalId.trim();
+    (await resolveProfessionalId(professionalId)) ?? "";
 
   if (!cleanProfessionalId) {
     throw new Error(
-      "Professional ID is required.",
+      "Professional profile not found. Complete your profile first.",
     );
   }
 
   const name = input.name.trim();
+  const description = input.description.trim();
+  const rawPrice = input.price.trim();
+  const icon = input.icon?.trim() || "briefcase-outline";
 
-  const description =
-    input.description.trim();
+  if (!name) throw new Error("Service name is required.");
+  if (!rawPrice) throw new Error("Service price is required.");
 
-  const rawPrice =
-    input.price.trim();
-
-  const icon =
-    input.icon?.trim() ||
-    "briefcase-outline";
-
-  if (!name) {
-    throw new Error(
-      "Service name is required.",
-    );
-  }
-
-  if (!rawPrice) {
-    throw new Error(
-      "Service price is required.",
-    );
-  }
-
-  const priceValue =
-    Number(
-      rawPrice.replace(/[^0-9.]/g, ""),
-    ) || 0;
-
-  const formattedPrice =
-    rawPrice.startsWith("₦")
-      ? rawPrice
-      : formatNaira(priceValue);
+  const priceValue = Number(rawPrice.replace(/[^0-9.]/g, "")) || 0;
+  const formattedPrice = rawPrice.startsWith("₦")
+    ? rawPrice
+    : formatNaira(priceValue);
 
   const { data, error } = await supabase
     .from("services")
@@ -981,74 +742,38 @@ export async function createMyService(
     .single();
 
   if (error) {
-    console.error(
-      "createMyService error:",
-      error,
-    );
-
+    console.error("createMyService error:", error);
     throw error;
   }
 
   return mapService(data as ServiceRow);
 }
 
-/**
- * Update a service.
- *
- * professionalId MUST be the real professionals.id UUID.
- */
 export async function updateMyService(
-  professionalId: string,
+  professionalId: string | undefined,
   serviceId: string,
   input: ServiceInput,
 ): Promise<ProService | null> {
   const cleanProfessionalId =
-    professionalId.trim();
-
-  const cleanServiceId =
-    serviceId.trim();
+    (await resolveProfessionalId(professionalId)) ?? "";
+  const cleanServiceId = serviceId.trim();
 
   if (!cleanProfessionalId) {
-    throw new Error(
-      "Professional ID is required.",
-    );
+    throw new Error("Professional profile not found.");
   }
-
-  if (!cleanServiceId) {
-    throw new Error(
-      "Service ID is required.",
-    );
-  }
+  if (!cleanServiceId) throw new Error("Service ID is required.");
 
   const name = input.name.trim();
+  const description = input.description.trim();
+  const rawPrice = input.price.trim();
 
-  const description =
-    input.description.trim();
+  if (!name) throw new Error("Service name is required.");
+  if (!rawPrice) throw new Error("Service price is required.");
 
-  const rawPrice =
-    input.price.trim();
-
-  if (!name) {
-    throw new Error(
-      "Service name is required.",
-    );
-  }
-
-  if (!rawPrice) {
-    throw new Error(
-      "Service price is required.",
-    );
-  }
-
-  const priceValue =
-    Number(
-      rawPrice.replace(/[^0-9.]/g, ""),
-    ) || 0;
-
-  const formattedPrice =
-    rawPrice.startsWith("₦")
-      ? rawPrice
-      : formatNaira(priceValue);
+  const priceValue = Number(rawPrice.replace(/[^0-9.]/g, "")) || 0;
+  const formattedPrice = rawPrice.startsWith("₦")
+    ? rawPrice
+    : formatNaira(priceValue);
 
   const updatePayload: {
     name: string;
@@ -1064,78 +789,47 @@ export async function updateMyService(
   };
 
   if (input.icon?.trim()) {
-    updatePayload.icon =
-      input.icon.trim();
+    updatePayload.icon = input.icon.trim();
   }
 
   const { data, error } = await supabase
     .from("services")
     .update(updatePayload)
     .eq("id", cleanServiceId)
-    .eq(
-      "professional_id",
-      cleanProfessionalId,
-    )
+    .eq("professional_id", cleanProfessionalId)
     .select(SERVICE_SELECT)
     .maybeSingle();
 
   if (error) {
-    console.error(
-      "updateMyService error:",
-      error,
-    );
-
+    console.error("updateMyService error:", error);
     throw error;
   }
 
-  if (!data) {
-    return null;
-  }
-
+  if (!data) return null;
   return mapService(data as ServiceRow);
 }
 
-/**
- * Delete a service.
- *
- * professionalId MUST be the real professionals.id UUID.
- */
 export async function deleteMyService(
-  professionalId: string,
+  professionalId: string | undefined,
   serviceId: string,
 ): Promise<boolean> {
   const cleanProfessionalId =
-    professionalId.trim();
+    (await resolveProfessionalId(professionalId)) ?? "";
+  const cleanServiceId = serviceId.trim();
 
-  const cleanServiceId =
-    serviceId.trim();
-
-  if (
-    !cleanProfessionalId ||
-    !cleanServiceId
-  ) {
-    return false;
-  }
+  if (!cleanProfessionalId || !cleanServiceId) return false;
 
   const { data, error } = await supabase
     .from("services")
     .delete()
     .eq("id", cleanServiceId)
-    .eq(
-      "professional_id",
-      cleanProfessionalId,
-    )
+    .eq("professional_id", cleanProfessionalId)
     .select("id");
 
   if (error) {
-    console.error(
-      "deleteMyService error:",
-      error,
-    );
-
+    console.error("deleteMyService error:", error);
     throw error;
   }
 
   return Boolean(data?.length);
 }
-
