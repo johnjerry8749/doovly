@@ -439,13 +439,11 @@ export async function getProfessionalById(
   if (!professionalId) {
     return undefined;
   }
-=======
-export async function getProfessionalById(
-  id: string,
-): Promise<Professional | undefined> {
-  const professionalId = id.trim();
-  if (!professionalId) return undefined;
->>>>>>> eb79e4e2e9be81ad08c0745039d29d24433849e2
+
+  }
+  
+  return undefined;
+}
 
   try {
     const { data, error } = await supabase
