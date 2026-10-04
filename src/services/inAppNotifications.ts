@@ -2,10 +2,9 @@
  * In-App Notifications service
  * ----------------------------
  * Screens import ONLY from here for the notification list inside the app.
- * NOW  → mock from src/data/notifications.ts filtered by userId
- * LATER → apiRequest(`/notifications?userId=...`)
  *
- * NOTE: Push notifications (device alerts) live in src/services/notifications/
+ * Notifications list still uses local mock data until notifications table swap.
+ * getCurrentUserId prefers real Supabase auth session (cached).
  */
 
 import {
@@ -18,21 +17,53 @@ import {
   MOCK_USER,
 } from "@/services/savedProviders";
 import { listProfessionals } from "@/services/professionals";
+import { supabase } from "@/lib/supabase";
+import { MOCK_SESSION } from "@/lib/ids";
 
 export type { Notification, NotifType };
 
-/** Current logged-in user id (mock). Later: from auth context. */
-export function getCurrentUserId(): string {
-  return MOCK_USER.id;
+/** Cached auth user id so sync callers keep working. */
+let cachedUserId: string = MOCK_SESSION.userUuid || MOCK_USER.id;
+
+/** Bootstrap from current session (call once at app start if needed). */
+export async function hydrateCurrentUserId(): Promise<string> {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      cachedUserId = session.user.id;
+      return cachedUserId;
+    }
+  } catch (e) {
+    console.warn("hydrateCurrentUserId:", e);
+  }
+  return cachedUserId;
 }
 
-/** All notifications for one user (newest first as stored). */
+// Keep cache fresh when auth changes
+try {
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (session?.user?.id) {
+      cachedUserId = session.user.id;
+    } else {
+      cachedUserId = MOCK_SESSION.userUuid || MOCK_USER.id;
+    }
+  });
+  void hydrateCurrentUserId();
+} catch {
+  /* supabase may throw if env missing in some test contexts */
+}
+
+/** Current logged-in user id (real auth UUID when signed in). */
+export function getCurrentUserId(): string {
+  return cachedUserId;
+}
+
 export function getNotificationsByUserId(userId: string): Notification[] {
-  // TODO backend: return apiRequest(`/notifications?userId=${userId}`)
   return NOTIFICATIONS.filter((n) => n.userId === String(userId));
 }
 
-/** Convenience: notifications for the mock logged-in user. */
 export function getMyNotifications(): Notification[] {
   return getNotificationsByUserId(getCurrentUserId());
 }
@@ -42,10 +73,6 @@ export function getUnreadCount(userId?: string): number {
   return getNotificationsByUserId(uid).filter((n) => n.unread).length;
 }
 
-/**
- * Mark one notification read (mock: mutates in-memory row).
- * Later: PATCH /notifications/:id
- */
 export function markNotificationRead(notificationId: string): void {
   const row = NOTIFICATIONS.find((n) => n.id === notificationId);
   if (row) row.unread = false;
@@ -58,7 +85,6 @@ export type InAppNotificationInput = {
   body: string;
 };
 
-/** Store one in-app notification. Later: POST /notifications. */
 export function addInAppNotification(
   input: InAppNotificationInput,
 ): Notification {
@@ -72,57 +98,78 @@ export function addInAppNotification(
     unread: true,
   };
 
-  // TODO backend: return apiRequest("/notifications", { method: "POST", body })
   NOTIFICATIONS.unshift(notification);
+
+  // Best-effort persist to Supabase when online
+  void supabase
+    .from("notifications")
+    .insert({
+      user_id: input.userId,
+      type: input.type,
+      title: input.title,
+      body: input.body,
+      unread: true,
+      time_label: "Just now",
+    })
+    .then(({ error }) => {
+      if (error) console.warn("addInAppNotification persist:", error.message);
+    });
+
   return notification;
 }
 
-/**
- * In-app alerts for subscribed pros in the request city.
- * Later: the API fans these out; the bell still reads getNotificationsByUserId.
- * The logged-in pro is included only when they are subscribed and in that city,
- * so the top bell can show the alert without changing the notification screen.
- */
 export function notifySubscribedProsInArea(input: {
   city: string;
   title: string;
   body: string;
 }): number {
   const city = input.city.trim().toLowerCase();
-  const pros = listProfessionals().filter((pro) => {
-    if (!pro.subscribed) return false;
-    const proCity = pro.city.trim().toLowerCase();
-    return proCity.includes(city) || city.includes(proCity);
-  });
+  // listProfessionals is async — fire-and-forget fan-out
+  void (async () => {
+    try {
+      const pros = await listProfessionals();
+      const filtered = pros.filter((pro) => {
+        if (!pro.subscribed) return false;
+        const proCity = pro.city.trim().toLowerCase();
+        return proCity.includes(city) || city.includes(proCity);
+      });
+      const currentUserId = getCurrentUserId();
+      const currentProId = getLoggedInProfessionalId();
+      const recipientIds = new Set<string>();
 
-  const currentUserId = getCurrentUserId();
-  const currentProId = getLoggedInProfessionalId();
-  const recipientIds = new Set<string>();
+      for (const pro of filtered) {
+        if (currentProId && String(pro.id) === String(currentProId)) {
+          recipientIds.add(currentUserId);
+          continue;
+        }
+        if (pro.userId) recipientIds.add(String(pro.userId));
+        else recipientIds.add(`pro-${pro.id}`);
+      }
 
-  pros.forEach((pro) => {
-    if (currentProId && String(pro.id) === String(currentProId)) {
-      recipientIds.add(currentUserId);
-      return;
+      recipientIds.forEach((userId) => {
+        addInAppNotification({
+          userId,
+          type: "general",
+          title: input.title,
+          body: input.body,
+        });
+      });
+    } catch (e) {
+      console.warn("notifySubscribedProsInArea:", e);
     }
-    recipientIds.add(`pro-${pro.id}`);
-  });
+  })();
 
-  recipientIds.forEach((userId) => {
-    addInAppNotification({
-      userId,
-      type: "general",
-      title: input.title,
-      body: input.body,
-    });
-  });
-
-  return recipientIds.size;
+  return 0;
 }
 
-/** Mark all of a user's notifications read. */
 export function markAllNotificationsRead(userId?: string): void {
   const uid = userId ?? getCurrentUserId();
   NOTIFICATIONS.forEach((n) => {
     if (n.userId === String(uid)) n.unread = false;
   });
+  void supabase
+    .from("notifications")
+    .update({ unread: false })
+    .eq("user_id", uid)
+    .eq("unread", true);
 }

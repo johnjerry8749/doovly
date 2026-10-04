@@ -3,18 +3,16 @@
  * ----------------------
  * Screens import ONLY from here.
  *
- * NOW  → mock in-memory conversations
- * LATER → apiRequest + realtime (Supabase channels / websockets)
+ * DATA SOURCE: Supabase
+ *   conversations, messages, conversation_reads
  *
- * Booking / Offer messaging lock:
- *   Pending  → locked (waiting for acceptor)
- *   Accepted → unlocked
- *   Declined → locked
- * Accept / Decline UI:
- *   Booking → professional (Received side)
- *   Offer   → request owner (provider who posted the job)
+ * Booking / Offer messaging lock still tracked in-memory + card JSONB.
+ * Pending → locked | Accepted → unlocked | Declined → locked
  */
 
+import type { ImageSourcePropType } from "react-native";
+import { supabase } from "@/lib/supabase";
+import { resolveImageSource } from "@/lib/mappers";
 import { getProfessionalById } from "@/services/professionals";
 import type { Booking } from "@/services/bookings";
 import { recordAcceptedOfferBooking } from "@/services/bookings";
@@ -24,12 +22,11 @@ import { getLoggedInProfessionalId } from "@/services/savedProviders";
 export type ChatParticipant = {
   id: string;
   name: string;
-  image: number;
+  image: ImageSourcePropType;
   verified?: boolean;
   online?: boolean;
 };
 
-/** Rich card shown in chat for booking or offer requests */
 export type RequestCardData = {
   kind: "booking" | "offer";
   title: string;
@@ -65,149 +62,48 @@ export type Conversation = {
   unreadCount: number;
 };
 
-const CURRENT_USER_ID = "u1";
-
-const pro2 = getProfessionalById("2");
-const pro3 = getProfessionalById("3");
-const pro4 = getProfessionalById("4");
-const pro5 = getProfessionalById("5");
-
-let conversations: Conversation[] = [
-  {
-    id: "c1",
-    participant: {
-      id: "2",
-      name: pro2?.name ?? "Chioma Eze",
-      image: pro2?.image ?? 0,
-      verified: pro2?.verified,
-      online: true,
-    },
-    lastMessage: "Hi! Is the dresser still available?",
-    lastMessageAt: "9:30 AM",
-    unreadCount: 2,
-  },
-  {
-    id: "c2",
-    participant: {
-      id: "3",
-      name: pro3?.name ?? "Ikechukwu Obi",
-      image: pro3?.image ?? 0,
-      verified: pro3?.verified,
-      online: false,
-    },
-    lastMessage: "Thanks! Can we meet this weekend?",
-    lastMessageAt: "9:12 AM",
-    unreadCount: 1,
-  },
-  {
-    id: "c3",
-    participant: {
-      id: "4",
-      name: pro4?.name ?? "Blessing Joy",
-      image: pro4?.image ?? 0,
-      verified: pro4?.verified,
-      online: true,
-    },
-    lastMessage: "The plant pots are ready for pickup 😊",
-    lastMessageAt: "Yesterday",
-    unreadCount: 3,
-  },
-  {
-    id: "c4",
-    participant: {
-      id: "5",
-      name: pro5?.name ?? "Emeka Okoro",
-      image: pro5?.image ?? 0,
-      verified: pro5?.verified,
-      online: false,
-    },
-    lastMessage: "Sounds good! See you then.",
-    lastMessageAt: "Yesterday",
-    unreadCount: 0,
-  },
-];
+const DEFAULT_AVATAR = require("@/assets/profile_1.jpg");
 
 type UnreadCountListener = (count: number) => void;
-
 const unreadCountListeners = new Set<UnreadCountListener>();
+let lastKnownTotalUnread = 0;
 
-export function getTotalUnreadCount(): number {
-  return conversations.reduce(
-    (total, conversation) => total + conversation.unreadCount,
-    0,
-  );
+function notifyUnreadCountListeners(count?: number) {
+  const c = count ?? lastKnownTotalUnread;
+  lastKnownTotalUnread = c;
+  unreadCountListeners.forEach((listener) => listener(c));
 }
 
-function notifyUnreadCountListeners() {
-  const count = getTotalUnreadCount();
-  unreadCountListeners.forEach((listener) => listener(count));
+export function getTotalUnreadCount(): number {
+  return lastKnownTotalUnread;
 }
 
 export function subscribeToUnreadCount(
   listener: UnreadCountListener,
 ): () => void {
   unreadCountListeners.add(listener);
-  listener(getTotalUnreadCount());
-
+  listener(lastKnownTotalUnread);
+  void refreshUnreadTotal();
   return () => unreadCountListeners.delete(listener);
 }
 
-const messagesByConv: Record<string, ChatMessage[]> = {
-  c1: [
-    {
-      id: "m1",
-      conversationId: "c1",
-      senderId: CURRENT_USER_ID,
-      text: "Hi Chioma, thank you for connecting.",
-      createdAt: "9:30 AM",
-      isMine: true,
-    },
-    {
-      id: "m2",
-      conversationId: "c1",
-      senderId: "2",
-      text: "Hi! Thanks for reaching out.",
-      createdAt: "9:32 AM",
-      isMine: false,
-    },
-  ],
-  c2: [
-    {
-      id: "m1",
-      conversationId: "c2",
-      senderId: "3",
-      text: "Thanks! Can we meet this weekend?",
-      createdAt: "9:12 AM",
-      isMine: false,
-    },
-  ],
-  c3: [
-    {
-      id: "m1",
-      conversationId: "c3",
-      senderId: "4",
-      text: "The plant pots are ready for pickup 😊",
-      createdAt: "Yesterday",
-      isMine: false,
-    },
-  ],
-  c4: [
-    {
-      id: "m1",
-      conversationId: "c4",
-      senderId: CURRENT_USER_ID,
-      text: "Sounds good! See you then.",
-      createdAt: "Yesterday",
-      isMine: true,
-    },
-  ],
-};
-
-const locationSharingByConv: Record<string, boolean> = {};
-const lastSharedLocationByConv: Record<
-  string,
-  { label: string; latitude?: number; longitude?: number }
-> = {};
+async function refreshUnreadTotal() {
+  const uid = getCurrentUserId();
+  if (!uid) return;
+  const { data, error } = await supabase
+    .from("conversation_reads")
+    .select("unread_count")
+    .eq("user_id", uid);
+  if (error) {
+    console.warn("refreshUnreadTotal:", error.message);
+    return;
+  }
+  const total = (data ?? []).reduce(
+    (sum, row) => sum + Number(row.unread_count ?? 0),
+    0,
+  );
+  notifyUnreadCountListeners(total);
+}
 
 function nowLabel() {
   return new Date().toLocaleTimeString("en-US", {
@@ -216,34 +112,196 @@ function nowLabel() {
   });
 }
 
-function pushMessage(conversationId: string, msg: ChatMessage) {
-  if (!messagesByConv[conversationId]) {
-    messagesByConv[conversationId] = [];
+function formatMessageTime(iso: string | null | undefined): string {
+  if (!iso) return nowLabel();
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return nowLabel();
+  const today = new Date();
+  const sameDay =
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate();
+  if (sameDay) {
+    return d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
   }
-  messagesByConv[conversationId].push(msg);
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (
+    d.getFullYear() === yesterday.getFullYear() &&
+    d.getMonth() === yesterday.getMonth() &&
+    d.getDate() === yesterday.getDate()
+  ) {
+    return "Yesterday";
+  }
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
-  const conv = conversations.find((c) => c.id === conversationId);
-  if (conv) {
-    conv.lastMessage = msg.text;
-    conv.lastMessageAt = msg.createdAt;
-    conv.unreadCount = 0;
+async function loadProfile(userId: string): Promise<{
+  id: string;
+  name: string;
+  image: ImageSourcePropType;
+  online?: boolean;
+}> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, is_online")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return {
+    id: userId,
+    name: data?.full_name?.trim() || "User",
+    image:
+      (resolveImageSource(data?.avatar_url) as ImageSourcePropType) ||
+      DEFAULT_AVATAR,
+    online: Boolean(data?.is_online),
+  };
+}
+
+async function otherParticipantId(
+  row: { participant_a: string; participant_b: string },
+  me: string,
+): Promise<string> {
+  return row.participant_a === me ? row.participant_b : row.participant_a;
+}
+
+/** In-memory lock state keyed by conversation id */
+export type BookingChatStatus = "Pending" | "Accepted" | "Declined";
+const bookingStatusByConv: Record<string, BookingChatStatus> = {};
+const acceptorIdByConv: Record<string, string> = {};
+const conversationKindByConv: Record<string, "booking" | "offer"> = {};
+const conversationIdByBookingId: Record<string, string> = {};
+const offerMetaByConv: Record<
+  string,
+  {
+    requestId: string;
+    title: string;
+    category?: string;
+    location?: string;
+    amount: number;
+    offererProfessionalId: string;
+    offererName: string;
+    offererImage: ImageSourcePropType;
+    requestOwnerId: string;
+    requestOwnerName: string;
+    requestOwnerImage: ImageSourcePropType;
+  }
+> = {};
+const locationSharingByConv: Record<string, boolean> = {};
+const lastSharedLocationByConv: Record<
+  string,
+  { label: string; latitude?: number; longitude?: number }
+> = {};
+
+function mapMessage(
+  row: {
+    id: string;
+    conversation_id: string;
+    sender_id: string;
+    text: string;
+    kind: string;
+    location_label: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    card: RequestCardData | null;
+    created_at: string;
+  },
+  me: string,
+): ChatMessage {
+  return {
+    id: row.id,
+    conversationId: row.conversation_id,
+    senderId: row.sender_id,
+    text: row.text ?? "",
+    createdAt: formatMessageTime(row.created_at),
+    isMine: row.sender_id === me,
+    kind: (row.kind as ChatMessage["kind"]) || "text",
+    location: row.location_label
+      ? {
+          label: row.location_label,
+          latitude: row.latitude ?? undefined,
+          longitude: row.longitude ?? undefined,
+        }
+      : undefined,
+    card: row.card ?? undefined,
+  };
+}
+
+export async function listConversations(): Promise<Conversation[]> {
+  const me = getCurrentUserId();
+  if (!me) return [];
+
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("*")
+    .or(`participant_a.eq.${me},participant_b.eq.${me}`)
+    .order("last_message_at", { ascending: false });
+
+  if (error) {
+    console.error("listConversations error:", error.message);
+    throw error;
   }
 
-  notifyUnreadCountListeners();
+  const rows = data ?? [];
+  const { data: reads } = await supabase
+    .from("conversation_reads")
+    .select("conversation_id, unread_count")
+    .eq("user_id", me);
+
+  const unreadMap = new Map<
+    string,
+    number
+  >((reads ?? []).map((r) => [r.conversation_id, Number(r.unread_count ?? 0)]));
+
+  const result: Conversation[] = [];
+  for (const row of rows) {
+    const otherId = await otherParticipantId(row, me);
+    const profile = await loadProfile(otherId);
+    result.push({
+      id: row.id,
+      participant: {
+        id: profile.id,
+        name: profile.name,
+        image: profile.image,
+        online: profile.online,
+      },
+      lastMessage: row.last_message ?? "",
+      lastMessageAt: formatMessageTime(row.last_message_at),
+      unreadCount: unreadMap.get(row.id) ?? 0,
+    });
+  }
+
+  const total = result.reduce((s, c) => s + c.unreadCount, 0);
+  notifyUnreadCountListeners(total);
+  return result;
 }
 
-export function listConversations(): Conversation[] {
-  return [...conversations];
-}
-
-export function getMessages(conversationId: string): ChatMessage[] {
-  return [...(messagesByConv[conversationId] ?? [])];
-}
-
-export function getConversation(
+export async function getMessages(
   conversationId: string,
-): Conversation | undefined {
-  return conversations.find((c) => c.id === conversationId);
+): Promise<ChatMessage[]> {
+  const me = getCurrentUserId();
+  const { data, error } = await supabase
+    .from("messages")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("getMessages error:", error.message);
+    throw error;
+  }
+
+  return (data ?? []).map((row) => mapMessage(row as Parameters<typeof mapMessage>[0], me));
+}
+
+export async function getConversation(
+  conversationId: string,
+): Promise<Conversation | undefined> {
+  const list = await listConversations();
+  return list.find((c) => c.id === conversationId);
 }
 
 export async function sendMessage(
@@ -253,28 +311,79 @@ export async function sendMessage(
   if (!canSendMessage(conversationId)) {
     throw new Error("Messaging is locked until the request is accepted");
   }
-  await new Promise((r) => setTimeout(r, 200));
 
-  const msg: ChatMessage = {
-    id: `local-${Date.now()}`,
-    conversationId,
-    senderId: CURRENT_USER_ID,
-    text: text.trim(),
-    createdAt: nowLabel(),
-    isMine: true,
-    kind: "text",
-  };
+  const me = getCurrentUserId();
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error("Empty message");
 
-  pushMessage(conversationId, msg);
-  return msg;
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: me,
+      text: trimmed,
+      kind: "text",
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("sendMessage error:", error.message);
+    throw error;
+  }
+
+  await supabase
+    .from("conversations")
+    .update({
+      last_message: trimmed,
+      last_message_at: new Date().toISOString(),
+    })
+    .eq("id", conversationId);
+
+  // bump unread for the other participant
+  const { data: conv } = await supabase
+    .from("conversations")
+    .select("participant_a, participant_b")
+    .eq("id", conversationId)
+    .maybeSingle();
+
+  if (conv) {
+    const other =
+      conv.participant_a === me ? conv.participant_b : conv.participant_a;
+    const { data: readRow } = await supabase
+      .from("conversation_reads")
+      .select("unread_count")
+      .eq("conversation_id", conversationId)
+      .eq("user_id", other)
+      .maybeSingle();
+
+    await supabase.from("conversation_reads").upsert(
+      {
+        conversation_id: conversationId,
+        user_id: other,
+        unread_count: Number(readRow?.unread_count ?? 0) + 1,
+      },
+      { onConflict: "conversation_id,user_id" },
+    );
+  }
+
+  return mapMessage(data as Parameters<typeof mapMessage>[0], me);
 }
 
-export function markConversationRead(conversationId: string) {
-  const conv = conversations.find((c) => c.id === conversationId);
-  if (conv) {
-    conv.unreadCount = 0;
-    notifyUnreadCountListeners();
-  }
+export async function markConversationRead(
+  conversationId: string,
+): Promise<void> {
+  const me = getCurrentUserId();
+  await supabase.from("conversation_reads").upsert(
+    {
+      conversation_id: conversationId,
+      user_id: me,
+      unread_count: 0,
+      last_read_at: new Date().toISOString(),
+    },
+    { onConflict: "conversation_id,user_id" },
+  );
+  await refreshUnreadTotal();
 }
 
 export function isSharingLocation(conversationId: string): boolean {
@@ -290,48 +399,57 @@ export async function shareLocation(
   conversationId: string,
   location: { label: string; latitude?: number; longitude?: number },
 ): Promise<ChatMessage> {
-  await new Promise((r) => setTimeout(r, 150));
-
+  const me = getCurrentUserId();
   locationSharingByConv[conversationId] = true;
   lastSharedLocationByConv[conversationId] = location;
 
-  const msg: ChatMessage = {
-    id: `loc-${Date.now()}`,
-    conversationId,
-    senderId: CURRENT_USER_ID,
-    text: `📍 Shared location: ${location.label}`,
-    createdAt: nowLabel(),
-    isMine: true,
-    kind: "location",
-    location,
-  };
+  const text = `📍 Shared location: ${location.label}`;
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: me,
+      text,
+      kind: "location",
+      location_label: location.label,
+      latitude: location.latitude ?? null,
+      longitude: location.longitude ?? null,
+    })
+    .select("*")
+    .single();
 
-  pushMessage(conversationId, msg);
-  return msg;
+  if (error) throw error;
+
+  await supabase
+    .from("conversations")
+    .update({ last_message: text, last_message_at: new Date().toISOString() })
+    .eq("id", conversationId);
+
+  return mapMessage(data as Parameters<typeof mapMessage>[0], me);
 }
 
 export async function stopSharingLocation(
   conversationId: string,
 ): Promise<ChatMessage | null> {
   if (!locationSharingByConv[conversationId]) return null;
-
-  await new Promise((r) => setTimeout(r, 100));
-
+  const me = getCurrentUserId();
   locationSharingByConv[conversationId] = false;
   delete lastSharedLocationByConv[conversationId];
 
-  const msg: ChatMessage = {
-    id: `loc-stop-${Date.now()}`,
-    conversationId,
-    senderId: CURRENT_USER_ID,
-    text: "Location sharing stopped",
-    createdAt: nowLabel(),
-    kind: "location_stopped",
-    isMine: true,
-  };
+  const text = "Location sharing stopped";
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: me,
+      text,
+      kind: "location_stopped",
+    })
+    .select("*")
+    .single();
 
-  pushMessage(conversationId, msg);
-  return msg;
+  if (error) throw error;
+  return mapMessage(data as Parameters<typeof mapMessage>[0], me);
 }
 
 export function canOpenSharedLocation(
@@ -342,264 +460,169 @@ export function canOpenSharedLocation(
   return isSharingLocation(conversationId);
 }
 
-/** Chat-side lock for booking / offer threads */
-export type BookingChatStatus = "Pending" | "Accepted" | "Declined";
-
-const bookingStatusByConv: Record<string, BookingChatStatus> = {};
-/** Who can Accept/Decline (professional for booking, request owner for offer) */
-const acceptorIdByConv: Record<string, string> = {};
-const conversationKindByConv: Record<string, "booking" | "offer"> = {};
-const conversationIdByBookingId: Record<string, string> = {};
-/** Offer metadata for recording accepted offer into bookings */
-const offerMetaByConv: Record<
-  string,
-  {
-    requestId: string;
-    title: string;
-    category?: string;
-    location?: string;
-    amount: number;
-    offererProfessionalId: string;
-    offererName: string;
-    offererImage: number;
-    requestOwnerId: string;
-    requestOwnerName: string;
-    requestOwnerImage: number;
-  }
-> = {};
-
-function seedPendingBookingChat(input: {
-  conversationId: string;
-  bookingId: string;
-  professionalId: string;
-  participant: ChatParticipant;
-  title: string;
-  date: string;
-  location?: string;
-  amount?: number;
-  category?: string;
-  description?: string;
-  lastMessage: string;
-}) {
-  const {
-    conversationId: id,
-    bookingId,
-    professionalId,
-    participant,
-    title,
-    date,
-    location,
-    amount,
-    category,
-    description,
-    lastMessage,
-  } = input;
-
-  if (conversations.some((c) => c.id === id)) return;
-
-  conversations = [
-    {
-      id,
-      participant,
-      lastMessage,
-      lastMessageAt: "Just now",
-      unreadCount: 1,
-    },
-    ...conversations,
-  ];
-  notifyUnreadCountListeners();
-
-  messagesByConv[id] = [
-    {
-      id: `sys-seed-${bookingId}`,
-      conversationId: id,
-      senderId: "system",
-      text: `Booking request: ${title}`,
-      createdAt: "Just now",
-      isMine: false,
-      kind: "request_card",
-      card: {
-        kind: "booking",
-        title,
-        category,
-        location,
-        description,
-        amount,
-        date,
-        statusLabel: "Waiting for professional to accept",
-      },
-    },
-  ];
-
-  bookingStatusByConv[id] = "Pending";
-  acceptorIdByConv[id] = String(professionalId);
-  conversationKindByConv[id] = "booking";
-  conversationIdByBookingId[bookingId] = id;
+async function ensureParticipants(
+  a: string,
+  b: string,
+): Promise<{ participant_a: string; participant_b: string }> {
+  // stable order for uniqueness if you add a unique index later
+  return a < b
+    ? { participant_a: a, participant_b: b }
+    : { participant_a: b, participant_b: a };
 }
 
-seedPendingBookingChat({
-  conversationId: "booking-hist-r1",
-  bookingId: "r1",
-  professionalId: "1",
-  participant: {
-    id: "u2",
-    name: "Ada Okafor",
-    image: pro2?.image ?? 0,
-    online: true,
-  },
-  title: "House Cleaning",
-  date: "May 28, 2025 09:00 AM",
-  location: "Lagos",
-  amount: 15400,
-  category: "Cleaning",
-  description: "Need a thorough clean of a 3-bedroom flat before guests arrive.",
-  lastMessage: "Booking request: House Cleaning",
-});
-
-seedPendingBookingChat({
-  conversationId: "booking-hist-b1",
-  bookingId: "b1",
-  professionalId: "2",
-  participant: {
-    id: "2",
-    name: pro2?.name ?? "Chioma Eze",
-    image: pro2?.image ?? 0,
-    verified: pro2?.verified,
-    online: true,
-  },
-  title: "Nail Extension",
-  date: "May 25, 2025 10:00 AM",
-  location: "Lagos",
-  amount: 15400,
-  category: "Beauty",
-  description: "Full set nail extension, prefer soft gel.",
-  lastMessage: "Booking request: Nail Extension",
-});
-
-export function getOrCreateConversationForProfessional(
+export async function getOrCreateConversationForProfessional(
   professionalId: string,
-): Conversation {
-  const existing = conversations.find(
-    (c) => String(c.participant.id) === String(professionalId),
-  );
-  if (existing) return existing;
+): Promise<Conversation> {
+  const me = getCurrentUserId();
+  const pro = await getProfessionalById(professionalId);
+  const otherUserId = pro?.userId;
+  if (!otherUserId) {
+    throw new Error("Professional has no linked user profile");
+  }
 
-  const pro = getProfessionalById(professionalId);
-  const id = `c-pro-${professionalId}`;
+  const existing = await listConversations();
+  const found = existing.find((c) => String(c.participant.id) === String(otherUserId));
+  if (found) return found;
 
-  const conv: Conversation = {
-    id,
+  const parts = await ensureParticipants(me, otherUserId);
+  const { data, error } = await supabase
+    .from("conversations")
+    .insert({
+      ...parts,
+      last_message: "",
+      last_message_at: new Date().toISOString(),
+    })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+
+  await supabase.from("conversation_reads").upsert([
+    { conversation_id: data.id, user_id: me, unread_count: 0 },
+    { conversation_id: data.id, user_id: otherUserId, unread_count: 0 },
+  ]);
+
+  const profile = await loadProfile(otherUserId);
+  return {
+    id: data.id,
     participant: {
-      id: String(professionalId),
-      name: pro?.name ?? "Professional",
-      image: pro?.image ?? 0,
+      id: profile.id,
+      name: pro?.name ?? profile.name,
+      image: pro?.image ?? profile.image,
       verified: pro?.verified,
-      online: false,
+      online: profile.online,
     },
     lastMessage: "",
     lastMessageAt: "Now",
     unreadCount: 0,
   };
-
-  conversations = [conv, ...conversations];
-  notifyUnreadCountListeners();
-  if (!messagesByConv[id]) messagesByConv[id] = [];
-  return conv;
 }
 
-/** Map Booking.status → chat lock (Accepted unlocks messaging) */
 function syncChatLockFromBooking(
   conversationId: string,
   status: Booking["status"],
 ) {
-  if (status === "Pending") {
-    bookingStatusByConv[conversationId] = "Pending";
-  } else if (status === "Declined") {
-    bookingStatusByConv[conversationId] = "Declined";
-  } else {
-    bookingStatusByConv[conversationId] = "Accepted";
-  }
+  if (status === "Pending") bookingStatusByConv[conversationId] = "Pending";
+  else if (status === "Declined") bookingStatusByConv[conversationId] = "Declined";
+  else bookingStatusByConv[conversationId] = "Accepted";
 }
 
-export function openBookingChat(
+export async function openBookingChat(
   booking: Booking,
   mainTab: "booked" | "received",
-): Conversation {
+): Promise<Conversation> {
   const linkedId = conversationIdByBookingId[booking.id];
   if (linkedId) {
-    const existing = conversations.find((c) => c.id === linkedId);
+    const existing = await getConversation(linkedId);
     if (existing) {
       syncChatLockFromBooking(linkedId, booking.status);
       return existing;
     }
   }
 
-  const id = `booking-hist-${booking.id}`;
-  let conv = conversations.find((c) => c.id === id);
+  const me = getCurrentUserId();
+  const isBooked = mainTab === "booked";
+  // Resolve other party's profile id — prefer customer/professional user linkage
+  let otherId = isBooked
+    ? String(booking.professionalId)
+    : String(booking.customerId);
 
-  if (!conv) {
-    const isBooked = mainTab === "booked";
-    conv = {
-      id,
-      participant: isBooked
-        ? {
-            id: String(booking.professionalId),
-            name: booking.professionalName,
-            image: booking.professionalImage,
-            verified: booking.professionalVerified,
-            online: false,
-          }
-        : {
-            id: String(booking.customerId),
-            name: booking.customerName,
-            image: booking.customerImage,
-            online: false,
-          },
-      lastMessage:
+  // If professionalId is a pro UUID, resolve user_id
+  if (isBooked) {
+    const pro = await getProfessionalById(String(booking.professionalId));
+    if (pro?.userId) otherId = pro.userId;
+  }
+
+  const parts = await ensureParticipants(me, otherId);
+  const { data: conv, error } = await supabase
+    .from("conversations")
+    .insert({
+      ...parts,
+      booking_id: booking.id,
+      last_message:
         booking.status === "Pending"
           ? `Booking request: ${booking.title}`
           : `Booking: ${booking.title}`,
-      lastMessageAt: "Earlier",
-      unreadCount: 0,
-    };
-    conversations = [conv, ...conversations];
-    notifyUnreadCountListeners();
+      last_message_at: new Date().toISOString(),
+    })
+    .select("*")
+    .single();
 
-    if (!messagesByConv[id]) {
-      const statusLabel =
-        booking.status === "Pending"
-          ? "Waiting for professional to accept"
-          : booking.status === "Declined"
-            ? "This booking was declined"
-            : "Status: Accepted";
-
-      messagesByConv[id] = [
-        {
-          id: `sys-${booking.id}`,
-          conversationId: id,
-          senderId: "system",
-          text: `Booking: ${booking.title}`,
-          createdAt: "Earlier",
-          isMine: false,
-          kind: "request_card",
-          card: {
-            kind: "booking",
-            title: booking.title,
-            location: booking.location,
-            amount: booking.amount,
-            date: booking.date,
-            statusLabel,
-          },
-        },
-      ];
+  if (error) {
+    // maybe already exists — list and find by booking
+    const list = await listConversations();
+    const found = list[0];
+    if (found) {
+      conversationIdByBookingId[booking.id] = found.id;
+      syncChatLockFromBooking(found.id, booking.status);
+      return found;
     }
+    throw error;
   }
 
-  conversationIdByBookingId[booking.id] = id;
-  acceptorIdByConv[id] = String(booking.professionalId);
-  conversationKindByConv[id] = "booking";
-  syncChatLockFromBooking(id, booking.status);
-  return conv;
+  const statusLabel =
+    booking.status === "Pending"
+      ? "Waiting for professional to accept"
+      : booking.status === "Declined"
+        ? "This booking was declined"
+        : "Status: Accepted";
+
+  await supabase.from("messages").insert({
+    conversation_id: conv.id,
+    sender_id: me,
+    text: `Booking: ${booking.title}`,
+    kind: "request_card",
+    card: {
+      kind: "booking",
+      title: booking.title,
+      location: booking.location,
+      amount: booking.amount,
+      date: booking.date,
+      statusLabel,
+    },
+  });
+
+  conversationIdByBookingId[booking.id] = conv.id;
+  acceptorIdByConv[conv.id] = String(booking.professionalId);
+  conversationKindByConv[conv.id] = "booking";
+  syncChatLockFromBooking(conv.id, booking.status);
+
+  const profile = await loadProfile(otherId);
+  return {
+    id: conv.id,
+    participant: {
+      id: profile.id,
+      name: isBooked ? booking.professionalName : booking.customerName,
+      image: isBooked
+        ? (booking.professionalImage as ImageSourcePropType)
+        : (booking.customerImage as ImageSourcePropType),
+      verified: booking.professionalVerified,
+      online: profile.online,
+    },
+    lastMessage: conv.last_message,
+    lastMessageAt: "Just now",
+    unreadCount: 0,
+  };
 }
 
 export function getBookingStatus(conversationId: string): BookingChatStatus {
@@ -614,9 +637,7 @@ export function isProfessionalInConversation(
   conversationId: string,
   currentUserId: string,
 ): boolean {
-  return (
-    String(acceptorIdByConv[conversationId] ?? "") === String(currentUserId)
-  );
+  return String(acceptorIdByConv[conversationId] ?? "") === String(currentUserId);
 }
 
 export function isAcceptorInConversation(
@@ -632,10 +653,10 @@ export function getConversationKind(
   return conversationKindByConv[conversationId];
 }
 
-export function createBookingConversation(input: {
+export async function createBookingConversation(input: {
   professionalId: string;
   professionalName: string;
-  professionalImage: number;
+  professionalImage: ImageSourcePropType;
   professionalVerified?: boolean;
   bookingTitle: string;
   bookingDate: string;
@@ -644,41 +665,29 @@ export function createBookingConversation(input: {
   amount?: number;
   category?: string;
   description?: string;
-}): Conversation {
-  const id = `booking-${input.professionalId}-${Date.now()}`;
+}): Promise<Conversation> {
+  const me = getCurrentUserId();
+  const pro = await getProfessionalById(input.professionalId);
+  const otherUserId = pro?.userId ?? String(input.professionalId);
+  const parts = await ensureParticipants(me, otherUserId);
 
-  const conv: Conversation = {
-    id,
-    participant: {
-      id: String(input.professionalId),
-      name: input.professionalName,
-      image: input.professionalImage,
-      verified: input.professionalVerified,
-      online: true,
-    },
-    lastMessage: `New booking: ${input.bookingTitle}`,
-    lastMessageAt: "Just now",
-    unreadCount: 1,
-  };
+  const { data: conv, error } = await supabase
+    .from("conversations")
+    .insert({
+      ...parts,
+      booking_id: input.bookingId ?? null,
+      last_message: `New booking: ${input.bookingTitle}`,
+      last_message_at: new Date().toISOString(),
+    })
+    .select("*")
+    .single();
 
-  conversations = [conv, ...conversations];
-  notifyUnreadCountListeners();
-  messagesByConv[id] = [];
-  bookingStatusByConv[id] = "Pending";
-  acceptorIdByConv[id] = String(input.professionalId);
-  conversationKindByConv[id] = "booking";
+  if (error) throw error;
 
-  if (input.bookingId) {
-    conversationIdByBookingId[input.bookingId] = id;
-  }
-
-  messagesByConv[id].push({
-    id: `sys-${Date.now()}`,
-    conversationId: id,
-    senderId: "system",
+  await supabase.from("messages").insert({
+    conversation_id: conv.id,
+    sender_id: me,
     text: `Booking request: ${input.bookingTitle}`,
-    createdAt: nowLabel(),
-    isMine: false,
     kind: "request_card",
     card: {
       kind: "booking",
@@ -692,10 +701,34 @@ export function createBookingConversation(input: {
     },
   });
 
-  return conv;
+  await supabase.from("conversation_reads").upsert([
+    { conversation_id: conv.id, user_id: me, unread_count: 0 },
+    { conversation_id: conv.id, user_id: otherUserId, unread_count: 1 },
+  ]);
+
+  bookingStatusByConv[conv.id] = "Pending";
+  acceptorIdByConv[conv.id] = String(input.professionalId);
+  conversationKindByConv[conv.id] = "booking";
+  if (input.bookingId) conversationIdByBookingId[input.bookingId] = conv.id;
+
+  await refreshUnreadTotal();
+
+  return {
+    id: conv.id,
+    participant: {
+      id: otherUserId,
+      name: input.professionalName,
+      image: input.professionalImage,
+      verified: input.professionalVerified,
+      online: true,
+    },
+    lastMessage: `New booking: ${input.bookingTitle}`,
+    lastMessageAt: "Just now",
+    unreadCount: 0,
+  };
 }
 
-export function createOfferConversation(input: {
+export async function createOfferConversation(input: {
   requestId: string;
   requestTitle: string;
   requestCategory?: string;
@@ -704,68 +737,40 @@ export function createOfferConversation(input: {
   amount: number;
   requestOwnerId: string;
   requestOwnerName: string;
-  requestOwnerImage: number;
+  requestOwnerImage: ImageSourcePropType;
   offererProfessionalId: string;
   offererName: string;
-  offererImage: number;
-}): Conversation {
-  const id = `offer-${input.requestId}-${input.offererProfessionalId}-${Date.now()}`;
+  offererImage: ImageSourcePropType;
+}): Promise<Conversation> {
+  const me = getCurrentUserId();
+  const ownerId = String(input.requestOwnerId);
+  const offererPro = await getProfessionalById(String(input.offererProfessionalId));
+  const offererUserId = offererPro?.userId ?? String(input.offererProfessionalId);
 
-  const current = getCurrentUserId();
   const iAmOfferer =
-    String(current) === String(input.offererProfessionalId) ||
+    String(me) === String(offererUserId) ||
     String(getLoggedInProfessionalId()) === String(input.offererProfessionalId);
 
-  const participant: ChatParticipant = iAmOfferer
-    ? {
-        id: String(input.requestOwnerId),
-        name: input.requestOwnerName,
-        image: input.requestOwnerImage,
-        online: true,
-      }
-    : {
-        id: String(input.offererProfessionalId),
-        name: input.offererName,
-        image: input.offererImage,
-        online: true,
-      };
+  const otherId = iAmOfferer ? ownerId : offererUserId;
+  const parts = await ensureParticipants(me, otherId);
 
-  const conv: Conversation = {
-    id,
-    participant,
-    lastMessage: `Offer: ₦${input.amount.toLocaleString()} on "${input.requestTitle}"`,
-    lastMessageAt: "Just now",
-    unreadCount: 1,
-  };
+  const { data: conv, error } = await supabase
+    .from("conversations")
+    .insert({
+      ...parts,
+      service_request_id: input.requestId,
+      last_message: `Offer: ₦${input.amount.toLocaleString()} on "${input.requestTitle}"`,
+      last_message_at: new Date().toISOString(),
+    })
+    .select("*")
+    .single();
 
-  conversations = [conv, ...conversations];
-  notifyUnreadCountListeners();
-  messagesByConv[id] = [];
-  bookingStatusByConv[id] = "Pending";
-  acceptorIdByConv[id] = String(input.requestOwnerId);
-  conversationKindByConv[id] = "offer";
+  if (error) throw error;
 
-  offerMetaByConv[id] = {
-    requestId: input.requestId,
-    title: input.requestTitle,
-    category: input.requestCategory,
-    location: input.requestLocation,
-    amount: input.amount,
-    offererProfessionalId: String(input.offererProfessionalId),
-    offererName: input.offererName,
-    offererImage: input.offererImage,
-    requestOwnerId: String(input.requestOwnerId),
-    requestOwnerName: input.requestOwnerName,
-    requestOwnerImage: input.requestOwnerImage,
-  };
-
-  messagesByConv[id].push({
-    id: `sys-offer-${Date.now()}`,
-    conversationId: id,
-    senderId: "system",
+  await supabase.from("messages").insert({
+    conversation_id: conv.id,
+    sender_id: me,
     text: `Offer request: ${input.requestTitle}`,
-    createdAt: nowLabel(),
-    isMine: false,
     kind: "request_card",
     card: {
       kind: "offer",
@@ -778,25 +783,52 @@ export function createOfferConversation(input: {
     },
   });
 
-  return conv;
+  await supabase.from("conversation_reads").upsert([
+    { conversation_id: conv.id, user_id: me, unread_count: 0 },
+    { conversation_id: conv.id, user_id: otherId, unread_count: 1 },
+  ]);
+
+  bookingStatusByConv[conv.id] = "Pending";
+  acceptorIdByConv[conv.id] = ownerId;
+  conversationKindByConv[conv.id] = "offer";
+  offerMetaByConv[conv.id] = {
+    requestId: input.requestId,
+    title: input.requestTitle,
+    category: input.requestCategory,
+    location: input.requestLocation,
+    amount: input.amount,
+    offererProfessionalId: String(input.offererProfessionalId),
+    offererName: input.offererName,
+    offererImage: input.offererImage,
+    requestOwnerId: ownerId,
+    requestOwnerName: input.requestOwnerName,
+    requestOwnerImage: input.requestOwnerImage,
+  };
+
+  await refreshUnreadTotal();
+
+  return {
+    id: conv.id,
+    participant: {
+      id: otherId,
+      name: iAmOfferer ? input.requestOwnerName : input.offererName,
+      image: iAmOfferer ? input.requestOwnerImage : input.offererImage,
+      online: true,
+    },
+    lastMessage: `Offer: ₦${input.amount.toLocaleString()} on "${input.requestTitle}"`,
+    lastMessageAt: "Just now",
+    unreadCount: 0,
+  };
 }
 
-export function acceptBooking(
+export async function acceptBooking(
   conversationId: string,
   acceptorDisplayName: string,
-): ChatMessage {
+): Promise<ChatMessage> {
   bookingStatusByConv[conversationId] = "Accepted";
-
-  const msgs = messagesByConv[conversationId] ?? [];
-  const cardMsg = msgs.find((m) => m.kind === "request_card" && m.card);
-  if (cardMsg?.card) {
-    cardMsg.card = {
-      ...cardMsg.card,
-      statusLabel: "Accepted",
-    };
-  }
-
+  const me = getCurrentUserId();
   const kind = conversationKindByConv[conversationId];
+
   if (kind === "offer") {
     const meta = offerMetaByConv[conversationId];
     if (meta) {
@@ -806,61 +838,69 @@ export function acceptBooking(
         location: meta.location ?? "Nigeria",
         professionalId: meta.offererProfessionalId,
         professionalName: meta.offererName,
-        professionalImage: meta.offererImage,
+        professionalImage: meta.offererImage as number,
         customerId: meta.requestOwnerId,
         customerName: meta.requestOwnerName,
-        customerImage: meta.requestOwnerImage,
+        customerImage: meta.requestOwnerImage as number,
       });
     }
   }
 
-  const msg: ChatMessage = {
-    id: `sys-accept-${Date.now()}`,
-    conversationId,
-    senderId: "system",
-    text:
-      kind === "offer"
-        ? `${acceptorDisplayName} accepted your offer`
-        : `${acceptorDisplayName} accepted your booking`,
-    createdAt: nowLabel(),
-    isMine: false,
-    kind: "text",
-  };
+  const text =
+    kind === "offer"
+      ? `${acceptorDisplayName} accepted your offer`
+      : `${acceptorDisplayName} accepted your booking`;
 
-  pushMessage(conversationId, msg);
-  return msg;
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: me,
+      text,
+      kind: "text",
+    })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+
+  await supabase
+    .from("conversations")
+    .update({ last_message: text, last_message_at: new Date().toISOString() })
+    .eq("id", conversationId);
+
+  return mapMessage(data as Parameters<typeof mapMessage>[0], me);
 }
 
-export function declineBooking(
+export async function declineBooking(
   conversationId: string,
   acceptorDisplayName: string,
-): ChatMessage {
+): Promise<ChatMessage> {
   bookingStatusByConv[conversationId] = "Declined";
-
-  const msgs = messagesByConv[conversationId] ?? [];
-  const cardMsg = msgs.find((m) => m.kind === "request_card" && m.card);
-  if (cardMsg?.card) {
-    cardMsg.card = {
-      ...cardMsg.card,
-      statusLabel: "Declined",
-    };
-  }
-
+  const me = getCurrentUserId();
   const kind = conversationKindByConv[conversationId];
+  const text =
+    kind === "offer"
+      ? `${acceptorDisplayName} declined your offer`
+      : `${acceptorDisplayName} declined your booking`;
 
-  const msg: ChatMessage = {
-    id: `sys-decline-${Date.now()}`,
-    conversationId,
-    senderId: "system",
-    text:
-      kind === "offer"
-        ? `${acceptorDisplayName} declined your offer`
-        : `${acceptorDisplayName} declined your booking`,
-    createdAt: nowLabel(),
-    isMine: false,
-    kind: "text",
-  };
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: me,
+      text,
+      kind: "text",
+    })
+    .select("*")
+    .single();
 
-  pushMessage(conversationId, msg);
-  return msg;
+  if (error) throw error;
+
+  await supabase
+    .from("conversations")
+    .update({ last_message: text, last_message_at: new Date().toISOString() })
+    .eq("id", conversationId);
+
+  return mapMessage(data as Parameters<typeof mapMessage>[0], me);
 }
