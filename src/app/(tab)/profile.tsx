@@ -20,6 +20,8 @@ import {
 import {
   getCurrentUserRole,
   getLoggedInProfessionalId,
+  hasAuthenticatedSession,
+  hydrateLoggedInProfessionalId,
   isCurrentUserPro,
 } from "@/services/savedProviders";
 import { listMyServiceRequests } from "@/services/serviceRequests";
@@ -111,11 +113,19 @@ export default function Profile() {
     let cancelled = false;
     (async () => {
       try {
-        // 1) Authenticated user's professional row (real session)
-        // 2) Fallback: seeded / mock logged-in professional id (UUID-safe)
+        // Keep cached pro id aligned with auth before reading it.
+        await hydrateLoggedInProfessionalId();
+        const resolvedProId = getLoggedInProfessionalId();
+
+        // 1) Real session → only that user's professional row
+        // 2) Demo (no session) → seeded mock pro UUID (never bare "1")
         let p = await getMyProfessional();
-        if (!p && proId) {
-          p = await getProfessionalById(proId);
+        if (
+          !p &&
+          !hasAuthenticatedSession() &&
+          resolvedProId
+        ) {
+          p = await getProfessionalById(resolvedProId);
         }
         if (!cancelled) setPro(p);
 

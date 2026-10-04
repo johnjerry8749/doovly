@@ -17,6 +17,7 @@
 import type { ImageSourcePropType } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { isUuid, tryToUuid } from "@/lib/ids";
+import { resolveImageSource } from "@/lib/mappers";
 
 
 /* =========================================================
@@ -267,12 +268,13 @@ function formatNaira(value: number): string {
 }
 
 /**
- * Get avatar.
+ * Get avatar (https URL, mock:// seed key, or default asset).
  */
 function getAvatar(
   avatarUrl?: string | null,
 ): ImageSourcePropType | string {
-  return avatarUrl?.trim() ? avatarUrl : DEFAULT_AVATAR;
+  const resolved = resolveImageSource(avatarUrl?.trim() || null);
+  return resolved ?? DEFAULT_AVATAR;
 }
 
 /**

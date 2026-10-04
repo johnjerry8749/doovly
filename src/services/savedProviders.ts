@@ -6,11 +6,11 @@
  *
  * Later: swap bodies for API / AsyncStorage.
  *
- * Single source of truth while on mock data:
- * - subscribed / verified / role come from the logged-in professional in
- *   src/data/professionals.ts (via mock professional id "1").
- * - professionalId exposed to the rest of the app is the seeded UUID so
- *   Supabase queries never receive bare mock ids like "1".
+ * Identity:
+ * - When a real Supabase session exists, professionalId is the user's
+ *   professionals.id (or null if they have no pro row).
+ * - When there is no session (demo), professionalId is the seeded UUID
+ *   for mock pro "1" so Supabase uuid columns never receive bare "1".
  */
 
 import {
@@ -22,6 +22,7 @@ import {
   getProfessionalById as getMockProfessionalById,
 } from "@/data/professionals";
 import { MOCK_SESSION, isUuid, tryToUuid, tryToMockId } from "@/lib/ids";
+import { supabase } from "@/lib/supabase";
 
 // =====================================================
 // MOCK LOGGED-IN USER (replace with auth later)
@@ -34,9 +35,7 @@ export type AppUser = {
   subscribed: boolean;
   /**
    * Professional profile id that belongs to this user (if they offer services).
-   * Stored as the seeded Supabase UUID (not mock "1") so service-layer
-   * queries against uuid columns succeed.
-   * Later: from auth context / API (e.g. /me).
+   * Seeded Supabase UUID in demo mode; real professionals.id when signed in.
    */
   professionalId: string | null;
 };
@@ -44,7 +43,7 @@ export type AppUser = {
 /** Mock professional row key in src/data/professionals.ts ("1" = John Chukwuemeka) */
 const MOCK_LOGGED_IN_PRO_MOCK_ID = MOCK_SESSION.professionalMockId;
 
-/** Seeded professionals.id UUID corresponding to the mock pro */
+/** Seeded professionals.id UUID corresponding to the mock pro (demo only) */
 const MOCK_LOGGED_IN_PRO_UUID = MOCK_SESSION.professionalUuid;
 
 const loggedInProMock = getMockProfessionalById(MOCK_LOGGED_IN_PRO_MOCK_ID);
@@ -52,28 +51,94 @@ const loggedInProMock = getMockProfessionalById(MOCK_LOGGED_IN_PRO_MOCK_ID);
 /**
  * MOCK_USER is derived from the professional record so
  * verified + subscribed stay in sync with src/data/professionals.ts.
- * Change subscribed/verified on the professional to control Pro UI.
+ * Change subscribed/verified on the professional to control Pro UI (demo).
  */
 export const MOCK_USER: AppUser = {
   id: MOCK_SESSION.userUuid,
   name: loggedInProMock?.name ?? "John Jerry",
-  // Driven by professional mock data
   subscribed: loggedInProMock?.subscribed ?? false,
   professionalId: MOCK_LOGGED_IN_PRO_UUID,
 };
 
+/** Cached professional id for sync callers (mirrors getCurrentUserId pattern). */
+let cachedProfessionalId: string | null = MOCK_LOGGED_IN_PRO_UUID;
+/** True when supabase.auth has a user session. */
+let hasAuthSession = false;
+
+/**
+ * Refresh cached professional id from the current auth session.
+ * - signed in + pro row → that UUID
+ * - signed in, no pro row → null (do not fall back to mock John)
+ * - signed out → seeded mock UUID for demo
+ */
+export async function hydrateLoggedInProfessionalId(): Promise<string | null> {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session?.user?.id) {
+      hasAuthSession = true;
+      const { data, error } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.warn("hydrateLoggedInProfessionalId:", error.message);
+        cachedProfessionalId = null;
+        MOCK_USER.professionalId = null;
+        return null;
+      }
+
+      cachedProfessionalId = data?.id ?? null;
+      MOCK_USER.professionalId = cachedProfessionalId;
+      return cachedProfessionalId;
+    }
+
+    hasAuthSession = false;
+    cachedProfessionalId = MOCK_LOGGED_IN_PRO_UUID;
+    MOCK_USER.professionalId = MOCK_LOGGED_IN_PRO_UUID;
+    return cachedProfessionalId;
+  } catch (e) {
+    console.warn("hydrateLoggedInProfessionalId:", e);
+    return cachedProfessionalId;
+  }
+}
+
+try {
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (session?.user?.id) {
+      hasAuthSession = true;
+      void hydrateLoggedInProfessionalId();
+    } else {
+      hasAuthSession = false;
+      cachedProfessionalId = MOCK_LOGGED_IN_PRO_UUID;
+      MOCK_USER.professionalId = MOCK_LOGGED_IN_PRO_UUID;
+    }
+  });
+  void hydrateLoggedInProfessionalId();
+} catch {
+  /* supabase may throw if env missing in some test contexts */
+}
+
+/** True when a real Supabase auth session is active. */
+export function hasAuthenticatedSession(): boolean {
+  return hasAuthSession;
+}
+
 /**
  * Professional id of the logged-in user (if any).
- * NOW  → seeded UUID from MOCK_USER (safe for Supabase uuid columns)
- * LATER → from auth / GET /me
+ * Prefer hydrateLoggedInProfessionalId() at app start so this is fresh.
  */
 export function getLoggedInProfessionalId(): string | null {
-  return MOCK_USER.professionalId ?? null;
+  return cachedProfessionalId;
 }
 
 /**
  * Current logged-in user.
- * NOW  → mock MOCK_USER
+ * NOW  → mock MOCK_USER (professionalId kept in sync by hydrate)
  * LATER → from auth / GET /me. Keep this name.
  */
 export function getCurrentUser(): AppUser {
@@ -93,14 +158,13 @@ export function getCurrentUserRole(): "user" | "admin" {
 /**
  * True when the given professional profile belongs to the current auth user.
  * Use this to disable Book Now / Add Review on own profile.
- * Compares both UUID and legacy mock id forms.
+ * Compares both UUID and legacy mock id forms against the cached pro id.
  */
 export function isOwnProfessionalProfile(professionalId: string): boolean {
   const mine = getLoggedInProfessionalId();
   if (!mine) return false;
   const target = String(professionalId);
   if (String(mine) === target) return true;
-  // Also match when one side is still a mock id ("1") and the other is UUID
   const mineMock =
     tryToMockId("professional", mine) ??
     (!isUuid(mine) ? mine : undefined);
@@ -114,7 +178,7 @@ export function isOwnProfessionalProfile(professionalId: string): boolean {
   return Boolean(targetUuid && targetUuid === mine);
 }
 
-/** Current user is on Doovly Pro (from professional mock data). */
+/** Current user is on Doovly Pro (from professional mock data in demo). */
 export function isCurrentUserPro(): boolean {
   return loggedInProMock?.subscribed ?? MOCK_USER.subscribed;
 }
@@ -148,7 +212,6 @@ export function getSavedIds(): string[] {
 
 /**
  * Resolve saved providers from Supabase (async).
- * Prefer this over the old sync mock list when rendering UI.
  */
 export async function getSavedProviders(): Promise<Professional[]> {
   const results = await Promise.all(
