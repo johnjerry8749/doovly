@@ -23,16 +23,18 @@ export function useOpenRequestComments(
     const id = Array.isArray(raw) ? raw[0] : raw;
     if (!id) return;
     if (openedRef.current === id) return;
-    const found =
-      allRequests.find((r) => r.id === String(id)) ||
-      listServiceRequests().find((r) => r.id === String(id));
-    if (!found) return;
-    openedRef.current = String(id);
-    openChat(found);
-    try {
-      router.setParams({ openRequestId: undefined as unknown as string });
-    } catch {
-      /* ignore */
-    }
+    void (async () => {
+      const found =
+        allRequests.find((r) => r.id === String(id)) ||
+        (await listServiceRequests()).find((r) => r.id === String(id));
+      if (!found) return;
+      openedRef.current = String(id);
+      openChat(found);
+      try {
+        router.setParams({ openRequestId: undefined as unknown as string });
+      } catch {
+        /* ignore */
+      }
+    })();
   }, [openRequestId, allRequests, openChat]);
 }

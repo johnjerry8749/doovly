@@ -36,8 +36,8 @@ export function BookingCard({ item, mainTab }: Props) {
   /** Customer (booked) may cancel only while Pending */
   const showCancel = mainTab === "booked" && item.status === "Pending";
 
-  const openChat = () => {
-    const conv = openBookingChat(item, mainTab);
+  const openChat = async () => {
+    const conv = await openBookingChat(item, mainTab);
     router.push({
       pathname: "/chat/[id]",
       params: { id: conv.id },
