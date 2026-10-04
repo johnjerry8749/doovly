@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -28,15 +28,46 @@ export default function BookMeScreen() {
     price?: string;
   }>();
 
-  const pro = useMemo(() => getProfessionalById(id ?? ""), [id]);
+  const [pro, setPro] = useState<
+    Awaited<ReturnType<typeof getProfessionalById>>
+  >(undefined);
+  const [loadingPro, setLoadingPro] = useState(true);
 
-  const initialService =
-    pro?.services.find((service) => service.id === serviceId) ??
-    pro?.services.find((service) => service.name === serviceName) ??
-    pro?.services[0] ??
-    null;
+  const [selectedService, setSelectedService] = useState<
+    | NonNullable<
+        Awaited<ReturnType<typeof getProfessionalById>>
+      >["services"][number]
+    | null
+  >(null);
 
-  const [selectedService, setSelectedService] = useState(initialService);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoadingPro(true);
+        const data = await getProfessionalById(id ?? "");
+        if (cancelled) return;
+        setPro(data);
+        if (data) {
+          const initial =
+            data.services.find((s) => s.id === serviceId) ??
+            data.services.find((s) => s.name === serviceName) ??
+            data.services[0] ??
+            null;
+          setSelectedService(initial);
+        }
+      } catch (e) {
+        console.error("BookMe load error:", e);
+        if (!cancelled) setPro(undefined);
+      } finally {
+        if (!cancelled) setLoadingPro(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, serviceId, serviceName]);
+
   const [showServicePicker, setShowServicePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tempDate, setTempDate] = useState(new Date());
@@ -69,13 +100,11 @@ export default function BookMeScreen() {
       year: "numeric",
     });
 
-  const getDaysInMonth = (year: number, month: number) => {
-    return new Date(year, month + 1, 0).getDate();
-  };
+  const getDaysInMonth = (year: number, month: number) =>
+    new Date(year, month + 1, 0).getDate();
 
-  const getFirstDayOfMonth = (year: number, month: number) => {
-    return new Date(year, month, 1).getDay();
-  };
+  const getFirstDayOfMonth = (year: number, month: number) =>
+    new Date(year, month, 1).getDay();
 
   const openDatePicker = () => {
     setTempDate(selectedDate);
@@ -103,9 +132,7 @@ export default function BookMeScreen() {
     );
     const today = new Date();
     const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    if (newMonth < currentMonth) {
-      return;
-    }
+    if (newMonth < currentMonth) return;
     setCalendarMonth(newMonth);
   };
 
@@ -117,9 +144,7 @@ export default function BookMeScreen() {
     );
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (newDate < today) {
-      return;
-    }
+    if (newDate < today) return;
     setTempDate(newDate);
   };
 
@@ -141,13 +166,9 @@ export default function BookMeScreen() {
   const confirmTime = () => {
     let hour = tempHour;
     if (tempPeriod === "AM") {
-      if (hour === 12) {
-        hour = 0;
-      }
-    } else {
-      if (hour !== 12) {
-        hour += 12;
-      }
+      if (hour === 12) hour = 0;
+    } else if (hour !== 12) {
+      hour += 12;
     }
     const newTime = new Date(selectedTime);
     newTime.setHours(hour, tempMinute, 0, 0);
@@ -155,9 +176,7 @@ export default function BookMeScreen() {
     setShowTimePicker(false);
   };
 
-  const cancelTime = () => {
-    setShowTimePicker(false);
-  };
+  const cancelTime = () => setShowTimePicker(false);
 
   const hours = Array.from({ length: 12 }, (_, index) => index + 1);
   const minutes = Array.from({ length: 12 }, (_, index) => index * 5);
@@ -220,7 +239,6 @@ export default function BookMeScreen() {
 
   const serviceFee = selectedService?.priceValue ?? 0;
   const total = serviceFee + platformFee;
-  const formatNaira = (amount: number) => `₦${amount.toLocaleString("en-NG")}`;
 
   const handleConfirmBooking = () => {
     if (!selectedService) {
@@ -236,7 +254,7 @@ export default function BookMeScreen() {
     const conv = createBookingConversation({
       professionalId: pro.id,
       professionalName: pro.name,
-      professionalImage: pro.image,
+      professionalImage: pro.image as any,
       professionalVerified: pro.verified,
       bookingTitle: selectedService.name,
       bookingDate: `${formatDate(selectedDate)} • ${formatTime(selectedTime)}`,
@@ -254,6 +272,16 @@ export default function BookMeScreen() {
       params: { id: conv.id },
     });
   };
+
+  if (loadingPro) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#16A34A" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!pro) {
     return (
@@ -370,6 +398,7 @@ export default function BookMeScreen() {
             style={styles.notesIcon}
           />
         </View>
+
         <TouchableOpacity
           style={styles.payBtn}
           onPress={handleConfirmBooking}
@@ -411,7 +440,7 @@ export default function BookMeScreen() {
             onPress={(event) => event.stopPropagation()}
           >
             <Text style={styles.modalTitle}>Select service</Text>
-            {pro.services.map((service) => (
+            {(pro.services ?? []).map((service) => (
               <TouchableOpacity
                 key={service.id}
                 style={styles.serviceOption}
@@ -503,7 +532,10 @@ export default function BookMeScreen() {
                     onPress={() => selectCalendarDate(day)}
                   >
                     <Text
-                      style={[styles.dayText, isSelected && styles.dayTextSelected]}
+                      style={[
+                        styles.dayText,
+                        isSelected && styles.dayTextSelected,
+                      ]}
                     >
                       {day}
                     </Text>
@@ -540,7 +572,10 @@ export default function BookMeScreen() {
                 {hours.map((h) => (
                   <TouchableOpacity
                     key={h}
-                    style={[styles.timeItem, tempHour === h && styles.timeItemActive]}
+                    style={[
+                      styles.timeItem,
+                      tempHour === h && styles.timeItemActive,
+                    ]}
                     onPress={() => setTempHour(h)}
                   >
                     <Text
@@ -617,29 +652,29 @@ export default function BookMeScreen() {
           >
             <Text style={styles.modalTitle}>Service location</Text>
             <TouchableOpacity
-              style={styles.locationOption}
+              style={styles.serviceOption}
               onPress={useCurrentLocation}
               disabled={gettingLocation}
             >
               {gettingLocation ? (
                 <ActivityIndicator color="#16A34A" />
               ) : (
-                <Ionicons name="navigate-outline" size={22} color="#16A34A" />
+                <Ionicons name="navigate" size={22} color="#16A34A" />
               )}
-              <Text style={styles.locationOptionText}>Use current location</Text>
+              <Text style={styles.serviceOptionName}>
+                Use current location
+              </Text>
             </TouchableOpacity>
-            <Text style={styles.orText}>or enter manually</Text>
             <TextInput
-              style={styles.manualInput}
-              placeholder="Street, city, area..."
+              style={[styles.notesInput, { minHeight: 44, marginTop: 12 }]}
+              placeholder="Or type address manually"
               placeholderTextColor="#9CA3AF"
               value={manualAddress}
               onChangeText={setManualAddress}
             />
             <TouchableOpacity
-              style={styles.payBtn}
+              style={[styles.payBtn, { marginTop: 12 }]}
               onPress={useManualAddress}
-              activeOpacity={0.85}
             >
               <Text style={styles.payBtnText}>Use this address</Text>
             </TouchableOpacity>
@@ -651,95 +686,93 @@ export default function BookMeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#FFFFFF" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  notFound: { fontSize: 16, color: "#6B7280" },
-  backLink: { fontSize: 15, color: "#16A34A", fontWeight: "600" },
+  safe: { flex: 1, backgroundColor: "#fff" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  notFound: { fontSize: 16, color: "#333", marginBottom: 12 },
+  backLink: { color: "#16A34A", fontWeight: "600" },
   header: {
-    height: 56,
+    height: 52,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    paddingHorizontal: 12,
   },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  logo: { flex: 1, textAlign: "center", fontSize: 18, fontWeight: "800", color: "#16A34A" },
-  shield: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
-  title: { fontSize: 22, fontWeight: "800", color: "#111827" },
-  subtitle: { fontSize: 14, color: "#6B7280", marginTop: 6, marginBottom: 20 },
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logo: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#16A34A",
+  },
+  shield: { width: 40 },
+  content: { paddingHorizontal: 20, paddingBottom: 24 },
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111",
+    marginTop: 8,
+  },
+  subtitle: { fontSize: 14, color: "#6B7280", marginTop: 4, marginBottom: 20 },
   label: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#374151",
+    color: "#6B7280",
     marginBottom: 8,
     marginTop: 12,
   },
   field: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    backgroundColor: "#FFFFFF",
-  },
-  fieldText: { flex: 1, fontSize: 15, color: "#111827" },
-  placeholderText: { color: "#9CA3AF" },
-  notesBox: {
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderWidth: 1.5,
+    borderColor: "#16A34A",
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    gap: 10,
+  },
+  fieldText: { flex: 1, fontSize: 15, color: "#111" },
+  placeholderText: { color: "#9CA3AF" },
+  notesBox: {
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     minHeight: 90,
     position: "relative",
   },
-  notesInput: { fontSize: 14, color: "#111827", minHeight: 70, textAlignVertical: "top" },
+  notesInput: {
+    fontSize: 15,
+    color: "#111",
+    minHeight: 70,
+    textAlignVertical: "top",
+  },
   notesIcon: { position: "absolute", right: 12, bottom: 12 },
-  breakdown: {
-    marginTop: 20,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    padding: 16,
-  },
-  breakdownTitle: { fontSize: 15, fontWeight: "700", color: "#111827", marginBottom: 12 },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  rowLabel: { fontSize: 14, color: "#6B7280" },
-  rowValue: { fontSize: 14, fontWeight: "600", color: "#111827" },
-  feeHint: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
-  divider: { height: 1, backgroundColor: "#E5E7EB", marginVertical: 8 },
-  totalLabel: { fontSize: 16, fontWeight: "700", color: "#111827" },
-  totalValue: { fontSize: 16, fontWeight: "800", color: "#16A34A" },
   payBtn: {
-    marginTop: 20,
-    height: 52,
-    borderRadius: 14,
+    marginTop: 24,
     backgroundColor: "#16A34A",
+    borderRadius: 14,
+    height: 52,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
-  payBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  payBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   secureRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     marginTop: 16,
-    gap: 8,
     flexWrap: "wrap",
+    justifyContent: "center",
   },
-  secureDivider: { width: 1, height: 12, backgroundColor: "#E5E7EB" },
-  secureItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  secureDivider: { width: 8 },
+  secureItem: { flexDirection: "row", alignItems: "center" },
   secureText: { fontSize: 11, color: "#6B7280" },
   modalOverlay: {
     flex: 1,
@@ -747,21 +780,22 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalSheet: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
+    paddingBottom: 32,
     maxHeight: "80%",
   },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  modalTitle: { fontSize: 17, fontWeight: "700", color: "#111827", marginBottom: 12 },
-  modalCancel: { fontSize: 15, color: "#6B7280" },
-  modalDone: { fontSize: 15, fontWeight: "700", color: "#16A34A" },
+  modalTitle: { fontSize: 17, fontWeight: "700", color: "#111" },
+  modalCancel: { color: "#6B7280", fontWeight: "600" },
+  modalDone: { color: "#16A34A", fontWeight: "700" },
   serviceOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -770,7 +804,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  serviceOptionName: { fontSize: 15, fontWeight: "600", color: "#111827" },
+  serviceOptionName: { fontSize: 15, fontWeight: "600", color: "#111" },
   serviceOptionPrice: { fontSize: 13, color: "#16A34A", marginTop: 2 },
   calendarNav: {
     flexDirection: "row",
@@ -778,9 +812,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  calendarMonthLabel: { fontSize: 16, fontWeight: "700", color: "#111827" },
-  weekRow: { flexDirection: "row", marginBottom: 8 },
-  weekDay: { flex: 1, textAlign: "center", fontSize: 12, color: "#9CA3AF", fontWeight: "600" },
+  calendarMonthLabel: { fontSize: 16, fontWeight: "700", color: "#111" },
+  weekRow: { flexDirection: "row", marginBottom: 6 },
+  weekDay: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontWeight: "600",
+  },
   daysGrid: { flexDirection: "row", flexWrap: "wrap" },
   dayCell: {
     width: "14.28%",
@@ -788,9 +828,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  daySelected: { backgroundColor: "#16A34A", borderRadius: 20 },
-  dayText: { fontSize: 14, color: "#111827" },
-  dayTextSelected: { color: "#FFFFFF", fontWeight: "700" },
+  daySelected: {
+    backgroundColor: "#16A34A",
+    borderRadius: 20,
+  },
+  dayText: { fontSize: 14, color: "#111" },
+  dayTextSelected: { color: "#fff", fontWeight: "700" },
   timePickRow: { flexDirection: "row", height: 200, gap: 8 },
   timeCol: { flex: 1 },
   timeItem: {
@@ -798,35 +841,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 8,
   },
-  timeItemActive: { backgroundColor: "#DCFCE7" },
-  timeItemText: { fontSize: 16, color: "#6B7280" },
+  timeItemActive: { backgroundColor: "#ECFDF5" },
+  timeItemText: { fontSize: 16, color: "#333" },
   timeItemTextActive: { color: "#16A34A", fontWeight: "700" },
-  locationOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    marginBottom: 12,
-  },
-  locationOptionText: { fontSize: 15, fontWeight: "600", color: "#111827" },
-  orText: {
-    textAlign: "center",
-    color: "#9CA3AF",
-    marginBottom: 12,
-    fontSize: 13,
-  },
-  manualInput: {
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: "#111827",
-    marginBottom: 12,
-  },
 });
