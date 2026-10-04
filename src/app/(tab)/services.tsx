@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -33,7 +33,10 @@ export default function Services() {
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [favTick, setFavTick] = useState(0);
 
-  const categories = useMemo(() => listServiceCategories(), []);
+  const [categories, setCategories] = useState<
+    { name: string; icon: string }[]
+  >([{ name: "All", icon: "apps" }]);
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
 
   const {
     locationName,
@@ -51,7 +54,29 @@ export default function Services() {
     closeCityPicker,
   } = useLocation();
 
-  const professionals = listProfessionals();
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [cats, pros] = await Promise.all([
+          listServiceCategories(),
+          listProfessionals(),
+        ]);
+        if (cancelled) return;
+        setCategories(cats);
+        setProfessionals(pros);
+      } catch (e) {
+        console.error("Services load error:", e);
+        if (!cancelled) {
+          setCategories([{ name: "All", icon: "apps" }]);
+          setProfessionals([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onToggleFavorite = useCallback((proId: string) => {
     const result = toggleSave(proId);
@@ -96,7 +121,7 @@ export default function Services() {
       }
       const city = locationName.split(",")[0].trim().toLowerCase();
       if (!city || city === "nigeria") return true;
-      const professionalCity = itemCity.toLowerCase();
+      const professionalCity = (itemCity || "").toLowerCase();
       return professionalCity.includes(city) || city.includes(professionalCity);
     },
     [locationName, showAllNigeria],
@@ -105,7 +130,7 @@ export default function Services() {
   const matchesCategory = useCallback((profession: string, filter: string) => {
     if (filter === "All") return true;
     const category = filter.toLowerCase();
-    const professional = profession.toLowerCase();
+    const professional = (profession || "").toLowerCase();
     if (professional === category || professional.includes(category))
       return true;
     if (
@@ -123,9 +148,9 @@ export default function Services() {
     return professionals.filter((person) => {
       const matchesSearch =
         !q ||
-        person.name.toLowerCase().includes(q) ||
-        person.profession.toLowerCase().includes(q) ||
-        person.city.toLowerCase().includes(q);
+        (person.name || "").toLowerCase().includes(q) ||
+        (person.profession || "").toLowerCase().includes(q) ||
+        (person.city || "").toLowerCase().includes(q);
       return (
         matchesSearch &&
         matchesCategory(person.profession, selectedFilter) &&
@@ -142,7 +167,10 @@ export default function Services() {
 
   const renderProfessional = ({ item }: { item: Professional }) => {
     const saved = isSaved(item.id);
-    const stars = Math.min(5, Math.floor((item.reviews?.length || 0) / 10));
+    const stars = Math.min(
+      5,
+      Math.floor((item.reviews?.length || item.reviewCount || 0) / 10),
+    );
 
     return (
       <TouchableOpacity
@@ -169,7 +197,11 @@ export default function Services() {
 
         <View style={styles.profileImageContainer}>
           <Image
-            source={item.image}
+            source={
+              typeof item.image === "string"
+                ? { uri: item.image }
+                : (item.image as any)
+            }
             style={styles.profileImage}
             resizeMode="cover"
           />
@@ -186,7 +218,7 @@ export default function Services() {
             <Ionicons name="star" size={11} color="#F59E0B" />
             <Text style={styles.ratingText}>{stars}</Text>
             <Text style={styles.reviewCount}>
-              ({item.reviews?.length || 0})
+              ({item.reviews?.length || item.reviewCount || 0})
             </Text>
           </View>
 
@@ -435,10 +467,7 @@ export default function Services() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
+  safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
   stickyHeader: {
     paddingHorizontal: 16,
     paddingTop: 8,
@@ -460,15 +489,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
     gap: 6,
   },
-  locationLoading: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  locationLoadingText: {
-    fontSize: 13,
-    color: "#6B7280",
-  },
+  locationLoading: { flexDirection: "row", alignItems: "center", gap: 6 },
+  locationLoadingText: { fontSize: 13, color: "#6B7280" },
   locationText: {
     fontSize: 15,
     fontWeight: "600",
@@ -481,7 +503,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   notificationDot: {
     position: "absolute",
     top: 6,
@@ -500,24 +521,10 @@ const styles = StyleSheet.create({
     height: 46,
     gap: 8,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: "#111",
-  },
-  fixedCategorySection: {
-    backgroundColor: "#FFFFFF",
-    paddingTop: 10,
-  },
-  filterContainer: {
-    paddingHorizontal: 12,
-    paddingBottom: 8,
-  },
-  filterItem: {
-    alignItems: "center",
-    marginRight: 14,
-    width: 72,
-  },
+  searchInput: { flex: 1, fontSize: 15, color: "#111" },
+  fixedCategorySection: { backgroundColor: "#FFFFFF", paddingTop: 10 },
+  filterContainer: { paddingHorizontal: 12, paddingBottom: 8 },
+  filterItem: { alignItems: "center", marginRight: 14, width: 72 },
   filterCircle: {
     width: 50,
     height: 50,
@@ -527,18 +534,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 6,
   },
-  activeFilterCircle: {
-    backgroundColor: GREEN,
-  },
+  activeFilterCircle: { backgroundColor: GREEN },
   filterName: {
     fontSize: 12,
     fontWeight: "600",
     color: "#333",
     textAlign: "center",
   },
-  activeFilterName: {
-    color: GREEN,
-  },
+  activeFilterName: { color: GREEN },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -546,23 +549,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#111",
-  },
-  resultCount: {
-    fontSize: 13,
-    color: "#6B7280",
-  },
-  professionalList: {
-    paddingHorizontal: 12,
-    paddingTop: 4,
-  },
-  columnWrapper: {
-    gap: 8,
-    marginBottom: 10,
-  },
+  sectionTitle: { fontSize: 17, fontWeight: "700", color: "#111" },
+  resultCount: { fontSize: 13, color: "#6B7280" },
+  professionalList: { paddingHorizontal: 12, paddingTop: 4 },
+  columnWrapper: { gap: 8, marginBottom: 10 },
   professionalCard: {
     flex: 1,
     maxWidth: "32%",
@@ -571,12 +561,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E1E1E1",
   },
-  favoriteButton: {
-    position: "absolute",
-    right: 8,
-    top: 8,
-    zIndex: 5,
-  },
+  favoriteButton: { position: "absolute", right: 8, top: 8, zIndex: 5 },
   profileImageContainer: {
     width: 70,
     height: 70,
@@ -588,76 +573,35 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: "#E5E7EB",
   },
-  profileImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 35,
-  },
-  cardContent: {
-    padding: 8,
-  },
+  profileImage: { width: "100%", height: "100%", borderRadius: 35 },
+  cardContent: { padding: 8 },
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
     marginBottom: 2,
   },
-  professionalName: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#111",
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 2,
-  },
+  professionalName: { flex: 1, fontSize: 12, fontWeight: "700", color: "#111" },
+  ratingRow: { flexDirection: "row", alignItems: "center", marginBottom: 2 },
   ratingText: {
     fontSize: 11,
     fontWeight: "600",
     marginLeft: 3,
     color: "#333",
   },
-  reviewCount: {
-    fontSize: 10,
-    color: "#777",
-    marginLeft: 2,
-  },
-  profession: {
-    fontSize: 11,
-    color: "#555",
-    marginBottom: 2,
-  },
-  city: {
-    fontSize: 10,
-    color: "#777",
-    marginBottom: 4,
-  },
-  price: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: GREEN,
-  },
-  emptyContainer: {
-    alignItems: "center",
-    paddingVertical: 48,
-  },
+  reviewCount: { fontSize: 10, color: "#777", marginLeft: 2 },
+  profession: { fontSize: 11, color: "#555", marginBottom: 2 },
+  city: { fontSize: 10, color: "#777", marginBottom: 4 },
+  price: { fontSize: 12, fontWeight: "800", color: GREEN },
+  emptyContainer: { alignItems: "center", paddingVertical: 48 },
   emptyTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: "#333",
     marginTop: 10,
   },
-  emptyText: {
-    color: "#888",
-    marginTop: 5,
-    fontSize: 13,
-    textAlign: "center",
-  },
-  listBottomSpace: {
-    height: 100,
-  },
+  emptyText: { color: "#888", marginTop: 5, fontSize: 13, textAlign: "center" },
+  listBottomSpace: { height: 100 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -671,9 +615,7 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     paddingTop: 10,
   },
-  cityPickerSheet: {
-    maxHeight: "80%",
-  },
+  cityPickerSheet: { maxHeight: "80%" },
   modalHandle: {
     width: 40,
     height: 4,
@@ -686,37 +628,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#111",
-    marginBottom: 16,
+    marginBottom: 12,
   },
   modalOption: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
-    gap: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
-  modalOptionText: {
-    flex: 1,
-  },
-  modalOptionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111",
-  },
-  modalOptionSub: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginTop: 2,
-  },
-  modalCancel: {
-    marginTop: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  modalCancelText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
+  modalOptionText: { marginLeft: 12, flex: 1 },
+  modalOptionTitle: { fontSize: 15, fontWeight: "600", color: "#111" },
+  modalOptionSub: { fontSize: 12, color: "#888", marginTop: 2 },
+  modalCancel: { marginTop: 12, alignItems: "center", paddingVertical: 12 },
+  modalCancelText: { fontSize: 15, fontWeight: "600", color: "#666" },
   citySearchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -727,27 +652,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 8,
   },
-  citySearchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: "#111",
-  },
-  cityList: {
-    maxHeight: 320,
-  },
+  citySearchInput: { flex: 1, fontSize: 15, color: "#111" },
+  cityList: { maxHeight: 320 },
   cityItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    gap: 10,
   },
-  cityItemText: {
-    fontSize: 15,
-    color: "#111",
-    marginLeft: 12,
-  },
+  cityItemText: { fontSize: 15, color: "#111" },
   emptyCitiesText: {
     textAlign: "center",
     color: "#888",
-    paddingVertical: 24,
+    marginTop: 24,
+    fontSize: 14,
   },
 });
