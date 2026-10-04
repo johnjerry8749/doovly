@@ -1,25 +1,61 @@
 /**
  * Service requests service — screens import ONLY from here.
- * Mock data uses local @/assets/profile_*.jpg (same as professionals).
  *
- * NOW  → mutates in-memory SERVICE_REQUESTS from src/data/serviceRequests.ts
- * LATER → swap each function body to apiRequest(...) — keep the same signatures.
+ * DATA SOURCE: Supabase
+ *   service_requests
+ *   service_request_comments
+ *   service_request_offers
+ *   service_request_likes
+ *
+ * Keep function names + return shapes stable for the UI.
  */
 
 import type { ImageSourcePropType } from "react-native";
-import {
-  SERVICE_REQUESTS,
-  getServiceRequestById as getFromData,
-  type ServiceRequest,
-  type ServiceRequestComment,
-  type ServiceRequestIcon,
-} from "@/data/serviceRequests";
+import type { MaterialCommunityIcons } from "@expo/vector-icons";
+import { supabase } from "@/lib/supabase";
+import { resolveImageSource, resolveImageSources } from "@/lib/mappers";
 import {
   getCurrentUserId,
   addInAppNotification,
 } from "@/services/inAppNotifications";
 
-export type { ServiceRequest, ServiceRequestComment, ServiceRequestIcon };
+export type ServiceRequestIcon = keyof typeof MaterialCommunityIcons.glyphMap;
+
+export type ServiceRequestComment = {
+  id: string;
+  userId?: string;
+  userName: string;
+  userAvatar: ImageSourcePropType;
+  text: string;
+  timeAgo: string;
+};
+
+export type ServiceRequest = {
+  id: string;
+  title: string;
+  category: string;
+  profession: string;
+  location: string;
+  city: string;
+  price?: string;
+  timeAgo: string;
+  icon: ServiceRequestIcon;
+  iconBackground: string;
+  latitude?: number;
+  longitude?: number;
+  images: ImageSourcePropType[];
+  description: string;
+  isNew: boolean;
+  createdByUserId: string;
+  posterName: string;
+  posterAvatar: ImageSourcePropType;
+  posterVerified?: boolean;
+  likesCount: number;
+  maxOffers: number;
+  offersCount: number;
+  offeredByUserIds?: string[];
+  comments: ServiceRequestComment[];
+};
 
 export type CreateServiceRequestInput = {
   category: string;
@@ -30,7 +66,6 @@ export type CreateServiceRequestInput = {
   images: ImageSourcePropType[];
   icon: ServiceRequestIcon;
   iconBackground: string;
-  /** How many offers this request should accept (1–20) */
   maxOffers: number;
 };
 
@@ -60,148 +95,386 @@ export type AddCommentInput = {
 
 const DEFAULT_AVATAR = require("@/assets/profile_1.jpg");
 
-function uniqueById(list: ServiceRequest[]): ServiceRequest[] {
-  const seen = new Set<string>();
-  const out: ServiceRequest[] = [];
-  for (const item of list) {
-    if (seen.has(item.id)) continue;
-    seen.add(item.id);
-    out.push(item);
-  }
-  return out;
+type RequestRow = {
+  id: string;
+  mock_id: string | null;
+  title: string;
+  category: string;
+  profession: string;
+  location: string;
+  city: string;
+  price: string | null;
+  description: string;
+  icon: string;
+  icon_background: string | null;
+  images: string[] | null;
+  image_keys: string[] | null;
+  time_ago: string | null;
+  is_new: boolean;
+  created_by: string | null;
+  poster_name: string;
+  poster_avatar_url: string | null;
+  poster_verified: boolean;
+  likes_count: number;
+  max_offers: number;
+  offers_count: number;
+  offered_by: string[] | null;
+  latitude: number | null;
+  longitude: number | null;
+  created_at: string;
+};
+
+type CommentRow = {
+  id: string;
+  request_id: string;
+  user_id: string | null;
+  user_name: string;
+  user_avatar_url: string | null;
+  text: string;
+  time_ago: string | null;
+  created_at: string;
+};
+
+function formatTimeAgo(iso: string | null | undefined, fallback?: string | null): string {
+  if (fallback?.trim()) return fallback.trim();
+  if (!iso) return "Just now";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "Just now";
+  const sec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (sec < 60) return `${sec || 1} sec ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const days = Math.floor(hr / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
-/** True when the request belongs to the authenticated user (mock or API). */
+function mapComment(row: CommentRow): ServiceRequestComment {
+  const avatar =
+    resolveImageSource(row.user_avatar_url) ?? DEFAULT_AVATAR;
+  return {
+    id: row.id,
+    userId: row.user_id ?? undefined,
+    userName: row.user_name?.trim() || "User",
+    userAvatar: avatar as ImageSourcePropType,
+    text: row.text ?? "",
+    timeAgo: formatTimeAgo(row.created_at, row.time_ago),
+  };
+}
+
+function mapRequest(
+  row: RequestRow,
+  comments: ServiceRequestComment[] = [],
+): ServiceRequest {
+  const images = resolveImageSources(row.image_keys, row.images);
+  const posterAvatar =
+    (resolveImageSource(row.poster_avatar_url) as ImageSourcePropType) ||
+    DEFAULT_AVATAR;
+
+  return {
+    id: row.id,
+    title: row.title ?? "",
+    category: row.category ?? "",
+    profession: row.profession ?? row.category ?? "",
+    location: row.location ?? "",
+    city: row.city ?? "",
+    price: row.price ?? undefined,
+    timeAgo: formatTimeAgo(row.created_at, row.time_ago),
+    icon: (row.icon as ServiceRequestIcon) || "briefcase-outline",
+    iconBackground: row.icon_background?.trim() || "#E8F5E9",
+    latitude: row.latitude != null ? Number(row.latitude) : undefined,
+    longitude: row.longitude != null ? Number(row.longitude) : undefined,
+    images: images.length ? images : [],
+    description: row.description ?? "",
+    isNew: Boolean(row.is_new),
+    createdByUserId: row.created_by ?? "",
+    posterName: row.poster_name ?? "User",
+    posterAvatar,
+    posterVerified: Boolean(row.poster_verified),
+    likesCount: Number(row.likes_count ?? 0),
+    maxOffers: Number(row.max_offers ?? 5),
+    offersCount: Number(row.offers_count ?? 0),
+    offeredByUserIds: (row.offered_by ?? []).map(String),
+    comments,
+  };
+}
+
+async function loadCommentsByRequestIds(
+  requestIds: string[],
+): Promise<Map<string, ServiceRequestComment[]>> {
+  const map = new Map<string, ServiceRequestComment[]>();
+  if (!requestIds.length) return map;
+
+  const { data, error } = await supabase
+    .from("service_request_comments")
+    .select(
+      "id, request_id, user_id, user_name, user_avatar_url, text, time_ago, created_at",
+    )
+    .in("request_id", requestIds)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("loadCommentsByRequestIds error:", error.message);
+    return map;
+  }
+
+  for (const row of (data ?? []) as CommentRow[]) {
+    const list = map.get(row.request_id) ?? [];
+    list.push(mapComment(row));
+    map.set(row.request_id, list);
+  }
+  return map;
+}
+
+async function fetchRequests(
+  filter?: { createdBy?: string; city?: string; id?: string },
+): Promise<ServiceRequest[]> {
+  let query = supabase
+    .from("service_requests")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (filter?.id) query = query.eq("id", filter.id);
+  if (filter?.createdBy) query = query.eq("created_by", filter.createdBy);
+  if (filter?.city) {
+    const c = filter.city.trim();
+    if (c && c.toLowerCase() !== "all nigeria" && c.toLowerCase() !== "nigeria") {
+      query = query.ilike("city", c);
+    }
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("fetchRequests error:", error.message);
+    throw error;
+  }
+
+  const rows = (data ?? []) as RequestRow[];
+  const commentsMap = await loadCommentsByRequestIds(rows.map((r) => r.id));
+  return rows.map((r) => mapRequest(r, commentsMap.get(r.id) ?? []));
+}
+
+/** True when the request belongs to the authenticated user. */
 export function isOwnServiceRequest(request: ServiceRequest): boolean {
   const current = getCurrentUserId();
   return String(request.createdByUserId) === String(current);
 }
 
-export function listServiceRequests(): ServiceRequest[] {
-  // TODO backend: return apiRequest<ServiceRequest[]>("/service-requests")
-  return uniqueById(SERVICE_REQUESTS);
+export async function listServiceRequests(): Promise<ServiceRequest[]> {
+  return fetchRequests();
 }
 
-/**
- * Requests created by the logged-in user only.
- * NOW  → filter mock by createdByUserId
- * LATER → GET /service-requests?mine=1 or /me/service-requests
- */
-export function listMyServiceRequests(): ServiceRequest[] {
+export async function listMyServiceRequests(): Promise<ServiceRequest[]> {
   const uid = getCurrentUserId();
-  return uniqueById(
-    SERVICE_REQUESTS.filter(
-      (r) => String(r.createdByUserId) === String(uid),
-    ),
-  );
+  if (!uid) return [];
+  return fetchRequests({ createdBy: uid });
 }
 
-export function listServiceRequestsByCity(city: string): ServiceRequest[] {
-  const c = city.trim().toLowerCase();
-  if (!c) return listServiceRequests();
-  return listServiceRequests().filter(
-    (r) => r.city.trim().toLowerCase() === c,
-  );
+export async function listServiceRequestsByCity(
+  city: string,
+): Promise<ServiceRequest[]> {
+  return fetchRequests({ city });
 }
 
-export function getServiceRequestById(
+export async function getServiceRequestById(
   id: string,
-): ServiceRequest | undefined {
-  return getFromData(id);
+): Promise<ServiceRequest | undefined> {
+  const list = await fetchRequests({ id: String(id).trim() });
+  return list[0];
 }
 
-export function listRecentServiceRequests(limit = 5): ServiceRequest[] {
-  return listServiceRequests().slice(0, limit);
+export async function listRecentServiceRequests(
+  limit = 5,
+): Promise<ServiceRequest[]> {
+  const all = await listServiceRequests();
+  return all.slice(0, limit);
 }
 
-export function createServiceRequest(
+export async function createServiceRequest(
   input: CreateServiceRequestInput,
-): ServiceRequest {
-  // TODO backend: return apiRequest("/service-requests", { method: "POST", body })
-  const request: ServiceRequest = {
-    id: `sr-${Date.now()}`,
+): Promise<ServiceRequest> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("You must be signed in to create a request.");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const imageUrls: string[] = [];
+  for (const img of input.images.slice(0, 4)) {
+    if (typeof img === "object" && img && "uri" in img && typeof img.uri === "string") {
+      if (img.uri.startsWith("http")) imageUrls.push(img.uri);
+    }
+  }
+
+  const payload = {
     title: input.title.trim(),
     category: input.category,
     profession: input.category,
     location: input.location.trim(),
     city: input.city.trim(),
-    timeAgo: "Just now",
-    icon: input.icon,
-    iconBackground: input.iconBackground,
-    images: input.images.slice(0, 4),
     description: input.description.trim(),
-    isNew: true,
-    createdByUserId: getCurrentUserId(),
-    posterName: "You",
-    posterAvatar: DEFAULT_AVATAR,
-    posterVerified: false,
-    likesCount: 0,
-    maxOffers: input.maxOffers,
-    offersCount: 0,
-    offeredByUserIds: [],
-    comments: [],
+    icon: input.icon || "briefcase-outline",
+    icon_background: input.iconBackground || "#E8F5E9",
+    images: imageUrls,
+    image_keys: [] as string[],
+    time_ago: "Just now",
+    is_new: true,
+    created_by: user.id,
+    poster_name:
+      profile?.full_name?.trim() ||
+      (user.user_metadata?.full_name as string) ||
+      "You",
+    poster_avatar_url: profile?.avatar_url ?? null,
+    poster_verified: false,
+    likes_count: 0,
+    max_offers: Math.min(20, Math.max(1, Number(input.maxOffers) || 5)),
+    offers_count: 0,
+    offered_by: [] as string[],
   };
-  SERVICE_REQUESTS.unshift(request);
-  return request;
+
+  const { data, error } = await supabase
+    .from("service_requests")
+    .insert(payload)
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("createServiceRequest error:", error.message);
+    throw error;
+  }
+
+  return mapRequest(data as RequestRow, []);
 }
 
-export function updateServiceRequest(
+export async function updateServiceRequest(
   id: string,
   input: UpdateServiceRequestInput,
-): ServiceRequest | null {
-  // TODO backend: PATCH /service-requests/:id
-  const request = getFromData(id);
-  if (!request) return null;
-  if (!isOwnServiceRequest(request)) return null;
-  if (input.title !== undefined) request.title = input.title.trim();
-  if (input.description !== undefined)
-    request.description = input.description.trim();
+): Promise<ServiceRequest | null> {
+  const existing = await getServiceRequestById(id);
+  if (!existing) return null;
+  if (!isOwnServiceRequest(existing)) return null;
+
+  const patch: Record<string, unknown> = {};
+  if (input.title !== undefined) patch.title = input.title.trim();
+  if (input.description !== undefined) patch.description = input.description.trim();
   if (input.category !== undefined) {
-    request.category = input.category;
-    request.profession = input.category;
+    patch.category = input.category;
+    patch.profession = input.category;
   }
-  if (input.location !== undefined) request.location = input.location.trim();
-  if (input.city !== undefined) request.city = input.city.trim();
-  if (input.images !== undefined) request.images = input.images.slice(0, 4);
-  if (input.icon !== undefined) request.icon = input.icon;
-  if (input.iconBackground !== undefined)
-    request.iconBackground = input.iconBackground;
-  return request;
+  if (input.location !== undefined) patch.location = input.location.trim();
+  if (input.city !== undefined) patch.city = input.city.trim();
+  if (input.icon !== undefined) patch.icon = input.icon;
+  if (input.iconBackground !== undefined) patch.icon_background = input.iconBackground;
+  if (input.images !== undefined) {
+    const imageUrls: string[] = [];
+    for (const img of input.images.slice(0, 4)) {
+      if (typeof img === "object" && img && "uri" in img && typeof img.uri === "string") {
+        if (img.uri.startsWith("http")) imageUrls.push(img.uri);
+      }
+    }
+    patch.images = imageUrls;
+  }
+
+  const { data, error } = await supabase
+    .from("service_requests")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("updateServiceRequest error:", error.message);
+    throw error;
+  }
+
+  const commentsMap = await loadCommentsByRequestIds([id]);
+  return mapRequest(data as RequestRow, commentsMap.get(id) ?? []);
 }
 
-export function deleteServiceRequest(id: string): boolean {
-  // TODO backend: DELETE /service-requests/:id
-  const request = getFromData(id);
-  if (!request) return false;
-  if (!isOwnServiceRequest(request)) return false;
-  const idx = SERVICE_REQUESTS.findIndex((r) => r.id === id);
-  if (idx < 0) return false;
-  SERVICE_REQUESTS.splice(idx, 1);
+export async function deleteServiceRequest(id: string): Promise<boolean> {
+  const existing = await getServiceRequestById(id);
+  if (!existing) return false;
+  if (!isOwnServiceRequest(existing)) return false;
+
+  const { error } = await supabase.from("service_requests").delete().eq("id", id);
+  if (error) {
+    console.error("deleteServiceRequest error:", error.message);
+    return false;
+  }
   return true;
 }
 
-export function addServiceRequestComment(
+export async function addServiceRequestComment(
   input: AddCommentInput,
-): ServiceRequestComment | null {
-  // TODO backend: POST /service-requests/:id/comments
-  // Server should also create an in-app + push notification for the owner.
-  const request = getFromData(input.requestId);
+): Promise<ServiceRequestComment | null> {
   const text = input.text.trim();
-  if (!request || !text) return null;
-  const actorId = String(getCurrentUserId());
-  const comment: ServiceRequestComment = {
-    id: `c-${Date.now()}`,
-    userId: actorId,
-    userName: input.userName?.trim() || "You",
-    userAvatar: input.userAvatar || DEFAULT_AVATAR,
-    text,
-    timeAgo: "Just now",
-  };
-  request.comments = [...(request.comments || []), comment];
+  if (!text) return null;
 
-  // Notify owner when someone else comments (mock + same shape for API later)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const request = await getServiceRequestById(input.requestId);
+  if (!request) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const userName =
+    input.userName?.trim() ||
+    profile?.full_name?.trim() ||
+    "You";
+
+  let avatarUrl: string | null = profile?.avatar_url ?? null;
+  if (
+    input.userAvatar &&
+    typeof input.userAvatar === "object" &&
+    "uri" in input.userAvatar
+  ) {
+    avatarUrl = String(input.userAvatar.uri);
+  }
+
+  const { data, error } = await supabase
+    .from("service_request_comments")
+    .insert({
+      request_id: input.requestId,
+      user_id: user.id,
+      user_name: userName,
+      user_avatar_url: avatarUrl,
+      text,
+      time_ago: "Just now",
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("addServiceRequestComment error:", error.message);
+    return null;
+  }
+
+  const comment = mapComment(data as CommentRow);
+
   const ownerId = String(request.createdByUserId || "");
-  if (ownerId && ownerId !== actorId) {
+  if (ownerId && ownerId !== user.id) {
     const preview =
       comment.text.length > 80
         ? `${comment.text.slice(0, 80)}…`
@@ -217,16 +490,42 @@ export function addServiceRequestComment(
   return comment;
 }
 
-export function likeServiceRequest(requestId: string, liked: boolean): number {
-  // TODO backend: POST|DELETE /service-requests/:id/like
-  const request = getFromData(requestId);
-  if (!request) return 0;
-  if (liked) request.likesCount = (request.likesCount || 0) + 1;
-  else request.likesCount = Math.max(0, (request.likesCount || 0) - 1);
-  return request.likesCount;
+export async function likeServiceRequest(
+  requestId: string,
+  liked: boolean,
+): Promise<number> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return 0;
+
+  if (liked) {
+    await supabase.from("service_request_likes").upsert(
+      { request_id: requestId, user_id: user.id },
+      { onConflict: "request_id,user_id" },
+    );
+  } else {
+    await supabase
+      .from("service_request_likes")
+      .delete()
+      .eq("request_id", requestId)
+      .eq("user_id", user.id);
+  }
+
+  const { count } = await supabase
+    .from("service_request_likes")
+    .select("*", { count: "exact", head: true })
+    .eq("request_id", requestId);
+
+  const likesCount = count ?? 0;
+  await supabase
+    .from("service_requests")
+    .update({ likes_count: likesCount })
+    .eq("id", requestId);
+
+  return likesCount;
 }
 
-/** Whether the current user may send an offer on this request. */
 export function canSendOfferOnRequest(request: ServiceRequest): {
   ok: boolean;
   reason?: "own" | "full" | "already" | "missing";
@@ -244,16 +543,14 @@ export function canSendOfferOnRequest(request: ServiceRequest): {
   return { ok: true };
 }
 
-export function submitServiceRequestOffer(input: SubmitOfferInput): {
+export async function submitServiceRequestOffer(input: SubmitOfferInput): Promise<{
   ok: boolean;
   requestId: string;
   amount: number;
   recipientUserId: string;
   reason?: "own" | "full" | "already" | "invalid";
-} | null {
-  // TODO backend: POST /service-requests/:id/offers
-  const request = getFromData(input.requestId);
-  if (!request || !input.amount || input.amount <= 0) {
+} | null> {
+  if (!input.amount || input.amount <= 0) {
     return {
       ok: false,
       requestId: input.requestId,
@@ -262,39 +559,89 @@ export function submitServiceRequestOffer(input: SubmitOfferInput): {
       reason: "invalid",
     };
   }
-  if (isOwnServiceRequest(request)) {
+
+  const request = await getServiceRequestById(input.requestId);
+  if (!request) {
+    return {
+      ok: false,
+      requestId: input.requestId,
+      amount: input.amount,
+      recipientUserId: "",
+      reason: "invalid",
+    };
+  }
+
+  const check = canSendOfferOnRequest(request);
+  if (!check.ok) {
     return {
       ok: false,
       requestId: request.id,
       amount: input.amount,
       recipientUserId: request.createdByUserId,
-      reason: "own",
+      reason: check.reason === "missing" ? "invalid" : check.reason,
     };
   }
-  const uid = String(getCurrentUserId());
-  const offered = request.offeredByUserIds || [];
-  if (offered.some((id) => String(id) === uid)) {
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
     return {
       ok: false,
       requestId: request.id,
       amount: input.amount,
       recipientUserId: request.createdByUserId,
-      reason: "already",
+      reason: "invalid",
     };
   }
-  const max = request.maxOffers ?? 5;
-  const count = request.offersCount ?? 0;
-  if (count >= max) {
+
+  const { data: pro } = await supabase
+    .from("professionals")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const { error: offerError } = await supabase.from("service_request_offers").insert({
+    request_id: request.id,
+    user_id: user.id,
+    professional_id: pro?.id ?? null,
+    amount: input.amount,
+    message: input.message?.trim() || null,
+    status: "pending",
+  });
+
+  if (offerError) {
+    // unique (request_id, user_id) → already offered
+    if (offerError.code === "23505") {
+      return {
+        ok: false,
+        requestId: request.id,
+        amount: input.amount,
+        recipientUserId: request.createdByUserId,
+        reason: "already",
+      };
+    }
+    console.error("submitServiceRequestOffer error:", offerError.message);
     return {
       ok: false,
       requestId: request.id,
       amount: input.amount,
       recipientUserId: request.createdByUserId,
-      reason: "full",
+      reason: "invalid",
     };
   }
-  request.offersCount = count + 1;
-  request.offeredByUserIds = [...offered, uid];
+
+  const offeredBy = [...(request.offeredByUserIds || []), user.id];
+  const offersCount = (request.offersCount ?? 0) + 1;
+
+  await supabase
+    .from("service_requests")
+    .update({
+      offers_count: offersCount,
+      offered_by: offeredBy,
+    })
+    .eq("id", request.id);
+
   return {
     ok: true,
     requestId: request.id,
