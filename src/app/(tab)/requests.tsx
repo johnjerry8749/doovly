@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -10,12 +10,12 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listServiceRequests,
   type ServiceRequest,
 } from "@/services/serviceRequests";
-import { listProfessionals } from "@/services/professionals";
 import { useLocation } from "@/context/LocationContext";
 import CreateJobModal from "@/components/CreateJobModal";
 import RequestImageSlider from "@/components/RequestImageSlider";
@@ -35,27 +35,24 @@ export default function RequestsScreen() {
   const [loading, setLoading] = useState(true);
   const [createVisible, setCreateVisible] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const [reqs] = await Promise.all([
-          listServiceRequests(),
-          listProfessionals().catch(() => []),
-        ]);
-        if (!cancelled) setAllRequests(reqs);
-      } catch (e) {
-        console.error("Requests load error:", e);
-        if (!cancelled) setAllRequests([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const loadRequests = useCallback(async () => {
+    try {
+      setLoading(true);
+      const reqs = await listServiceRequests();
+      setAllRequests(reqs);
+    } catch (e) {
+      console.error("Requests load error:", e);
+      setAllRequests([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadRequests();
+    }, [loadRequests]),
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -179,8 +176,14 @@ export default function RequestsScreen() {
       <CreateJobModal
         visible={createVisible}
         onClose={() => setCreateVisible(false)}
-        onSaved={async () => {
+        onSaved={async (created) => {
           setCreateVisible(false);
+          if (created) {
+            setAllRequests((prev) => {
+              const without = prev.filter((r) => r.id !== created.id);
+              return [created, ...without];
+            });
+          }
           try {
             const reqs = await listServiceRequests();
             setAllRequests(reqs);
