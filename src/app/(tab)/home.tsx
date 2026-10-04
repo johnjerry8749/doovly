@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -45,11 +45,41 @@ export default function Home() {
     closeCityPicker,
   } = useLocation();
 
-  const services = listServiceCategories();
-  const professionals = listProfessionals();
+  const [services, setServices] = useState<
+    { name: string; icon: string }[]
+  >([{ name: "All", icon: "apps" }]);
+  const [professionals, setProfessionals] = useState<
+    Awaited<ReturnType<typeof listProfessionals>>
+  >([]);
 
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [favTick, setFavTick] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [cats, pros] = await Promise.all([
+          listServiceCategories(),
+          listProfessionals(),
+        ]);
+        if (cancelled) return;
+        setServices(cats);
+        setProfessionals(pros);
+      } catch (e) {
+        console.error("Home load error:", e);
+        if (!cancelled) {
+          setServices([{ name: "All", icon: "apps" }]);
+          setProfessionals([]);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onToggleFavorite = useCallback((proId: string) => {
     const result = toggleSave(proId);
@@ -59,10 +89,7 @@ export default function Home() {
         "Save limit reached",
         "Free users can save up to 5 providers. Upgrade to Pro for unlimited saves.",
         [
-          {
-            text: "Not now",
-            style: "cancel",
-          },
+          { text: "Not now", style: "cancel" },
           {
             text: "Upgrade",
             onPress: () =>
@@ -70,7 +97,6 @@ export default function Home() {
           },
         ],
       );
-
       return;
     }
 
@@ -81,11 +107,7 @@ export default function Home() {
 
   const filteredCities = useMemo(() => {
     const query = citySearch.trim().toLowerCase();
-
-    if (!query) {
-      return [...NIGERIA_CITIES];
-    }
-
+    if (!query) return [...NIGERIA_CITIES];
     return NIGERIA_CITIES.filter((city) =>
       city.toLowerCase().includes(query),
     );
@@ -104,20 +126,11 @@ export default function Home() {
         locationName.toLowerCase().includes("getting")
       )
     ) {
-      const city = locationName
-        .split(",")[0]
-        .trim()
-        .toLowerCase();
+      const city = locationName.split(",")[0].trim().toLowerCase();
 
-      if (
-        city &&
-        city !== "nigeria" &&
-        city !== "all nigeria"
-      ) {
+      if (city && city !== "nigeria" && city !== "all nigeria") {
         list = list.filter((professional) => {
-          const professionalCity =
-            professional.city.toLowerCase();
-
+          const professionalCity = (professional.city || "").toLowerCase();
           return (
             professionalCity.includes(city) ||
             city.includes(professionalCity)
@@ -126,15 +139,10 @@ export default function Home() {
       }
     }
 
-    if (
-      selectedCategory &&
-      selectedCategory !== "All"
-    ) {
+    if (selectedCategory && selectedCategory !== "All") {
       const cat = selectedCategory.toLowerCase();
-
       list = list.filter((p) => {
-        const prof = p.profession.toLowerCase();
-
+        const prof = (p.profession || "").toLowerCase();
         return (
           prof === cat ||
           prof.includes(cat) ||
@@ -144,12 +152,7 @@ export default function Home() {
     }
 
     return list;
-  }, [
-    locationName,
-    showAllNigeria,
-    professionals,
-    selectedCategory,
-  ]);
+  }, [locationName, showAllNigeria, professionals, selectedCategory]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -157,46 +160,26 @@ export default function Home() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.container}
       >
-        {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.locationContainer}
             onPress={() => setShowLocationModal(true)}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="location"
-              size={28}
-              color="#159447"
-            />
-
+            <Ionicons name="location" size={28} color="#159447" />
             {loadingLocation ? (
               <View style={styles.locationLoading}>
-                <ActivityIndicator
-                  size="small"
-                  color="#159447"
-                />
-
-                <Text
-                  style={styles.locationLoadingText}
-                >
+                <ActivityIndicator size="small" color="#159447" />
+                <Text style={styles.locationLoadingText}>
                   Getting location...
                 </Text>
               </View>
             ) : (
-              <Text
-                style={styles.locationText}
-                numberOfLines={1}
-              >
+              <Text style={styles.locationText} numberOfLines={1}>
                 {locationName}
               </Text>
             )}
-
-            <Ionicons
-              name="chevron-down"
-              size={18}
-              color="#111"
-            />
+            <Ionicons name="chevron-down" size={18} color="#111" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -205,24 +188,15 @@ export default function Home() {
             onPress={() =>
               router.push({
                 pathname: "/notification/[id]",
-                params: {
-                  id: String(getCurrentUserId()),
-                },
+                params: { id: String(getCurrentUserId()) },
               })
             }
           >
-            <Ionicons
-              name="notifications-outline"
-              size={28}
-              color="#111"
-            />
-
+            <Ionicons name="notifications-outline" size={28} color="#111" />
             <View style={styles.notificationDot} />
           </TouchableOpacity>
         </View>
 
-
-        {/* BANNER */}
         <View style={styles.bannerContainer}>
           <Image
             source={require("@/assets/images/home_banner.png")}
@@ -231,16 +205,10 @@ export default function Home() {
           />
         </View>
 
-        {/* SERVICES */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            What do you need help with?
-          </Text>
-
+          <Text style={styles.sectionTitle}>What do you need help with?</Text>
           <TouchableOpacity
-            onPress={() =>
-              router.push("/(tab)/services")
-            }
+            onPress={() => router.push("/(tab)/services")}
             activeOpacity={0.7}
           >
             <Text style={styles.seeAll}>See all</Text>
@@ -253,36 +221,25 @@ export default function Home() {
           contentContainerStyle={styles.servicesContainer}
         >
           {services.map((service, index) => {
-            const active =
-              selectedCategory === service.name;
-
+            const active = selectedCategory === service.name;
             return (
               <TouchableOpacity
                 key={`${service.name}-${index}`}
                 style={styles.serviceItem}
                 activeOpacity={0.7}
-                onPress={() =>
-                  setSelectedCategory(service.name)
-                }
+                onPress={() => setSelectedCategory(service.name)}
               >
                 <View style={styles.serviceCircle}>
                   <MaterialCommunityIcons
                     name={service.icon as any}
                     size={26}
-                    color={
-                      active
-                        ? "#159447"
-                        : "#087A38"
-                    }
+                    color={active ? "#159447" : "#087A38"}
                   />
                 </View>
-
                 <Text
                   style={[
                     styles.serviceName,
-                    active && {
-                      color: "#159447",
-                    },
+                    active && { color: "#159447" },
                   ]}
                 >
                   {service.name}
@@ -292,19 +249,14 @@ export default function Home() {
           })}
         </ScrollView>
 
-        {/* POPULAR PROFESSIONALS */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
-            {showAllNigeria ||
-            locationName === "All Nigeria"
+            {showAllNigeria || locationName === "All Nigeria"
               ? "Popular in Nigeria"
               : "Popular near you"}
           </Text>
-
           <TouchableOpacity
-            onPress={() =>
-              router.push("/(tab)/services")
-            }
+            onPress={() => router.push("/(tab)/services")}
             activeOpacity={0.7}
           >
             <Text style={styles.seeAll}>See all</Text>
@@ -313,29 +265,19 @@ export default function Home() {
 
         {nearbyProfessionals.length === 0 ? (
           <View style={styles.emptyProsContainer}>
-            <Ionicons
-              name="search-outline"
-              size={48}
-              color="#ccc"
-            />
-
+            <Ionicons name="search-outline" size={48} color="#ccc" />
             <Text style={styles.emptyProsTitle}>
               No Avaliable professionals near you
             </Text>
-
             <Text style={styles.emptyProsSubtitle}>
-              Try another location or view all in
-              Nigeria.
+              Try another location or view all in Nigeria.
             </Text>
-
             <TouchableOpacity
               style={styles.emptyProsButton}
               onPress={viewAllInNigeria}
               activeOpacity={0.8}
             >
-              <Text
-                style={styles.emptyProsButtonText}
-              >
+              <Text style={styles.emptyProsButtonText}>
                 View all in Nigeria
               </Text>
             </TouchableOpacity>
@@ -344,9 +286,7 @@ export default function Home() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={
-              styles.professionalsContainer
-            }
+            contentContainerStyle={styles.professionalsContainer}
           >
             {nearbyProfessionals.map((person) => (
               <TouchableOpacity
@@ -355,106 +295,65 @@ export default function Home() {
                 activeOpacity={0.8}
                 onPress={() =>
                   router.push({
-                    pathname:
-                      "/professional/[id]",
-                    params: {
-                      id: person.id,
-                      from: "home",
-                    },
+                    pathname: "/professional/[id]",
+                    params: { id: person.id, from: "home" },
                   })
                 }
               >
-                {/* FAVORITE */}
                 <TouchableOpacity
                   style={styles.heartButton}
                   activeOpacity={0.7}
-                  onPress={() =>
-                    onToggleFavorite(person.id)
-                  }
+                  onPress={() => onToggleFavorite(person.id)}
                 >
                   <Ionicons
-                    name={
-                      isSaved(person.id)
-                        ? "heart"
-                        : "heart-outline"
-                    }
+                    name={isSaved(person.id) ? "heart" : "heart-outline"}
                     size={17}
-                    color={
-                      isSaved(person.id)
-                        ? "#EF4444"
-                        : "#111"
-                    }
+                    color={isSaved(person.id) ? "#EF4444" : "#111"}
                   />
                 </TouchableOpacity>
 
-                {/* PROFILE IMAGE */}
-                <View
-                  style={styles.profileImageContainer}
-                >
+                <View style={styles.profileImageContainer}>
                   <Image
-                    source={person.image}
+                    source={
+                      typeof person.image === "string"
+                        ? { uri: person.image }
+                        : (person.image as any)
+                    }
                     style={styles.profileImage}
                     resizeMode="cover"
                   />
                 </View>
 
-                {/* NAME + VERIFIED BADGE */}
-                <View
-                  style={styles.nameContainer}
-                >
-                  <Text
-                    style={styles.professionalName}
-                    numberOfLines={1}
-                  >
+                <View style={styles.nameContainer}>
+                  <Text style={styles.professionalName} numberOfLines={1}>
                     {person.name}
                   </Text>
                 </View>
 
-                {/* RATING */}
                 <View style={styles.ratingContainer}>
-                  <Ionicons
-                    name="star"
-                    size={12}
-                    color="#F4C400"
-                  />
-
+                  <Ionicons name="star" size={12} color="#F4C400" />
                   <Text style={styles.rating}>
                     {starsFromReviewCount(
-                      person.reviews.length,
+                      person.reviews?.length ?? person.reviewCount ?? 0,
                     )}
                   </Text>
-
                   <Text style={styles.reviews}>
-                    ({person.reviews.length})
+                    ({person.reviews?.length ?? person.reviewCount ?? 0})
                   </Text>
                 </View>
 
-                {/* PROFESSION */}
-                <Text
-                  style={styles.profession}
-                  numberOfLines={1}
-                >
+                <Text style={styles.profession} numberOfLines={1}>
                   {person.profession}
                 </Text>
-
-                {/* CITY */}
-                <Text
-                  style={styles.cityText}
-                  numberOfLines={1}
-                >
+                <Text style={styles.cityText} numberOfLines={1}>
                   {person.city}
                 </Text>
-
-                {/* PRICE */}
-                <Text style={styles.price}>
-                  From {person.priceFrom}
-                </Text>
+                <Text style={styles.price}>From {person.priceFrom}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         )}
 
-        {/* VERIFIED BANNER */}
         <View style={styles.verifiedContainer}>
           <View style={styles.shieldContainer}>
             <Ionicons
@@ -463,87 +362,53 @@ export default function Home() {
               color="#159447"
             />
           </View>
-
-          <View
-            style={styles.verifiedTextContainer}
-          >
+          <View style={styles.verifiedTextContainer}>
             <Text style={styles.verifiedTitle}>
               Verified pros. Trusted service.
             </Text>
-
             <Text style={styles.verifiedSubtitle}>
-              All professionals are background
-              checked.
+              All professionals are background checked.
             </Text>
           </View>
-
           <TouchableOpacity
             style={styles.howButton}
             activeOpacity={0.8}
-            onPress={() =>
-              router.push("/(tab)/how-it-works")
-            }
+            onPress={() => router.push("/(tab)/how-it-works")}
           >
-            <Text style={styles.howButtonText}>
-              How it works
-            </Text>
-
-            <Ionicons
-              name="arrow-forward"
-              size={20}
-              color="#fff"
-            />
+            <Text style={styles.howButtonText}>How it works</Text>
+            <Ionicons name="arrow-forward" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* LOCATION MODAL */}
       <Modal
         visible={showLocationModal}
         transparent
         animationType="slide"
-        onRequestClose={() =>
-          setShowLocationModal(false)
-        }
+        onRequestClose={() => setShowLocationModal(false)}
       >
         <Pressable
           style={styles.modalOverlay}
-          onPress={() =>
-            setShowLocationModal(false)
-          }
+          onPress={() => setShowLocationModal(false)}
         >
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
-
-            <Text style={styles.modalTitle}>
-              Choose location
-            </Text>
+            <Text style={styles.modalTitle}>Choose location</Text>
 
             <TouchableOpacity
               style={styles.modalOption}
               onPress={getUserLocation}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name="navigate"
-                size={24}
-                color="#159447"
-              />
-
+              <Ionicons name="navigate" size={24} color="#159447" />
               <View style={styles.modalOptionText}>
-                <Text
-                  style={styles.modalOptionTitle}
-                >
+                <Text style={styles.modalOptionTitle}>
                   Use current location
                 </Text>
-
-                <Text
-                  style={styles.modalOptionSub}
-                >
-                  Allow access to detect your
-                  position
+                <Text style={styles.modalOptionSub}>
+                  Allow access to detect your position
                 </Text>
               </View>
             </TouchableOpacity>
@@ -556,22 +421,10 @@ export default function Home() {
               }}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name="list-outline"
-                size={24}
-                color="#159447"
-              />
-
+              <Ionicons name="list-outline" size={24} color="#159447" />
               <View style={styles.modalOptionText}>
-                <Text
-                  style={styles.modalOptionTitle}
-                >
-                  Select a city
-                </Text>
-
-                <Text
-                  style={styles.modalOptionSub}
-                >
+                <Text style={styles.modalOptionTitle}>Select a city</Text>
+                <Text style={styles.modalOptionSub}>
                   Pick from popular cities in Nigeria
                 </Text>
               </View>
@@ -582,22 +435,12 @@ export default function Home() {
               onPress={viewAllInNigeria}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name="globe-outline"
-                size={24}
-                color="#159447"
-              />
-
+              <Ionicons name="globe-outline" size={24} color="#159447" />
               <View style={styles.modalOptionText}>
-                <Text
-                  style={styles.modalOptionTitle}
-                >
+                <Text style={styles.modalOptionTitle}>
                   View all in Nigeria
                 </Text>
-
-                <Text
-                  style={styles.modalOptionSub}
-                >
+                <Text style={styles.modalOptionSub}>
                   See professionals from every city
                 </Text>
               </View>
@@ -605,19 +448,14 @@ export default function Home() {
 
             <TouchableOpacity
               style={styles.modalCancel}
-              onPress={() =>
-                setShowLocationModal(false)
-              }
+              onPress={() => setShowLocationModal(false)}
             >
-              <Text style={styles.modalCancelText}>
-                Cancel
-              </Text>
+              <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
       </Modal>
 
-      {/* CITY PICKER */}
       <Modal
         visible={showCityPicker}
         transparent
@@ -625,25 +463,12 @@ export default function Home() {
         onRequestClose={closeCityPicker}
       >
         <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalSheet,
-              styles.cityPickerSheet,
-            ]}
-          >
+          <View style={[styles.modalSheet, styles.cityPickerSheet]}>
             <View style={styles.modalHandle} />
-
-            <Text style={styles.modalTitle}>
-              Select a city
-            </Text>
+            <Text style={styles.modalTitle}>Select a city</Text>
 
             <View style={styles.citySearchBox}>
-              <Ionicons
-                name="search-outline"
-                size={20}
-                color="#888"
-              />
-
+              <Ionicons name="search-outline" size={20} color="#888" />
               <TextInput
                 style={styles.citySearchInput}
                 placeholder="Filter cities..."
@@ -652,16 +477,9 @@ export default function Home() {
                 onChangeText={setCitySearch}
                 autoCorrect={false}
               />
-
               {citySearch.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => setCitySearch("")}
-                >
-                  <Ionicons
-                    name="close-circle"
-                    size={20}
-                    color="#aaa"
-                  />
+                <TouchableOpacity onPress={() => setCitySearch("")}>
+                  <Ionicons name="close-circle" size={20} color="#aaa" />
                 </TouchableOpacity>
               )}
             </View>
@@ -673,15 +491,13 @@ export default function Home() {
               keyboardShouldPersistTaps="handled"
               style={styles.cityList}
               ListEmptyComponent={
-                <Text
-                  style={styles.emptyCitiesText}
-                >
-                  No city found. Try another spelling.
+                <Text style={styles.emptyCitiesText}>
+                  No cities match your search
                 </Text>
               }
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.cityItem}
+                  style={styles.cityRow}
                   onPress={() => selectCity(item)}
                   activeOpacity={0.7}
                 >
@@ -690,18 +506,7 @@ export default function Home() {
                     size={20}
                     color="#159447"
                   />
-
-                  <Text
-                    style={styles.cityItemText}
-                  >
-                    {item}
-                  </Text>
-
-                  <Ionicons
-                    name="chevron-forward"
-                    size={18}
-                    color="#ccc"
-                  />
+                  <Text style={styles.cityRowText}>{item}</Text>
                 </TouchableOpacity>
               )}
             />
@@ -710,9 +515,7 @@ export default function Home() {
               style={styles.modalCancel}
               onPress={closeCityPicker}
             >
-              <Text style={styles.modalCancelText}>
-                Cancel
-              </Text>
+              <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -727,458 +530,347 @@ const styles = StyleSheet.create({
     marginBottom: 35,
     backgroundColor: "#fff",
   },
-
   container: {
     paddingHorizontal: 16,
     paddingBottom: 0,
   },
-
-  /* HEADER */
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 10,
-    marginBottom: 18,
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 16,
   },
-
   locationContainer: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    marginRight: 15,
+    marginRight: 12,
   },
-
   locationText: {
-    flex: 1,
-    fontSize: 19,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "600",
     color: "#111",
-    marginLeft: 8,
-    marginRight: 5,
+    marginHorizontal: 6,
+    flexShrink: 1,
   },
-
   locationLoading: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    marginLeft: 8,
+    marginHorizontal: 6,
   },
-
   locationLoadingText: {
-    fontSize: 15,
-    color: "#555",
-    marginLeft: 7,
+    marginLeft: 6,
+    fontSize: 14,
+    color: "#666",
   },
-
   notificationButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
+    position: "relative",
+    padding: 4,
   },
-
   notificationDot: {
     position: "absolute",
-    top: 6,
-    right: 6,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: "#159447",
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#EF4444",
   },
-
-  /* SEARCH */
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F3F3",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 50,
-    marginBottom: 18,
-  },
-
-  searchInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
-    color: "#111",
-  },
-
-  /* BANNER */
   bannerContainer: {
-    width: "100%",
-    height: 120,
     borderRadius: 16,
     overflow: "hidden",
-    marginBottom: 22,
+    marginBottom: 20,
   },
-
   banner: {
     width: "100%",
-    height: "100%",
+    height: 140,
   },
-
-  /* SECTION */
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
   },
-
   sectionTitle: {
     fontSize: 17,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#111",
   },
-
   seeAll: {
     fontSize: 14,
     fontWeight: "600",
     color: "#159447",
   },
-
-  /* SERVICES */
   servicesContainer: {
-    flexDirection: "row",
-    gap: 14,
-    paddingBottom: 22,
+    paddingBottom: 8,
+    marginBottom: 20,
   },
-
   serviceItem: {
     alignItems: "center",
+    marginRight: 16,
     width: 72,
   },
-
   serviceCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 31,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#E8F5E9",
-    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 7,
+    justifyContent: "center",
+    marginBottom: 6,
   },
-
   serviceName: {
     fontSize: 12,
-    fontWeight: "600",
     color: "#333",
     textAlign: "center",
   },
-
-  /* PROFESSIONALS */
   professionalsContainer: {
-    flexDirection: "row",
-    gap: 8,
-    paddingBottom: 25,
+    paddingBottom: 8,
+    marginBottom: 20,
   },
-
   professionalCard: {
-    width: 115,
-    minHeight: 100,
-    borderWidth: 1,
-    borderColor: "#E1E1E1",
-    borderRadius: 12,
-    padding: 10,
+    width: 150,
     backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 12,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-
   heartButton: {
     position: "absolute",
-    right: 8,
-    top: 8,
-    zIndex: 5,
-  },
-
-  profileImageContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    alignSelf: "center",
-    marginBottom: 8,
-    position: "relative",
-  },
-
-  profileImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 35,
-  },
-
-  /* NAME + VERIFIED BADGE */
-  nameContainer: {
-    flexDirection: "row",
+    top: 10,
+    right: 10,
+    zIndex: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-    width: "100%",
-    marginBottom: 3,
-    paddingHorizontal: 1,
   },
-
+  profileImageContainer: {
+    alignItems: "center",
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  profileImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#E5E7EB",
+  },
+  nameContainer: {
+    alignItems: "center",
+    marginBottom: 4,
+  },
   professionalName: {
-    fontSize: 13,
-    fontWeight: "800",
+    fontSize: 14,
+    fontWeight: "700",
     color: "#111",
-    maxWidth: 88,
+    textAlign: "center",
   },
-  verifiedBadgeImage: {
-    position: "absolute",
-    right: 2,
-    bottom: 0,
-    width: 26,
-    height: 26,
-  },
-
-  /* RATING */
   ratingContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 3,
+    justifyContent: "center",
+    marginBottom: 4,
   },
-
   rating: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
+    color: "#111",
     marginLeft: 3,
-    color: "#333",
   },
-
   reviews: {
-    fontSize: 10,
-    color: "#777",
+    fontSize: 11,
+    color: "#888",
     marginLeft: 2,
   },
-
   profession: {
-    fontSize: 11,
-    color: "#555",
+    fontSize: 12,
+    color: "#159447",
+    textAlign: "center",
     marginBottom: 2,
   },
-
   cityText: {
-    fontSize: 10,
-    color: "#777",
-    marginBottom: 5,
+    fontSize: 11,
+    color: "#888",
+    textAlign: "center",
+    marginBottom: 4,
   },
-
   price: {
     fontSize: 12,
-    fontWeight: "800",
-    color: "#159447",
+    fontWeight: "700",
+    color: "#111",
+    textAlign: "center",
   },
-
-  /* EMPTY PROFESSIONALS */
   emptyProsContainer: {
     alignItems: "center",
-    paddingVertical: 30,
+    paddingVertical: 32,
     paddingHorizontal: 20,
+    marginBottom: 20,
   },
-
   emptyProsTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111",
+    color: "#333",
     marginTop: 12,
     textAlign: "center",
   },
-
   emptyProsSubtitle: {
     fontSize: 13,
     color: "#888",
     marginTop: 6,
     textAlign: "center",
   },
-
   emptyProsButton: {
     marginTop: 16,
     backgroundColor: "#159447",
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
-
   emptyProsButtonText: {
     color: "#fff",
     fontWeight: "700",
-    fontSize: 13,
-  },
-
-  /* VERIFIED INFO */
-  verifiedContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-    marginTop: 8,
-    backgroundColor: "#F0F9F4",
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-  },
-
-  shieldContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-    flexShrink: 0,
-  },
-
-  verifiedTextContainer: {
-    flex: 2,
-    minWidth: 0,
-    marginRight: 8,
-  },
-
-  verifiedTitle: {
     fontSize: 14,
-    fontWeight: "800",
+  },
+  verifiedContainer: {
+    backgroundColor: "#E8F5E9",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  },
+  shieldContainer: {
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  verifiedTextContainer: {
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  verifiedTitle: {
+    fontSize: 16,
+    fontWeight: "700",
     color: "#111",
-    marginBottom: 3,
+    textAlign: "center",
   },
-
   verifiedSubtitle: {
-    fontSize: 11,
+    fontSize: 13,
     color: "#555",
-    lineHeight: 16,
+    marginTop: 4,
+    textAlign: "center",
   },
-
   howButton: {
-    backgroundColor: "#159447",
-    borderRadius: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 9,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    maxWidth: 105,
+    backgroundColor: "#159447",
+    borderRadius: 12,
+    paddingVertical: 12,
   },
-
   howButtonText: {
     color: "#fff",
     fontWeight: "700",
-    fontSize: 11,
+    fontSize: 14,
+    marginRight: 6,
   },
-
   bottomSpacing: {
-    height: 30,
+    height: 24,
   },
-
-  /* MODALS */
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
-
   modalSheet: {
     backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 28,
     paddingTop: 12,
   },
-
   cityPickerSheet: {
     maxHeight: "80%",
   },
-
   modalHandle: {
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#ddd",
+    backgroundColor: "#D1D5DB",
     alignSelf: "center",
     marginBottom: 16,
   },
-
   modalTitle: {
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#111",
-    marginBottom: 18,
+    marginBottom: 16,
   },
-
   modalOption: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: "#F3F4F6",
   },
-
   modalOptionText: {
     marginLeft: 14,
     flex: 1,
   },
-
   modalOptionTitle: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#111",
   },
-
   modalOptionSub: {
     fontSize: 12,
-    color: "#777",
+    color: "#888",
     marginTop: 2,
   },
-
   modalCancel: {
-    marginTop: 16,
+    marginTop: 12,
     alignItems: "center",
     paddingVertical: 12,
   },
-
   modalCancelText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#888",
+    color: "#666",
   },
-
-  /* CITY SEARCH */
   citySearchBox: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
+    backgroundColor: "#F3F4F6",
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,
     marginBottom: 12,
   },
-
   citySearchInput: {
     flex: 1,
+    marginLeft: 8,
     fontSize: 15,
     color: "#111",
-    marginLeft: 8,
   },
-
   cityList: {
     maxHeight: 320,
   },
-
-  cityItem: {
+  cityRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F5F5F5",
+    borderBottomColor: "#F3F4F6",
   },
-
-  cityItemText: {
-    flex: 1,
+  cityRowText: {
+    marginLeft: 10,
     fontSize: 15,
     color: "#111",
-    marginLeft: 12,
   },
-
   emptyCitiesText: {
     textAlign: "center",
     color: "#888",
