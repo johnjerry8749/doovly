@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -96,9 +96,43 @@ function MenuIcon({
 export default function Profile() {
   const role = getCurrentUserRole();
   const proId = getLoggedInProfessionalId();
-  const pro = proId ? getProfessionalById(proId) : undefined;
   const isPro = isCurrentUserPro();
-  const requestCount = listMyServiceRequests().length;
+  const [pro, setPro] = useState<
+    Awaited<ReturnType<typeof getProfessionalById>>
+  >(undefined);
+  const [requestCount, setRequestCount] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (proId) {
+          const p = await getProfessionalById(proId);
+          if (!cancelled) setPro(p);
+        }
+        const mine = await listMyServiceRequests();
+        if (!cancelled) setRequestCount(mine.length);
+      } catch (e) {
+        console.error("Profile load:", e);
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [proId]);
+
+  if (!loaded) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Loading…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!pro) {
     return (
@@ -121,11 +155,10 @@ export default function Profile() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Fixed Header */}
       <View style={styles.header}>
         <View style={styles.profileHeaderContent}>
           <View style={styles.avatarWrapper}>
-            <Image source={pro.image} style={styles.avatar} />
+            <Image source={pro.image as any} style={styles.avatar} />
           </View>
 
           <View style={styles.profileInfo}>
@@ -160,13 +193,11 @@ export default function Profile() {
         </TouchableOpacity>
       </View>
 
-      {/* Scrollable Content */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Pro Banner */}
         {!isPro && (
           <View style={styles.proBanner}>
             <View style={styles.proLeft}>
@@ -191,7 +222,6 @@ export default function Profile() {
           </View>
         )}
 
-        {/* Services */}
         <Text style={styles.sectionTitle}>Services</Text>
         <View style={styles.card}>
           <MenuItem
@@ -213,7 +243,6 @@ export default function Profile() {
           />
         </View>
 
-        {/* Portfolio & Social */}
         <Text style={styles.sectionTitle}>Portfolio & Social</Text>
         <View style={styles.card}>
           <MenuItem
@@ -239,7 +268,6 @@ export default function Profile() {
           />
         </View>
 
-        {/* Account & Subscription */}
         <Text style={styles.sectionTitle}>Account & Subscription</Text>
         <View style={styles.card}>
           <MenuItem
@@ -259,7 +287,6 @@ export default function Profile() {
           />
         </View>
 
-        {/* Preferences & Support */}
         <Text style={styles.sectionTitle}>Preferences & Support</Text>
         <View style={styles.card}>
           <MenuItem
@@ -275,13 +302,11 @@ export default function Profile() {
           />
         </View>
 
-        {/* Log Out */}
         <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8}>
           <Ionicons name="log-out-outline" size={20} color="#EF4444" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
-        {/* Admin */}
         {role === "admin" && (
           <TouchableOpacity
             style={styles.adminloginButton}
