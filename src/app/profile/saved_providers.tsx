@@ -28,12 +28,25 @@ export default function SavedProviders() {
   const [list, setList] = useState<Professional[]>([]);
 
   const refresh = useCallback(() => {
-    setList(getSavedProviders());
+    let cancelled = false;
+    (async () => {
+      try {
+        const next = await getSavedProviders();
+        if (!cancelled) setList(next);
+      } catch (e) {
+        console.error("Saved providers load:", e);
+        if (!cancelled) setList([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      refresh();
+      const cleanup = refresh();
+      return cleanup;
     }, [refresh]),
   );
 
@@ -90,7 +103,14 @@ export default function SavedProviders() {
               })
             }
           >
-            <Image source={item.image} style={styles.avatar} />
+            <Image
+              source={
+                typeof item.image === "string"
+                  ? { uri: item.image }
+                  : (item.image as any)
+              }
+              style={styles.avatar}
+            />
             <View style={styles.cardBody}>
               <Text style={styles.name} numberOfLines={1}>
                 {item.name}

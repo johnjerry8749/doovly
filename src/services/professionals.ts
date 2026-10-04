@@ -16,6 +16,7 @@
 
 import type { ImageSourcePropType } from "react-native";
 import { supabase } from "@/lib/supabase";
+import { isUuid, tryToUuid } from "@/lib/ids";
 
 
 /* =========================================================
@@ -578,22 +579,83 @@ export async function listProfessionalsByCity(
 }
 
 /**
- * Get one professional by REAL Supabase UUID.
+ * Resolve a professional primary key for Supabase.
+ * Accepts real UUIDs or legacy mock ids ("1"…"6") from seed data.
+ */
+function resolveProfessionalId(id: string): string | undefined {
+  const raw = String(id ?? "").trim();
+  if (!raw) return undefined;
+  if (isUuid(raw)) return raw;
+  return tryToUuid("professional", raw);
+}
+
+/**
+ * Hydrate one professional row with profile, services, and reviews.
+ */
+async function hydrateProfessional(
+  professional: ProfessionalRow,
+): Promise<Professional> {
+  const [profileResult, servicesResult, reviewsResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(PROFILE_SELECT)
+      .eq("id", professional.user_id)
+      .maybeSingle(),
+
+    supabase
+      .from("services")
+      .select(SERVICE_SELECT)
+      .eq("professional_id", professional.id)
+      .order("created_at", { ascending: true }),
+
+    supabase
+      .from("reviews")
+      .select(REVIEW_SELECT)
+      .eq("professional_id", professional.id)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (profileResult.error) {
+    throw profileResult.error;
+  }
+
+  if (servicesResult.error) {
+    throw servicesResult.error;
+  }
+
+  if (reviewsResult.error) {
+    throw reviewsResult.error;
+  }
+
+  const profile = profileResult.data as ProfileRow | null;
+
+  const services = (servicesResult.data ?? []).map((row) =>
+    mapService(row as ServiceRow),
+  );
+
+  const reviews = (reviewsResult.data ?? []).map((row) =>
+    mapReview(row as ReviewRow),
+  );
+
+  return mapProfessional(
+    professional,
+    profile ?? undefined,
+    services,
+    reviews,
+  );
+}
+
+/**
+ * Get one professional by Supabase UUID or legacy mock id ("1"…"6").
  *
  * Example:
- *
- * getProfessionalById(
- *   "a7c4e7c0-1234-4d8a-9f11-123456789abc"
- * );
- *
- * DO NOT pass old IDs such as:
- *
- * getProfessionalById("4")
+ *   getProfessionalById("a1000000-0000-0000-0000-000000000001")
+ *   getProfessionalById("1") // seed mock id → mapped UUID
  */
 export async function getProfessionalById(
   id: string,
 ): Promise<Professional | undefined> {
-  const professionalId = id.trim();
+  const professionalId = resolveProfessionalId(id);
 
   if (!professionalId) {
     return undefined;
@@ -615,64 +677,52 @@ export async function getProfessionalById(
       return undefined;
     }
 
-    const professional =
-      data as ProfessionalRow;
-
-    const [profileResult, servicesResult, reviewsResult] =
-      await Promise.all([
-        supabase
-          .from("profiles")
-          .select(PROFILE_SELECT)
-          .eq("id", professional.user_id)
-          .maybeSingle(),
-
-        supabase
-          .from("services")
-          .select(SERVICE_SELECT)
-          .eq("professional_id", professional.id)
-          .order("created_at", { ascending: true }),
-
-        supabase
-          .from("reviews")
-          .select(REVIEW_SELECT)
-          .eq("professional_id", professional.id)
-          .order("created_at", { ascending: false }),
-      ]);
-
-    if (profileResult.error) {
-      throw profileResult.error;
-    }
-
-    if (servicesResult.error) {
-      throw servicesResult.error;
-    }
-
-    if (reviewsResult.error) {
-      throw reviewsResult.error;
-    }
-
-    const profile =
-      profileResult.data as ProfileRow | null;
-
-    const services =
-      (servicesResult.data ?? []).map((row) =>
-        mapService(row as ServiceRow),
-      );
-
-    const reviews =
-      (reviewsResult.data ?? []).map((row) =>
-        mapReview(row as ReviewRow),
-      );
-
-    return mapProfessional(
-      professional,
-      profile ?? undefined,
-      services,
-      reviews,
-    );
+    return hydrateProfessional(data as ProfessionalRow);
   } catch (error) {
     console.error("getProfessionalById error:", error);
     throw error;
+  }
+}
+
+/**
+ * Professional profile for the currently authenticated Supabase user.
+ * Prefer this on the Profile tab over hard-coded mock professional ids.
+ */
+export async function getMyProfessional(): Promise<Professional | undefined> {
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) {
+      console.error("getMyProfessional auth error:", authError.message);
+      return undefined;
+    }
+
+    if (!user) {
+      return undefined;
+    }
+
+    const { data, error } = await supabase
+      .from("professionals")
+      .select(PROFESSIONAL_SELECT)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("getMyProfessional error:", error);
+      return undefined;
+    }
+
+    if (!data) {
+      return undefined;
+    }
+
+    return hydrateProfessional(data as ProfessionalRow);
+  } catch (error) {
+    console.error("getMyProfessional error:", error);
+    return undefined;
   }
 }
 

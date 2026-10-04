@@ -12,7 +12,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
-import { getProfessionalById } from "@/services/professionals";
+import {
+  getMyProfessional,
+  getProfessionalById,
+  type Professional,
+} from "@/services/professionals";
 import {
   getCurrentUserRole,
   getLoggedInProfessionalId,
@@ -96,21 +100,25 @@ function MenuIcon({
 export default function Profile() {
   const role = getCurrentUserRole();
   const proId = getLoggedInProfessionalId();
-  const isPro = isCurrentUserPro();
-  const [pro, setPro] = useState<
-    Awaited<ReturnType<typeof getProfessionalById>>
-  >(undefined);
+  const [pro, setPro] = useState<Professional | undefined>(undefined);
   const [requestCount, setRequestCount] = useState(0);
   const [loaded, setLoaded] = useState(false);
+
+  // Prefer live pro.subscribed once loaded; fall back to mock helper.
+  const isPro = pro?.subscribed ?? isCurrentUserPro();
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        if (proId) {
-          const p = await getProfessionalById(proId);
-          if (!cancelled) setPro(p);
+        // 1) Authenticated user's professional row (real session)
+        // 2) Fallback: seeded / mock logged-in professional id (UUID-safe)
+        let p = await getMyProfessional();
+        if (!p && proId) {
+          p = await getProfessionalById(proId);
         }
+        if (!cancelled) setPro(p);
+
         const mine = await listMyServiceRequests();
         if (!cancelled) setRequestCount(mine.length);
       } catch (e) {
