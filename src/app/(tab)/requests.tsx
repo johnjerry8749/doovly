@@ -1,4 +1,10 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,7 +23,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -94,11 +100,11 @@ const getCommentUserId = (comment: ServiceRequestComment) => {
   );
 };
 
-const findProfessionalForUser = (
+const findProfessionalForUser = async (
   userId?: string | number | null,
   userName?: string | null,
 ) => {
-  const list = listProfessionals();
+  const list = await listProfessionals();
   if (!list?.length) return undefined;
 
   const id = normalize(userId);
@@ -128,7 +134,7 @@ const findProfessionalForUser = (
 
 let lastProfileNavAt = 0;
 
-const openUserProfile = ({
+const openUserProfile = async ({
   userId,
   userName,
   beforeNavigate,
@@ -140,7 +146,7 @@ const openUserProfile = ({
   const now = Date.now();
   if (now - lastProfileNavAt < PROFILE_NAV_COOLDOWN_MS) return;
 
-  const professional = findProfessionalForUser(userId, userName);
+  const professional = await findProfessionalForUser(userId, userName);
   if (!professional) return;
 
   lastProfileNavAt = now;
@@ -171,13 +177,14 @@ export default function RequestsScreen() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
-  const [allRequests, setAllRequests] = useState(() => listServiceRequests());
+  const [allRequests, setAllRequests] = useState<ServiceRequest[]>([]);
   const [createVisible, setCreateVisible] = useState(false);
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
   const [offerPrice, setOfferPrice] = useState("");
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
   const [chatText, setChatText] = useState("");
   const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
+  const initialFocus = useRef(true);
 
   const filteredCities = useMemo(() => {
     const q = citySearch.trim().toLowerCase();
@@ -245,7 +252,24 @@ export default function RequestsScreen() {
   const getComments = (item: ServiceRequest): ServiceRequestComment[] =>
     item.comments || [];
 
-  const refreshRequests = () => setAllRequests(listServiceRequests());
+  const refreshRequests = useCallback(async () => {
+    const requests = await listServiceRequests();
+    setAllRequests(requests);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (initialFocus.current) {
+        initialFocus.current = false;
+        return;
+      }
+      void refreshRequests();
+    }, [refreshRequests]),
+  );
+
+  useEffect(() => {
+    void refreshRequests();
+  }, [refreshRequests]);
 
   const toggleLike = (id: string) =>
     setLikedIds((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -271,14 +295,14 @@ export default function RequestsScreen() {
     setChatText("");
   };
 
-  const sendChatMessage = () => {
+  const sendChatMessage = async () => {
     if (!chatRequest) return;
     const text = chatText.trim();
     if (!text) return;
 
     const currentUserId = getCurrentUserId();
-    const currentProfessional = findProfessionalForUser(currentUserId);
-    const comment = addServiceRequestComment({
+    const currentProfessional = await findProfessionalForUser(currentUserId);
+    const comment = await addServiceRequestComment({
       requestId: chatRequest.id,
       text,
       userName: currentProfessional?.name || "You",
@@ -286,7 +310,7 @@ export default function RequestsScreen() {
     });
     if (!comment) return;
 
-    refreshRequests();
+    await refreshRequests();
     setChatRequest({ ...chatRequest });
     setChatText("");
     setTimeout(() => commentListRef.current?.scrollToEnd({ animated: true }), 100);
@@ -297,12 +321,12 @@ export default function RequestsScreen() {
     setOfferPrice("");
   };
 
-  const submitOffer = () => {
+  const submitOffer = async () => {
     if (!offerRequest) return;
     const amountNum = Number(offerPrice.replace(/[^\d]/g, ""));
     if (!amountNum) return;
 
-    const result = submitServiceRequestOffer({
+    const result = await submitServiceRequestOffer({
       requestId: offerRequest.id,
       amount: amountNum,
     });
@@ -328,12 +352,12 @@ export default function RequestsScreen() {
     });
 
     const offererProId = getLoggedInProfessionalId() ?? getCurrentUserId();
-    const offererPro = getProfessionalById(String(offererProId));
+    const offererPro = await getProfessionalById(String(offererProId));
     const locationLabel = [offerRequest.location, offerRequest.city]
       .filter(Boolean)
       .join(", ");
 
-    const conv = createOfferConversation({
+    const conv = await createOfferConversation({
       requestId: offerRequest.id,
       requestTitle: offerRequest.title,
       requestCategory: offerRequest.category,
@@ -352,7 +376,7 @@ export default function RequestsScreen() {
         (require("@/assets/profile_1.jpg") as number),
     });
 
-    setAllRequests(listServiceRequests());
+    await refreshRequests();
     closeOffer();
     router.push({ pathname: "/chat/[id]", params: { id: conv.id } });
   };

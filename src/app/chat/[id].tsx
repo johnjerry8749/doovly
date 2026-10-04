@@ -208,16 +208,27 @@ export default function ChatConversation() {
   const isProUser = isCurrentUserPro();
 
   useEffect(() => {
-    const conv = getConversation(conversationId);
-    setConversation(conv);
-    setMessages(getMessages(conversationId));
-    setSharing(isSharingLocation(conversationId));
-    setBookingStatus(getBookingStatus(conversationId));
-    markConversationRead(conversationId);
+    const loadConversation = async () => {
+      const conv = await getConversation(conversationId);
+      const conversationMessages = await getMessages(conversationId);
+      await markConversationRead(conversationId);
+      setConversation(conv);
+      setMessages(conversationMessages);
+      setSharing(isSharingLocation(conversationId));
+      setBookingStatus(getBookingStatus(conversationId));
+    };
+    void loadConversation();
   }, [conversationId]);
 
-  const proDisplayName =
-    getProfessionalById(loggedInProId ?? "")?.name ?? "You";
+  const [proDisplayName, setProDisplayName] = useState("You");
+
+  useEffect(() => {
+    const loadProfessional = async () => {
+      const professional = await getProfessionalById(loggedInProId ?? "");
+      setProDisplayName(professional?.name ?? "You");
+    };
+    void loadProfessional();
+  }, [loggedInProId]);
 
   const onSend = async () => {
     const trimmed = text.trim();
@@ -234,9 +245,9 @@ export default function ChatConversation() {
     }
   };
 
-  const onAccept = () => {
+  const onAccept = async () => {
     if (!conversation) return;
-    const msg = acceptBooking(conversationId, proDisplayName);
+    const msg = await acceptBooking(conversationId, proDisplayName);
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Accepted");
 
@@ -251,9 +262,9 @@ export default function ChatConversation() {
     });
   };
 
-  const onDecline = () => {
+  const onDecline = async () => {
     if (!conversation) return;
-    const msg = declineBooking(conversationId, proDisplayName);
+    const msg = await declineBooking(conversationId, proDisplayName);
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Declined");
 

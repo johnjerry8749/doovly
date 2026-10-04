@@ -168,7 +168,7 @@ export default function CreateJobModal({
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSave || saving) return;
 
     setSaving(true);
@@ -187,7 +187,7 @@ export default function CreateJobModal({
       };
 
       if (isEditing && request) {
-        const updated = updateServiceRequest(request.id, payload);
+        const updated = await updateServiceRequest(request.id, payload);
 
         if (!updated) {
           Alert.alert(
@@ -202,7 +202,7 @@ export default function CreateJobModal({
         return;
       }
 
-      const created = createServiceRequest(payload);
+      const created = await createServiceRequest(payload);
       onSaved?.(created);
       onClose();
     } catch (error) {

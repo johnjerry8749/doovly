@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,11 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
-import { getProfessionalById } from "@/services/professionals";
+import {
+  getProfessionalById,
+  type Professional,
+  type ProService,
+} from "@/services/professionals";
 import { createBookingConversation } from "@/services/chat";
 import { addInAppNotification } from "@/services/inAppNotifications";
 
@@ -28,15 +32,31 @@ export default function BookMeScreen() {
     price?: string;
   }>();
 
-  const pro = useMemo(() => getProfessionalById(id ?? ""), [id]);
+  const [pro, setPro] = useState<Professional>();
+  const [selectedService, setSelectedService] = useState<ProService | null>(
+    null,
+  );
 
-  const initialService =
-    pro?.services.find((service) => service.id === serviceId) ??
-    pro?.services.find((service) => service.name === serviceName) ??
-    pro?.services[0] ??
-    null;
-
-  const [selectedService, setSelectedService] = useState(initialService);
+  useEffect(() => {
+    let active = true;
+    const loadProfessional = async () => {
+      const professional = await getProfessionalById(id ?? "");
+      if (!active) return;
+      setPro(professional);
+      setSelectedService(
+        professional?.services.find((service) => service.id === serviceId) ??
+          professional?.services.find(
+            (service) => service.name === serviceName,
+          ) ??
+          professional?.services[0] ??
+          null,
+      );
+    };
+    void loadProfessional();
+    return () => {
+      active = false;
+    };
+  }, [id, serviceId, serviceName]);
   const [showServicePicker, setShowServicePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tempDate, setTempDate] = useState(new Date());
@@ -222,7 +242,7 @@ export default function BookMeScreen() {
   const total = serviceFee + platformFee;
   const formatNaira = (amount: number) => `₦${amount.toLocaleString("en-NG")}`;
 
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = async () => {
     if (!selectedService) {
       Alert.alert("Select Service", "Please select a service.");
       return;
@@ -233,7 +253,7 @@ export default function BookMeScreen() {
     }
     if (!pro) return;
 
-    const conv = createBookingConversation({
+    const conv = await createBookingConversation({
       professionalId: pro.id,
       professionalName: pro.name,
       professionalImage: pro.image,
