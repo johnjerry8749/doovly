@@ -2,9 +2,6 @@
  * My Service Requests (Profile)
  * ----------------------------
  * Same card layout as the Requests feed, scoped to the auth user's posts.
- * • 3-dot menu (top-right) → Edit / Delete
- * • Tap comments to open the same half-sheet comments UI (read + reply)
- * Does not auto-open comments on card press.
  */
 
 import React, { useCallback, useRef, useState } from "react";
@@ -46,30 +43,26 @@ const MY_AVATAR = require("@/assets/profile_1.jpg");
 
 export default function MyServiceRequestsScreen() {
   const router = useRouter();
-  const [requests, setRequests] = useState<ServiceRequest[]>(() =>
-    listMyServiceRequests(),
-  );
-  const [extraComments, setExtraComments] = useState<
-    Record<string, ServiceRequestComment[]>
-  >({});
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
-
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingRequest, setEditingRequest] = useState<ServiceRequest | null>(
-    null,
-  );
-
+  const [editingRequest, setEditingRequest] = useState<ServiceRequest | null>(null);
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
   const [chatText, setChatText] = useState("");
   const commentListRef = useRef<FlatList>(null);
 
-  const refresh = useCallback(() => {
-    setRequests(listMyServiceRequests());
+  const refresh = useCallback(async () => {
+    try {
+      const data = await listMyServiceRequests();
+      setRequests(data);
+    } catch (e) {
+      console.error("MyServiceRequests refresh:", e);
+    }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      refresh();
+      void refresh();
     }, [refresh]),
   );
 
@@ -89,7 +82,7 @@ export default function MyServiceRequestsScreen() {
   };
 
   const handleSaved = (_request: ServiceRequest) => {
-    refresh();
+    void refresh();
   };
 
   const onDelete = (item: ServiceRequest) => {
@@ -101,14 +94,14 @@ export default function MyServiceRequestsScreen() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            const ok = deleteServiceRequest(item.id);
+          onPress: async () => {
+            const ok = await deleteServiceRequest(item.id);
             if (ok) {
               if (chatRequest?.id === item.id) {
                 setChatRequest(null);
                 setChatText("");
               }
-              refresh();
+              await refresh();
             } else {
               Alert.alert(
                 "Could not delete",
@@ -124,19 +117,13 @@ export default function MyServiceRequestsScreen() {
   const openMenu = (item: ServiceRequest) => {
     Alert.alert(item.title, undefined, [
       { text: "Edit", onPress: () => openEdit(item) },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => onDelete(item),
-      },
+      { text: "Delete", style: "destructive", onPress: () => onDelete(item) },
       { text: "Cancel", style: "cancel" },
     ]);
   };
 
-  const getComments = (item: ServiceRequest): ServiceRequestComment[] => [
-    ...(item.comments || []),
-    ...(extraComments[item.id] || []),
-  ];
+  const getComments = (item: ServiceRequest): ServiceRequestComment[] =>
+    item.comments || [];
 
   const openChat = (item: ServiceRequest) => {
     setChatRequest(item);
@@ -148,18 +135,17 @@ export default function MyServiceRequestsScreen() {
     setChatText("");
   };
 
-  const sendChatMessage = () => {
+  const sendChatMessage = async () => {
     if (!chatRequest) return;
     const text = chatText.trim();
     if (!text) return;
 
     const proId = getLoggedInProfessionalId();
-    const pro = proId ? getProfessionalById(proId) : undefined;
+    const pro = proId ? await getProfessionalById(proId) : undefined;
     const userName = pro?.name || "You";
     const userAvatar = (pro?.image as typeof MY_AVATAR) || MY_AVATAR;
 
-    // Persist once only. Do NOT also push into extraComments or the list doubles.
-    const saved = addServiceRequestComment({
+    const saved = await addServiceRequestComment({
       requestId: chatRequest.id,
       text,
       userName,
@@ -167,11 +153,12 @@ export default function MyServiceRequestsScreen() {
     });
     if (!saved) return;
 
-    setChatRequest({
-      ...chatRequest,
-      comments: [...(chatRequest.comments || [])],
-    });
-    refresh();
+    await refresh();
+    setChatRequest((prev) =>
+      prev
+        ? { ...prev, comments: [...(prev.comments || []), saved] }
+        : prev,
+    );
     setChatText("");
     setTimeout(
       () => commentListRef.current?.scrollToEnd({ animated: true }),
@@ -227,11 +214,7 @@ export default function MyServiceRequestsScreen() {
         </View>
 
         {item.images?.length ? (
-          <RequestImageSlider
-            images={item.images}
-            height={180}
-            borderRadius={0}
-          />
+          <RequestImageSlider images={item.images} height={180} borderRadius={0} />
         ) : null}
 
         <View style={styles.metaRow}>
@@ -269,16 +252,10 @@ export default function MyServiceRequestsScreen() {
 
         {firstComment ? (
           <View style={styles.commentPreview}>
-            <Image
-              source={firstComment.userAvatar}
-              style={styles.commentAvatar}
-            />
+            <Image source={firstComment.userAvatar} style={styles.commentAvatar} />
             <View style={styles.commentBody}>
               <Text style={styles.commentName}>{firstComment.userName}</Text>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => openChat(item)}
-              >
+              <TouchableOpacity activeOpacity={0.8} onPress={() => openChat(item)}>
                 <Text style={styles.commentText} numberOfLines={2}>
                   {firstComment.text}
                 </Text>
@@ -291,11 +268,7 @@ export default function MyServiceRequestsScreen() {
             onPress={() => openChat(item)}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={16}
-              color={GREEN}
-            />
+            <Ionicons name="chatbubble-ellipses-outline" size={16} color={GREEN} />
             <Text style={styles.writeCommentHintText}>Write a comment…</Text>
           </TouchableOpacity>
         )}
@@ -414,10 +387,7 @@ export default function MyServiceRequestsScreen() {
                   value={chatText}
                   onChangeText={setChatText}
                 />
-                <TouchableOpacity
-                  onPress={sendChatMessage}
-                  style={styles.commentSend}
-                >
+                <TouchableOpacity onPress={() => void sendChatMessage()} style={styles.commentSend}>
                   <Ionicons name="send" size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -440,19 +410,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  backBtn: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 17,
-    fontWeight: "700",
-    color: TEXT,
-  },
+  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  headerTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "700", color: TEXT },
   createBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -462,17 +421,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
   },
-  createBtnText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 32,
-    flexGrow: 1,
-  },
+  createBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32, flexGrow: 1 },
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -481,11 +431,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
-  posterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
+  posterRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   posterAvatar: {
     width: 40,
     height: 40,
@@ -495,26 +441,11 @@ const styles = StyleSheet.create({
   },
   posterInfo: { flex: 1, minWidth: 0 },
   posterName: { fontSize: 14, fontWeight: "700", color: TEXT },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    marginTop: 2,
-  },
+  locationRow: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2 },
   locationText: { fontSize: 12, color: MUTED, flex: 1 },
   timeAgo: { fontSize: 12, color: "#9CA3AF", marginRight: 4 },
-  menuBtn: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    marginBottom: 8,
-  },
+  menuBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8 },
   cardTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: TEXT },
   newBadge: {
     backgroundColor: "#DCFCE7",
@@ -531,43 +462,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   categoryChipText: { fontSize: 12, fontWeight: "600", color: GREEN },
-  description: {
-    fontSize: 14,
-    color: "#4B5563",
-    lineHeight: 20,
-    marginBottom: 10,
-  },
+  description: { fontSize: 14, color: "#4B5563", lineHeight: 20, marginBottom: 10 },
   engagementRow: { flexDirection: "row", gap: 16, marginBottom: 8 },
   engagementBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
   engagementText: { fontSize: 13, color: MUTED, fontWeight: "600" },
-  commentPreview: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  commentAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#E5E7EB",
-  },
+  commentPreview: { flexDirection: "row", gap: 8, marginTop: 4, marginBottom: 4 },
+  commentAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E5E7EB" },
   commentBody: { flex: 1 },
   commentName: { fontSize: 13, fontWeight: "700", color: TEXT },
   commentText: { fontSize: 13, color: "#4B5563" },
-  writeCommentHint: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 6,
-  },
+  writeCommentHint: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 },
   writeCommentHintText: { fontSize: 13, color: GREEN, fontWeight: "600" },
-  viewMoreComments: {
-    fontSize: 13,
-    color: GREEN,
-    fontWeight: "600",
-    marginTop: 4,
-  },
+  viewMoreComments: { fontSize: 13, color: GREEN, fontWeight: "600", marginTop: 4 },
   empty: {
     flex: 1,
     alignItems: "center",
@@ -575,19 +481,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingTop: 80,
   },
-  emptyTitle: {
-    marginTop: 12,
-    fontSize: 17,
-    fontWeight: "700",
-    color: TEXT,
-  },
-  emptySub: {
-    marginTop: 6,
-    fontSize: 14,
-    color: MUTED,
-    textAlign: "center",
-    lineHeight: 20,
-  },
+  emptyTitle: { marginTop: 12, fontSize: 17, fontWeight: "700", color: TEXT },
+  emptySub: { marginTop: 6, fontSize: 14, color: MUTED, textAlign: "center", lineHeight: 20 },
   emptyCreate: {
     marginTop: 20,
     backgroundColor: GREEN,
@@ -595,28 +490,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 24,
   },
-  emptyCreateText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: "#9CA3AF",
-    textAlign: "center",
-    marginTop: 24,
-  },
+  emptyCreateText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  emptyText: { fontSize: 13, color: "#9CA3AF", textAlign: "center", marginTop: 24 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: TEXT,
-    marginBottom: 6,
-  },
+  modalTitle: { fontSize: 18, fontWeight: "800", color: TEXT, marginBottom: 6 },
   commentModalSheet: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
@@ -637,12 +518,7 @@ const styles = StyleSheet.create({
   },
   commentList: { flex: 1, marginBottom: 8 },
   commentRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
-  commentInputRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 10,
-    alignItems: "center",
-  },
+  commentInputRow: { flexDirection: "row", gap: 8, marginTop: 10, alignItems: "center" },
   commentInput: {
     flex: 1,
     borderWidth: 1,
