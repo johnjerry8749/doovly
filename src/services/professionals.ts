@@ -357,6 +357,7 @@ export async function listProfessionalsByCity(
   });
 }
 
+
 /**
  * Resolve a professional primary key for Supabase.
  * Accepts real UUIDs or legacy mock ids ("1"…"6") from seed data.
@@ -439,11 +440,13 @@ export async function getProfessionalById(
   if (!professionalId) {
     return undefined;
   }
-
-  }
-  
-  return undefined;
-}
+=======
+export async function getProfessionalById(
+  id: string,
+): Promise<Professional | undefined> {
+  const professionalId = id.trim();
+  if (!professionalId) return undefined;
+>>>>>>> eb79e4e2e9be81ad08c0745039d29d24433849e2
 
   try {
     const { data, error } = await supabase
@@ -460,7 +463,9 @@ export async function getProfessionalById(
 
     const professional = data as ProfessionalRow;
 
+<<<<<<< HEAD
     return hydrateProfessional(data as ProfessionalRow);
+=======
     const [profileResult, servicesResult, reviewsResult] = await Promise.all([
       supabase
         .from("profiles")
@@ -497,11 +502,14 @@ export async function getProfessionalById(
       services,
       reviews,
     );
+>>>>>>> eb79e4e2e9be81ad08c0745039d29d24433849e2
   } catch (error) {
     console.error("getProfessionalById error:", error);
     throw error;
   }
 }
+
+<<<<<<< HEAD
 /**
  * Professional profile for the currently authenticated Supabase user.
  * Prefer this on the Profile tab over hard-coded mock professional ids.
@@ -556,9 +564,9 @@ export async function getMyProfessional(): Promise<Professional | undefined> {
 export async function listServiceCategories(): Promise<
   ServiceCategory[]
 > {
-}
-
+=======
 export async function listServiceCategories(): Promise<ServiceCategory[]> {
+>>>>>>> eb79e4e2e9be81ad08c0745039d29d24433849e2
   const { data, error } = await supabase
     .from("service_categories")
     .select("id, name, icon, sort_order")
