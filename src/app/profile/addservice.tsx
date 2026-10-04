@@ -17,22 +17,22 @@ import { router } from "expo-router";
 
 import {
   getProfessionalById,
+  getMyProfessionalId,
   listMyServices,
   createMyService,
   updateMyService,
   deleteMyService,
   listServiceCategories,
   type ProService,
+  type Professional,
+  type ServiceCategory,
 } from "@/services/professionals";
-import { getLoggedInProfessionalId } from "@/services/savedProviders";
 
 const PRIMARY = "#16A34A";
 const LIGHT_GREEN = "#EAF8F0";
 const BORDER = "#E5E7EB";
 const TEXT = "#111827";
 const SECONDARY = "#6B7280";
-
-/** Free users can add at most this many services. Pro (subscribed) = unlimited. */
 const FREE_SERVICE_LIMIT = 5;
 
 function priceToInput(price: string): string {
@@ -46,11 +46,9 @@ function formatPrice(value: string): string {
 }
 
 export default function AddService() {
-  const proId = getLoggedInProfessionalId();
-  const pro = proId ? getProfessionalById(proId) : undefined;
-  const isPro = !!pro?.subscribed;
-  const categories = listServiceCategories();
-
+  const [proId, setProId] = useState<string | null>(null);
+  const [pro, setPro] = useState<Professional | undefined>(undefined);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [services, setServices] = useState<ProService[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,19 +62,35 @@ export default function AddService() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
 
-  const loadServices = useCallback(() => {
-    if (!proId) {
+  const isPro = !!pro?.subscribed;
+
+  const loadServices = useCallback(async () => {
+    try {
+      setLoading(true);
+      const resolvedId = await getMyProfessionalId();
+      setProId(resolvedId);
+
+      const [cats, list, proData] = await Promise.all([
+        listServiceCategories().catch(() => [{ name: "All", icon: "apps" }]),
+        listMyServices(resolvedId ?? undefined).catch(() => []),
+        resolvedId
+          ? getProfessionalById(resolvedId).catch(() => undefined)
+          : Promise.resolve(undefined),
+      ]);
+
+      setCategories(cats);
+      setServices(list);
+      setPro(proData);
+    } catch (e) {
+      console.error("AddService load error:", e);
       setServices([]);
+    } finally {
       setLoading(false);
-      return;
     }
-    const list = listMyServices(proId);
-    setServices(list);
-    setLoading(false);
-  }, [proId]);
+  }, []);
 
   useEffect(() => {
-    loadServices();
+    void loadServices();
   }, [loadServices]);
 
   const atFreeLimit = !isPro && services.length >= FREE_SERVICE_LIMIT;
@@ -147,8 +161,6 @@ export default function AddService() {
       Alert.alert("Missing price", "Please enter the price for this service.");
       return;
     }
-
-    // Block new services for free users at limit (edit is always allowed)
     if (!editingServiceId && atFreeLimit) {
       Alert.alert(
         "Service limit reached",
@@ -164,9 +176,8 @@ export default function AddService() {
         "briefcase-outline";
 
       if (editingServiceId) {
-        if (!proId) return;
         const updated = await updateMyService(
-          proId,
+          proId ?? undefined,
           editingServiceId,
           {
             name: serviceName.trim(),
@@ -182,8 +193,7 @@ export default function AddService() {
           Alert.alert("Service Updated", "Your service has been updated.");
         }
       } else {
-        if (!proId) return;
-        const created = await createMyService(proId, {
+        const created = await createMyService(proId ?? undefined, {
           name: serviceName.trim(),
           description: description.trim(),
           price: price.trim(),
@@ -193,7 +203,8 @@ export default function AddService() {
         Alert.alert("Service Added", "Your service has been added.");
       }
       closeModal();
-    } catch {
+    } catch (e) {
+      console.error("Save service error:", e);
       Alert.alert("Error", "Something went wrong. Please try again.");
     } finally {
       setSaving(false);
@@ -210,8 +221,7 @@ export default function AddService() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (!proId) return;
-            const ok = await deleteMyService(proId, id);
+            const ok = await deleteMyService(proId ?? undefined, id);
             if (ok) {
               setServices((prev) => prev.filter((s) => s.id !== id));
               if (editingServiceId === id) closeModal();
@@ -226,7 +236,6 @@ export default function AddService() {
 
   return (
     <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
-      {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={28} color={TEXT} />
@@ -239,7 +248,6 @@ export default function AddService() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        {/* Status banner */}
         <View style={styles.statusBanner}>
           <View style={styles.statusLeft}>
             <View style={styles.statusIconWrap}>
@@ -266,7 +274,6 @@ export default function AddService() {
           </View>
         </View>
 
-        {/* Add New Service — top so users don't scroll */}
         <Pressable
           style={({ pressed }) => [
             styles.addNewBox,
@@ -287,7 +294,9 @@ export default function AddService() {
                 atFreeLimit && styles.addNewTitleDisabled,
               ]}
             >
-              {atFreeLimit ? "Limit reached — Upgrade for more" : "Add New Service"}
+              {atFreeLimit
+                ? "Limit reached — Upgrade for more"
+                : "Add New Service"}
             </Text>
           </View>
           <Text style={styles.addNewSubtitle}>
@@ -299,7 +308,6 @@ export default function AddService() {
           </Text>
         </Pressable>
 
-        {/* Section header */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Your Added Services</Text>
           <Text style={styles.sectionCount}>
@@ -336,7 +344,6 @@ export default function AddService() {
                     color={PRIMARY}
                   />
                 </View>
-
                 <View style={styles.serviceMain}>
                   <View style={styles.serviceNameRow}>
                     <Text style={styles.serviceName} numberOfLines={1}>
@@ -348,11 +355,9 @@ export default function AddService() {
                         : formatPrice(service.price)}
                     </Text>
                   </View>
-
                   <Text style={styles.serviceDesc} numberOfLines={2}>
                     {service.description}
                   </Text>
-
                   <View style={styles.badgeRow}>
                     <View style={styles.activeBadge}>
                       <Text style={styles.activeBadgeText}>Active</Text>
@@ -360,7 +365,6 @@ export default function AddService() {
                   </View>
                 </View>
               </View>
-
               <View style={styles.serviceActions}>
                 <Pressable
                   style={styles.editBtn}
@@ -369,7 +373,6 @@ export default function AddService() {
                   <Ionicons name="pencil" size={14} color={PRIMARY} />
                   <Text style={styles.editBtnText}>Edit</Text>
                 </Pressable>
-
                 <Pressable
                   style={styles.deleteBtn}
                   onPress={() => handleDelete(service.id)}
@@ -385,7 +388,6 @@ export default function AddService() {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* ===================== ADD / EDIT MODAL ===================== */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -397,10 +399,8 @@ export default function AddService() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <Pressable style={styles.modalBackdrop} onPress={closeModal} />
-
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
-
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {editingServiceId ? "Edit Service" : "Add New Service"}
@@ -415,13 +415,9 @@ export default function AddService() {
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.modalBody}
             >
-              {/* Category */}
               <Text style={styles.label}>Service Category</Text>
               <Pressable
-                style={[
-                  styles.dropdown,
-                  categoryOpen && styles.dropdownOpen,
-                ]}
+                style={[styles.dropdown, categoryOpen && styles.dropdownOpen]}
                 onPress={() => setCategoryOpen((p) => !p)}
               >
                 <View style={styles.dropdownLeft}>
@@ -454,58 +450,57 @@ export default function AddService() {
 
               {categoryOpen && (
                 <View style={styles.categoryList}>
-                  {categories.map((cat) => {
-                    const selected = selectedCategory === cat.name;
-                    return (
-                      <Pressable
-                        key={cat.name}
-                        style={[
-                          styles.categoryOption,
-                          selected && styles.categoryOptionSelected,
-                        ]}
-                        onPress={() => handleSelectCategory(cat.name)}
-                      >
-                        <View style={styles.categoryOptionLeft}>
-                          <View
-                            style={[
-                              styles.categoryOptionIcon,
-                              selected && styles.categoryOptionIconSelected,
-                            ]}
-                          >
-                            <MaterialCommunityIcons
-                              name={
-                                cat.icon as keyof typeof MaterialCommunityIcons.glyphMap
-                              }
-                              size={18}
-                              color={selected ? "#FFFFFF" : PRIMARY}
-                            />
+                  {categories
+                    .filter((c) => c.name !== "All")
+                    .map((cat) => {
+                      const selected = selectedCategory === cat.name;
+                      return (
+                        <Pressable
+                          key={cat.name}
+                          style={[
+                            styles.categoryOption,
+                            selected && styles.categoryOptionSelected,
+                          ]}
+                          onPress={() => handleSelectCategory(cat.name)}
+                        >
+                          <View style={styles.categoryOptionLeft}>
+                            <View
+                              style={[
+                                styles.categoryOptionIcon,
+                                selected && styles.categoryOptionIconSelected,
+                              ]}
+                            >
+                              <MaterialCommunityIcons
+                                name={
+                                  cat.icon as keyof typeof MaterialCommunityIcons.glyphMap
+                                }
+                                size={18}
+                                color={selected ? "#FFFFFF" : PRIMARY}
+                              />
+                            </View>
+                            <Text
+                              style={[
+                                styles.categoryOptionText,
+                                selected && styles.categoryOptionTextSelected,
+                              ]}
+                            >
+                              {cat.name}
+                            </Text>
                           </View>
-                          <Text
-                            style={[
-                              styles.categoryOptionText,
-                              selected && styles.categoryOptionTextSelected,
-                            ]}
-                          >
-                            {cat.name}
-                          </Text>
-                        </View>
-                        {selected && (
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={20}
-                            color={PRIMARY}
-                          />
-                        )}
-                      </Pressable>
-                    );
-                  })}
+                          {selected && (
+                            <Ionicons
+                              name="checkmark-circle"
+                              size={20}
+                              color={PRIMARY}
+                            />
+                          )}
+                        </Pressable>
+                      );
+                    })}
                 </View>
               )}
 
-              {/* Service Name */}
-              <Text style={[styles.label, { marginTop: 18 }]}>
-                Service Name
-              </Text>
+              <Text style={[styles.label, { marginTop: 18 }]}>Service Name</Text>
               <View style={styles.inputRow}>
                 <MaterialCommunityIcons
                   name="briefcase-outline"
@@ -523,10 +518,7 @@ export default function AddService() {
                 />
               </View>
 
-              {/* Description */}
-              <Text style={[styles.label, { marginTop: 18 }]}>
-                Description
-              </Text>
+              <Text style={[styles.label, { marginTop: 18 }]}>Description</Text>
               <View style={[styles.inputRow, styles.descRow]}>
                 <MaterialCommunityIcons
                   name="text-box-outline"
@@ -545,13 +537,17 @@ export default function AddService() {
                 />
               </View>
 
-              {/* Price */}
-              <Text style={[styles.label, { marginTop: 18 }]}>Price</Text>
+              <Text style={[styles.label, { marginTop: 18 }]}>Price (₦)</Text>
               <View style={styles.inputRow}>
-                <Text style={styles.currency}>₦</Text>
+                <MaterialCommunityIcons
+                  name="currency-ngn"
+                  size={20}
+                  color={PRIMARY}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter price"
+                  placeholder="e.g. 5000"
                   placeholderTextColor="#9CA3AF"
                   value={price}
                   onChangeText={setPrice}
@@ -559,24 +555,11 @@ export default function AddService() {
                 />
               </View>
 
-              {/* Save button */}
               <Pressable
-                style={({ pressed }) => [
-                  styles.saveBtn,
-                  (pressed || saving) && { opacity: 0.85 },
-                ]}
+                style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
                 onPress={handleSave}
                 disabled={saving}
               >
-                <Ionicons
-                  name={
-                    editingServiceId
-                      ? "checkmark-circle-outline"
-                      : "add-circle-outline"
-                  }
-                  size={22}
-                  color="#FFFFFF"
-                />
                 <Text style={styles.saveBtnText}>
                   {saving
                     ? "Saving…"
@@ -585,11 +568,6 @@ export default function AddService() {
                       : "Add Service"}
                 </Text>
               </Pressable>
-
-              <Pressable style={styles.cancelBtn} onPress={closeModal}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </Pressable>
-
               <View style={{ height: 24 }} />
             </ScrollView>
           </View>
@@ -600,20 +578,14 @@ export default function AddService() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#F9FAFB",
-  },
-
+  screen: { flex: 1, backgroundColor: "#FFFFFF" },
   header: {
+    height: 52,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: BORDER,
   },
   backButton: {
     width: 40,
@@ -622,269 +594,145 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    fontSize: 18,
+    flex: 1,
+    textAlign: "center",
+    fontSize: 17,
     fontWeight: "700",
     color: TEXT,
   },
-  headerSpacer: {
-    width: 40,
-  },
-
-  container: {
-    padding: 16,
-  },
-
+  headerSpacer: { width: 40 },
+  container: { padding: 16, paddingBottom: 40 },
   statusBanner: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#F0FDF4",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
+    backgroundColor: LIGHT_GREEN,
+    borderRadius: 14,
+    padding: 14,
     marginBottom: 16,
   },
-  statusLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    gap: 12,
-  },
+  statusLeft: { flex: 1, flexDirection: "row", alignItems: "center" },
   statusIconWrap: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  statusTextWrap: { flex: 1 },
+  statusTitle: { fontSize: 15, fontWeight: "700", color: TEXT },
+  statusSubtitle: { fontSize: 12, color: SECONDARY, marginTop: 2, lineHeight: 16 },
+  growthIcon: { marginLeft: 8 },
+  addNewBox: {
+    borderWidth: 1.5,
+    borderColor: PRIMARY,
+    borderStyle: "dashed",
     borderRadius: 14,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
+    padding: 16,
+    marginBottom: 20,
+    backgroundColor: "#F9FFFB",
   },
-  statusTextWrap: {
-    flex: 1,
+  addNewBoxPressed: { opacity: 0.85 },
+  addNewBoxDisabled: {
+    borderColor: "#D1D5DB",
+    backgroundColor: "#F9FAFB",
   },
-  statusTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: TEXT,
-  },
-  statusSubtitle: {
-    fontSize: 13,
-    color: SECONDARY,
-    marginTop: 3,
-    lineHeight: 18,
-  },
-  growthIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#DCFCE7",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-  },
-
+  addNewContent: { flexDirection: "row", alignItems: "center", gap: 8 },
+  addNewTitle: { fontSize: 15, fontWeight: "700", color: PRIMARY },
+  addNewTitleDisabled: { color: "#9CA3AF" },
+  addNewSubtitle: { fontSize: 12, color: SECONDARY, marginTop: 6, lineHeight: 16 },
   sectionHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 20,
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: TEXT,
-  },
-  sectionCount: {
-    fontSize: 13,
-    color: SECONDARY,
-    fontWeight: "500",
-  },
-
-  loadingText: {
-    fontSize: 14,
-    color: SECONDARY,
-    textAlign: "center",
-    marginVertical: 24,
-  },
-  emptyBox: {
     alignItems: "center",
-    paddingVertical: 32,
     marginBottom: 12,
   },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: TEXT,
-    marginTop: 12,
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: TEXT },
+  sectionCount: { fontSize: 12, color: SECONDARY },
+  loadingText: { textAlign: "center", color: SECONDARY, marginTop: 24 },
+  emptyBox: { alignItems: "center", paddingVertical: 40 },
+  emptyTitle: { fontSize: 16, fontWeight: "700", color: TEXT, marginTop: 10 },
   emptySubtitle: {
     fontSize: 13,
     color: SECONDARY,
     marginTop: 4,
     textAlign: "center",
   },
-
   serviceCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E5EDE8",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  serviceCardTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  serviceIconWrap: {
-    width: 48,
-    height: 48,
+    borderColor: BORDER,
     borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+  },
+  serviceCardTop: { flexDirection: "row" },
+  serviceIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: LIGHT_GREEN,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
-  serviceMain: {
-    flex: 1,
-    minWidth: 0,
-  },
+  serviceMain: { flex: 1 },
   serviceNameRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
   },
-  serviceName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: TEXT,
-    flex: 1,
-  },
-  servicePrice: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: PRIMARY,
-  },
-  serviceDesc: {
-    fontSize: 13,
-    color: SECONDARY,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  badgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 10,
-    gap: 8,
-  },
+  serviceName: { flex: 1, fontSize: 15, fontWeight: "700", color: TEXT },
+  servicePrice: { fontSize: 14, fontWeight: "700", color: PRIMARY },
+  serviceDesc: { fontSize: 12, color: SECONDARY, marginTop: 4, lineHeight: 16 },
+  badgeRow: { flexDirection: "row", marginTop: 8 },
   activeBadge: {
-    backgroundColor: "#DCFCE7",
-    paddingHorizontal: 10,
+    backgroundColor: LIGHT_GREEN,
+    paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 20,
+    borderRadius: 6,
   },
-  activeBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: PRIMARY,
-  },
+  activeBadgeText: { fontSize: 11, fontWeight: "700", color: PRIMARY },
   serviceActions: {
     flexDirection: "row",
-    alignItems: "center",
-    marginTop: 14,
     gap: 10,
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    paddingTop: 12,
   },
   editBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    backgroundColor: "#F0FDF4",
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: LIGHT_GREEN,
   },
-  editBtnText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: PRIMARY,
-  },
+  editBtnText: { fontSize: 12, fontWeight: "600", color: PRIMARY },
   deleteBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
     backgroundColor: "#FEF2F2",
-    borderWidth: 1,
-    borderColor: "#FECACA",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
   },
-  deleteBtnText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#DC2626",
-  },
-
-  addNewBox: {
-    borderWidth: 1.5,
-    borderColor: "#BBF7D0",
-    borderStyle: "dashed",
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-  },
-  addNewBoxPressed: {
-    backgroundColor: "#F0FDF4",
-  },
-  addNewBoxDisabled: {
-    borderColor: "#E5E7EB",
-    backgroundColor: "#F9FAFB",
-  },
-  addNewContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  addNewTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: PRIMARY,
-  },
-  addNewTitleDisabled: {
-    color: "#6B7280",
-  },
-  addNewSubtitle: {
-    fontSize: 13,
-    color: SECONDARY,
-    marginTop: 6,
-    textAlign: "center",
-  },
-
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
+  deleteBtnText: { fontSize: 12, fontWeight: "600", color: "#DC2626" },
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalBackdrop: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.4)",
   },
   modalSheet: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "92%",
-    paddingBottom: Platform.OS === "ios" ? 10 : 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "90%",
   },
   modalHandle: {
     width: 40,
@@ -893,175 +741,95 @@ const styles = StyleSheet.create({
     backgroundColor: "#D1D5DB",
     alignSelf: "center",
     marginTop: 10,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: BORDER,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: TEXT,
-  },
-  modalBody: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-
-  label: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: TEXT,
-    marginBottom: 8,
-  },
-
+  modalTitle: { fontSize: 17, fontWeight: "700", color: TEXT },
+  modalBody: { padding: 20, paddingBottom: 40 },
+  label: { fontSize: 13, fontWeight: "700", color: TEXT, marginBottom: 8 },
   dropdown: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#F9FAFB",
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
-  dropdownOpen: {
-    borderColor: PRIMARY,
-  },
-  dropdownLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
+  dropdownOpen: { borderColor: PRIMARY },
+  dropdownLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
   dropdownIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: LIGHT_GREEN,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
   },
-  dropdownText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: TEXT,
-    flex: 1,
-  },
-  placeholder: {
-    color: "#9CA3AF",
-    fontWeight: "500",
-  },
-
+  dropdownText: { fontSize: 14, color: TEXT, flex: 1 },
+  placeholder: { color: "#9CA3AF" },
   categoryList: {
     marginTop: 8,
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 14,
+    borderRadius: 12,
+    maxHeight: 200,
     overflow: "hidden",
-    backgroundColor: "#FFFFFF",
   },
   categoryOption: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  categoryOptionSelected: {
-    backgroundColor: LIGHT_GREEN,
-  },
-  categoryOptionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
+  categoryOptionSelected: { backgroundColor: LIGHT_GREEN },
+  categoryOptionLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
   categoryOptionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    backgroundColor: LIGHT_GREEN,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
   },
-  categoryOptionIconSelected: {
-    backgroundColor: PRIMARY,
-  },
-  categoryOptionText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: TEXT,
-  },
-  categoryOptionTextSelected: {
-    color: PRIMARY,
-  },
-
+  categoryOptionIconSelected: { backgroundColor: PRIMARY },
+  categoryOptionText: { fontSize: 14, color: TEXT },
+  categoryOptionTextSelected: { fontWeight: "700", color: PRIMARY },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 12,
+    minHeight: 48,
   },
-  inputIcon: {
-    marginRight: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: TEXT,
-    paddingVertical: 13,
-  },
-  descRow: {
-    alignItems: "flex-start",
-    paddingVertical: 10,
-  },
-  descInput: {
-    minHeight: 90,
-    textAlignVertical: "top",
-  },
-  currency: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: PRIMARY,
-    marginRight: 6,
-  },
-
+  descRow: { alignItems: "flex-start", paddingVertical: 10, minHeight: 100 },
+  inputIcon: { marginRight: 8 },
+  input: { flex: 1, fontSize: 14, color: TEXT, paddingVertical: 10 },
+  descInput: { minHeight: 80, textAlignVertical: "top" },
   saveBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    marginTop: 24,
     backgroundColor: PRIMARY,
     borderRadius: 14,
-    paddingVertical: 15,
-    gap: 8,
-    marginTop: 24,
-  },
-  saveBtnText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  cancelBtn: {
+    height: 52,
     alignItems: "center",
-    paddingVertical: 14,
-    marginTop: 4,
+    justifyContent: "center",
   },
-  cancelBtnText: {
-    color: SECONDARY,
-    fontSize: 15,
-    fontWeight: "600",
-  },
+  saveBtnDisabled: { opacity: 0.6 },
+  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });
