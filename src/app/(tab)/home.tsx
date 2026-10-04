@@ -307,8 +307,8 @@ export default function Home() {
                 >
                   <Ionicons
                     name={isSaved(person.id) ? "heart" : "heart-outline"}
-                    size={17}
-                    color={isSaved(person.id) ? "#EF4444" : "#111"}
+                    size={14}
+                    color={isSaved(person.id) ? "#EF4444" : "#9CA3AF"}
                   />
                 </TouchableOpacity>
 
@@ -331,7 +331,7 @@ export default function Home() {
                 </View>
 
                 <View style={styles.ratingContainer}>
-                  <Ionicons name="star" size={12} color="#F4C400" />
+                  <Ionicons name="star" size={11} color="#F59E0B" />
                   <Text style={styles.rating}>
                     {starsFromReviewCount(
                       person.reviews?.length ?? person.reviewCount ?? 0,
@@ -630,43 +630,43 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   professionalCard: {
-    width: 150,
+    width: 110,
     backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 12,
-    marginRight: 12,
+    borderRadius: 12,
+    padding: 8,
+    marginRight: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#E1E1E1",
   },
   heartButton: {
     position: "absolute",
-    top: 10,
-    right: 10,
+    top: 6,
+    right: 6,
     zIndex: 2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
   },
   profileImageContainer: {
     alignItems: "center",
-    marginBottom: 8,
-    marginTop: 4,
+    marginBottom: 6,
+    marginTop: 10,
   },
   profileImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#E5E7EB",
   },
   nameContainer: {
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   professionalName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
     color: "#111",
     textAlign: "center",
@@ -675,35 +675,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   rating: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     color: "#111",
-    marginLeft: 3,
+    marginLeft: 2,
   },
   reviews: {
-    fontSize: 11,
-    color: "#888",
+    fontSize: 10,
+    color: "#777",
     marginLeft: 2,
   },
   profession: {
-    fontSize: 12,
-    color: "#159447",
+    fontSize: 11,
+    color: "#555",
     textAlign: "center",
     marginBottom: 2,
   },
   cityText: {
-    fontSize: 11,
-    color: "#888",
+    fontSize: 10,
+    color: "#777",
     textAlign: "center",
     marginBottom: 4,
   },
   price: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#111",
+    fontWeight: "800",
+    color: "#159447",
     textAlign: "center",
   },
   emptyProsContainer: {
