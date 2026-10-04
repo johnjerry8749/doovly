@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +21,8 @@ import {
   listProfessionals,
   listServiceCategories,
   starsFromReviewCount,
+  type Professional,
+  type ServiceCategory,
 } from "@/services/professionals";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
@@ -45,11 +47,38 @@ export default function Home() {
     closeCityPicker,
   } = useLocation();
 
-  const services = listServiceCategories();
-  const professionals = listProfessionals();
+  const [services, setServices] = useState<ServiceCategory[]>([]);
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
 
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [favTick, setFavTick] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [cats, pros] = await Promise.all([
+          listServiceCategories(),
+          listProfessionals(),
+        ]);
+
+        if (!cancelled) {
+          setServices(cats);
+          setProfessionals(pros);
+        }
+      } catch (e) {
+        console.error("Home load:", e);
+      } finally {
+        if (!cancelled) setLoadingData(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onToggleFavorite = useCallback((proId: string) => {
     const result = toggleSave(proId);
@@ -311,7 +340,12 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-        {nearbyProfessionals.length === 0 ? (
+        {loadingData ? (
+          <View style={styles.emptyProsContainer}>
+            <ActivityIndicator size="large" color="#159447" />
+            <Text style={styles.emptyProsSubtitle}>Loading professionals…</Text>
+          </View>
+        ) : nearbyProfessionals.length === 0 ? (
           <View style={styles.emptyProsContainer}>
             <Ionicons
               name="search-outline"
@@ -392,7 +426,7 @@ export default function Home() {
                   style={styles.profileImageContainer}
                 >
                   <Image
-                    source={person.image}
+                    source={person.image as any}
                     style={styles.profileImage}
                     resizeMode="cover"
                   />
@@ -420,12 +454,12 @@ export default function Home() {
 
                   <Text style={styles.rating}>
                     {starsFromReviewCount(
-                      person.reviews.length,
+                      person.reviews?.length ?? 0,
                     )}
                   </Text>
 
                   <Text style={styles.reviews}>
-                    ({person.reviews.length})
+                    ({person.reviews?.length ?? 0})
                   </Text>
                 </View>
 

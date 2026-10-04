@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,7 @@ import {
   listProfessionals,
   listServiceCategories,
   type Professional,
+  type ServiceCategory,
 } from "@/services/professionals";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
@@ -32,8 +33,9 @@ export default function Services() {
   const [search, setSearch] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [favTick, setFavTick] = useState(0);
-
-  const categories = useMemo(() => listServiceCategories(), []);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
 
   const {
     locationName,
@@ -51,7 +53,31 @@ export default function Services() {
     closeCityPicker,
   } = useLocation();
 
-  const professionals = listProfessionals();
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [cats, pros] = await Promise.all([
+          listServiceCategories(),
+          listProfessionals(),
+        ]);
+
+        if (!cancelled) {
+          setCategories(cats);
+          setProfessionals(pros);
+        }
+      } catch (e) {
+        console.error("Services load:", e);
+      } finally {
+        if (!cancelled) setLoadingData(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onToggleFavorite = useCallback((proId: string) => {
     const result = toggleSave(proId);
@@ -169,7 +195,7 @@ export default function Services() {
 
         <View style={styles.profileImageContainer}>
           <Image
-            source={item.image}
+            source={item.image as any}
             style={styles.profileImage}
             resizeMode="cover"
           />
@@ -316,11 +342,20 @@ export default function Services() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="search-outline" size={42} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>No professionals found</Text>
-            <Text style={styles.emptyText}>
-              Try another filter or search term.
-            </Text>
+            {loadingData ? (
+              <>
+                <ActivityIndicator size="large" color={GREEN} />
+                <Text style={styles.emptyText}>Loading professionals…</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="search-outline" size={42} color="#D1D5DB" />
+                <Text style={styles.emptyTitle}>No professionals found</Text>
+                <Text style={styles.emptyText}>
+                  Try another filter or search term.
+                </Text>
+              </>
+            )}
           </View>
         }
         ListFooterComponent={<View style={styles.listBottomSpace} />}
