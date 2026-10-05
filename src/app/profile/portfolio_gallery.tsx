@@ -220,6 +220,7 @@ export default function PortfolioGallery() {
       const result =
         await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ["images"],
+          allowsEditing: true,
           allowsMultipleSelection: false,
           quality: 0.8,
         });
@@ -228,11 +229,17 @@ export default function PortfolioGallery() {
         return;
       }
 
-      const uri = result.assets?.[0]?.uri;
+      const asset = result.assets?.[0];
 
-      if (uri) {
-        setSelectedImage(uri);
+      if (!asset || asset.type !== "image" || !asset.uri) {
+        Alert.alert(
+          "Unsupported image",
+          "Please select a normal photo (JPG, JPEG, PNG, or a photo your device can convert).",
+        );
+        return;
       }
+
+      setSelectedImage(asset.uri);
     } catch (error) {
       console.error("Portfolio image picker error:", error);
 
