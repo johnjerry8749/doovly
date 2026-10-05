@@ -28,6 +28,58 @@ export type ProfileEditData = {
   verified: boolean;
 };
 
+export async function getProfileForEditAsync(): Promise<ProfileEditData | null> {
+  const s = await loadSessionUser(true);
+  if (!s) return null;
+
+  const { data: row, error } = await supabase
+    .from("professionals")
+    .select(`
+      id,
+      user_id,
+      profession,
+      bio,
+      city,
+      email,
+      phone,
+      is_verified,
+      avatar_url,
+      avatar_key,
+      profiles!professionals_user_id_fkey (
+        full_name,
+        email,
+        phone,
+        avatar_url
+      )
+    `)
+    .eq("user_id", s.uuid)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const profile = row?.profiles;
+  const imageUrl =
+    row?.avatar_url ??
+    row?.avatar_key
+      ? row.avatar_url ??
+        supabase.storage.from("profile-images").getPublicUrl(row.avatar_key).data.publicUrl
+      : profile?.avatar_url;
+
+  return {
+    id: row?.id ?? s.publicId,
+    name: row?.profession
+      ? profile?.full_name ?? s.fullName ?? ""
+      : profile?.full_name ?? s.fullName ?? "",
+    phone: row?.phone ?? profile?.phone ?? s.phone ?? "",
+    email: row?.email ?? profile?.email ?? s.email ?? "",
+    profession: row?.profession ?? "",
+    bio: row?.bio ?? "",
+    city: row?.city ?? "",
+    image: imageUrl ? ({ uri: imageUrl } as any) : FALLBACK_IMG,
+    verified: Boolean(row?.is_verified ?? s.verified),
+  };
+}
+
 export type VerificationStepStatus =
   | "pending"
   | "uploaded"
