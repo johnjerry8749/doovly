@@ -480,13 +480,45 @@ export async function openBookingChatAsync(
     if (conv) return conv;
   }
 
-  return createConversation(
+  const conversation = await createConversation(
     otherUuid,
     {
       bookingId: bookingUuid,
       lastMessage: `Booking: ${booking.title}`,
     },
   );
+
+  const { data: existingCard } = await supabase
+    .from("messages")
+    .select("id")
+    .eq("conversation_id", conversation.id)
+    .eq("kind", "request_card")
+    .limit(1)
+    .maybeSingle();
+
+  if (!existingCard) {
+    await supabase.from("messages").insert({
+      conversation_id: conversation.id,
+      sender_id: session.uuid,
+      text: `Booking request: ${booking.title}`,
+      kind: "request_card",
+      card: {
+        kind: "booking",
+        title: booking.title,
+        location: booking.location,
+        amount: booking.amount,
+        date: booking.date,
+        statusLabel:
+          booking.status === "Pending"
+            ? "Waiting for professional to accept"
+            : booking.status === "Declined"
+              ? "This booking was declined"
+              : "Accepted",
+      },
+    });
+  }
+
+  return conversation;
 }
 
 export async function createBookingConversationAsync(input: {
@@ -528,7 +560,7 @@ export async function createOfferConversationAsync(input: {
   offererImage: ImageSourcePropType;
 }): Promise<Conversation> {
   return createConversation(input.requestOwnerId === (await loadSessionUser())?.publicId ? input.offererProfessionalId : input.requestOwnerId, {
-    serviceRequestId: input.requestId,
+    serviceRequestId: tryToUuid("serviceRequest", input.requestId) ?? input.requestId,
     lastMessage: `Offer: ₦${input.amount.toLocaleString()} on "${input.requestTitle}"`,
   });
 }
