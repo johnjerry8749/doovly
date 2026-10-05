@@ -50,12 +50,12 @@ export default function RequestDetailModal({
     : { ok: false as const, reason: "missing" as const };
   const showSendOffer = Boolean(offerGate.ok);
 
-  const sendOffer = () => {
+  const sendOffer = async () => {
     if (!request) return;
     const amount = offerPrice.replace(/[^\d]/g, "");
     if (!amount) return;
 
-    const result = submitServiceRequestOffer({
+    const result = await submitServiceRequestOffer({
       requestId: request.id,
       amount: Number(amount),
     });
@@ -63,12 +63,6 @@ export default function RequestDetailModal({
       closeOffer();
       return;
     }
-    addInAppNotification({
-      userId: result.recipientUserId,
-      type: "general",
-      title: "New Offer",
-      body: `Someone sent an offer of \u20a6${Number(amount).toLocaleString()} on "${request.title}".`,
-    });
     closeOffer();
     onClose();
   };
