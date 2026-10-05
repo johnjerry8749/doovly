@@ -26,6 +26,8 @@ import {
   canSendOfferOnRequest,
   submitServiceRequestOffer,
   addServiceRequestComment,
+  updateServiceRequestComment,
+  deleteServiceRequestComment,
   likeServiceRequest,
   type ServiceRequest,
   type ServiceRequestComment,
@@ -178,6 +180,7 @@ export default function RequestsScreen() {
   const [offerPrice, setOfferPrice] = useState("");
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
   const [chatText, setChatText] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
 
   useEffect(() => {
@@ -296,6 +299,69 @@ export default function RequestsScreen() {
   const closeChat = () => {
     setChatRequest(null);
     setChatText("");
+    setEditingCommentId(null);
+  };
+
+  const isOwnComment = (comment: ServiceRequestComment) =>
+    String(getCommentUserId(comment) ?? "") === String(getCurrentUserId() ?? "");
+
+  const replaceCommentInRequest = (requestId: string, updated: ServiceRequestComment) => {
+    setAllRequests((previous) =>
+      previous.map((item) =>
+        item.id === requestId
+          ? { ...item, comments: (item.comments || []).map((comment) => comment.id === updated.id ? updated : comment) }
+          : item,
+      ),
+    );
+    setChatRequest((current) =>
+      current && current.id === requestId
+        ? { ...current, comments: (current.comments || []).map((comment) => comment.id === updated.id ? updated : comment) }
+        : current,
+    );
+  };
+
+  const removeCommentFromRequest = (requestId: string, commentId: string) => {
+    setAllRequests((previous) =>
+      previous.map((item) =>
+        item.id === requestId
+          ? { ...item, comments: (item.comments || []).filter((comment) => comment.id !== commentId) }
+          : item,
+      ),
+    );
+    setChatRequest((current) =>
+      current && current.id === requestId
+        ? { ...current, comments: (current.comments || []).filter((comment) => comment.id !== commentId) }
+        : current,
+    );
+  };
+
+  const editComment = (comment: ServiceRequestComment) => {
+    if (!chatRequest || !isOwnComment(comment)) return;
+    setEditingCommentId(comment.id);
+    setChatText(comment.text);
+  };
+
+  const deleteComment = (comment: ServiceRequestComment) => {
+    if (!chatRequest || !isOwnComment(comment)) return;
+    Alert.alert("Delete comment?", "This comment will be removed.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteServiceRequestComment(comment.id);
+            removeCommentFromRequest(chatRequest.id, comment.id);
+            if (editingCommentId === comment.id) {
+              setEditingCommentId(null);
+              setChatText("");
+            }
+          } catch (error: any) {
+            Alert.alert("Delete failed", error?.message || "Could not delete comment.");
+          }
+        },
+      },
+    ]);
   };
 
   const sendChatMessage = async () => {
@@ -303,7 +369,20 @@ export default function RequestsScreen() {
     const text = chatText.trim();
     if (!text) return;
 
-    const currentUserId = getCurrentUserId();
+    try {
+      if (editingCommentId) {
+        const updated = await updateServiceRequestComment(editingCommentId, text);
+        if (!updated) {
+          Alert.alert("Edit failed", "Your comment could not be updated.");
+          return;
+        }
+        replaceCommentInRequest(chatRequest.id, updated);
+        setEditingCommentId(null);
+        setChatText("");
+        return;
+      }
+
+      const currentUserId = getCurrentUserId();
     const currentProfessional = findProfessionalForUser(currentUserId);
     const comment = await addServiceRequestComment({
       requestId: chatRequest.id,
@@ -318,6 +397,9 @@ export default function RequestsScreen() {
     setChatRequest((current) => current ? { ...current, comments: [...(current.comments || []), comment] } : current);
     setChatText("");
     setTimeout(() => commentListRef.current?.scrollToEnd({ animated: true }), 100);
+    } catch (error: any) {
+      Alert.alert(editingCommentId ? "Edit failed" : "Comment failed", error?.message || "Please try again.");
+    }
   };
 
   const closeOffer = () => {
@@ -724,6 +806,16 @@ export default function RequestsScreen() {
                         <Text style={styles.commentName}>{c.userName}</Text>
                       </TouchableOpacity>
                       <Text style={styles.commentText}>{c.text}</Text>
+                      {isOwnComment(c) ? (
+                        <View style={{ flexDirection: "row", marginTop: 5 }}>
+                          <TouchableOpacity onPress={() => editComment(c)} activeOpacity={0.7}>
+                            <Text style={{ color: GREEN, fontSize: 12, fontWeight: "700" }}>Edit</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => deleteComment(c)} activeOpacity={0.7} style={{ marginLeft: 14 }}>
+                            <Text style={{ color: "#EF4444", fontSize: 12, fontWeight: "700" }}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : null}
                     </View>
                   </View>
                 )}
@@ -731,7 +823,7 @@ export default function RequestsScreen() {
               <View style={styles.commentInputRow}>
                 <TextInput
                   style={styles.commentInput}
-                  placeholder="Write a comment…"
+                  placeholder={editingCommentId ? "Edit your comment…" : "Write a comment…"}
                   placeholderTextColor="#9CA3AF"
                   value={chatText}
                   onChangeText={setChatText}
