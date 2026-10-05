@@ -49,6 +49,7 @@ export default function ProfessionalProfile() {
   );
   const [pro, setPro] = useState<Professional | undefined>(initialPro);
   const [loadingProfile, setLoadingProfile] = useState(!initialPro);
+  const [profileLoadError, setProfileLoadError] = useState(false);
 
   const [tab, setTab] = useState<TabKey>("services");
 
@@ -64,6 +65,7 @@ export default function ProfessionalProfile() {
 
   useEffect(() => {
     setPro(initialPro);
+    setProfileLoadError(false);
     setLoadingProfile(!initialPro);
   }, [id, initialPro]);
 
@@ -83,10 +85,14 @@ export default function ProfessionalProfile() {
           if (!active) return;
 
           setPro(nextPro);
+          setProfileLoadError(false);
           setLoadingProfile(false);
         } catch (error) {
           console.warn("Professional profile refresh failed:", error);
-          if (active) setLoadingProfile(false);
+          if (active) {
+            setProfileLoadError(true);
+            setLoadingProfile(false);
+          }
         }
       };
 
@@ -199,8 +205,21 @@ export default function ProfessionalProfile() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
           <Text style={styles.notFound}>
-            Professional not found
+            {profileLoadError
+              ? "No connection"
+              : "Professional not found"}
           </Text>
+
+          {profileLoadError ? (
+            <Text
+              style={[
+                styles.notFound,
+                { textAlign: "center", paddingHorizontal: 24 },
+              ]}
+            >
+              Please check your internet connection and try again.
+            </Text>
+          ) : null}
 
           <TouchableOpacity
             onPress={() => router.back()}
