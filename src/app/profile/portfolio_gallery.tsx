@@ -27,6 +27,7 @@ import {
 import {
   getLoggedInProfessionalId,
   getProfessionalById,
+  invalidateProfessionalsCache,
   isCurrentUserPro,
 } from "@/services/savedProviders";
 
@@ -354,6 +355,11 @@ export default function PortfolioGallery() {
       };
 
       setItems((previous) => [...previous, newItem]);
+
+      // The professional profile uses the shared professionals cache.
+      // Invalidate it immediately so the new portfolio item appears when
+      // the profile screen is opened/refocused.
+      invalidateProfessionalsCache();
 
       setShowAddModal(false);
       setSelectedImage(null);
