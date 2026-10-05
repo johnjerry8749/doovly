@@ -37,7 +37,6 @@ import {
   type BookingChatStatus,
   type RequestCardData,
 } from "@/services/chat";
-import { addInAppNotification } from "@/services/inAppNotifications";
 import { loadSessionUser } from "@/lib/session";
 import { isCurrentUserPro } from "@/services/savedProviders";
 
@@ -274,15 +273,7 @@ export default function ChatConversation() {
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Accepted");
 
-    const isOffer = convKind === "offer";
-    addInAppNotification({
-      userId: "u1",
-      type: "booking",
-      title: isOffer ? "Offer Accepted" : "Booking Accepted",
-      body: isOffer
-        ? `${proDisplayName} accepted your offer.`
-        : `${proDisplayName} accepted your booking.`,
-    });
+    setBookingStatus("Accepted");
   };
 
   const onDecline = async () => {
@@ -291,15 +282,7 @@ export default function ChatConversation() {
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Declined");
 
-    const isOffer = convKind === "offer";
-    addInAppNotification({
-      userId: "u1",
-      type: "booking",
-      title: isOffer ? "Offer Declined" : "Booking Declined",
-      body: isOffer
-        ? `${proDisplayName} declined your offer.`
-        : `${proDisplayName} declined your booking.`,
-    });
+    setBookingStatus("Declined");
   };
 
   const onCall = () => {
