@@ -69,8 +69,8 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [favTick, setFavTick] = useState(0);
 
-  const onToggleFavorite = useCallback((proId: string) => {
-    const result = toggleSave(proId);
+  const onToggleFavorite = useCallback(async (proId: string) => {
+    const result = await toggleSave(proId);
 
     if (!result.ok && result.reason === "limit") {
       Alert.alert(
@@ -89,6 +89,11 @@ export default function Home() {
         ],
       );
 
+      return;
+    }
+
+    if (!result.ok && result.reason === "error") {
+      Alert.alert("Could not update", result.message || "Please check your connection and try again.");
       return;
     }
 
