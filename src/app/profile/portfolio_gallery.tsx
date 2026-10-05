@@ -47,6 +47,7 @@ type PortfolioItem = {
   id: string;
   description: string;
   image: PortfolioImage;
+  storageKey?: string | null;
 };
 
 export default function PortfolioGallery() {
@@ -117,6 +118,7 @@ export default function PortfolioGallery() {
                     .getPublicUrl(row.image_key).data.publicUrl
                 : ""),
           },
+          storageKey: row.image_key ?? null,
         })).filter((item) => Boolean((item.image as { uri: string }).uri));
 
         if (active) {
@@ -300,12 +302,18 @@ export default function PortfolioGallery() {
       const path = `${user.id}/portfolio/${Date.now()}.${extension}`;
 
       const response = await fetch(selectedImage);
-      const blob = await response.blob();
+      if (!response.ok) {
+        throw new Error("Could not read the selected image.");
+      }
+
+      // React Native uploads to Supabase Storage should use ArrayBuffer.
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error: uploadError } = await supabase.storage
         .from("profile-images")
-        .upload(path, blob, {
-          contentType: blob.type || "image/jpeg",
+        .upload(path, arrayBuffer, {
+          contentType: "image/jpeg",
+          cacheControl: "3600",
           upsert: false,
         });
 
@@ -327,12 +335,17 @@ export default function PortfolioGallery() {
         .select("id, description, image_key, image_url")
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Do not leave an orphaned storage object when the database insert fails.
+        await supabase.storage.from("profile-images").remove([path]);
+        throw error;
+      }
 
       const newItem: PortfolioItem = {
         id: row.id,
         description: row.description ?? trimmedDescription,
         image: { uri: row.image_url || publicData.publicUrl },
+        storageKey: row.image_key ?? path,
       };
 
       setItems((previous) => [...previous, newItem]);
@@ -380,25 +393,13 @@ export default function PortfolioGallery() {
 
               if (error) throw error;
 
-              const imageUri =
-                item && typeof item.image !== "number"
-                  ? item.image.uri
-                  : null;
+              if (item?.storageKey) {
+                const { error: storageError } = await supabase.storage
+                  .from("profile-images")
+                  .remove([item.storageKey]);
 
-              if (imageUri) {
-                const marker = "/profile-images/";
-                const index = imageUri.indexOf(marker);
-
-                if (index >= 0) {
-                  const key = decodeURIComponent(
-                    imageUri.slice(index + marker.length).split("?")[0],
-                  );
-
-                  if (key) {
-                    await supabase.storage
-                      .from("profile-images")
-                      .remove([key]);
-                  }
+                if (storageError) {
+                  console.warn("Portfolio image cleanup failed:", storageError);
                 }
               }
 
