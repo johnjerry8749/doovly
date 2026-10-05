@@ -152,6 +152,7 @@ export default function Splash() {
         }
 
         if (onboardingCompleted !== "true") {
+          await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, "true");
           router.replace("/(onboarding)");
           return;
         }
