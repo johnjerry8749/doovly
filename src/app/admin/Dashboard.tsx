@@ -30,8 +30,6 @@ type StatCardProps = {
 
 function MiniSpark({ color }: { color: string }) {
   const heights = [4, 7, 5, 9, 6, 11, 8, 12, 9, 14];
-  if (!stats) return <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) + 56 }]} />;
-
   return (
     <View style={styles.sparkRow}>
       {heights.map((h, i) => (
@@ -72,8 +70,12 @@ export default function Dashboard() {
   useEffect(() => { getDashboardStats().then(setStats).catch((e) => console.warn("[Admin Dashboard]", e)); }, []);
   const maxBar = useMemo(
     () => Math.max(...(stats?.overviewSeries ?? []).map((s) => s.value), 1),
-    [stats.overviewSeries],
+    [stats?.overviewSeries],
   );
+
+  if (!stats) {
+    return <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) + 56 }]} />;
+  }
 
   return (
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) + 56 }]}>
