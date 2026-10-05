@@ -4,6 +4,7 @@
  */
 
 import { loadSessionUser, bindAuthListener, clearSessionCache } from "@/lib/session";
+import { supabase } from "@/lib/supabase";
 import {
   setDataPhase,
   checkOnline,
@@ -21,6 +22,7 @@ import { ensureServiceRequestsLoaded } from "@/services/serviceRequests";
 let bootstrapped = false;
 let bootPromise: Promise<void> | null = null;
 let unbindAuth: (() => void) | null = null;
+let professionalsChannel: ReturnType<typeof supabase.channel> | null = null;
 
 async function loadAllCaches() {
   await loadSessionUser(true);
@@ -64,6 +66,21 @@ export async function bootstrapAppData(): Promise<void> {
           }
         });
       }
+      if (!professionalsChannel) {
+        professionalsChannel = supabase
+          .channel("professionals-subscription-sync")
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "professionals" },
+            () => {
+              void loadAllCaches().catch((e: any) =>
+                console.warn("[professionals realtime]", e?.message ?? e),
+              );
+            },
+          )
+          .subscribe();
+      }
+
       bootstrapped = true;
       setDataPhase("ready");
     } catch (err: any) {
