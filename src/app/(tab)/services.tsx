@@ -78,8 +78,8 @@ export default function Services() {
   } = useLocation();
 
 
-  const onToggleFavorite = useCallback((proId: string) => {
-    const result = toggleSave(proId);
+  const onToggleFavorite = useCallback(async (proId: string) => {
+    const result = await toggleSave(proId);
 
     if (!result.ok && result.reason === "limit") {
       Alert.alert(
@@ -93,6 +93,11 @@ export default function Services() {
           },
         ],
       );
+      return;
+    }
+
+    if (!result.ok && result.reason === "error") {
+      Alert.alert("Could not update", result.message || "Please check your connection and try again.");
       return;
     }
 
