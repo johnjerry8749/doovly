@@ -200,6 +200,22 @@ export async function updateProfile(
     if (proErr) {
       return { ok: false, error: proErr.message };
     }
+  } else {
+    const { error: createProErr } = await supabase
+      .from("professionals")
+      .insert({
+        user_id: s.uuid,
+        profession: profession || null,
+        bio: bio || null,
+        city: city || null,
+        email: email || null,
+        phone: phone || null,
+        avatar_url: input.imageUrl || null,
+      });
+
+    if (createProErr) {
+      return { ok: false, error: createProErr.message };
+    }
   }
 
   invalidateProfessionalsCache();
