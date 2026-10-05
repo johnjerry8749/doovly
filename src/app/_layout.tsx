@@ -6,10 +6,12 @@ import { LocationProvider } from "@/context/LocationContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { queryClient } from "@/lib/queryClient";
 import { registerForNotifications } from "@/services/notifications";
+import { bootstrapAppData } from "@/lib/bootstrapData";
 
 export default function RootLayout() {
   useEffect(() => {
     registerForNotifications();
+    void bootstrapAppData();
   }, []);
 
   return (
@@ -26,4 +28,3 @@ export default function RootLayout() {
     </QueryClientProvider>
   );
 }
-
