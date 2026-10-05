@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -22,28 +22,28 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   listServiceRequests,
-  listServiceRequestsAsync,
   canSendOfferOnRequest,
   submitServiceRequestOffer,
   addServiceRequestComment,
-  updateServiceRequestComment,
-  deleteServiceRequestComment,
-  likeServiceRequest,
   type ServiceRequest,
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
-import { getCurrentUserId } from "@/services/inAppNotifications";
-import { createOfferConversationAsync } from "@/services/chat";
+import {
+  getCurrentUserId,
+  addInAppNotification,
+} from "@/services/inAppNotifications";
+import { createOfferConversation } from "@/services/chat";
 import { getLoggedInProfessionalId } from "@/services/savedProviders";
-import { listProfessionals, getProfessionalById, listServiceCategoriesAsync } from "@/services/professionals";
-import { listCitiesAsync } from "@/services/cities";
+import { listProfessionals, getProfessionalById } from "@/services/professionals";
+import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
+import { NIGERIA_CITIES } from "@/data/cities";
 import { useLocation } from "@/context/LocationContext";
 import CreateJobModal from "@/components/CreateJobModal";
 import RequestImageSlider from "@/components/RequestImageSlider";
 
 const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
-
+const CATEGORY_FILTERS = ["All", ...SERVICE_CATEGORIES.map((c) => c.name)];
 const PROFILE_NAV_COOLDOWN_MS = 4500;
 
 const normalize = (value?: string | number | null) =>
@@ -171,37 +171,19 @@ export default function RequestsScreen() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
-  const [allRequests, setAllRequests] = useState<ServiceRequest[]>(() => listServiceRequests());
-  const [categoryFilters, setCategoryFilters] = useState<string[]>(["All"]);
-  const [cities, setCities] = useState<string[]>([]);
-  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [allRequests, setAllRequests] = useState(() => listServiceRequests());
   const [createVisible, setCreateVisible] = useState(false);
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
   const [offerPrice, setOfferPrice] = useState("");
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
   const [chatText, setChatText] = useState("");
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
-
-  useEffect(() => {
-    let active = true;
-    Promise.all([listServiceRequestsAsync(), listServiceCategoriesAsync(), listCitiesAsync()])
-      .then(([requests, categories, nextCities]) => {
-        if (!active) return;
-        setAllRequests(requests ?? []);
-        setCategoryFilters(["All", ...(categories ?? []).map((c) => c.name).filter(Boolean)]);
-        setCities(nextCities ?? []);
-      })
-      .catch((error) => Alert.alert("Could not load requests", error?.message || "Please try again."))
-      .finally(() => { if (active) setLoadingRequests(false); });
-    return () => { active = false; };
-  }, []);
 
   const filteredCities = useMemo(() => {
     const q = citySearch.trim().toLowerCase();
-    if (!q) return cities;
-    return cities.filter((c) => c.toLowerCase().includes(q));
-  }, [citySearch, cities]);
+    if (!q) return [...NIGERIA_CITIES];
+    return NIGERIA_CITIES.filter((c) => c.toLowerCase().includes(q));
+  }, [citySearch]);
 
   const matchesLocationCity = (itemCity?: string, itemArea?: string) => {
     if (
@@ -263,22 +245,10 @@ export default function RequestsScreen() {
   const getComments = (item: ServiceRequest): ServiceRequestComment[] =>
     item.comments || [];
 
-  const refreshRequests = async () => {
-    try { setAllRequests(await listServiceRequestsAsync()); }
-    catch (error: any) { Alert.alert("Refresh failed", error?.message || "Could not refresh requests."); }
-  };
+  const refreshRequests = () => setAllRequests(listServiceRequests());
 
-  const toggleLike = async (id: string) => {
-    const nextLiked = !likedIds[id];
-    setLikedIds((prev) => ({ ...prev, [id]: nextLiked }));
-    try {
-      const count = await likeServiceRequest(id, nextLiked);
-      setAllRequests((prev) => prev.map((item) => item.id === id ? { ...item, likesCount: count } : item));
-    } catch (error: any) {
-      setLikedIds((prev) => ({ ...prev, [id]: !nextLiked }));
-      Alert.alert("Like failed", error?.message || "Please try again.");
-    }
-  };
+  const toggleLike = (id: string) =>
+    setLikedIds((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const shareRequest = async (item: ServiceRequest) => {
     try {
@@ -299,92 +269,16 @@ export default function RequestsScreen() {
   const closeChat = () => {
     setChatRequest(null);
     setChatText("");
-    setEditingCommentId(null);
   };
 
-  const isOwnComment = (comment: ServiceRequestComment) =>
-    String(getCommentUserId(comment) ?? "") === String(getCurrentUserId() ?? "");
-
-  const replaceCommentInRequest = (requestId: string, updated: ServiceRequestComment) => {
-    setAllRequests((previous) =>
-      previous.map((item) =>
-        item.id === requestId
-          ? { ...item, comments: (item.comments || []).map((comment) => comment.id === updated.id ? updated : comment) }
-          : item,
-      ),
-    );
-    setChatRequest((current) =>
-      current && current.id === requestId
-        ? { ...current, comments: (current.comments || []).map((comment) => comment.id === updated.id ? updated : comment) }
-        : current,
-    );
-  };
-
-  const removeCommentFromRequest = (requestId: string, commentId: string) => {
-    setAllRequests((previous) =>
-      previous.map((item) =>
-        item.id === requestId
-          ? { ...item, comments: (item.comments || []).filter((comment) => comment.id !== commentId) }
-          : item,
-      ),
-    );
-    setChatRequest((current) =>
-      current && current.id === requestId
-        ? { ...current, comments: (current.comments || []).filter((comment) => comment.id !== commentId) }
-        : current,
-    );
-  };
-
-  const editComment = (comment: ServiceRequestComment) => {
-    if (!chatRequest || !isOwnComment(comment)) return;
-    setEditingCommentId(comment.id);
-    setChatText(comment.text);
-  };
-
-  const deleteComment = (comment: ServiceRequestComment) => {
-    if (!chatRequest || !isOwnComment(comment)) return;
-    Alert.alert("Delete comment?", "This comment will be removed.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteServiceRequestComment(comment.id);
-            removeCommentFromRequest(chatRequest.id, comment.id);
-            if (editingCommentId === comment.id) {
-              setEditingCommentId(null);
-              setChatText("");
-            }
-          } catch (error: any) {
-            Alert.alert("Delete failed", error?.message || "Could not delete comment.");
-          }
-        },
-      },
-    ]);
-  };
-
-  const sendChatMessage = async () => {
+  const sendChatMessage = () => {
     if (!chatRequest) return;
     const text = chatText.trim();
     if (!text) return;
 
-    try {
-      if (editingCommentId) {
-        const updated = await updateServiceRequestComment(editingCommentId, text);
-        if (!updated) {
-          Alert.alert("Edit failed", "Your comment could not be updated.");
-          return;
-        }
-        replaceCommentInRequest(chatRequest.id, updated);
-        setEditingCommentId(null);
-        setChatText("");
-        return;
-      }
-
-      const currentUserId = getCurrentUserId();
+    const currentUserId = getCurrentUserId();
     const currentProfessional = findProfessionalForUser(currentUserId);
-    const comment = await addServiceRequestComment({
+    const comment = addServiceRequestComment({
       requestId: chatRequest.id,
       text,
       userName: currentProfessional?.name || "You",
@@ -392,14 +286,10 @@ export default function RequestsScreen() {
     });
     if (!comment) return;
 
-    await refreshRequests();
-
-    setChatRequest((current) => current ? { ...current, comments: [...(current.comments || []), comment] } : current);
+    refreshRequests();
+    setChatRequest({ ...chatRequest });
     setChatText("");
     setTimeout(() => commentListRef.current?.scrollToEnd({ animated: true }), 100);
-    } catch (error: any) {
-      Alert.alert(editingCommentId ? "Edit failed" : "Comment failed", error?.message || "Please try again.");
-    }
   };
 
   const closeOffer = () => {
@@ -407,12 +297,12 @@ export default function RequestsScreen() {
     setOfferPrice("");
   };
 
-  const submitOffer = async () => {
+  const submitOffer = () => {
     if (!offerRequest) return;
     const amountNum = Number(offerPrice.replace(/[^\d]/g, ""));
     if (!amountNum) return;
 
-    const result = await submitServiceRequestOffer({
+    const result = submitServiceRequestOffer({
       requestId: offerRequest.id,
       amount: amountNum,
     });
@@ -430,13 +320,20 @@ export default function RequestsScreen() {
       return;
     }
 
+    addInAppNotification({
+      userId: result.recipientUserId,
+      type: "general",
+      title: "New Offer",
+      body: `Someone sent an offer of ₦${amountNum.toLocaleString()} on "${offerRequest.title}".`,
+    });
+
     const offererProId = getLoggedInProfessionalId() ?? getCurrentUserId();
     const offererPro = getProfessionalById(String(offererProId));
     const locationLabel = [offerRequest.location, offerRequest.city]
       .filter(Boolean)
       .join(", ");
 
-    const conv = await createOfferConversationAsync({
+    const conv = createOfferConversation({
       requestId: offerRequest.id,
       requestTitle: offerRequest.title,
       requestCategory: offerRequest.category,
@@ -455,7 +352,7 @@ export default function RequestsScreen() {
         (require("@/assets/profile_1.jpg") as number),
     });
 
-    await refreshRequests();
+    setAllRequests(listServiceRequests());
     closeOffer();
     router.push({ pathname: "/chat/[id]", params: { id: conv.id } });
   };
@@ -681,7 +578,7 @@ export default function RequestsScreen() {
           contentContainerStyle={styles.filtersRow}
           keyboardShouldPersistTaps="handled"
         >
-          {categoryFilters.map((category) => {
+          {CATEGORY_FILTERS.map((category) => {
             const active = categoryFilter === category;
             return (
               <TouchableOpacity
@@ -701,8 +598,6 @@ export default function RequestsScreen() {
 
       <FlatList
         data={filteredRequests}
-        refreshing={loadingRequests}
-        onRefresh={refreshRequests}
         keyExtractor={(item) => item.id}
         renderItem={renderRequest}
         contentContainerStyle={styles.listContent}
@@ -719,7 +614,7 @@ export default function RequestsScreen() {
       <CreateJobModal
         visible={createVisible}
         onClose={() => setCreateVisible(false)}
-        onSaved={() => {
+        onCreate={() => {
           setCreateVisible(false);
           refreshRequests();
         }}
@@ -806,16 +701,6 @@ export default function RequestsScreen() {
                         <Text style={styles.commentName}>{c.userName}</Text>
                       </TouchableOpacity>
                       <Text style={styles.commentText}>{c.text}</Text>
-                      {isOwnComment(c) ? (
-                        <View style={{ flexDirection: "row", marginTop: 5 }}>
-                          <TouchableOpacity onPress={() => editComment(c)} activeOpacity={0.7}>
-                            <Text style={{ color: GREEN, fontSize: 12, fontWeight: "700" }}>Edit</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => deleteComment(c)} activeOpacity={0.7} style={{ marginLeft: 14 }}>
-                            <Text style={{ color: "#EF4444", fontSize: 12, fontWeight: "700" }}>Delete</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ) : null}
                     </View>
                   </View>
                 )}
@@ -823,7 +708,7 @@ export default function RequestsScreen() {
               <View style={styles.commentInputRow}>
                 <TextInput
                   style={styles.commentInput}
-                  placeholder={editingCommentId ? "Edit your comment…" : "Write a comment…"}
+                  placeholder="Write a comment…"
                   placeholderTextColor="#9CA3AF"
                   value={chatText}
                   onChangeText={setChatText}
