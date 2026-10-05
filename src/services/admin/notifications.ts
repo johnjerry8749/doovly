@@ -133,6 +133,14 @@ export function resolveAudienceUsers(_audience: NotificationAudience): any[] {
 }
 
 function map(row: any): AdminNotification {
+  const rawStatus = String(row.status ?? "sent").toLowerCase();
+  const status: NotificationStatus =
+    rawStatus === "scheduled"
+      ? "Scheduled"
+      : rawStatus === "failed"
+        ? "Failed"
+        : "Sent";
+
   return {
     id: row.id,
     title: row.title,
@@ -143,7 +151,7 @@ function map(row: any): AdminNotification {
       row.sent_to_label ??
       labels[row.sent_to as NotificationAudience] ??
       "All Users",
-    status: (row.status ?? "Sent") as NotificationStatus,
+    status,
     link: row.link ?? undefined,
     sentAt: row.sent_at ?? row.created_at,
     createdAt: row.created_at,
@@ -205,11 +213,18 @@ export async function sendAdminNotification(
         detail = payload?.error || payload?.errors?.join?.("\n") || detail;
       }
     } catch {}
-    throw new Error(detail);
+
+    throw new Error(
+      typeof detail === "string" ? detail : JSON.stringify(detail),
+    );
   }
 
   if (!data?.notification) {
-    throw new Error(data?.error || data?.errors?.join?.("\n") || "Notification delivery failed.");
+    throw new Error(
+      typeof data?.error === "string"
+        ? data.error
+        : data?.errors?.join?.("\n") || "Notification delivery failed.",
+    );
   }
 
   const errors = Array.isArray(data.errors) ? data.errors.map(String) : [];
