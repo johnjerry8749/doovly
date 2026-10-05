@@ -17,11 +17,11 @@ import { router } from "expo-router";
 
 import {
   getProfessionalById,
-  listMyServices,
+  listMyServicesAsync,
   createMyService,
   updateMyService,
   deleteMyService,
-  listServiceCategories,\n  listServiceCategoriesAsync,
+  listServiceCategoriesAsync,
   type ProService,
 } from "@/services/professionals";
 import { getLoggedInProfessionalId } from "@/services/savedProviders";
