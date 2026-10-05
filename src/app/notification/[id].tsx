@@ -15,6 +15,7 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 
 import {
   getNotificationsByUserId,
+  getNotificationsByUserIdAsync,
   getCurrentUserId,
   markNotificationRead,
   clearAllNotifications,
@@ -99,13 +100,14 @@ export default function NotificationsScreen() {
     getNotificationsByUserId(userId),
   );
 
-  const refresh = useCallback(() => {
-    setItems(getNotificationsByUserId(userId));
+  const refresh = useCallback(async () => {
+    const list = await getNotificationsByUserIdAsync(userId);
+    setItems(list);
   }, [userId]);
 
   useFocusEffect(
     useCallback(() => {
-      refresh();
+      void refresh();
     }, [refresh]),
   );
 
@@ -121,7 +123,7 @@ export default function NotificationsScreen() {
           onPress: async () => {
             try {
               await clearAllNotifications(userId);
-              refresh();
+              await refresh();
             } catch (error) {
               Alert.alert(
                 "Clear failed",
@@ -146,7 +148,7 @@ export default function NotificationsScreen() {
           onPress: async () => {
             try {
               await deleteNotification(notificationId);
-              refresh();
+              await refresh();
             } catch (error) {
               Alert.alert(
                 "Delete failed",
