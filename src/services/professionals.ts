@@ -1,17 +1,20 @@
 /**
  * Professionals service
- * --------------------
+ * ---------------------
  * Screens import ONLY from here.
- *
- * NOW  → reads mock data from src/data/professionals.ts
- * LATER → swap the body of each function to call apiRequest("/professionals...")
- *
- * Do not change function names when you add the backend — only the insides.
+ * Function names + return shapes stay stable — UI never changes.
  */
 
+import { supabase } from "@/lib/supabase";
 import {
-  PROFESSIONALS,
-  getProfessionalById as getFromData,
+  mapProfessionalRow,
+  mapServiceRow,
+  mapReviewRow,
+  PROFESSIONAL_SELECT,
+} from "@/lib/rowMappers";
+import { toUuid, tryToUuid } from "@/lib/ids";
+import { loadSessionUser } from "@/lib/session";
+import {
   getDistanceKm,
   starsFromReviewCount,
   type Professional,
@@ -26,73 +29,118 @@ import {
 export type { Professional, ProService, ProReview, ServiceCategory };
 export { getDistanceKm, starsFromReviewCount };
 
-/** List all professionals (Home, Search). */
-export function listProfessionals(): Professional[] {
-  // TODO backend: return apiRequest<Professional[]>("/professionals")
-  return PROFESSIONALS;
+/** In-memory cache so existing sync callers keep working after first load. */
+let cache: Professional[] | null = null;
+let loadPromise: Promise<Professional[]> | null = null;
+
+async function fetchAll(): Promise<Professional[]> {
+  const { data, error } = await supabase
+    .from("professionals")
+    .select(PROFESSIONAL_SELECT)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  const list = (data ?? []).map(mapProfessionalRow);
+  cache = list;
+  return list;
 }
 
-/** Filter by city name (case-insensitive). */
-export function listProfessionalsByCity(city: string): Professional[] {
-  // TODO backend: return apiRequest(`/professionals?city=${encodeURIComponent(city)}`)
-  const key = city.trim().toLowerCase();
-  if (!key || key === "all nigeria" || key === "nigeria") {
-    return PROFESSIONALS;
+export async function ensureProfessionalsLoaded(): Promise<Professional[]> {
+  if (cache) return cache;
+  if (!loadPromise) {
+    loadPromise = fetchAll().finally(() => {
+      loadPromise = null;
+    });
   }
-  const filtered = PROFESSIONALS.filter(
+  return loadPromise;
+}
+
+export function invalidateProfessionalsCache() {
+  cache = null;
+}
+
+export function listProfessionals(): Professional[] {
+  if (!cache) {
+    void ensureProfessionalsLoaded();
+  }
+  return cache ?? [];
+}
+
+export async function listProfessionalsAsync(): Promise<Professional[]> {
+  return ensureProfessionalsLoaded();
+}
+
+export function listProfessionalsByCity(city: string): Professional[] {
+  const all = listProfessionals();
+  const key = city.trim().toLowerCase();
+  if (!key || key === "all nigeria" || key === "nigeria") return all;
+  const filtered = all.filter(
     (p) =>
       p.city.toLowerCase().includes(key) || key.includes(p.city.toLowerCase()),
   );
-  return filtered.length > 0 ? filtered : PROFESSIONALS;
+  return filtered.length > 0 ? filtered : all;
 }
 
-/** Single professional by id (Profile screen). */
-export function getProfessionalById(
+export async function listProfessionalsByCityAsync(
+  city: string,
+): Promise<Professional[]> {
+  await ensureProfessionalsLoaded();
+  return listProfessionalsByCity(city);
+}
+
+export function getProfessionalById(id: string): Professional | undefined {
+  const all = listProfessionals();
+  return all.find((p) => String(p.id) === String(id));
+}
+
+export async function getProfessionalByIdAsync(
   id: string,
-): Professional | undefined {
-  // TODO backend: return apiRequest<Professional>(`/professionals/${id}`)
-  return getFromData(id);
+): Promise<Professional | undefined> {
+  await ensureProfessionalsLoaded();
+  const fromCache = getProfessionalById(id);
+  if (fromCache) return fromCache;
+
+  const uuid = tryToUuid("professional", id) ?? id;
+  const { data, error } = await supabase
+    .from("professionals")
+    .select(PROFESSIONAL_SELECT)
+    .or(`id.eq.${uuid},mock_id.eq.${id}`)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return undefined;
+  return mapProfessionalRow(data);
 }
 
-/**
- * Category chips for Home + Services.
- * Includes "All" first. Screens should only call this — do not hardcode chips.
- * TODO backend: return apiRequest("/categories")
- */
 export function listServiceCategories(): ServiceCategory[] {
-  return [{ name: "All", icon: "apps" }, ...SERVICE_CATEGORIES];
+  return SERVICE_CATEGORIES;
 }
 
-/**
- * Add a review (mock: returns the new review object for local state).
- * Later: POST /professionals/:id/reviews and return server row.
- */
 export async function addReview(
   professionalId: string,
-  payload: { userName: string; comment: string; userId?: string },
+  input: { userName: string; comment: string; rating?: number },
 ): Promise<ProReview> {
-  // TODO backend:
-  // return apiRequest(`/professionals/${professionalId}/reviews`, {
-  //   method: "POST",
-  //   body: JSON.stringify(payload),
-  // })
-  await new Promise((r) => setTimeout(r, 300));
-  return {
-    id: `local-${Date.now()}`,
-    userId: payload.userId,
-    userName: payload.userName.trim() || "Anonymous",
-    comment: payload.comment.trim(),
-    date: new Date().toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }),
-  };
-}
+  const proUuid = toUuid("professional", professionalId);
+  const { data, error } = await supabase
+    .from("reviews")
+    .insert({
+      professional_id: proUuid,
+      user_name: input.userName.trim(),
+      comment: input.comment.trim(),
+      rating: input.rating ?? null,
+      date_label: new Date().toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+    })
+    .select("id, mock_id, user_name, comment, date_label, rating")
+    .single();
 
-// =====================================================
-// AUTH USER SERVICES (My Services screen)
-// =====================================================
+  if (error) throw error;
+  invalidateProfessionalsCache();
+  return mapReviewRow(data);
+}
 
 export type ServiceInput = {
   name: string;
@@ -101,84 +149,126 @@ export type ServiceInput = {
   icon?: string;
 };
 
-/** Services for the logged-in professional (auth user). */
-export function listMyServices(professionalId: string): ProService[] {
-  // TODO backend: return apiRequest<ProService[]>("/me/services")
-  const pro = getFromData(professionalId);
-  return pro ? [...pro.services] : [];
+function parsePriceValue(price: string): number {
+  const n = Number(String(price).replace(/[^0-9.]/g, ""));
+  return Number.isFinite(n) ? n : 0;
 }
 
-/** Create a service for the auth user. */
+function formatPrice(price: string): string {
+  const n = parsePriceValue(price);
+  if (!n) return price.trim() || "₦0";
+  return `₦${n.toLocaleString("en-NG")}`;
+}
+
+export function listMyServices(professionalId: string): ProService[] {
+  const pro = getProfessionalById(professionalId);
+  return pro?.services ?? [];
+}
+
+export async function listMyServicesAsync(
+  professionalId: string,
+): Promise<ProService[]> {
+  await ensureProfessionalsLoaded();
+  return listMyServices(professionalId);
+}
+
 export async function createMyService(
   professionalId: string,
   input: ServiceInput,
 ): Promise<ProService> {
-  // TODO backend: return apiRequest<ProService>("/me/services", { method: "POST", body: JSON.stringify(input) })
-  await new Promise((r) => setTimeout(r, 200));
+  const proUuid = toUuid("professional", professionalId);
+  const priceValue = parsePriceValue(input.price);
+  const price = formatPrice(input.price);
 
-  const priceValue = Number(String(input.price).replace(/[^0-9.]/g, "")) || 0;
-  const newService: ProService = {
-    id: `s-${Date.now()}`,
-    name: input.name.trim(),
-    description: input.description.trim(),
-    price: input.price.trim().startsWith("₦")
-      ? input.price.trim()
-      : `₦${Number(input.price).toLocaleString()}`,
-    priceValue,
-    icon: input.icon || "briefcase-outline",
-  };
+  const { data, error } = await supabase
+    .from("services")
+    .insert({
+      professional_id: proUuid,
+      name: input.name.trim(),
+      description: input.description.trim(),
+      price,
+      price_value: priceValue,
+      icon: input.icon || "briefcase-outline",
+    })
+    .select("id, mock_id, name, description, price, price_value, icon")
+    .single();
 
-  const pro = PROFESSIONALS.find((p) => p.id === String(professionalId));
-  if (pro) {
-    pro.services = [...pro.services, newService];
-  }
-
-  return newService;
+  if (error) throw error;
+  invalidateProfessionalsCache();
+  return mapServiceRow(data);
 }
 
-/** Update an existing service for the auth user. */
 export async function updateMyService(
   professionalId: string,
   serviceId: string,
   input: ServiceInput,
 ): Promise<ProService | null> {
-  // TODO backend: return apiRequest<ProService>(`/me/services/${serviceId}`, { method: "PATCH", body: JSON.stringify(input) })
-  await new Promise((r) => setTimeout(r, 200));
+  const proUuid = toUuid("professional", professionalId);
+  const priceValue = parsePriceValue(input.price);
+  const price = formatPrice(input.price);
 
-  const pro = PROFESSIONALS.find((p) => p.id === String(professionalId));
-  if (!pro) return null;
+  let serviceUuid = serviceId;
+  if (!serviceId.includes("-") || serviceId.startsWith("s")) {
+    const { data: found } = await supabase
+      .from("services")
+      .select("id")
+      .eq("professional_id", proUuid)
+      .or(`mock_id.eq.${serviceId},id.eq.${serviceId}`)
+      .maybeSingle();
+    if (!found) return null;
+    serviceUuid = found.id;
+  }
 
-  const idx = pro.services.findIndex((s) => s.id === serviceId);
-  if (idx === -1) return null;
+  const { data, error } = await supabase
+    .from("services")
+    .update({
+      name: input.name.trim(),
+      description: input.description.trim(),
+      price,
+      price_value: priceValue,
+      icon: input.icon || "briefcase-outline",
+    })
+    .eq("id", serviceUuid)
+    .eq("professional_id", proUuid)
+    .select("id, mock_id, name, description, price, price_value, icon")
+    .maybeSingle();
 
-  const priceValue = Number(String(input.price).replace(/[^0-9.]/g, "")) || 0;
-  const updated: ProService = {
-    ...pro.services[idx],
-    name: input.name.trim(),
-    description: input.description.trim(),
-    price: input.price.trim().startsWith("₦")
-      ? input.price.trim()
-      : `₦${Number(input.price).toLocaleString()}`,
-    priceValue,
-    icon: input.icon || pro.services[idx].icon,
-  };
-
-  pro.services = pro.services.map((s, i) => (i === idx ? updated : s));
-  return updated;
+  if (error) throw error;
+  if (!data) return null;
+  invalidateProfessionalsCache();
+  return mapServiceRow(data);
 }
 
-/** Delete a service for the auth user. */
 export async function deleteMyService(
   professionalId: string,
   serviceId: string,
 ): Promise<boolean> {
-  // TODO backend: await apiRequest(`/me/services/${serviceId}`, { method: "DELETE" }); return true
-  await new Promise((r) => setTimeout(r, 150));
+  const proUuid = toUuid("professional", professionalId);
 
-  const pro = PROFESSIONALS.find((p) => p.id === String(professionalId));
-  if (!pro) return false;
+  let serviceUuid = serviceId;
+  if (!serviceId.includes("-") || serviceId.startsWith("s")) {
+    const { data: found } = await supabase
+      .from("services")
+      .select("id")
+      .eq("professional_id", proUuid)
+      .or(`mock_id.eq.${serviceId},id.eq.${serviceId}`)
+      .maybeSingle();
+    if (!found) return false;
+    serviceUuid = found.id;
+  }
 
-  const before = pro.services.length;
-  pro.services = pro.services.filter((s) => s.id !== serviceId);
-  return pro.services.length < before;
+  const { error } = await supabase
+    .from("services")
+    .delete()
+    .eq("id", serviceUuid)
+    .eq("professional_id", proUuid);
+
+  if (error) throw error;
+  invalidateProfessionalsCache();
+  return true;
+}
+
+export async function resolveMyProfessionalMockId(): Promise<string | null> {
+  const s = await loadSessionUser();
+  return s?.professionalId ?? null;
 }
