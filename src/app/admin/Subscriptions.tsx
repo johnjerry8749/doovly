@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  listSubscriptions,
+  listSubscriptionsAsync,
   updateSubscription,
   getSubscriptionStats,
   type SubscriptionUser,
@@ -31,12 +31,14 @@ type FilterTab = "All" | "Pro" | "Free";
 
 export default function Subscriptions() {
   const insets = useSafeAreaInsets();
-  const [list, setList] = useState(() => listSubscriptions());
+  const [list, setList] = useState<SubscriptionUser[]>([]);
   const [filter, setFilter] = useState<FilterTab>("All");
   const [search, setSearch] = useState("");
   const [editUser, setEditUser] = useState<SubscriptionUser | null>(null);
   const [editPlan, setEditPlan] = useState<SubscriptionPlan>("Pro");
   const [editStatus, setEditStatus] = useState<SubscriptionStatus>("Active");
+
+  useEffect(() => { listSubscriptionsAsync().then(setList).catch(() => setList([])); }, []);
 
   const stats = useMemo(() => getSubscriptionStats(list), [list]);
 
@@ -62,9 +64,7 @@ export default function Subscriptions() {
 
   const saveEdit = () => {
     if (!editUser) return;
-    updateSubscription(editUser.id, { plan: editPlan, status: editStatus });
-    setList(listSubscriptions());
-    setEditUser(null);
+    updateSubscription(editUser.id, { plan: editPlan, status: editStatus }).then(() => listSubscriptionsAsync()).then(setList).then(() => setEditUser(null)).catch(() => setEditUser(null));
   };
 
   const planBadge = (plan: SubscriptionPlan) => (
