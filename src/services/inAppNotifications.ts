@@ -49,7 +49,15 @@ export async function getNotificationsByUserIdAsync(userId: string): Promise<Not
   await ensureNotificationsLoaded(); return cache.filter(n => n.userId === String(userId));
 }
 export function getMyNotifications(): Notification[] { if (!loaded) void ensureNotificationsLoaded(); return cache; }
-export async function getMyNotificationsAsync(): Promise<Notification[]> { return ensureNotificationsLoaded(); }
+export async function getMyNotificationsAsync(): Promise<Notification[]> {
+  return ensureNotificationsLoaded();
+}
+
+export async function refreshNotificationsAsync(): Promise<Notification[]> {
+  loaded = false;
+  cache = [];
+  return fetchMine();
+}
 export function getUnreadCount(userId?: string): number {
   const uid = userId ?? getCurrentUserId();
   return getNotificationsByUserId(uid).filter(n => n.unread).length;
