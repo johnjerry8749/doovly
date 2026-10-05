@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
-  listVerificationApplications,
+  listVerificationApplicationsAsync,
   updateVerificationStatus,
   bulkUpdateVerificationStatus,
   getVerificationStats,
@@ -35,9 +35,7 @@ type FilterTab = "All" | "Pending" | "Verified";
 
 export default function VerificationApplications() {
   const insets = useSafeAreaInsets();
-  const [applications, setApplications] = useState(() =>
-    listVerificationApplications(),
-  );
+  const [applications, setApplications] = useState<VerificationApplication[]>([]);
   const [filter, setFilter] = useState<FilterTab>("Pending");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -79,7 +77,9 @@ export default function VerificationApplications() {
     [selectedIds, applications],
   );
 
-  const refresh = () => setApplications(listVerificationApplications());
+  const refresh = async () => { try { setApplications(await listVerificationApplicationsAsync()); } catch (e) { console.warn("[Admin Verification]", e); } };
+
+  useEffect(() => { refresh(); }, []);
 
   const toggleSelect = (id: string, status: VerificationStatus) => {
     if (status !== "Pending") return;
@@ -108,7 +108,7 @@ export default function VerificationApplications() {
   };
 
   const verifyOne = (id: string) => {
-    updateVerificationStatus(id, "Verified");
+    updateVerificationStatus(id, "Verified").then(refresh).catch((e:any) => console.warn("[Admin Verification]", e));
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
@@ -122,7 +122,7 @@ export default function VerificationApplications() {
   };
 
   const rejectOne = (id: string) => {
-    updateVerificationStatus(id, "Rejected");
+    updateVerificationStatus(id, "Rejected").then(refresh).catch((e:any) => console.warn("[Admin Verification]", e));
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
@@ -138,7 +138,7 @@ export default function VerificationApplications() {
       applications.some((a) => a.id === id && a.status === "Pending"),
     );
     if (!ids.length) return;
-    bulkUpdateVerificationStatus(ids, "Verified");
+    bulkUpdateVerificationStatus(ids, "Verified").then(refresh).catch((e:any) => console.warn("[Admin Verification]", e));
     setSelectedIds(new Set());
     refresh();
   };
@@ -148,7 +148,7 @@ export default function VerificationApplications() {
       applications.some((a) => a.id === id && a.status === "Pending"),
     );
     if (!ids.length) return;
-    bulkUpdateVerificationStatus(ids, "Rejected");
+    bulkUpdateVerificationStatus(ids, "Rejected").then(refresh).catch((e:any) => console.warn("[Admin Verification]", e));
     setSelectedIds(new Set());
     refresh();
   };
