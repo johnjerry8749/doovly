@@ -10,6 +10,7 @@ import {
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { loadSessionUser } from "@/lib/session";
+import { invalidateNotificationsCache } from "@/services/inAppNotifications";
 
 type IncomingNotification = {
   id: string;
@@ -19,6 +20,7 @@ type IncomingNotification = {
 };
 
 export default function SystemNotificationBanner() {
+  const notificationUserId = useRef("");
   const [notification, setNotification] = useState<IncomingNotification | null>(null);
   const translateY = useRef(new Animated.Value(-140)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,6 +32,7 @@ export default function SystemNotificationBanner() {
     const start = async () => {
       const sessionUser = await loadSessionUser();
       if (cancelled || !sessionUser?.uuid) return;
+      notificationUserId.current = sessionUser.uuid;
 
       channel = supabase
         .channel(`user-notifications-${sessionUser.uuid}`)
@@ -43,6 +46,7 @@ export default function SystemNotificationBanner() {
           },
           (payload) => {
             const row = payload.new as IncomingNotification;
+            invalidateNotificationsCache();
             setNotification({
               id: String(row.id),
               title: row.title,
@@ -90,7 +94,13 @@ export default function SystemNotificationBanner() {
       useNativeDriver: true,
     }).start(() => {
       setNotification(null);
-      router.push(`/notification/${notification.id}`);
+      router.push({
+        pathname: "/notification/[id]",
+        params: {
+          id: notificationUserId.current,
+          notificationId: notification.id,
+        },
+      });
     });
   };
 
