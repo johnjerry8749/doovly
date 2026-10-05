@@ -193,15 +193,27 @@ export default function ChatConversation() {
   const [bookingStatus, setBookingStatus] =
     useState<BookingChatStatus>("Accepted");
   const listRef = useRef<FlatList>(null);
-  const currentUserId = getCurrentUserId();
-  const loggedInProId = getLoggedInProfessionalId();
-  const isAcceptor = Boolean(
-    (loggedInProId &&
-      isProfessionalInConversation(conversationId, loggedInProId)) ||
-      isProfessionalInConversation(conversationId, currentUserId),
-  );
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [isAcceptor, setIsAcceptor] = useState(false);
   const [convKind, setConvKind] = useState<"booking" | "offer" | undefined>();
   const isProUser = isCurrentUserPro();
+
+  useEffect(() => {
+    let active = true;
+    void loadSessionUser().then((session) => {
+      if (!active) return;
+      const uid = session?.uuid ?? "";
+      setCurrentUserId(uid);
+      if (uid) {
+        void isAcceptorInConversationAsync(conversationId, uid)
+          .then(setIsAcceptor)
+          .catch(() => setIsAcceptor(false));
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [conversationId]);
 
   useEffect(() => {
     let active = true;
