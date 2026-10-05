@@ -36,6 +36,36 @@ export async function listReceivedJobsAsync(){await ensureBookingsLoaded();retur
 export function getBookingById(id:string,type:"booked"|"received"="booked"){return (type==="booked"?listBookedJobs():listReceivedJobs()).find(j=>j.id===String(id));}
 export function getProfessionalForBooking(booking:Booking){return getProfessionalById(booking.professionalId);}
 
+
+export async function createBookingRequest(input:{
+  professionalId:string;
+  professionalName:string;
+  title:string;
+  amount:number;
+  location:string;
+  bookingDate?:string;
+}):Promise<Booking>{
+  const s=await loadSessionUser();
+  if(!s) throw new Error("Not logged in");
+  const professionalUuid=tryToUuid("professional",input.professionalId) ?? input.professionalId;
+  const displayDate=input.bookingDate ?? new Date().toLocaleDateString("en-NG",{day:"numeric",month:"short",year:"numeric"});
+  const {data,error}=await supabase.from("bookings").insert({
+    customer_id:s.uuid,
+    professional_id:professionalUuid,
+    title:input.title,
+    professional_name:input.professionalName,
+    customer_name:s.fullName ?? "Customer",
+    status:"pending",
+    amount:input.amount,
+    location:input.location,
+    display_date:displayDate,
+    rating:5,
+    reviews_count:0,
+  }).select(BOOKING_SELECT).single();
+  if(error) throw error;
+  invalidateBookingsCache();
+  return mapBookingRow(data);
+}
 export async function recordAcceptedOfferBooking(input:{title:string;amount:number;location:string;professionalId:string;professionalName:string;professionalImage:number;customerId:string;customerName:string;customerImage:number;}):Promise<Booking>{
   const s=await loadSessionUser(); if(!s) throw new Error("Not logged in");
   const proUuid=tryToUuid("professional",input.professionalId)??input.professionalId;
