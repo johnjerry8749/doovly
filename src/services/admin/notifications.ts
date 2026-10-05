@@ -170,49 +170,48 @@ export async function sendAdminNotification(
     throw new Error("Notification title and message are required.");
   }
 
-  const recipients = input.channels.includes("in-app")
-    ? await audienceIds(input.sentTo)
-    : [];
+  if (!input.channels.length) {
+    throw new Error("Select at least one delivery channel.");
+  }
 
-  const { data, error } = await supabase
-    .from("admin_notifications")
-    .insert({
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error("Your admin session has expired. Please sign in again.");
+
+  const { data, error } = await supabase.functions.invoke("admin-send-notification", {
+    body: {
       title,
       message,
       channels: input.channels,
-      sent_to: input.sentTo,
-      sent_to_label: labels[input.sentTo],
-      status: "Sent",
-      link: input.link?.trim() || null,
-      sent_at: new Date().toISOString(),
-    })
-    .select(
-      "id,title,message,channels,sent_to,sent_to_label,status,link,sent_at,created_at",
-    )
-    .single();
+      sentTo: input.sentTo,
+      link: input.link?.trim() || undefined,
+    },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
 
-  if (error) throw error;
+  if (error) {
+    let detail = error.message;
+    try {
+      const context = (error as any).context;
+      if (context?.json) {
+        const payload = await context.json();
+        detail = payload?.error || payload?.errors?.join?.("\n") || detail;
+      }
+    } catch {}
+    throw new Error(detail);
+  }
 
-  if (input.channels.includes("in-app") && recipients.length) {
-    const rows = recipients.map((user_id) => ({
-      user_id,
-      type: "general",
-      title,
-      body: message,
-      unread: true,
-      data: input.link?.trim() ? { link: input.link.trim() } : null,
-    }));
-
-    const notificationInsert = await supabase
-      .from("notifications")
-      .insert(rows);
-
-    if (notificationInsert.error) throw notificationInsert.error;
+  if (!data?.notification) {
+    throw new Error(data?.error || data?.errors?.join?.("\n") || "Notification delivery failed.");
   }
 
   return {
-    notification: map(data),
-    inAppRecipientCount: recipients.length,
+    notification: map(data.notification),
+    inAppRecipientCount: Number(data.inAppRecipientCount ?? 0),
     systemNotificationShown: false,
   };
 }
