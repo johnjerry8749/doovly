@@ -301,10 +301,27 @@ export default function PortfolioGallery() {
         throw new Error("Professional account not found.");
       }
 
-      const cloudinary = await uploadImageFull(
-        selectedImage,
-        UPLOAD_FOLDERS.portfolio,
-      );
+      let cloudinary: Awaited<ReturnType<typeof uploadImageFull>> | null = null;
+      let lastUploadError: unknown = null;
+
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        try {
+          cloudinary = await uploadImageFull(selectedImage, UPLOAD_FOLDERS.portfolio);
+          lastUploadError = null;
+          break;
+        } catch (uploadError) {
+          lastUploadError = uploadError;
+          if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, 800));
+          }
+        }
+      }
+
+      if (!cloudinary) {
+        throw lastUploadError instanceof Error
+          ? lastUploadError
+          : new Error("Portfolio image upload failed.");
+      }
 
       const { data: row, error } = await supabase
         .from("portfolio_items")
@@ -341,10 +358,24 @@ export default function PortfolioGallery() {
       );
     } catch (error) {
       console.error("Portfolio save error:", error);
-      Alert.alert(
-        "Could not save",
-        "Your portfolio photo could not be saved. Please check your connection and try again.",
-      );
+      const message = error instanceof Error ? error.message : "";
+
+      if (/Cloudinary is not configured/i.test(message)) {
+        Alert.alert(
+          "Photo upload failed",
+          "Cloudinary is not configured in this Expo build. Check the Cloudinary environment values and restart Expo.",
+        );
+      } else if (/Cloudinary upload failed|upload preset|unsigned|cloud name/i.test(message)) {
+        Alert.alert(
+          "Photo upload failed",
+          "The image upload service rejected this photo. Check that the Doovly Cloudinary upload preset is active and unsigned, then try again.",
+        );
+      } else {
+        Alert.alert(
+          "Could not save",
+          message || "Your portfolio photo could not be saved. Please try again.",
+        );
+      }
     } finally {
       setIsSaving(false);
     }

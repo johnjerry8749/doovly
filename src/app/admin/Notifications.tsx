@@ -194,11 +194,17 @@ export default function Notifications() {
           );
         }
       }
-      if (channels.includes("email") || channels.includes("sms")) {
-        parts.push("Email/SMS need a backend provider when you swap to API.");
+      if (channels.includes("email")) {
+        parts.push(`Email delivered to ${result.emailRecipientCount} user(s).`);
+      }
+      if (channels.includes("sms")) {
+        parts.push(`SMS delivered to ${result.smsRecipientCount} user(s).`);
+      }
+      if (result.errors.length) {
+        parts.push(result.errors.join("\n"));
       }
 
-      Alert.alert("Sent", parts.join("\n"));
+      Alert.alert(result.errors.length ? "Partially sent" : "Sent", parts.join("\n"));
     } catch (e: any) {
       Alert.alert(
         "Send failed",

@@ -113,6 +113,7 @@ export function mapProfessionalRow(row: any): Professional {
 
   return {
     id: publicId("professional", row.mock_id, row.id),
+    userId: row.user_id ?? undefined,
     name: profile?.full_name ?? "Professional",
     profession: row.profession,
     city: row.city,
@@ -279,6 +280,7 @@ export function mapServiceRequestComment(row: any): ServiceRequestComment {
   return {
     id: row.mock_id ?? row.id,
     userId: row.user_id ? publicId("user", null, row.user_id) : "",
+    authUserId: row.user_id ?? undefined,
     userName: row.user_name,
     userAvatar: asImage(resolveImageSource(row.user_avatar_url, null)),
     text: row.text,

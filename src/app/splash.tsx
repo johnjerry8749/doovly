@@ -10,12 +10,16 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/lib/supabase";
 
 // Keep the native splash visible while this screen prepares
 SplashScreen.preventAutoHideAsync();
 
 export default function Splash() {
   const router = useRouter();
+
+  const ONBOARDING_COMPLETED_KEY = "doovly_onboarding_completed";
 
   // =========================
   // ANIMATION VALUES
@@ -134,8 +138,31 @@ export default function Splash() {
     // =========================
 
     const navigationTimer = setTimeout(async () => {
-      await SplashScreen.hideAsync();
-      router.replace("/(onboarding)");
+      try {
+        const [{ data: sessionData }, onboardingCompleted] = await Promise.all([
+          supabase.auth.getSession(),
+          AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY),
+        ]);
+
+        await SplashScreen.hideAsync();
+
+        if (sessionData.session?.access_token) {
+          router.replace("/(tab)/home");
+          return;
+        }
+
+        if (onboardingCompleted !== "true") {
+          await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, "true");
+          router.replace("/(onboarding)");
+          return;
+        }
+
+        router.replace("/(auth)/login");
+      } catch (error) {
+        console.error("[Splash] Session bootstrap failed:", error);
+        await SplashScreen.hideAsync();
+        router.replace("/(auth)/login");
+      }
     }, 3200);
 
     // =========================

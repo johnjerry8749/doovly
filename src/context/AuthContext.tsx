@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
-
 type AuthContextValue = {
   user: User | null;
   session: Session | null;

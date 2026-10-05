@@ -8,6 +8,7 @@ import { loadSessionUser, getCachedSessionUser } from "@/lib/session";
 import { mapServiceRequestRow, mapServiceRequestComment, SERVICE_REQUEST_SELECT } from "@/lib/rowMappers";
 import { tryToUuid } from "@/lib/ids";
 import type { ServiceRequest, ServiceRequestComment, ServiceRequestIcon } from "@/data/serviceRequests";
+import { uploadImageFull, UPLOAD_FOLDERS } from "@/services/cloudinary";
 
 export type { ServiceRequest, ServiceRequestComment, ServiceRequestIcon };
 
@@ -29,6 +30,20 @@ function currentUuid(): string | null {
   return getCachedSessionUser()?.uuid ?? null;
 }
 function requestUuid(id: string): string { return tryToUuid("serviceRequest", id) ?? id; }
+
+async function uploadRequestImages(images: ImageSourcePropType[] | undefined) {
+  const urls: string[] = [];
+  const keys: string[] = [];
+  for (const image of images ?? []) {
+    const uri = typeof image === "object" && image && "uri" in image ? String((image as any).uri ?? "") : "";
+    if (!uri) continue;
+    if (/^https?:\/\//i.test(uri)) { urls.push(uri); continue; }
+    const uploaded = await uploadImageFull(uri, UPLOAD_FOLDERS.requests);
+    urls.push(uploaded.secure_url);
+    keys.push(uploaded.public_id);
+  }
+  return { urls, keys };
+}
 
 async function fetchAll(): Promise<ServiceRequest[]> {
   const { data, error } = await supabase
@@ -81,10 +96,11 @@ export function isOwnServiceRequest(request: ServiceRequest): boolean {
 
 export async function createServiceRequest(input: CreateServiceRequestInput): Promise<ServiceRequest> {
   const s = await loadSessionUser(true); if (!s) throw new Error("Not logged in");
+  const uploaded = await uploadRequestImages(input.images);
   const { data, error } = await supabase.from("service_requests").insert({
     title: input.title.trim(), category: input.category, profession: input.category,
     location: input.location.trim(), city: input.city.trim(), description: input.description.trim(),
-    icon: input.icon, icon_background: input.iconBackground, images: [], image_keys: [],
+    icon: input.icon, icon_background: input.iconBackground, images: uploaded.urls, image_keys: uploaded.keys,
     time_ago: "Just now", is_new: true, created_by: s.uuid,
     poster_name: s.fullName || "You", poster_avatar_url: null, poster_verified: s.verified,
     likes_count: 0, max_offers: Math.max(1, Math.min(20, input.maxOffers)), offers_count: 0, offered_by: [],
@@ -104,6 +120,11 @@ export async function updateServiceRequest(id: string, input: UpdateServiceReque
   if (input.city !== undefined) patch.city = input.city.trim();
   if (input.icon !== undefined) patch.icon = input.icon;
   if (input.iconBackground !== undefined) patch.icon_background = input.iconBackground;
+  if (input.images !== undefined) {
+    const uploaded = await uploadRequestImages(input.images);
+    patch.images = uploaded.urls;
+    patch.image_keys = uploaded.keys;
+  }
   const { data, error } = await supabase.from("service_requests").update(patch)
     .eq("id", uuid).eq("created_by", s.uuid).select(SERVICE_REQUEST_SELECT).maybeSingle();
   if (error) throw error; if (!data) return null;
@@ -127,27 +148,25 @@ export async function addServiceRequestComment(input: AddCommentInput): Promise<
   if (error) throw error; invalidateServiceRequestsCache(); return mapServiceRequestComment(data);
 }
 
-/** Auth user may delete only their own comment. */
+export async function updateServiceRequestComment(commentId: string, text: string): Promise<ServiceRequestComment | null> {
+  const s = await loadSessionUser(true);
+  const value = text.trim();
+  if (!s || !value) return null;
+  const { data, error } = await supabase.from("service_request_comments")
+    .update({ text: value }).eq("id", commentId).eq("user_id", s.uuid)
+    .select("id,mock_id,user_id,user_name,user_avatar_url,text,time_ago,created_at").maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  invalidateServiceRequestsCache();
+  return mapServiceRequestComment(data);
+}
+
 export async function deleteServiceRequestComment(commentId: string): Promise<boolean> {
   const s = await loadSessionUser(true);
   if (!s) return false;
-  const id = String(commentId || "").trim();
-  if (!id) return false;
-
-  let query = supabase
-    .from("service_request_comments")
-    .delete()
-    .eq("user_id", s.uuid);
-
-  if (id.includes("-") && id.length >= 32) {
-    query = query.eq("id", id);
-  } else {
-    query = query.or(`id.eq.${id},mock_id.eq.${id}`);
-  }
-
-  const { data, error } = await query.select("id").maybeSingle();
+  const { error } = await supabase.from("service_request_comments")
+    .delete().eq("id", commentId).eq("user_id", s.uuid);
   if (error) throw error;
-  if (!data) return false;
   invalidateServiceRequestsCache();
   return true;
 }
