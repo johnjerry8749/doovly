@@ -25,6 +25,7 @@ import {
   canSendOfferOnRequest,
   submitServiceRequestOffer,
   addServiceRequestComment,
+  deleteServiceRequestComment,
   type ServiceRequest,
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
@@ -271,6 +272,37 @@ export default function RequestsScreen() {
     setChatText("");
   };
 
+  const deleteComment = (requestId: string, comment: ServiceRequestComment) => {
+    if (!requestId || !comment.userId || comment.userId !== getCurrentUserId()) return;
+
+    Alert.alert("Delete comment?", "This comment will be removed.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const deleted = await deleteServiceRequestComment(comment.id);
+            if (!deleted) {
+              Alert.alert("Could not delete comment", "Please try again.");
+              return;
+            }
+
+            const removeComment = (request: ServiceRequest) =>
+              request.id === requestId
+                ? { ...request, comments: request.comments.filter((entry) => entry.id !== comment.id) }
+                : request;
+
+            setAllRequests((current) => current.map(removeComment));
+            setChatRequest((current) => current?.id === requestId ? removeComment(current) : current);
+          } catch {
+            Alert.alert("Could not delete comment", "Please try again.");
+          }
+        },
+      },
+    ]);
+  };
+
   const sendChatMessage = () => {
     if (!chatRequest) return;
     const text = chatText.trim();
@@ -495,7 +527,12 @@ export default function RequestsScreen() {
               >
                 <Text style={styles.commentName}>{firstComment.userName}</Text>
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.8} onPress={() => openChat(item)}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => openChat(item)}
+                onLongPress={() => deleteComment(item.id, firstComment)}
+                delayLongPress={450}
+              >
                 <Text style={styles.commentText} numberOfLines={2}>
                   {firstComment.text}
                 </Text>
@@ -700,7 +737,13 @@ export default function RequestsScreen() {
                       >
                         <Text style={styles.commentName}>{c.userName}</Text>
                       </TouchableOpacity>
-                      <Text style={styles.commentText}>{c.text}</Text>
+                      <TouchableOpacity
+                        activeOpacity={1}
+                        onLongPress={() => deleteComment(chatRequest?.id ?? "", c)}
+                        delayLongPress={450}
+                      >
+                        <Text style={styles.commentText}>{c.text}</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 )}
