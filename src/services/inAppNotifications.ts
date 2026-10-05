@@ -10,6 +10,7 @@ import type { Notification, NotifType } from "@/data/notifications";
 
 export type { Notification, NotifType };
 const CACHE_KEY = "doovly_notifications_cache_v1";
+const PENDING_READS_KEY = "doovly_notifications_pending_reads_v1";
 let cache: Notification[] = [];
 let loaded = false;
 let loading: Promise<Notification[]> | null = null;
@@ -27,6 +28,36 @@ async function writeLocal(list: Notification[]) {
   try { await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(list.slice(0, 100))); } catch {}
 }
 
+async function readPendingReads(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_READS_KEY);
+    const value = raw ? JSON.parse(raw) : [];
+    return Array.isArray(value) ? value.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writePendingReads(ids: string[]) {
+  try { await AsyncStorage.setItem(PENDING_READS_KEY, JSON.stringify([...new Set(ids)])); } catch {}
+}
+
+function isNetworkError(error: any): boolean {
+  const msg = String(error?.message ?? error ?? "").toLowerCase();
+  return (
+    msg.includes("network request failed") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("network error") ||
+    msg.includes("networkerror") ||
+    msg.includes("offline") ||
+    msg.includes("timeout") ||
+    msg.includes("timed out") ||
+    msg.includes("aborted") ||
+    msg.includes("connection refused") ||
+    msg.includes("connection reset")
+  );
+}
+
 async function fetchMine(): Promise<Notification[]> {
   const s = await loadSessionUser();
   if (!s) { cache = await readLocal(); loaded = true; return cache; }
@@ -36,7 +67,15 @@ async function fetchMine(): Promise<Notification[]> {
   if (error) {
     cache = await readLocal(); loaded = true; return cache;
   }
-  cache = (data ?? []).map(mapNotificationRow); loaded = true; await writeLocal(cache); return cache;
+  const pendingReads = await readPendingReads();
+  const pendingSet = new Set(pendingReads);
+  cache = (data ?? []).map(mapNotificationRow).map((n) =>
+    pendingSet.has(n.id) ? { ...n, unread: false } : n,
+  );
+  loaded = true;
+  await writeLocal(cache);
+  if (pendingReads.length) void syncPendingReads(pendingReads);
+  return cache;
 }
 
 export async function ensureNotificationsLoaded(): Promise<Notification[]> {
@@ -86,12 +125,51 @@ export async function deleteNotification(notificationId: string): Promise<void> 
   await writeLocal(cache);
 }
 
+async function syncPendingReads(ids: string[]): Promise<void> {
+  const s = await loadSessionUser();
+  if (!s || !ids.length) return;
+
+  const remaining: string[] = [];
+  for (const id of ids) {
+    try {
+      const { error } = await supabase.from("notifications").update({ unread:false })
+        .or(`id.eq.${id},mock_id.eq.${id}`).eq("user_id", s.uuid);
+      if (error) {
+        if (isNetworkError(error)) remaining.push(id);
+      }
+    } catch (error) {
+      if (isNetworkError(error)) remaining.push(id);
+    }
+  }
+
+  await writePendingReads(remaining);
+}
+
 export async function markNotificationRead(notificationId: string): Promise<void> {
-  const s = await loadSessionUser(); if (!s) return;
-  const { error } = await supabase.from("notifications").update({ unread:false })
-    .or(`id.eq.${notificationId},mock_id.eq.${notificationId}`).eq("user_id", s.uuid);
-  if (error) throw error;
-  cache = cache.map(n => n.id === notificationId ? {...n, unread:false} : n); await writeLocal(cache);
+  // Mark locally first so opening a notification immediately clears the unread dot,
+  // even when the device is offline. The server state is synchronized when possible.
+  cache = cache.map(n => n.id === notificationId ? {...n, unread:false} : n);
+  await writeLocal(cache);
+
+  const pending = await readPendingReads();
+  await writePendingReads([...pending, notificationId]);
+
+  const s = await loadSessionUser();
+  if (!s) return;
+
+  try {
+    const { error } = await supabase.from("notifications").update({ unread:false })
+      .or(`id.eq.${notificationId},mock_id.eq.${notificationId}`).eq("user_id", s.uuid);
+    if (error) {
+      if (isNetworkError(error)) return;
+      throw error;
+    }
+
+    await writePendingReads((await readPendingReads()).filter((id) => id !== notificationId));
+  } catch (error) {
+    if (isNetworkError(error)) return;
+    throw error;
+  }
 }
 
 export type InAppNotificationInput = { userId:string; type:NotifType; title:string; body:string };
