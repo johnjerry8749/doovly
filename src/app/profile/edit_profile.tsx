@@ -266,19 +266,12 @@ export default function EditProfile() {
           </Field>
 
           <Field label="Profession">
-            <TextInput
-              style={styles.input}
-              value={profession}
-              onChangeText={setProfession}
-              placeholder="e.g. Plumber"
-              placeholderTextColor="#9CA3AF"
-            />
-            <Ionicons
-              name="briefcase-outline"
-              size={18}
-              color={PRIMARY}
-              style={styles.inputIcon}
-            />
+            <TouchableOpacity style={styles.input} activeOpacity={0.8} onPress={() => setPicker("profession")}>
+              <Text style={{ color: profession ? TEXT_DARK : "#9CA3AF", fontSize: 15 }}>
+                {profession || "Select profession"}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={PRIMARY} style={styles.inputIcon} />
+            </TouchableOpacity>
           </Field>
 
           <Field label="Bio">
@@ -295,19 +288,12 @@ export default function EditProfile() {
           </Field>
 
           <Field label="City">
-            <TextInput
-              style={styles.input}
-              value={city}
-              onChangeText={setCity}
-              placeholder="Lagos"
-              placeholderTextColor="#9CA3AF"
-            />
-            <Ionicons
-              name="location-outline"
-              size={18}
-              color={PRIMARY}
-              style={styles.inputIcon}
-            />
+            <TouchableOpacity style={styles.input} activeOpacity={0.8} onPress={() => setPicker("city")}>
+              <Text style={{ color: city ? TEXT_DARK : "#9CA3AF", fontSize: 15 }}>
+                {city || "Select city"}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={PRIMARY} style={styles.inputIcon} />
+            </TouchableOpacity>
           </Field>
 
           <TouchableOpacity
@@ -325,6 +311,40 @@ export default function EditProfile() {
 
           <View style={{ height: 40 }} />
         </ScrollView>
+
+        <Modal visible={picker !== null} transparent animationType="slide" onRequestClose={() => setPicker(null)}>
+          <View style={styles.pickerOverlay}>
+            <View style={styles.pickerSheet}>
+              <View style={styles.pickerHeader}>
+                <Text style={styles.pickerTitle}>{picker === "city" ? "Select City" : "Select Profession"}</Text>
+                <TouchableOpacity onPress={() => setPicker(null)}>
+                  <Ionicons name="close" size={24} color={TEXT_DARK} />
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={picker === "city" ? cities : categories}
+                keyExtractor={(item) => typeof item === "string" ? item : item.name}
+                renderItem={({ item }) => {
+                  const value = typeof item === "string" ? item : item.name;
+                  return (
+                    <TouchableOpacity
+                      style={styles.pickerItem}
+                      onPress={() => {
+                        if (picker === "city") setCity(value);
+                        else setProfession(value);
+                        setPicker(null);
+                      }}
+                    >
+                      <Text style={styles.pickerItemText}>{value}</Text>
+                    </TouchableOpacity>
+                  );
+                }}
+                ListEmptyComponent={<Text style={styles.emptyText}>No options available.</Text>}
+                showsVerticalScrollIndicator={false}
+              />
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
