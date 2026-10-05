@@ -15,6 +15,8 @@ export type ServiceRequestComment = {
   id: string;
   /** Optional user id for full DB schema readiness */
   userId?: string;
+  /** Raw Supabase auth user UUID for reliable professional profile lookup. */
+  authUserId?: string;
   userName: string;
   /** Local require() asset or remote URI once API is live */
   userAvatar: ImageSourcePropType;
