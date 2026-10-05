@@ -212,9 +212,14 @@ export async function sendAdminNotification(
     throw new Error(data?.error || data?.errors?.join?.("\n") || "Notification delivery failed.");
   }
 
+  const errors = Array.isArray(data.errors) ? data.errors.map(String) : [];
+
   return {
     notification: map(data.notification),
     inAppRecipientCount: Number(data.inAppRecipientCount ?? 0),
+    emailRecipientCount: Number(data.emailRecipientCount ?? 0),
+    smsRecipientCount: Number(data.smsRecipientCount ?? 0),
+    errors,
     systemNotificationShown: false,
   };
 }
