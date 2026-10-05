@@ -62,8 +62,9 @@ export default function Subscription() {
 
   useFocusEffect(
     useCallback(() => {
-      const cached = getSubscriptionPlans();
-      if (cached) setPlansState(cached);
+      getSubscriptionPlansAsync(true)
+        .then((next) => setPlansState(next))
+        .catch((error) => console.warn("Subscription plans refresh failed:", error));
     }, []),
   );
 
