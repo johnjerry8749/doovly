@@ -22,7 +22,6 @@ import {
   canSendOfferOnRequest,
   submitServiceRequestOffer,
 } from "@/services/serviceRequests";
-import { addInAppNotification } from "@/services/inAppNotifications";
 
 const GREEN = "#159447";
 
