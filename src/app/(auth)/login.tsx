@@ -55,6 +55,7 @@ export default function Login() {
       if (error) {
         throw error;
       }
+      await AsyncStorage.setItem("doovly_login_at", String(Date.now()));
 
       if (!data.session || !data.user) {
         throw new Error("Login was not completed. Please try again.");
