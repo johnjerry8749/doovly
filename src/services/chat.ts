@@ -382,7 +382,7 @@ export function canOpenSharedLocation(_conversationId: string, message: ChatMess
 async function conversationRowFor(id: string) {
   const { data, error } = await supabase
     .from("conversations")
-    .select("id,booking_id,service_request_id")
+    .select("id,booking_id,service_request_id,offer_id")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -399,9 +399,10 @@ export async function getBookingStatusAsync(conversationId: string): Promise<Boo
     return status === "pending" ? "Pending" : status === "declined" || status === "cancelled" ? "Declined" : "Accepted";
   }
 
-  if (row.service_request_id) {
-    const { data } = await supabase.from("service_request_offers").select("status").eq("request_id", row.service_request_id).eq("status", "pending").maybeSingle();
-    return data ? "Pending" : "Accepted";
+  if (row.service_request_id && row.offer_id) {
+    const { data } = await supabase.from("service_request_offers").select("status").eq("id", row.offer_id).maybeSingle();
+    const status = String(data?.status ?? "").toLowerCase();
+    return status === "pending" ? "Pending" : status === "declined" ? "Declined" : "Accepted";
   }
 
   return "Accepted";
@@ -470,7 +471,7 @@ export function getConversationKind(_conversationId: string): "booking" | "offer
   return undefined;
 }
 
-async function createConversation(participantPublicId: string, options: { bookingId?: string; serviceRequestId?: string; lastMessage?: string }) {
+async function createConversation(participantPublicId: string, options: { bookingId?: string; serviceRequestId?: string; offerId?: string; lastMessage?: string }) {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
 
@@ -493,6 +494,7 @@ async function createConversation(participantPublicId: string, options: { bookin
       participant_b: participantUuid,
       booking_id: options.bookingId ?? null,
       service_request_id: options.serviceRequestId ?? null,
+      offer_id: options.offerId ?? null,
       last_message: options.lastMessage ?? "",
     })
     .select("id")
@@ -610,8 +612,29 @@ export async function createOfferConversationAsync(input: {
   offererName: string;
   offererImage: ImageSourcePropType;
 }): Promise<Conversation> {
-  return createConversation(input.requestOwnerId === (await loadSessionUser())?.publicId ? input.offererProfessionalId : input.requestOwnerId, {
-    serviceRequestId: tryToUuid("serviceRequest", input.requestId) ?? input.requestId,
+  const session = await loadSessionUser(true);
+  if (!session) throw new Error("Not logged in");
+
+  const requestUuid = tryToUuid("serviceRequest", input.requestId) ?? input.requestId;
+  const { data: offer } = await supabase
+    .from("service_request_offers")
+    .select("id")
+    .eq("request_id", requestUuid)
+    .eq("professional_id", input.offererProfessionalId)
+    .eq("user_id", session.uuid)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (!offer?.id) throw new Error("Offer not found");
+
+  const participantPublicId =
+    session.uuid === (await getUserUuid(input.requestOwnerId))
+      ? input.offererProfessionalId
+      : input.requestOwnerId;
+
+  return createConversation(participantPublicId, {
+    serviceRequestId: requestUuid,
+    offerId: offer.id,
     lastMessage: `Offer: ₦${input.amount.toLocaleString()} on "${input.requestTitle}"`,
   });
 }
@@ -628,11 +651,11 @@ export async function acceptBooking(conversationId: string, acceptorDisplayName:
 
   if (row.booking_id) {
     await updateBookingStatus(row.booking_id, "Accepted");
-  } else if (row.service_request_id) {
+  } else if (row.service_request_id && row.offer_id) {
     const { data: offer } = await supabase
       .from("service_request_offers")
       .select("id,user_id,professional_id,amount")
-      .eq("request_id", row.service_request_id)
+      .eq("id", row.offer_id)
       .eq("status", "pending")
       .maybeSingle();
     if (offer) {
@@ -663,8 +686,8 @@ export async function declineBooking(conversationId: string, acceptorDisplayName
 
   if (row.booking_id) {
     await updateBookingStatus(row.booking_id, "Declined");
-  } else if (row.service_request_id) {
-    const { error } = await supabase.from("service_request_offers").update({ status: "declined" }).eq("request_id", row.service_request_id).eq("status", "pending");
+  } else if (row.service_request_id && row.offer_id) {
+    const { error } = await supabase.from("service_request_offers").update({ status: "declined" }).eq("id", row.offer_id).eq("status", "pending");
     if (error) throw error;
   }
 
