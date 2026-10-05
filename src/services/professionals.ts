@@ -301,13 +301,17 @@ export async function deleteMyService(
     serviceUuid = found.id;
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("services")
     .delete()
     .eq("id", serviceUuid)
-    .eq("professional_id", proUuid);
+    .eq("professional_id", proUuid)
+    .select("id")
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) return false;
+
   invalidateProfessionalsCache();
   return true;
 }
