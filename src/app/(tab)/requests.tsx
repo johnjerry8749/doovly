@@ -86,12 +86,14 @@ const getCommentUserId = (comment: ServiceRequestComment) => {
   const c = comment as ServiceRequestComment & {
     professionalId?: string | number;
     userId?: string | number;
+    authUserId?: string | number;
     createdByUserId?: string | number;
     authorId?: string | number;
     posterUserId?: string | number;
   };
   return (
     c.professionalId ??
+    c.authUserId ??
     c.userId ??
     c.createdByUserId ??
     c.authorId ??
