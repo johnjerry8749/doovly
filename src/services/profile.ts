@@ -61,10 +61,11 @@ export async function getProfileForEditAsync(): Promise<ProfileEditData | null> 
   const profile = row?.profiles;
   const imageUrl =
     row?.avatar_url ??
-    row?.avatar_key
-      ? row.avatar_url ??
-        supabase.storage.from("profile-images").getPublicUrl(row.avatar_key).data.publicUrl
-      : profile?.avatar_url;
+    (row?.avatar_key
+      ? supabase.storage
+          .from("profile-images")
+          .getPublicUrl(row.avatar_key).data.publicUrl
+      : profile?.avatar_url);
 
   return {
     id: row?.id ?? s.publicId,
