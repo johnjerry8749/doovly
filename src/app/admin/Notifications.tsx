@@ -194,14 +194,17 @@ export default function Notifications() {
           );
         }
       }
-      if (channels.includes("email") && !channels.includes("in-app")) {
-        parts.push("Email delivery was sent through the backend provider.");
+      if (channels.includes("email")) {
+        parts.push(`Email delivered to ${result.emailRecipientCount} user(s).`);
       }
-      if (channels.includes("sms") && !channels.includes("in-app")) {
-        parts.push("SMS delivery was sent through the backend provider.");
+      if (channels.includes("sms")) {
+        parts.push(`SMS delivered to ${result.smsRecipientCount} user(s).`);
+      }
+      if (result.errors.length) {
+        parts.push(result.errors.join("\n"));
       }
 
-      Alert.alert("Sent", parts.join("\n"));
+      Alert.alert(result.errors.length ? "Partially sent" : "Sent", parts.join("\n"));
     } catch (e: any) {
       Alert.alert(
         "Send failed",
