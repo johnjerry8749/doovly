@@ -659,8 +659,58 @@ export async function acceptBooking(conversationId: string, acceptorDisplayName:
       .eq("status", "pending")
       .maybeSingle();
     if (offer) {
-      const { error } = await supabase.from("service_request_offers").update({ status: "accepted" }).eq("id", offer.id);
+      const { error } = await supabase
+        .from("service_request_offers")
+        .update({ status: "accepted" })
+        .eq("id", offer.id);
+
       if (error) throw error;
+
+      const { data: request } = await supabase
+        .from("service_requests")
+        .select("title,location,city,created_by")
+        .eq("id", row.service_request_id)
+        .maybeSingle();
+
+      if (request?.created_by && offer.professional_id) {
+        const { data: professional } = await supabase
+          .from("professionals")
+          .select("profiles!professionals_user_id_fkey(full_name),mock_id")
+          .eq("id", offer.professional_id)
+          .maybeSingle();
+
+        const { data: customer } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", request.created_by)
+          .maybeSingle();
+
+        const displayDate = new Date().toLocaleDateString("en-NG", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        });
+
+        const { error: bookingError } = await supabase
+          .from("bookings")
+          .insert({
+            customer_id: request.created_by,
+            professional_id: offer.professional_id,
+            title: request.title,
+            professional_name: professional?.profiles?.full_name ?? "Professional",
+            customer_name: customer?.full_name ?? "Customer",
+            status: "accepted",
+            amount: offer.amount,
+            location: request.location ?? request.city ?? "Nigeria",
+            display_date: displayDate,
+            rating: 5,
+            reviews_count: 0,
+          });
+
+        if (bookingError) throw bookingError;
+      }
     }
   }
 
