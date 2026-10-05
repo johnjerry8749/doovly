@@ -8,7 +8,7 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
-import { loadSessionUser } from "@/lib/session";
+import { getCachedSessionUser, loadSessionUser } from "@/lib/session";
 import type { NotificationPayload, NotificationService } from "./types";
 
 function isExpoGo(): boolean {
@@ -59,7 +59,7 @@ async function savePushToken(token: string | null) {
 }
 
 async function clearPushToken() {
-  const user = await loadSessionUser();
+  const user = getCachedSessionUser();
   if (!user) return;
 
   await supabase
