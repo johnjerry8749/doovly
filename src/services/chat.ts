@@ -176,6 +176,51 @@ export function getConversation(_conversationId: string): Conversation | undefin
   return undefined;
 }
 
+async function touchConversation(conversationId: string, senderId: string, preview: string, createdAt: string) {
+  const { data: conversation, error: conversationError } = await supabase
+    .from("conversations")
+    .select("participant_a,participant_b")
+    .eq("id", conversationId)
+    .single();
+
+  if (conversationError) throw conversationError;
+
+  const { error: updateError } = await supabase
+    .from("conversations")
+    .update({
+      last_message: preview,
+      last_message_at: createdAt,
+    })
+    .eq("id", conversationId);
+
+  if (updateError) throw updateError;
+
+  const recipient =
+    conversation.participant_a === senderId
+      ? conversation.participant_b
+      : conversation.participant_a;
+
+  const { data: existingRead } = await supabase
+    .from("conversation_reads")
+    .select("unread_count")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", recipient)
+    .maybeSingle();
+
+  const { error: readError } = await supabase
+    .from("conversation_reads")
+    .upsert(
+      {
+        conversation_id: conversationId,
+        user_id: recipient,
+        unread_count: Number(existingRead?.unread_count ?? 0) + 1,
+      },
+      { onConflict: "conversation_id,user_id" },
+    );
+
+  if (readError) throw readError;
+}
+
 function mapMessage(row: any, currentUserId: string): ChatMessage {
   const kind = row.kind as ChatMessage["kind"];
   const card = row.card as RequestCardData | null;
@@ -233,6 +278,8 @@ export async function sendMessage(conversationId: string, text: string): Promise
     .single();
 
   if (error) throw error;
+  await touchConversation(conversationId, session.uuid, data.text, data.created_at);
+  await notifyUnread();
   return mapMessage(data, session.uuid);
 }
 
@@ -300,6 +347,8 @@ export async function shareLocation(conversationId: string, location: { label: s
     .single();
 
   if (error) throw error;
+  await touchConversation(conversationId, session.uuid, data.text, data.created_at);
+  await notifyUnread();
   return mapMessage(data, session.uuid);
 }
 
@@ -321,6 +370,8 @@ export async function stopSharingLocation(conversationId: string): Promise<ChatM
     .single();
 
   if (error) throw error;
+  await touchConversation(conversationId, session.uuid, data.text, data.created_at);
+  await notifyUnread();
   return mapMessage(data, session.uuid);
 }
 
