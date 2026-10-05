@@ -142,52 +142,7 @@ export default function NotificationsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ========== TEMPORARY TEST BUTTONS - DELETE LATER ========== */}
-      <View style={{ paddingHorizontal: 16, paddingBottom: 12, gap: 8 }}>
-        <Text style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 4 }}>
-          Temporary test buttons (remove later)
-        </Text>
-        <TouchableOpacity
-          onPress={() => Notifications.newBooking()}
-          style={{
-            backgroundColor: "#16A34A",
-            paddingVertical: 10,
-            borderRadius: 8,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "600" }}>
-            Test: New Booking
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => Notifications.bookingAccepted()}
-          style={{
-            backgroundColor: "#16A34A",
-            paddingVertical: 10,
-            borderRadius: 8,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "600" }}>
-            Test: Booking Accepted
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => Notifications.newMessage()}
-          style={{
-            backgroundColor: "#16A34A",
-            paddingVertical: 10,
-            borderRadius: 8,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "600" }}>
-            Test: New Message
-          </Text>
-        </TouchableOpacity>
-      </View>
-      {/* ========== TEMPORARY TEST BUTTONS - DELETE LATER ========== */}
+  
 
       <ScrollView
         showsVerticalScrollIndicator={false}
