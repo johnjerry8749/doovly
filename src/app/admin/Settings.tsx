@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -31,17 +31,16 @@ function formatNaira(n: number) {
 export default function Settings() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
-  const [plansState, setPlansState] = useState<SubscriptionPlansState>(() =>
-    getSubscriptionPlans(),
-  );
+  const [plansState, setPlansState] = useState<SubscriptionPlansState>({ plans: [], yearlySavePercent: 0 });
+  useEffect(() => { getSubscriptionPlans().then(setPlansState).catch((e:any) => Alert.alert("Load failed", e?.message || "Could not load subscription plans.")); }, []);
   const [savedFlash, setSavedFlash] = useState(false);
 
   const pro = useMemo(
-    () => plansState.plans.find((p) => p.id === "pro")!,
+    () => plansState.plans.find((p) => p.id === "pro") ?? { id: "pro", name: "Pro", tagline: "", monthlyPrice: 0, yearlyPrice: 0, popular: true, features: [] },
     [plansState.plans],
   );
   const basic = useMemo(
-    () => plansState.plans.find((p) => p.id === "basic")!,
+    () => plansState.plans.find((p) => p.id === "basic") ?? { id: "basic", name: "Basic", tagline: "", monthlyPrice: 0, yearlyPrice: 0, popular: false, features: [] },
     [plansState.plans],
   );
 
@@ -136,13 +135,7 @@ export default function Settings() {
       ),
     };
 
-    const saved = saveSubscriptionPlans(next);
-    setPlansState(saved);
-    setMonthlyStr(String(saved.plans.find((p) => p.id === "pro")!.monthlyPrice));
-    setYearlyStr(String(saved.plans.find((p) => p.id === "pro")!.yearlyPrice));
-    setYearlySaveStr(String(saved.yearlySavePercent));
-    setSavedFlash(true);
-    setTimeout(() => setSavedFlash(false), 2000);
+    saveSubscriptionPlans(next).then((saved) => { setPlansState(saved); setMonthlyStr(String(saved.plans.find((p) => p.id === "pro")?.monthlyPrice ?? 0)); setYearlyStr(String(saved.plans.find((p) => p.id === "pro")?.yearlyPrice ?? 0)); setYearlySaveStr(String(saved.yearlySavePercent)); setSavedFlash(true); setTimeout(() => setSavedFlash(false), 2000); }).catch((e:any) => Alert.alert("Save failed", e?.message || "Could not save subscription plans."));
   };
 
   const topPad = Math.max(insets.top, 12) + 56;
