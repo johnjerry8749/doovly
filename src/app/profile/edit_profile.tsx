@@ -83,6 +83,22 @@ export default function EditProfile() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    Promise.all([listCitiesAsync(), listServiceCategoriesAsync()])
+      .then(([nextCities, nextCategories]) => {
+        if (!active) return;
+        setCities(nextCities);
+        setCategories(nextCategories.filter((item) => item.name !== "All"));
+      })
+      .catch((error) => {
+        console.warn("Edit profile options load failed:", error);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handlePickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
