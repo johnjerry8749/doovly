@@ -22,9 +22,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   listServiceRequests,
+  listServiceRequestsAsync,
   canSendOfferOnRequest,
   submitServiceRequestOffer,
   addServiceRequestComment,
+  likeServiceRequest,
   type ServiceRequest,
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
@@ -34,16 +36,15 @@ import {
 } from "@/services/inAppNotifications";
 import { createOfferConversation } from "@/services/chat";
 import { getLoggedInProfessionalId } from "@/services/savedProviders";
-import { listProfessionals, getProfessionalById } from "@/services/professionals";
-import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
-import { NIGERIA_CITIES } from "@/data/cities";
+import { listProfessionals, getProfessionalById, listServiceCategoriesAsync } from "@/services/professionals";
+import { listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 import CreateJobModal from "@/components/CreateJobModal";
 import RequestImageSlider from "@/components/RequestImageSlider";
 
 const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
-const CATEGORY_FILTERS = ["All", ...SERVICE_CATEGORIES.map((c) => c.name)];
+
 const PROFILE_NAV_COOLDOWN_MS = 4500;
 
 const normalize = (value?: string | number | null) =>
@@ -171,7 +172,10 @@ export default function RequestsScreen() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
-  const [allRequests, setAllRequests] = useState(() => listServiceRequests());
+  const [allRequests, setAllRequests] = useState<ServiceRequest[]>(() => listServiceRequests());
+  const [categoryFilters, setCategoryFilters] = useState<string[]>(["All"]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
   const [createVisible, setCreateVisible] = useState(false);
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
   const [offerPrice, setOfferPrice] = useState("");
@@ -179,11 +183,25 @@ export default function RequestsScreen() {
   const [chatText, setChatText] = useState("");
   const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
 
+  useEffect(() => {
+    let active = true;
+    Promise.all([listServiceRequestsAsync(), listServiceCategoriesAsync(), listCitiesAsync()])
+      .then(([requests, categories, nextCities]) => {
+        if (!active) return;
+        setAllRequests(requests ?? []);
+        setCategoryFilters(["All", ...(categories ?? []).map((c) => c.name).filter(Boolean)]);
+        setCities(nextCities ?? []);
+      })
+      .catch((error) => Alert.alert("Could not load requests", error?.message || "Please try again."))
+      .finally(() => { if (active) setLoadingRequests(false); });
+    return () => { active = false; };
+  }, []);
+
   const filteredCities = useMemo(() => {
     const q = citySearch.trim().toLowerCase();
-    if (!q) return [...NIGERIA_CITIES];
-    return NIGERIA_CITIES.filter((c) => c.toLowerCase().includes(q));
-  }, [citySearch]);
+    if (!q) return cities;
+    return cities.filter((c) => c.toLowerCase().includes(q));
+  }, [citySearch, cities]);
 
   const matchesLocationCity = (itemCity?: string, itemArea?: string) => {
     if (
@@ -245,10 +263,22 @@ export default function RequestsScreen() {
   const getComments = (item: ServiceRequest): ServiceRequestComment[] =>
     item.comments || [];
 
-  const refreshRequests = () => setAllRequests(listServiceRequests());
+  const refreshRequests = async () => {
+    try { setAllRequests(await listServiceRequestsAsync()); }
+    catch (error: any) { Alert.alert("Refresh failed", error?.message || "Could not refresh requests."); }
+  };
 
-  const toggleLike = (id: string) =>
-    setLikedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleLike = async (id: string) => {
+    const nextLiked = !likedIds[id];
+    setLikedIds((prev) => ({ ...prev, [id]: nextLiked }));
+    try {
+      const count = await likeServiceRequest(id, nextLiked);
+      setAllRequests((prev) => prev.map((item) => item.id === id ? { ...item, likesCount: count } : item));
+    } catch (error: any) {
+      setLikedIds((prev) => ({ ...prev, [id]: !nextLiked }));
+      Alert.alert("Like failed", error?.message || "Please try again.");
+    }
+  };
 
   const shareRequest = async (item: ServiceRequest) => {
     try {
@@ -271,14 +301,14 @@ export default function RequestsScreen() {
     setChatText("");
   };
 
-  const sendChatMessage = () => {
+  const sendChatMessage = async () => {
     if (!chatRequest) return;
     const text = chatText.trim();
     if (!text) return;
 
     const currentUserId = getCurrentUserId();
     const currentProfessional = findProfessionalForUser(currentUserId);
-    const comment = addServiceRequestComment({
+    const comment = await addServiceRequestComment({
       requestId: chatRequest.id,
       text,
       userName: currentProfessional?.name || "You",
@@ -286,8 +316,9 @@ export default function RequestsScreen() {
     });
     if (!comment) return;
 
-    refreshRequests();
-    setChatRequest({ ...chatRequest });
+    await refreshRequests();
+
+    setChatRequest((current) => current ? { ...current, comments: [...(current.comments || []), comment] } : current);
     setChatText("");
     setTimeout(() => commentListRef.current?.scrollToEnd({ animated: true }), 100);
   };
@@ -297,12 +328,12 @@ export default function RequestsScreen() {
     setOfferPrice("");
   };
 
-  const submitOffer = () => {
+  const submitOffer = async () => {
     if (!offerRequest) return;
     const amountNum = Number(offerPrice.replace(/[^\d]/g, ""));
     if (!amountNum) return;
 
-    const result = submitServiceRequestOffer({
+    const result = await submitServiceRequestOffer({
       requestId: offerRequest.id,
       amount: amountNum,
     });
@@ -320,7 +351,7 @@ export default function RequestsScreen() {
       return;
     }
 
-    addInAppNotification({
+    await addInAppNotification({
       userId: result.recipientUserId,
       type: "general",
       title: "New Offer",
@@ -352,7 +383,7 @@ export default function RequestsScreen() {
         (require("@/assets/profile_1.jpg") as number),
     });
 
-    setAllRequests(listServiceRequests());
+    await refreshRequests();
     closeOffer();
     router.push({ pathname: "/chat/[id]", params: { id: conv.id } });
   };
@@ -578,7 +609,7 @@ export default function RequestsScreen() {
           contentContainerStyle={styles.filtersRow}
           keyboardShouldPersistTaps="handled"
         >
-          {CATEGORY_FILTERS.map((category) => {
+          {categoryFilters.map((category) => {
             const active = categoryFilter === category;
             return (
               <TouchableOpacity
@@ -598,6 +629,8 @@ export default function RequestsScreen() {
 
       <FlatList
         data={filteredRequests}
+        refreshing={loadingRequests}
+        onRefresh={refreshRequests}
         keyExtractor={(item) => item.id}
         renderItem={renderRequest}
         contentContainerStyle={styles.listContent}
@@ -614,7 +647,7 @@ export default function RequestsScreen() {
       <CreateJobModal
         visible={createVisible}
         onClose={() => setCreateVisible(false)}
-        onCreate={() => {
+        onSaved={() => {
           setCreateVisible(false);
           refreshRequests();
         }}
