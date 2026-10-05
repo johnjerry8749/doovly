@@ -35,7 +35,11 @@ import {
 } from "@/services/inAppNotifications";
 import { createOfferConversation } from "@/services/chat";
 import { getLoggedInProfessionalId } from "@/services/savedProviders";
-import { listProfessionals, getProfessionalById } from "@/services/professionals";
+import {
+  listProfessionals,
+  listProfessionalsAsync,
+  getProfessionalById,
+} from "@/services/professionals";
 import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
 import { NIGERIA_CITIES } from "@/data/cities";
 import { useLocation } from "@/context/LocationContext";
@@ -98,19 +102,20 @@ const getCommentUserId = (comment: ServiceRequestComment) => {
 const findProfessionalForUser = (
   userId?: string | number | null,
   userName?: string | null,
+  professionals = listProfessionals(),
 ) => {
-  const list = listProfessionals();
-  if (!list?.length) return undefined;
+  if (!professionals.length) return undefined;
 
   const id = normalize(userId);
   const name = normalize(userName);
 
   if (id) {
-    const variants = [id, id.replace(/^u/, ""), `u${id}`];
-    const byId = list.find((p) => variants.includes(normalize(p.id)));
+    const baseId = id.replace(/^[up]/, "");
+    const variants = [id, baseId, `u${baseId}`, `p${baseId}`];
+    const byId = professionals.find((p) => variants.includes(normalize(p.id)));
     if (byId) return byId;
 
-    const byUser = list.find((p) => {
+    const byUser = professionals.find((p) => {
       const extra = p as typeof p & {
         userId?: string | number;
         profileId?: string | number;
@@ -123,13 +128,13 @@ const findProfessionalForUser = (
     if (byUser) return byUser;
   }
 
-  if (name) return list.find((p) => normalize(p.name) === name);
+  if (name) return professionals.find((p) => normalize(p.name) === name);
   return undefined;
 };
 
 let lastProfileNavAt = 0;
 
-const openUserProfile = ({
+const openUserProfile = async ({
   userId,
   userName,
   beforeNavigate,
@@ -141,7 +146,14 @@ const openUserProfile = ({
   const now = Date.now();
   if (now - lastProfileNavAt < PROFILE_NAV_COOLDOWN_MS) return;
 
-  const professional = findProfessionalForUser(userId, userName);
+  let professionals;
+  try {
+    professionals = await listProfessionalsAsync();
+  } catch {
+    return;
+  }
+
+  const professional = findProfessionalForUser(userId, userName, professionals);
   if (!professional) return;
 
   lastProfileNavAt = now;
