@@ -86,6 +86,19 @@ export type ProfileUpdateInput = {
   city: string;
 };
 
+async function resolveMyProfessionalUuid(
+  userUuid: string,
+  fromSession: string | null | undefined,
+): Promise<string | null> {
+  if (fromSession) return fromSession;
+  const { data } = await supabase
+    .from("professionals")
+    .select("id")
+    .eq("user_id", userUuid)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
 export async function updateProfile(
   input: ProfileUpdateInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -102,7 +115,7 @@ export async function updateProfile(
   const { error: profileErr } = await supabase
     .from("profiles")
     .update({
-      full_name: name || undefined,
+      full_name: name || null,
       phone: phone || null,
       email: email || null,
       city: city || null,
@@ -113,14 +126,13 @@ export async function updateProfile(
     return { ok: false, error: profileErr.message };
   }
 
-  const refreshed = await loadSessionUser(true);
-  const proUuid = refreshed?.professionalUuid ?? s.professionalUuid;
+  const proUuid = await resolveMyProfessionalUuid(s.uuid, s.professionalUuid);
 
   if (proUuid) {
     const { error: proErr } = await supabase
       .from("professionals")
       .update({
-        profession: profession || undefined,
+        profession: profession || null,
         bio: bio || null,
         city: city || null,
         email: email || null,
@@ -169,8 +181,12 @@ function docStep(
 }
 
 export async function fetchVerificationStatus(): Promise<VerificationState> {
-  const s = await loadSessionUser();
-  if (!s?.professionalUuid) {
+  const s = await loadSessionUser(true);
+  const proUuid = s
+    ? await resolveMyProfessionalUuid(s.uuid, s.professionalUuid)
+    : null;
+
+  if (!s || !proUuid) {
     verificationCache = {
       overall: "not_verified",
       governmentId: "pending",
@@ -193,7 +209,7 @@ export async function fetchVerificationStatus(): Promise<VerificationState> {
   const { data: app } = await supabase
     .from("verification_applications")
     .select("id, status")
-    .eq("professional_id", s.professionalUuid)
+    .eq("professional_id", proUuid)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -274,16 +290,16 @@ const STEP_TITLE: Record<"governmentId" | "selfie" | "certificate", string> = {
 export async function uploadVerificationStep(
   step: "governmentId" | "selfie" | "certificate",
 ): Promise<VerificationState> {
-  const s = await loadSessionUser();
-  if (!s?.professionalUuid) {
-    throw new Error("Professional profile required");
-  }
+  const s = await loadSessionUser(true);
+  if (!s) throw new Error("Not logged in");
+  const proUuid = await resolveMyProfessionalUuid(s.uuid, s.professionalUuid);
+  if (!proUuid) throw new Error("Professional profile required");
 
   let appId: string | null = null;
   const { data: existing } = await supabase
     .from("verification_applications")
     .select("id, status")
-    .eq("professional_id", s.professionalUuid)
+    .eq("professional_id", proUuid)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -294,7 +310,7 @@ export async function uploadVerificationStep(
     const { data: created, error } = await supabase
       .from("verification_applications")
       .insert({
-        professional_id: s.professionalUuid,
+        professional_id: proUuid,
         user_id: s.uuid,
         status: "pending",
         email: s.email,
@@ -332,13 +348,15 @@ export async function uploadVerificationStep(
 }
 
 export async function submitVerification(): Promise<VerificationState> {
-  const s = await loadSessionUser();
-  if (!s?.professionalUuid) throw new Error("Professional profile required");
+  const s = await loadSessionUser(true);
+  if (!s) throw new Error("Not logged in");
+  const proUuid = await resolveMyProfessionalUuid(s.uuid, s.professionalUuid);
+  if (!proUuid) throw new Error("Professional profile required");
 
   const { data: existing } = await supabase
     .from("verification_applications")
     .select("id")
-    .eq("professional_id", s.professionalUuid)
+    .eq("professional_id", proUuid)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -353,7 +371,7 @@ export async function submitVerification(): Promise<VerificationState> {
       .eq("id", existing.id);
   } else {
     await supabase.from("verification_applications").insert({
-      professional_id: s.professionalUuid,
+      professional_id: proUuid,
       user_id: s.uuid,
       status: "pending",
       submitted_on: new Date().toISOString().slice(0, 10),
