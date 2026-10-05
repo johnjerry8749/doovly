@@ -127,6 +127,31 @@ export async function addServiceRequestComment(input: AddCommentInput): Promise<
   if (error) throw error; invalidateServiceRequestsCache(); return mapServiceRequestComment(data);
 }
 
+/** Auth user may delete only their own comment. */
+export async function deleteServiceRequestComment(commentId: string): Promise<boolean> {
+  const s = await loadSessionUser(true);
+  if (!s) return false;
+  const id = String(commentId || "").trim();
+  if (!id) return false;
+
+  let query = supabase
+    .from("service_request_comments")
+    .delete()
+    .eq("user_id", s.uuid);
+
+  if (id.includes("-") && id.length >= 32) {
+    query = query.eq("id", id);
+  } else {
+    query = query.or(`id.eq.${id},mock_id.eq.${id}`);
+  }
+
+  const { data, error } = await query.select("id").maybeSingle();
+  if (error) throw error;
+  if (!data) return false;
+  invalidateServiceRequestsCache();
+  return true;
+}
+
 export async function likeServiceRequest(requestId: string, liked: boolean): Promise<number> {
   const s = await loadSessionUser(true); if (!s) throw new Error("Not logged in");
   const rid = requestUuid(requestId);

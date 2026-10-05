@@ -6,12 +6,18 @@ export type ServiceCategory = {
   icon: string;
 };
 
-/** Profession types only — "All" is added by listServiceCategories() for filters. */
+/**
+ * Single source of truth for category chips / filters.
+ * Names match service_categories seed + request.category values.
+ * "All" is added by listServiceCategories() / CATEGORY_FILTERS where needed.
+ */
 export const SERVICE_CATEGORIES: ServiceCategory[] = [
-  { name: "Plumber", icon: "water-pump" },
-  { name: "Electrician", icon: "flash" },
-  { name: "Barber", icon: "content-cut" },
-  { name: "Nail Tech", icon: "hand-okay" },
+  { name: "Plumbing", icon: "pipe" },
+  { name: "Electrical", icon: "flash" },
+  { name: "Cleaning", icon: "broom" },
   { name: "Mechanic", icon: "car-wrench" },
-  { name: "Spa", icon: "spa" },
+  { name: "Barber", icon: "content-cut" },
+  { name: "Nail Tech", icon: "nail" },
+  { name: "Massage", icon: "spa" },
+  { name: "Carpentry", icon: "hammer" },
 ];
