@@ -7,6 +7,7 @@ export type ServiceCategory = {
 };
 
 export const SERVICE_CATEGORIES: ServiceCategory[] = [
+  { name: "All", icon: "apps" },
   { name: "Plumber", icon: "water-pump" },
   { name: "Electrician", icon: "flash" },
   { name: "Barber", icon: "content-cut" },
