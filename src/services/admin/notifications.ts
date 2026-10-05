@@ -26,6 +26,9 @@ export type SendAdminNotificationInput = {
 export type SendAdminNotificationResult = {
   notification: AdminNotification;
   inAppRecipientCount: number;
+  emailRecipientCount: number;
+  smsRecipientCount: number;
+  errors: string[];
   systemNotificationShown: boolean;
 };
 export type SendInAppToUserInput = {
