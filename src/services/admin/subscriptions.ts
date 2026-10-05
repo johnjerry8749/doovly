@@ -1,30 +1,7 @@
 import { supabase } from "@/lib/supabase";
-
-export type SubscriptionPlan = "Pro" | "Free";
-export type SubscriptionStatus = "Active" | "Expired" | "Cancelled";
-export type SubscriptionUser = {
-  id:string; name:string; profession:string; location:string; avatar:any;
-  plan:SubscriptionPlan; status:SubscriptionStatus; statusLabel:string; endDate:string;
-};
-
-let cache: SubscriptionUser[] = [];
-function map(row:any):SubscriptionUser {
-  const p = Array.isArray(row.professionals) ? row.professionals[0] : row.professionals;
-  const active = row.status === "active";
-  const plan = row.plan_code ? "Pro" : "Free";
-  const status: SubscriptionStatus = active ? "Active" : row.status === "cancelled" ? "Cancelled" : "Expired";
-  return { id:row.id, name:row.profiles?.full_name ?? "Unnamed User", profession:p?.profession ?? "User", location:row.profiles?.city ?? p?.city ?? "", avatar:row.profiles?.avatar_url ? {uri:row.profiles.avatar_url}:undefined, plan, status, statusLabel:active ? (row.end_date ? `Renews ${new Date(row.end_date).toLocaleDateString()}`:"Active") : status, endDate:row.end_date ?? "—" };
-}
-export async function listSubscriptionsAsync():Promise<SubscriptionUser[]> {
-  const {data,error}=await supabase.from("professional_subscriptions").select("id,status,status_label,end_date,plan_code,profiles:user_id(full_name,city,avatar_url),professionals:professional_id(profession)").order("created_at",{ascending:false});
-  if(error) throw error; cache=(data??[]).map(map); return cache;
-}
-export function listSubscriptions(){return cache;}
-export function getSubscriptionStats(list=cache){return {total:list.length,pro:list.filter(x=>x.plan==="Pro").length,free:list.filter(x=>x.plan==="Free").length};}
-export async function updateSubscription(id:string,input:{plan?:SubscriptionPlan;status?:SubscriptionStatus}) {
-  const patch:any={};
-  if(input.plan) patch.plan_code=input.plan==="Pro"?"pro":null;
-  if(input.status) patch.status=input.status==="Active"?"active":input.status.toLowerCase();
-  const {data,error}=await supabase.from("professional_subscriptions").update(patch).eq("id",id).select("id,status,status_label,end_date,plan_code,profiles:user_id(full_name,city,avatar_url),professionals:professional_id(profession)").single();
-  if(error) throw error; const item=map(data); cache=cache.map(x=>x.id===id?item:x); return item;
-}
+export type SubscriptionPlan="Pro"|"Free"; export type SubscriptionStatus="Active"|"Expired"|"Cancelled"; export type SubscriptionUser={id:string;name:string;profession:string;location:string;avatar:any;plan:SubscriptionPlan;status:SubscriptionStatus;statusLabel:string;endDate:string};
+let cache:SubscriptionUser[]=[];
+function map(row:any,profile?:any,pro?:any):SubscriptionUser{const active=row.status==="active";return{id:row.id,name:profile?.full_name??"Unnamed User",profession:pro?.profession??"User",location:profile?.city??pro?.city??"",avatar:profile?.avatar_url?{uri:profile.avatar_url}:undefined,plan:row.plan_code==="pro"?"Pro":"Free",status:active?"Active":row.status==="cancelled"?"Cancelled":"Expired",statusLabel:active?(row.end_date?"Renews "+new Date(row.end_date).toLocaleDateString():"Active"):(row.status_label||"Expired"),endDate:row.end_date??"—"};}
+export async function listSubscriptionsAsync():Promise<SubscriptionUser[]>{const{data:rows,error}=await supabase.from("professional_subscriptions").select("id,user_id,professional_id,plan_code,status,status_label,end_date,created_at").order("created_at",{ascending:false});if(error)throw error;const u=[...new Set((rows??[]).map((r:any)=>r.user_id).filter(Boolean))];const p=[...new Set((rows??[]).map((r:any)=>r.professional_id).filter(Boolean))];const[profiles,pros]=await Promise.all([u.length?supabase.from("profiles").select("id,full_name,city,avatar_url").in("id",u):Promise.resolve({data:[],error:null}),p.length?supabase.from("professionals").select("id,profession,city").in("id",p):Promise.resolve({data:[],error:null})]);const err=profiles.error??pros.error;if(err)throw err;const pm=new Map((profiles.data??[]).map((x:any)=>[x.id,x]));const prm=new Map((pros.data??[]).map((x:any)=>[x.id,x]));cache=(rows??[]).map((r:any)=>map(r,pm.get(r.user_id),prm.get(r.professional_id)));return cache;}
+export function listSubscriptions(){return cache;} export function getSubscriptionStats(list=cache){return{total:list.length,pro:list.filter(x=>x.plan==="Pro").length,free:list.filter(x=>x.plan==="Free").length};}
+export async function updateSubscription(id:string,input:{plan?:SubscriptionPlan;status?:SubscriptionStatus}){const patch:any={};if(input.plan)patch.plan_code=input.plan==="Pro"?"pro":"basic";if(input.status)patch.status=input.status==="Active"?"active":input.status.toLowerCase();const{error}=await supabase.from("professional_subscriptions").update(patch).eq("id",id);if(error)throw error;const refreshed=await listSubscriptionsAsync();return refreshed.find(x=>x.id===id);}
