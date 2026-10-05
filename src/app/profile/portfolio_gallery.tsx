@@ -27,9 +27,9 @@ import {
 import {
   getLoggedInProfessionalId,
   getProfessionalById,
-  invalidateProfessionalsCache,
   isCurrentUserPro,
 } from "@/services/savedProviders";
+import { invalidateProfessionalsCache } from "@/services/professionals";
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#E8F5E9";
