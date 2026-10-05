@@ -9,7 +9,10 @@ import {
   checkOnline,
   setOnline,
 } from "@/lib/dataState";
-import { ensureProfessionalsLoaded } from "@/services/professionals";
+import {
+  ensureProfessionalsLoaded,
+  invalidateProfessionalsCache,
+} from "@/services/professionals";
 import { ensureBookingsLoaded } from "@/services/bookings";
 import { ensureSavedLoaded } from "@/services/savedProviders";
 import { ensureNotificationsLoaded } from "@/services/inAppNotifications";
@@ -21,6 +24,7 @@ let unbindAuth: (() => void) | null = null;
 
 async function loadAllCaches() {
   await loadSessionUser(true);
+  invalidateProfessionalsCache();
   await Promise.all([
     ensureProfessionalsLoaded(),
     ensureBookingsLoaded(),
