@@ -18,7 +18,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import { getProfessionalById } from "@/services/professionals";
 import { createBookingConversation } from "@/services/chat";
-import { addInAppNotification } from "@/services/inAppNotifications";
 
 export default function BookMeScreen() {
   const { id, serviceId, serviceName, price } = useLocalSearchParams<{
@@ -240,13 +239,6 @@ export default function BookMeScreen() {
       professionalVerified: pro.verified,
       bookingTitle: selectedService.name,
       bookingDate: `${formatDate(selectedDate)} • ${formatTime(selectedTime)}`,
-    });
-
-    addInAppNotification({
-      userId: `pro-${pro.id}`,
-      type: "booking",
-      title: "New Booking Request",
-      body: `Someone requested ${selectedService.name} on ${formatDate(selectedDate)}.`,
     });
 
     router.replace({
