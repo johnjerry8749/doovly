@@ -1,27 +1,20 @@
 /**
- * Profile & verification service
- * -----------------------------
- * Screens import ONLY from here.
- *
- * NOW  → reads/writes mock data from professionals + in-memory overrides
- * LATER → swap bodies to apiRequest("/me", "/me/verification", etc.)
- *
- * Do not change function names when adding the backend — only the insides.
+ * Profile & verification — Supabase only.
  */
 
+import { supabase } from "@/lib/supabase";
+import {
+  loadSessionUser,
+  getCachedSessionUser,
+} from "@/lib/session";
 import {
   getProfessionalById,
-  type Professional,
+  ensureProfessionalsLoaded,
+  invalidateProfessionalsCache,
 } from "@/services/professionals";
-import {
-  getLoggedInProfessionalId,
-  getCurrentUser,
-} from "@/services/savedProviders";
-import { PROFESSIONALS } from "@/data/professionals";
+import { getLoggedInProfessionalId } from "@/services/savedProviders";
 
-// =====================================================
-// TYPES
-// =====================================================
+const FALLBACK_IMG = require("@/assets/profile_1.jpg") as number;
 
 export type ProfileEditData = {
   id: string;
@@ -35,7 +28,11 @@ export type ProfileEditData = {
   verified: boolean;
 };
 
-export type VerificationStepStatus = "pending" | "uploaded" | "approved" | "rejected";
+export type VerificationStepStatus =
+  | "pending"
+  | "uploaded"
+  | "approved"
+  | "rejected";
 
 export type VerificationState = {
   overall: "not_verified" | "under_review" | "verified" | "rejected";
@@ -44,49 +41,39 @@ export type VerificationState = {
   certificate: VerificationStepStatus;
 };
 
-// =====================================================
-// MOCK OVERRIDES (in-memory, reset on reload)
-// =====================================================
+let verificationCache: VerificationState | null = null;
 
-let mockPhone = "+234 810 123 4567";
-let mockEmail = "john.chukwuemeka@email.com";
-let mockBio =
-  "Experienced plumber with 8+ years fixing residential and commercial systems across Lagos.";
-
-let verificationState: VerificationState = {
-  overall: "not_verified",
-  governmentId: "pending",
-  selfie: "pending",
-  certificate: "pending",
-};
-
-// =====================================================
-// PROFILE
-// =====================================================
-
-/**
- * Profile data for Edit Profile screen.
- * NOW  → from logged-in professional + mock phone/email/bio
- * LATER → GET /me or GET /professionals/:id
- */
 export function getProfileForEdit(): ProfileEditData | null {
-  // TODO backend: return apiRequest<ProfileEditData>("/me")
-  const proId = getLoggedInProfessionalId();
-  if (!proId) return null;
+  const s = getCachedSessionUser();
+  if (!s) return null;
 
-  const pro = getProfessionalById(proId);
-  if (!pro) return null;
+  const proId = getLoggedInProfessionalId() ?? s.professionalId;
+  const pro = proId ? getProfessionalById(proId) : undefined;
+
+  if (pro) {
+    return {
+      id: pro.id,
+      name: pro.name || s.fullName || "",
+      phone: (pro as { phone?: string }).phone ?? "",
+      email: (pro as { email?: string }).email ?? s.email ?? "",
+      profession: pro.profession ?? "",
+      bio: pro.bio ?? "",
+      city: pro.city ?? "",
+      image: (pro.image as number) ?? FALLBACK_IMG,
+      verified: pro.verified,
+    };
+  }
 
   return {
-    id: pro.id,
-    name: pro.name,
-    phone: mockPhone,
-    email: mockEmail,
-    profession: pro.profession,
-    bio: pro.bio ?? mockBio,
-    city: pro.city,
-    image: pro.image,
-    verified: pro.verified,
+    id: s.publicId,
+    name: s.fullName ?? "",
+    phone: "",
+    email: s.email ?? "",
+    profession: "",
+    bio: "",
+    city: "",
+    image: FALLBACK_IMG,
+    verified: s.verified,
   };
 }
 
@@ -99,49 +86,169 @@ export type ProfileUpdateInput = {
   city: string;
 };
 
-/**
- * Update profile.
- * NOW  → mutates mock data
- * LATER → PATCH /me
- */
 export async function updateProfile(
   input: ProfileUpdateInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  // TODO backend:
-  // return apiRequest("/me", { method: "PATCH", body: JSON.stringify(input) })
-  await new Promise((r) => setTimeout(r, 400));
+  const s = await loadSessionUser(true);
+  if (!s) return { ok: false, error: "Not logged in" };
 
-  const proId = getLoggedInProfessionalId();
-  if (!proId) return { ok: false, error: "Not logged in" };
+  const name = input.name.trim();
+  const phone = input.phone.trim();
+  const email = input.email.trim();
+  const profession = input.profession.trim();
+  const bio = input.bio.trim();
+  const city = input.city.trim();
 
-  const pro = PROFESSIONALS.find((p) => p.id === String(proId));
-  if (!pro) return { ok: false, error: "Profile not found" };
+  const { error: profileErr } = await supabase
+    .from("profiles")
+    .update({
+      full_name: name || undefined,
+      phone: phone || null,
+      email: email || null,
+      city: city || null,
+    })
+    .eq("id", s.uuid);
 
-  pro.name = input.name.trim() || pro.name;
-  pro.profession = input.profession.trim() || pro.profession;
-  pro.city = input.city.trim() || pro.city;
-  pro.bio = input.bio.trim() || pro.bio;
-  mockPhone = input.phone.trim() || mockPhone;
-  mockEmail = input.email.trim() || mockEmail;
-  mockBio = input.bio.trim() || mockBio;
+  if (profileErr) {
+    return { ok: false, error: profileErr.message };
+  }
+
+  const refreshed = await loadSessionUser(true);
+  const proUuid = refreshed?.professionalUuid ?? s.professionalUuid;
+
+  if (proUuid) {
+    const { error: proErr } = await supabase
+      .from("professionals")
+      .update({
+        profession: profession || undefined,
+        bio: bio || null,
+        city: city || null,
+        email: email || null,
+        phone: phone || null,
+      })
+      .eq("id", proUuid);
+
+    if (proErr) {
+      return { ok: false, error: proErr.message };
+    }
+  }
+
+  invalidateProfessionalsCache();
+  await ensureProfessionalsLoaded();
+  await loadSessionUser(true);
 
   return { ok: true };
 }
 
-// =====================================================
-// VERIFICATION
-// =====================================================
+function mapAppStatus(
+  status: string | null | undefined,
+): VerificationState["overall"] {
+  switch (status) {
+    case "verified":
+      return "verified";
+    case "rejected":
+      return "rejected";
+    case "pending":
+      return "under_review";
+    default:
+      return "not_verified";
+  }
+}
 
-/**
- * Current verification status.
- * NOW  → in-memory mock
- * LATER → GET /me/verification
- */
+function docStep(
+  docs: { doc_type?: string; title?: string; uploaded?: boolean }[],
+  key: string,
+): VerificationStepStatus {
+  const d = docs.find(
+    (x) =>
+      (x.title ?? "").toLowerCase().includes(key) ||
+      (x.doc_type ?? "").toLowerCase().includes(key),
+  );
+  if (!d) return "pending";
+  return d.uploaded ? "uploaded" : "pending";
+}
+
+export async function fetchVerificationStatus(): Promise<VerificationState> {
+  const s = await loadSessionUser();
+  if (!s?.professionalUuid) {
+    verificationCache = {
+      overall: "not_verified",
+      governmentId: "pending",
+      selfie: "pending",
+      certificate: "pending",
+    };
+    return verificationCache;
+  }
+
+  if (s.verified) {
+    verificationCache = {
+      overall: "verified",
+      governmentId: "approved",
+      selfie: "approved",
+      certificate: "approved",
+    };
+    return verificationCache;
+  }
+
+  const { data: app } = await supabase
+    .from("verification_applications")
+    .select("id, status")
+    .eq("professional_id", s.professionalUuid)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!app) {
+    verificationCache = {
+      overall: "not_verified",
+      governmentId: "pending",
+      selfie: "pending",
+      certificate: "pending",
+    };
+    return verificationCache;
+  }
+
+  const { data: docs } = await supabase
+    .from("verification_documents")
+    .select("title, doc_type, uploaded")
+    .eq("application_id", app.id);
+
+  const list = docs ?? [];
+  verificationCache = {
+    overall: mapAppStatus(app.status),
+    governmentId:
+      app.status === "verified"
+        ? "approved"
+        : app.status === "rejected"
+          ? "rejected"
+          : docStep(list, "government") === "uploaded" ||
+              docStep(list, "id") === "uploaded"
+            ? "uploaded"
+            : "pending",
+    selfie:
+      app.status === "verified"
+        ? "approved"
+        : app.status === "rejected"
+          ? "rejected"
+          : docStep(list, "selfie") === "uploaded"
+            ? "uploaded"
+            : "pending",
+    certificate:
+      app.status === "verified"
+        ? "approved"
+        : app.status === "rejected"
+          ? "rejected"
+          : docStep(list, "cert") === "uploaded"
+            ? "uploaded"
+            : "pending",
+  };
+  return verificationCache;
+}
+
 export function getVerificationStatus(): VerificationState {
-  // TODO backend: return apiRequest<VerificationState>("/me/verification")
+  if (verificationCache) return { ...verificationCache };
   const proId = getLoggedInProfessionalId();
   const pro = proId ? getProfessionalById(proId) : undefined;
-
   if (pro?.verified) {
     return {
       overall: "verified",
@@ -150,44 +257,109 @@ export function getVerificationStatus(): VerificationState {
       certificate: "approved",
     };
   }
-
-  return { ...verificationState };
+  return {
+    overall: "not_verified",
+    governmentId: "pending",
+    selfie: "pending",
+    certificate: "pending",
+  };
 }
 
-/**
- * Mark a step as uploaded (mock).
- * LATER → POST /me/verification/:step with file
- */
+const STEP_TITLE: Record<"governmentId" | "selfie" | "certificate", string> = {
+  governmentId: "Government ID",
+  selfie: "Selfie",
+  certificate: "Certificate",
+};
+
 export async function uploadVerificationStep(
   step: "governmentId" | "selfie" | "certificate",
 ): Promise<VerificationState> {
-  // TODO backend: FormData upload
-  await new Promise((r) => setTimeout(r, 600));
-  verificationState = {
-    ...verificationState,
-    [step]: "uploaded",
-  };
-  return { ...verificationState };
-}
-
-/**
- * Submit for review.
- * LATER → POST /me/verification/submit
- */
-export async function submitVerification(): Promise<VerificationState> {
-  // TODO backend: return apiRequest("/me/verification/submit", { method: "POST" })
-  await new Promise((r) => setTimeout(r, 500));
-
-  if (
-    verificationState.governmentId === "pending" ||
-    verificationState.selfie === "pending"
-  ) {
-    return { ...verificationState };
+  const s = await loadSessionUser();
+  if (!s?.professionalUuid) {
+    throw new Error("Professional profile required");
   }
 
-  verificationState = {
-    ...verificationState,
-    overall: "under_review",
-  };
-  return { ...verificationState };
+  let appId: string | null = null;
+  const { data: existing } = await supabase
+    .from("verification_applications")
+    .select("id, status")
+    .eq("professional_id", s.professionalUuid)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    appId = existing.id;
+  } else {
+    const { data: created, error } = await supabase
+      .from("verification_applications")
+      .insert({
+        professional_id: s.professionalUuid,
+        user_id: s.uuid,
+        status: "pending",
+        email: s.email,
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+    appId = created.id;
+  }
+
+  const title = STEP_TITLE[step];
+  const { data: doc } = await supabase
+    .from("verification_documents")
+    .select("id")
+    .eq("application_id", appId)
+    .eq("title", title)
+    .maybeSingle();
+
+  if (doc) {
+    await supabase
+      .from("verification_documents")
+      .update({ uploaded: true })
+      .eq("id", doc.id);
+  } else {
+    await supabase.from("verification_documents").insert({
+      application_id: appId,
+      title,
+      file_name: `${step}.jpg`,
+      doc_type: "image",
+      uploaded: true,
+    });
+  }
+
+  return fetchVerificationStatus();
+}
+
+export async function submitVerification(): Promise<VerificationState> {
+  const s = await loadSessionUser();
+  if (!s?.professionalUuid) throw new Error("Professional profile required");
+
+  const { data: existing } = await supabase
+    .from("verification_applications")
+    .select("id")
+    .eq("professional_id", s.professionalUuid)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase
+      .from("verification_applications")
+      .update({
+        status: "pending",
+        submitted_on: new Date().toISOString().slice(0, 10),
+      })
+      .eq("id", existing.id);
+  } else {
+    await supabase.from("verification_applications").insert({
+      professional_id: s.professionalUuid,
+      user_id: s.uuid,
+      status: "pending",
+      submitted_on: new Date().toISOString().slice(0, 10),
+      email: s.email,
+    });
+  }
+
+  return fetchVerificationStatus();
 }
