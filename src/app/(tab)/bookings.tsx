@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { router } from "expo-router";
 import {
   View,
@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   listBookedJobs,
   listReceivedJobs,
+  ensureBookingsLoaded,
   type Booking,
 } from "@/services/bookings";
 
@@ -24,10 +25,15 @@ const GREEN = "#16A34A";
 
 export default function Bookings() {
   const [mainTab, setMainTab] = useState<"booked" | "received">("booked");
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    void ensureBookingsLoaded().then(() => setTick((t) => t + 1));
+  }, []);
 
   const data = useMemo<Booking[]>(() => {
     return mainTab === "booked" ? listBookedJobs() : listReceivedJobs();
-  }, [mainTab]);
+  }, [mainTab, tick]);
 
   const handleMainTabChange = (tab: "booked" | "received") => {
     setMainTab(tab);
