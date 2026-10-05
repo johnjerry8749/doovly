@@ -22,9 +22,11 @@ import * as Location from "expo-location";
 
 import {
   getProfessionalById,
+  getProfessionalByIdAsync,
   getDistanceKm,
   addReview,
   type ProReview,
+  type Professional,
 } from "@/services/professionals";
 
 import {
@@ -40,10 +42,12 @@ const GREEN = "#16A34A";
 export default function ProfessionalProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const pro = useMemo(
+  const initialPro = useMemo(
     () => getProfessionalById(id ?? ""),
     [id],
   );
+  const [pro, setPro] = useState<Professional | undefined>(initialPro);
+  const [loadingProfile, setLoadingProfile] = useState(!initialPro);
 
   const [tab, setTab] = useState<TabKey>("services");
 
@@ -58,8 +62,29 @@ export default function ProfessionalProfile() {
   const [saved, setSaved] = useState(() => isSaved(id ?? ""));
 
   useEffect(() => {
+    let active = true;
+    setPro(initialPro);
+    setLoadingProfile(!initialPro);
+
+    getProfessionalByIdAsync(id ?? "")
+      .then((nextPro) => {
+        if (!active) return;
+        setPro(nextPro);
+        setLoadingProfile(false);
+      })
+      .catch((error) => {
+        console.warn("Professional profile load failed:", error);
+        if (active) setLoadingProfile(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id, initialPro]);
+
+  useEffect(() => {
     if (pro) {
-      setReviews(pro.reviews);
+      setReviews(pro.reviews ?? []);
     }
   }, [pro]);
 
@@ -114,6 +139,17 @@ export default function ProfessionalProfile() {
       mounted = false;
     };
   }, [pro]);
+
+  if (!pro && loadingProfile) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={GREEN} />
+          <Text style={styles.notFound}>Loading professional...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!pro) {
     return (
