@@ -102,11 +102,12 @@ export async function saveSubscriptionPlans(
 
   if (m.error) throw m.error;
 
-  const metaPayload = {
-    promo_title: state.promoTitle ?? "",
-    promo_subtitle: state.promoSubtitle ?? "",
+  const metaPayload: Record<string, unknown> = {
     yearly_save_percent: state.yearlySavePercent,
   };
+
+  if (state.promoTitle !== undefined) metaPayload.promo_title = state.promoTitle;
+  if (state.promoSubtitle !== undefined) metaPayload.promo_subtitle = state.promoSubtitle;
 
   const metaResult = m.data
     ? await supabase.from("subscription_plan_meta").update(metaPayload).eq("id", m.data.id)
