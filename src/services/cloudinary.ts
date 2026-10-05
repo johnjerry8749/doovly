@@ -58,8 +58,6 @@ function getMimeType(uri: string) {
 
     case "heic":
     case "heif":
-      // Cloudinary can receive these, but the safest client-side fallback
-      // is to keep the real MIME type instead of incorrectly labeling them JPEG.
       return {
         type: extension === "heic" ? "image/heic" : "image/heif",
         extension,
@@ -72,6 +70,50 @@ function getMimeType(uri: string) {
     default:
       return { type: "image/jpeg", extension: "jpg" };
   }
+}
+
+async function createUploadForm(localUri: string, folder: UploadFolder) {
+  const { type, extension } = getMimeType(localUri);
+
+  let imageResponse: Response;
+
+  try {
+    imageResponse = await fetch(localUri);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+
+    throw new Error(
+      `Could not read the selected image: ${message}`,
+    );
+  }
+
+  if (!imageResponse.ok) {
+    throw new Error(
+      `Could not read the selected image (${imageResponse.status}).`,
+    );
+  }
+
+  const blob = await imageResponse.blob();
+
+  if (!blob || blob.size <= 0) {
+    throw new Error("The selected image is empty or could not be read.");
+  }
+
+  const form = new FormData();
+
+  // React Native 0.86 / Expo 57 does not reliably support the old
+  // { uri, type, name } FormData part. Use a real Blob instead.
+  form.append(
+    "file",
+    blob,
+    `upload.${extension}`,
+  );
+
+  form.append("upload_preset", UPLOAD_PRESET);
+  form.append("folder", folder);
+
+  return form;
 }
 
 export async function uploadImage(
@@ -92,17 +134,7 @@ export async function uploadImageFull(
     throw new Error("No image URI was provided.");
   }
 
-  const { type, extension } = getMimeType(localUri);
-  const form = new FormData();
-
-  form.append("file", {
-    uri: localUri,
-    type,
-    name: `upload.${extension}`,
-  } as any);
-
-  form.append("upload_preset", UPLOAD_PRESET);
-  form.append("folder", folder);
+  const form = await createUploadForm(localUri, folder);
 
   const endpoint =
     `https://api.cloudinary.com/v1_1/${encodeURIComponent(CLOUD_NAME)}/image/upload`;
@@ -119,7 +151,7 @@ export async function uploadImageFull(
       error instanceof Error ? error.message : String(error);
 
     throw new Error(
-      `Cloudinary network request failed: ${message}. Check your internet connection, Cloudinary cloud name, and Expo build environment.`,
+      `Cloudinary network request failed: ${message}`,
     );
   }
 
@@ -135,7 +167,7 @@ export async function uploadImageFull(
 
       cloudinaryMessage = parsed.error?.message || responseText;
     } catch {
-      // Keep the raw response when Cloudinary did not return JSON.
+      // Keep the raw response.
     }
 
     throw new Error(
