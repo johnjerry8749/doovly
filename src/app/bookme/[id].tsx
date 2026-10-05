@@ -17,7 +17,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import { getProfessionalById } from "@/services/professionals";
-import { createBookingConversation } from "@/services/chat";
+import { createBookingConversationAsync } from "@/services/chat";
+import { createBookingRequest } from "@/services/bookings";
 
 export default function BookMeScreen() {
   const { id, serviceId, serviceName, price } = useLocalSearchParams<{
@@ -221,7 +222,7 @@ export default function BookMeScreen() {
   const total = serviceFee + platformFee;
   const formatNaira = (amount: number) => `₦${amount.toLocaleString("en-NG")}`;
 
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = async () => {
     if (!selectedService) {
       Alert.alert("Select Service", "Please select a service.");
       return;
@@ -232,19 +233,37 @@ export default function BookMeScreen() {
     }
     if (!pro) return;
 
-    const conv = createBookingConversation({
+    try {
+      const booking = await createBookingRequest({
+        professionalId: pro.id,
+        professionalName: pro.name,
+        title: selectedService.name,
+        amount: Number(String(selectedService.price).replace(/[^\\d]/g, "")) || 0,
+        location: address.trim(),
+        bookingDate: `${formatDate(selectedDate)} • ${formatTime(selectedTime)}`,
+      });
+
+      const conv = await createBookingConversationAsync({
       professionalId: pro.id,
       professionalName: pro.name,
       professionalImage: pro.image,
       professionalVerified: pro.verified,
       bookingTitle: selectedService.name,
       bookingDate: `${formatDate(selectedDate)} • ${formatTime(selectedTime)}`,
-    });
+        bookingId: booking.id,
+        location: address.trim(),
+        amount: Number(String(selectedService.price).replace(/[^\\d]/g, "")) || 0,
+        category: selectedService.name,
+        description: notes.trim() || undefined,
+      });
 
-    router.replace({
+      router.replace({
       pathname: "/chat/[id]",
       params: { id: conv.id },
-    });
+      });
+    } catch (error: any) {
+      Alert.alert("Booking failed", error?.message || "Could not create your booking request.");
+    }
   };
 
   if (!pro) {
