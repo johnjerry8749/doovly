@@ -148,7 +148,7 @@ export const PROFESSIONAL_SELECT = `
   phone,
   avatar_url,
   avatar_key,
-  profiles (
+  profiles!professionals_user_id_fkey (
     full_name,
     email,
     phone,
@@ -255,7 +255,7 @@ export const BOOKING_SELECT = `
     is_verified,
     avatar_url,
     avatar_key,
-    profiles ( full_name, avatar_url )
+    profiles!professionals_user_id_fkey ( full_name, avatar_url )
   )
 `;
 
