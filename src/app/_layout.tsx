@@ -8,6 +8,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { queryClient } from "@/lib/queryClient";
 import { registerForNotifications } from "@/services/notifications";
 import { bootstrapAppData, retryBootstrap } from "@/lib/bootstrapData";
+import SystemNotificationBanner from "@/components/SystemNotificationBanner";
 
 export default function RootLayout() {
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <SystemNotificationBanner />
       <AuthProvider>
         <LocationProvider>
           <Stack
