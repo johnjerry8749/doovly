@@ -7,8 +7,11 @@
  * EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET
  */
 
-const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || "";
-const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "";
+const CLOUD_NAME =
+  (process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || "").trim();
+
+const UPLOAD_PRESET =
+  (process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "").trim();
 
 export type UploadFolder =
   | "doovly/avatars"
@@ -44,17 +47,31 @@ function assertConfig() {
 
 function getMimeType(uri: string) {
   const cleanUri = uri.split("?")[0].split("#")[0];
-  const extension = cleanUri.split(".").pop()?.toLowerCase() || "jpg";
+  const extension = cleanUri.split(".").pop()?.toLowerCase() || "";
 
-  if (extension === "png") {
-    return { type: "image/png", extension: "png" };
+  switch (extension) {
+    case "png":
+      return { type: "image/png", extension: "png" };
+
+    case "webp":
+      return { type: "image/webp", extension: "webp" };
+
+    case "heic":
+    case "heif":
+      // Cloudinary can receive these, but the safest client-side fallback
+      // is to keep the real MIME type instead of incorrectly labeling them JPEG.
+      return {
+        type: extension === "heic" ? "image/heic" : "image/heif",
+        extension,
+      };
+
+    case "jpg":
+    case "jpeg":
+      return { type: "image/jpeg", extension: "jpg" };
+
+    default:
+      return { type: "image/jpeg", extension: "jpg" };
   }
-
-  if (extension === "webp") {
-    return { type: "image/webp", extension: "webp" };
-  }
-
-  return { type: "image/jpeg", extension: "jpg" };
 }
 
 export async function uploadImage(
@@ -87,22 +104,52 @@ export async function uploadImageFull(
   form.append("upload_preset", UPLOAD_PRESET);
   form.append("folder", folder);
 
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-    {
+  const endpoint =
+    `https://api.cloudinary.com/v1_1/${encodeURIComponent(CLOUD_NAME)}/image/upload`;
+
+  let response: Response;
+
+  try {
+    response = await fetch(endpoint, {
       method: "POST",
       body: form,
-    },
-  );
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
     throw new Error(
-      errorText || `Cloudinary upload failed (${response.status})`,
+      `Cloudinary network request failed: ${message}. Check your internet connection, Cloudinary cloud name, and Expo build environment.`,
     );
   }
 
-  const data = (await response.json()) as CloudinaryUploadResult;
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    let cloudinaryMessage = responseText;
+
+    try {
+      const parsed = JSON.parse(responseText) as {
+        error?: { message?: string };
+      };
+
+      cloudinaryMessage = parsed.error?.message || responseText;
+    } catch {
+      // Keep the raw response when Cloudinary did not return JSON.
+    }
+
+    throw new Error(
+      `Cloudinary upload failed (${response.status}): ${cloudinaryMessage || response.statusText}`,
+    );
+  }
+
+  let data: CloudinaryUploadResult;
+
+  try {
+    data = JSON.parse(responseText) as CloudinaryUploadResult;
+  } catch {
+    throw new Error("Cloudinary returned an invalid upload response.");
+  }
 
   if (!data.secure_url) {
     throw new Error("Cloudinary returned no secure image URL.");
