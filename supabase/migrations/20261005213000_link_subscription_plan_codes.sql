@@ -19,6 +19,16 @@ on public.subscription_plan_features(plan_id, code);
 alter table public.subscription_plans alter column code set not null;
 alter table public.subscription_plan_features alter column code set not null;
 
-alter publication supabase_realtime add table public.subscription_plans;
-alter publication supabase_realtime add table public.subscription_plan_features;
-alter publication supabase_realtime add table public.subscription_plan_meta;
+do $
+begin
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='subscription_plans') then
+    alter publication supabase_realtime add table public.subscription_plans;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='subscription_plan_features') then
+    alter publication supabase_realtime add table public.subscription_plan_features;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='subscription_plan_meta') then
+    alter publication supabase_realtime add table public.subscription_plan_meta;
+  end if;
+end
+$;
