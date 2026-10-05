@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase";
 import {
-  getMockSubscriptionPlans,
   type SubscriptionPlansState,
   type SubscriptionPlanConfig,
   type PlanFeature,
@@ -67,7 +66,12 @@ async function fetchPlans(): Promise<SubscriptionPlansState> {
 }
 
 export function getSubscriptionPlans(): SubscriptionPlansState {
-  return cache ?? getMockSubscriptionPlans();
+  return cache ?? {
+    plans: [],
+    promoTitle: "",
+    promoSubtitle: "",
+    yearlySavePercent: 0,
+  };
 }
 
 export async function getSubscriptionPlansAsync(): Promise<SubscriptionPlansState> {
