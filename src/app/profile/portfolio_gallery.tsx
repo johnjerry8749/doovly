@@ -19,6 +19,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
+import {
+  uploadImageFull,
+  UPLOAD_FOLDERS,
+} from "@/services/cloudinary";
 
 import {
   getLoggedInProfessionalId,
@@ -297,55 +301,32 @@ export default function PortfolioGallery() {
         throw new Error("Professional account not found.");
       }
 
-      const extension =
-        selectedImage.split(".").pop()?.split("?")[0]?.toLowerCase() || "jpg";
-      const path = `${user.id}/portfolio/${Date.now()}.${extension}`;
-
-      const response = await fetch(selectedImage);
-      if (!response.ok) {
-        throw new Error("Could not read the selected image.");
-      }
-
-      // React Native uploads to Supabase Storage should use ArrayBuffer.
-      const arrayBuffer = await response.arrayBuffer();
-
-      const { error: uploadError } = await supabase.storage
-        .from("profile-images")
-        .upload(path, arrayBuffer, {
-          contentType: "image/jpeg",
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: publicData } = supabase.storage
-        .from("profile-images")
-        .getPublicUrl(path);
+      const cloudinary = await uploadImageFull(
+        selectedImage,
+        UPLOAD_FOLDERS.portfolio,
+      );
 
       const { data: row, error } = await supabase
         .from("portfolio_items")
         .insert({
           professional_id: professionalUuid,
           description: trimmedDescription,
-          image_key: path,
-          image_url: publicData.publicUrl,
+          image_key: cloudinary.public_id,
+          image_url: cloudinary.secure_url,
           sort_order: items.length,
         })
         .select("id, description, image_key, image_url")
         .single();
 
       if (error) {
-        // Do not leave an orphaned storage object when the database insert fails.
-        await supabase.storage.from("profile-images").remove([path]);
         throw error;
       }
 
       const newItem: PortfolioItem = {
         id: row.id,
         description: row.description ?? trimmedDescription,
-        image: { uri: row.image_url || publicData.publicUrl },
-        storageKey: row.image_key ?? path,
+        image: { uri: row.image_url || cloudinary.secure_url },
+        storageKey: row.image_key ?? cloudinary.public_id,
       };
 
       setItems((previous) => [...previous, newItem]);
@@ -393,15 +374,7 @@ export default function PortfolioGallery() {
 
               if (error) throw error;
 
-              if (item?.storageKey) {
-                const { error: storageError } = await supabase.storage
-                  .from("profile-images")
-                  .remove([item.storageKey]);
-
-                if (storageError) {
-                  console.warn("Portfolio image cleanup failed:", storageError);
-                }
-              }
+              // Cloudinary hosts the image; deleting the DB row removes it from the user's portfolio.
 
               setItems((previous) =>
                 previous.filter((entry) => entry.id !== itemId),
