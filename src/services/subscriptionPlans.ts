@@ -15,13 +15,14 @@ export type {
 
 let cache: SubscriptionPlansState | null = null;
 let loadPromise: Promise<SubscriptionPlansState> | null = null;
+let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 
 async function fetchPlans(): Promise<SubscriptionPlansState> {
   const [{ data: plans, error: plansError }, { data: meta, error: metaError }] =
     await Promise.all([
       supabase
         .from("subscription_plans")
-        .select("id,mock_id,name,tagline,monthly_price,yearly_price,popular,sort_order,subscription_plan_features(id,mock_id,label,sort_order)")
+        .select("id,code,name,tagline,monthly_price,yearly_price,popular,sort_order,subscription_plan_features(id,code,label,sort_order)")
         .order("sort_order", { ascending: true }),
       supabase
         .from("subscription_plan_meta")
@@ -35,21 +36,19 @@ async function fetchPlans(): Promise<SubscriptionPlansState> {
   if (metaError) throw metaError;
 
   const rows = plans ?? [];
-  if (!rows.length) {
-    throw new Error("No subscription plans configured in Supabase.");
-  }
+  if (!rows.length) throw new Error("No subscription plans configured in Supabase.");
 
   const mapped: SubscriptionPlanConfig[] = rows.map((row: any) => ({
-    id: String(row.mock_id ?? "").toLowerCase() === "pro" ? "pro" : "basic",
-    name: row.name,
-    tagline: row.tagline ?? "",
+    id: String(row.code ?? "").toLowerCase() === "pro" ? "pro" : "basic",
+    name: String(row.name ?? ""),
+    tagline: String(row.tagline ?? ""),
     monthlyPrice: Number(row.monthly_price ?? 0),
     yearlyPrice: Number(row.yearly_price ?? 0),
     popular: Boolean(row.popular),
     features: (row.subscription_plan_features ?? [])
       .sort((a: any, b: any) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0))
       .map((f: any): PlanFeature => ({
-        id: String(f.mock_id ?? f.id),
+        id: String(f.code ?? f.id),
         label: String(f.label ?? ""),
       })),
   }));
@@ -65,16 +64,30 @@ async function fetchPlans(): Promise<SubscriptionPlansState> {
   return result;
 }
 
-export function getSubscriptionPlans(): SubscriptionPlansState {
-  return cache ?? {
-    plans: [],
-    promoTitle: "",
-    promoSubtitle: "",
-    yearlySavePercent: 0,
-  };
+function ensureRealtime() {
+  if (realtimeChannel) return;
+
+  realtimeChannel = supabase
+    .channel("subscription-plan-settings-sync")
+    .on("postgres_changes", { event: "*", schema: "public", table: "subscription_plans" }, () => {
+      invalidateSubscriptionPlansCache();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "subscription_plan_features" }, () => {
+      invalidateSubscriptionPlansCache();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "subscription_plan_meta" }, () => {
+      invalidateSubscriptionPlansCache();
+    })
+    .subscribe();
 }
 
-export async function getSubscriptionPlansAsync(): Promise<SubscriptionPlansState> {
+export function getSubscriptionPlans(): SubscriptionPlansState {
+  return cache ?? { plans: [], promoTitle: "", promoSubtitle: "", yearlySavePercent: 0 };
+}
+
+export async function getSubscriptionPlansAsync(force = false): Promise<SubscriptionPlansState> {
+  ensureRealtime();
+  if (force) cache = null;
   if (cache) return cache;
   if (!loadPromise) {
     loadPromise = fetchPlans().finally(() => {
