@@ -70,9 +70,22 @@ export default function AddService() {
       setLoading(false);
       return;
     }
-    const list = listMyServices(proId);
-    setServices(list);
-    setLoading(false);
+    try {
+      const [list, nextCategories] = await Promise.all([
+        listMyServicesAsync(proId),
+        listServiceCategoriesAsync(),
+      ]);
+      setServices(list);
+      setCategories(nextCategories.filter((item) => item.name !== "All"));
+    } catch (error) {
+      console.warn("My services load failed:", error);
+      Alert.alert(
+        "Could not load services",
+        "Please check your connection and try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }, [proId]);
 
   useEffect(() => {
