@@ -37,15 +37,10 @@ import {
   type BookingChatStatus,
   type RequestCardData,
 } from "@/services/chat";
-import {
-  addInAppNotification,
-  getCurrentUserId,
-} from "@/services/inAppNotifications";
-import {
-  getLoggedInProfessionalId,
-  isCurrentUserPro,
-} from "@/services/savedProviders";
-import { getProfessionalById } from "@/services/professionals";
+import { addInAppNotification } from "@/services/inAppNotifications";
+import { loadSessionUser } from "@/lib/session";
+import { isCurrentUserPro } from "@/services/savedProviders";
+
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#DCFCE7";
@@ -244,8 +239,7 @@ export default function ChatConversation() {
     };
   }, [conversationId]);
 
-  const proDisplayName =
-    getProfessionalById(loggedInProId ?? "")?.name ?? "You";
+  const proDisplayName = "You";
 
   const onSend = async () => {
     const trimmed = text.trim();
