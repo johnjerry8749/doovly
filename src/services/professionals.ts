@@ -18,10 +18,7 @@ import {
   type ProService,
   type ProReview,
 } from "@/data/professionals";
-import {
-  SERVICE_CATEGORIES,
-  type ServiceCategory,
-} from "@/data/serviceCategories";
+import type { ServiceCategory } from "@/data/serviceCategories";
 
 export type { Professional, ProService, ProReview, ServiceCategory };
 export { getDistanceKm, starsFromReviewCount };
@@ -106,9 +103,11 @@ export async function getProfessionalByIdAsync(
 }
 
 /** Category chips — All exactly once. */
+let serviceCategoriesCache: ServiceCategory[] | null = null;
+
 export function listServiceCategories(): ServiceCategory[] {
-  const base = SERVICE_CATEGORIES.filter((c) => c.name !== "All");
-  return [{ name: "All", icon: "apps" }, ...base];
+  const cached = serviceCategoriesCache;
+  return cached ?? [{ name: "All", icon: "apps" }];
 }
 
 export async function listServiceCategoriesAsync(): Promise<ServiceCategory[]> {
@@ -117,11 +116,12 @@ export async function listServiceCategoriesAsync(): Promise<ServiceCategory[]> {
     .select("name, icon")
     .order("sort_order", { ascending: true });
 
-  if (error || !data?.length) return listServiceCategories();
+  if (error) throw error;
   const rows = data
     .map((r) => ({ name: r.name, icon: r.icon || "briefcase-outline" }))
     .filter((c) => c.name !== "All");
-  return [{ name: "All", icon: "apps" }, ...rows];
+  serviceCategoriesCache = [{ name: "All", icon: "apps" }, ...rows];
+  return serviceCategoriesCache;
 }
 
 export async function addReview(
