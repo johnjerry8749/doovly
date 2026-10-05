@@ -16,13 +16,14 @@ import {
 } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 
 import {
   getProfessionalById,
   getProfessionalByIdAsync,
+  invalidateProfessionalsCache,
   getDistanceKm,
   addReview,
   type ProReview,
@@ -62,25 +63,40 @@ export default function ProfessionalProfile() {
   const [saved, setSaved] = useState(() => isSaved(id ?? ""));
 
   useEffect(() => {
-    let active = true;
     setPro(initialPro);
     setLoadingProfile(!initialPro);
-
-    getProfessionalByIdAsync(id ?? "")
-      .then((nextPro) => {
-        if (!active) return;
-        setPro(nextPro);
-        setLoadingProfile(false);
-      })
-      .catch((error) => {
-        console.warn("Professional profile load failed:", error);
-        if (active) setLoadingProfile(false);
-      });
-
-    return () => {
-      active = false;
-    };
   }, [id, initialPro]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+
+      const refreshProfile = async () => {
+        try {
+          // Portfolio/services can change while this screen is not focused.
+          // Clear the in-memory professional cache so the profile gets the
+          // latest nested Supabase portfolio_items rows when it becomes visible.
+          invalidateProfessionalsCache();
+          setLoadingProfile(true);
+
+          const nextPro = await getProfessionalByIdAsync(id ?? "");
+          if (!active) return;
+
+          setPro(nextPro);
+          setLoadingProfile(false);
+        } catch (error) {
+          console.warn("Professional profile refresh failed:", error);
+          if (active) setLoadingProfile(false);
+        }
+      };
+
+      void refreshProfile();
+
+      return () => {
+        active = false;
+      };
+    }, [id]),
+  );
 
   useEffect(() => {
     if (pro) {
