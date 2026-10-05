@@ -10,7 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { statusColors, type Booking } from "@/services/bookings";
-import { openBookingChat } from "@/services/chat";
+import { openBookingChatAsync } from "@/services/chat";
 
 const GREEN = "#16A34A";
 
@@ -36,12 +36,19 @@ export function BookingCard({ item, mainTab }: Props) {
   /** Customer (booked) may cancel only while Pending */
   const showCancel = mainTab === "booked" && item.status === "Pending";
 
-  const openChat = () => {
-    const conv = openBookingChat(item, mainTab);
-    router.push({
-      pathname: "/chat/[id]",
-      params: { id: conv.id },
-    });
+  const openChat = async () => {
+    try {
+      const conv = await openBookingChatAsync(item, mainTab);
+      router.push({
+        pathname: "/chat/[id]",
+        params: { id: conv.id },
+      });
+    } catch (error) {
+      Alert.alert(
+        "Could not open chat",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    }
   };
 
   return (
