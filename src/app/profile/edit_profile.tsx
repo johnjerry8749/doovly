@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   View,
   Text,
@@ -21,6 +22,7 @@ import {
   updateProfile,
   type ProfileEditData,
 } from "@/services/profile";
+import { uploadImage, UPLOAD_FOLDERS } from "@/services/cloudinary";
 
 const PRIMARY = "#159447";
 const TEXT_DARK = "#111827";
@@ -37,6 +39,7 @@ export default function EditProfile() {
   const [profession, setProfession] = useState("");
   const [bio, setBio] = useState("");
   const [city, setCity] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -73,6 +76,32 @@ export default function EditProfile() {
     };
   }, []);
 
+  const handlePickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Permission required",
+        "Please allow photo access to change your profile picture.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+
+    const uri = result.assets[0].uri;
+    setImageUri(uri);
+    setProfile((current) =>
+      current ? { ...current, image: { uri } as any } : current,
+    );
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert("Name required", "Please enter your full name.");
@@ -81,6 +110,15 @@ export default function EditProfile() {
 
     setSaving(true);
     try {
+      let uploadedImageUrl: string | undefined;
+
+      if (imageUri) {
+        uploadedImageUrl = await uploadImage(
+          imageUri,
+          UPLOAD_FOLDERS.avatars,
+        );
+      }
+
       const result = await updateProfile({
         name,
         phone,
@@ -88,6 +126,7 @@ export default function EditProfile() {
         profession,
         bio,
         city,
+        imageUrl: uploadedImageUrl,
       });
 
       if (result.ok) {
@@ -157,7 +196,11 @@ export default function EditProfile() {
                 style={styles.avatar}
                 resizeMode="cover"
               />
-              <TouchableOpacity style={styles.cameraBtn} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.cameraBtn}
+                activeOpacity={0.8}
+                onPress={handlePickImage}
+              >
                 <Ionicons name="camera" size={18} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
