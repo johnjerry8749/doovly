@@ -31,7 +31,7 @@ import {
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
 import { getCurrentUserId } from "@/services/inAppNotifications";
-import { createOfferConversation } from "@/services/chat";
+import { createOfferConversationAsync } from "@/services/chat";
 import { getLoggedInProfessionalId } from "@/services/savedProviders";
 import { listProfessionals, getProfessionalById, listServiceCategoriesAsync } from "@/services/professionals";
 import { listCitiesAsync } from "@/services/cities";
@@ -354,7 +354,7 @@ export default function RequestsScreen() {
       .filter(Boolean)
       .join(", ");
 
-    const conv = createOfferConversation({
+    const conv = await createOfferConversationAsync({
       requestId: offerRequest.id,
       requestTitle: offerRequest.title,
       requestCategory: offerRequest.category,
