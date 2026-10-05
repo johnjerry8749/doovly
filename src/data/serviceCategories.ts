@@ -6,8 +6,8 @@ export type ServiceCategory = {
   icon: string;
 };
 
+/** Profession types only — "All" is added by listServiceCategories() for filters. */
 export const SERVICE_CATEGORIES: ServiceCategory[] = [
-  { name: "All", icon: "apps" },
   { name: "Plumber", icon: "water-pump" },
   { name: "Electrician", icon: "flash" },
   { name: "Barber", icon: "content-cut" },
