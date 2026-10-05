@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { router, useFocusEffect } from "expo-router";
 
 import {
   getSubscriptionPlans,
+  getSubscriptionPlansAsync,
   type BillingPeriod,
   type SubscriptionPlansState,
 } from "@/services/subscriptionPlans";
@@ -43,9 +44,26 @@ export default function Subscription() {
   );
   const [period, setPeriod] = useState<BillingPeriod>("monthly");
 
+  useEffect(() => {
+    let active = true;
+
+    getSubscriptionPlansAsync()
+      .then((next) => {
+        if (active) setPlansState(next);
+      })
+      .catch((error) => {
+        console.warn("Subscription plans load failed:", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
-      setPlansState(getSubscriptionPlans());
+      const cached = getSubscriptionPlans();
+      if (cached) setPlansState(cached);
     }, []),
   );
 
