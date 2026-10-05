@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { AppState } from "react-native";
 import { Stack } from "expo-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 
@@ -12,6 +13,12 @@ export default function RootLayout() {
   useEffect(() => {
     registerForNotifications();
     void bootstrapAppData();
+
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void bootstrapAppData();
+    });
+
+    return () => subscription.remove();
   }, []);
 
   return (
