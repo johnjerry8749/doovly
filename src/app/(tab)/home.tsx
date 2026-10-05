@@ -163,7 +163,7 @@ export default function Home() {
             onPress={() => setShowLocationModal(true)}
             activeOpacity={0.7}
           >
-            <Ionicons name="location" size={28} color="#159447" />
+            <Ionicons name="location" size={16} color="#159447" />
             {loadingLocation ? (
               <View style={styles.locationLoading}>
                 <ActivityIndicator size="small" color="#159447" />
@@ -174,7 +174,7 @@ export default function Home() {
                 {locationName}
               </Text>
             )}
-            <Ionicons name="chevron-down" size={18} color="#111" />
+            <Ionicons name="chevron-down" size={14} color="#6B7280" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -447,17 +447,16 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 18,
   },
-  locationContainer: { flexDirection: "row", alignItems: "center", flex: 1, marginRight: 15 },
+  locationContainer: { flexDirection: "row", alignItems: "center", flex: 1, marginRight: 12, gap: 6 },
   locationText: {
-    flex: 1,
-    fontSize: 19,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "600",
     color: "#111",
-    marginLeft: 8,
-    marginRight: 5,
+    flexShrink: 1,
+    marginLeft: 6,
   },
-  locationLoading: { flex: 1, flexDirection: "row", alignItems: "center", marginLeft: 8 },
-  locationLoadingText: { fontSize: 15, color: "#555", marginLeft: 7 },
+  locationLoading: { flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 6 },
+  locationLoadingText: { fontSize: 13, color: "#6B7280" },
   notificationButton: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
   notificationDot: {
     position: "absolute",
