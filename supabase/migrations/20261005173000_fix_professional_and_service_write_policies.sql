@@ -40,3 +40,11 @@ with check (
       and p.user_id = (select auth.uid())
   )
 );
+
+
+-- Track the exact offer represented by an offer chat.
+alter table public.conversations
+  add column if not exists offer_id uuid references public.service_request_offers(id) on delete set null;
+
+create index if not exists conversations_offer_id_idx
+  on public.conversations(offer_id);
