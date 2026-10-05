@@ -54,6 +54,22 @@ export function getUnreadCount(userId?: string): number {
   const uid = userId ?? getCurrentUserId();
   return getNotificationsByUserId(uid).filter(n => n.unread).length;
 }
+export async function deleteNotification(notificationId: string): Promise<void> {
+  const s = await loadSessionUser();
+  if (!s) return;
+
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .or(`id.eq.${notificationId},mock_id.eq.${notificationId}`)
+    .eq("user_id", s.uuid);
+
+  if (error) throw error;
+
+  cache = cache.filter((n) => n.id !== notificationId);
+  await writeLocal(cache);
+}
+
 export async function markNotificationRead(notificationId: string): Promise<void> {
   const s = await loadSessionUser(); if (!s) return;
   const { error } = await supabase.from("notifications").update({ unread:false })
