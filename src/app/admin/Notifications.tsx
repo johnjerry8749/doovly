@@ -194,8 +194,11 @@ export default function Notifications() {
           );
         }
       }
-      if (channels.includes("email") || channels.includes("sms")) {
-        parts.push("Email/SMS need a backend provider when you swap to API.");
+      if (channels.includes("email") && !channels.includes("in-app")) {
+        parts.push("Email delivery was sent through the backend provider.");
+      }
+      if (channels.includes("sms") && !channels.includes("in-app")) {
+        parts.push("SMS delivery was sent through the backend provider.");
       }
 
       Alert.alert("Sent", parts.join("\n"));
