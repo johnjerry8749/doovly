@@ -7,7 +7,7 @@ import { LocationProvider } from "@/context/LocationContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { queryClient } from "@/lib/queryClient";
 import { registerForNotifications } from "@/services/notifications";
-import { bootstrapAppData } from "@/lib/bootstrapData";
+import { bootstrapAppData, retryBootstrap } from "@/lib/bootstrapData";
 
 export default function RootLayout() {
   useEffect(() => {
@@ -15,7 +15,7 @@ export default function RootLayout() {
     void bootstrapAppData();
 
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") void bootstrapAppData();
+      if (state === "active") void retryBootstrap();
     });
 
     return () => subscription.remove();
