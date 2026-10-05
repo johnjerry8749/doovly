@@ -238,7 +238,7 @@ export default function BookMeScreen() {
         professionalId: pro.id,
         professionalName: pro.name,
         title: selectedService.name,
-        amount: Number(String(selectedService.price).replace(/[^\\d]/g, "")) || 0,
+        amount: Number(String(selectedService.price).replace(/[^\d]/g, "")) || 0,
         location: address.trim(),
         bookingDate: `${formatDate(selectedDate)} • ${formatTime(selectedTime)}`,
       });
@@ -252,7 +252,7 @@ export default function BookMeScreen() {
       bookingDate: `${formatDate(selectedDate)} • ${formatTime(selectedTime)}`,
         bookingId: booking.id,
         location: address.trim(),
-        amount: Number(String(selectedService.price).replace(/[^\\d]/g, "")) || 0,
+        amount: Number(String(selectedService.price).replace(/[^\d]/g, "")) || 0,
         category: selectedService.name,
         description: notes.trim() || undefined,
       });
