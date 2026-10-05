@@ -188,12 +188,14 @@ export default function AddService() {
             icon: categoryIcon,
           },
         );
-        if (updated) {
-          setServices((prev) =>
-            prev.map((s) => (s.id === editingServiceId ? updated : s)),
-          );
-          Alert.alert("Service Updated", "Your service has been updated.");
+        if (!updated) {
+          throw new Error("The service could not be found or updated.");
         }
+
+        setServices((prev) =>
+          prev.map((s) => (s.id === editingServiceId ? updated : s)),
+        );
+        Alert.alert("Service Updated", "Your service has been updated.");
       } else {
         if (!proId) return;
         const created = await createMyService(proId, {
@@ -225,10 +227,16 @@ export default function AddService() {
           onPress: async () => {
             if (!proId) return;
             const ok = await deleteMyService(proId, id);
-            if (ok) {
-              setServices((prev) => prev.filter((s) => s.id !== id));
-              if (editingServiceId === id) closeModal();
+            if (!ok) {
+              Alert.alert(
+                "Could not delete",
+                "The service could not be deleted. Please check your connection and try again.",
+              );
+              return;
             }
+
+            setServices((prev) => prev.filter((s) => s.id !== id));
+            if (editingServiceId === id) closeModal();
           },
         },
       ],
