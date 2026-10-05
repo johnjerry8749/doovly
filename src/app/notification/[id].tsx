@@ -20,6 +20,7 @@ import {
   markNotificationRead,
   clearAllNotifications,
   deleteNotification,
+  refreshNotificationsAsync,
   type Notification,
   type NotifType,
 } from "@/services/inAppNotifications";
