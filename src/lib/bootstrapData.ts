@@ -14,12 +14,10 @@ import { ensureBookingsLoaded } from "@/services/bookings";
 import { ensureSavedLoaded } from "@/services/savedProviders";
 import { ensureNotificationsLoaded } from "@/services/inAppNotifications";
 import { ensureServiceRequestsLoaded } from "@/services/serviceRequests";
-import { ensureChatLoaded, bindChatRealtime } from "@/services/chat";
 
 let bootstrapped = false;
 let bootPromise: Promise<void> | null = null;
 let unbindAuth: (() => void) | null = null;
-let unbindChat: (() => void) | null = null;
 
 async function loadAllCaches() {
   await loadSessionUser(true);
@@ -29,7 +27,6 @@ async function loadAllCaches() {
     ensureSavedLoaded(),
     ensureNotificationsLoaded(),
     ensureServiceRequestsLoaded(),
-    ensureChatLoaded(),
   ]);
 }
 
@@ -62,9 +59,6 @@ export async function bootstrapAppData(): Promise<void> {
             setDataPhase("error", e?.message ?? "Failed to refresh data");
           }
         });
-      }
-      if (!unbindChat) {
-        unbindChat = bindChatRealtime();
       }
       bootstrapped = true;
       setDataPhase("ready");
