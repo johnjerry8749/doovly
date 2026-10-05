@@ -21,7 +21,7 @@ import {
   createMyService,
   updateMyService,
   deleteMyService,
-  listServiceCategories,
+  listServiceCategories,\n  listServiceCategoriesAsync,
   type ProService,
 } from "@/services/professionals";
 import { getLoggedInProfessionalId } from "@/services/savedProviders";
@@ -49,7 +49,7 @@ export default function AddService() {
   const proId = getLoggedInProfessionalId();
   const pro = proId ? getProfessionalById(proId) : undefined;
   const isPro = !!pro?.subscribed;
-  const categories = listServiceCategories();
+  const [categories, setCategories] = useState<{ name: string; icon?: string }[]>([]);
 
   const [services, setServices] = useState<ProService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +64,7 @@ export default function AddService() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
 
-  const loadServices = useCallback(() => {
+  const loadServices = useCallback(async () => {
     if (!proId) {
       setServices([]);
       setLoading(false);
