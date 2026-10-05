@@ -114,15 +114,42 @@ export default function ProfessionalProfile() {
             accuracy: Location.Accuracy.Balanced,
           });
 
-        const distance = getDistanceKm(
-          location.coords.latitude,
-          location.coords.longitude,
-          pro.latitude,
-          pro.longitude,
-        );
+        let professionalLatitude = Number(pro.latitude);
+        let professionalLongitude = Number(pro.longitude);
 
-        if (mounted) {
-          setDistanceKm(distance);
+        // Production professionals may only have a city saved.
+        // Resolve that city to coordinates so authenticated users still
+        // get a real KM distance instead of calculating against 0,0.
+        if (
+          !Number.isFinite(professionalLatitude) ||
+          !Number.isFinite(professionalLongitude) ||
+          (professionalLatitude === 0 && professionalLongitude === 0)
+        ) {
+          const geocoded = await Location.geocodeAsync(
+            `${pro.city}, Nigeria`,
+          );
+
+          if (geocoded.length > 0) {
+            professionalLatitude = geocoded[0].latitude;
+            professionalLongitude = geocoded[0].longitude;
+          }
+        }
+
+        if (
+          Number.isFinite(professionalLatitude) &&
+          Number.isFinite(professionalLongitude) &&
+          !(professionalLatitude === 0 && professionalLongitude === 0)
+        ) {
+          const distance = getDistanceKm(
+            location.coords.latitude,
+            location.coords.longitude,
+            professionalLatitude,
+            professionalLongitude,
+          );
+
+          if (mounted) {
+            setDistanceKm(distance);
+          }
         }
       } catch (error) {
         console.log("Distance error:", error);
