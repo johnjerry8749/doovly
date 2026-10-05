@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Alert,
   ScrollView,
   TouchableOpacity,
   Image,
@@ -17,6 +18,7 @@ import {
   getCurrentUserId,
   markNotificationRead,
   markAllNotificationsRead,
+  deleteNotification,
   type Notification,
   type NotifType,
 } from "@/services/inAppNotifications";
@@ -112,6 +114,31 @@ export default function NotificationsScreen() {
     refresh();
   };
 
+  const onDeleteItem = (notificationId: string) => {
+    Alert.alert(
+      "Delete notification",
+      "Are you sure you want to delete this notification?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteNotification(notificationId);
+              refresh();
+            } catch (error) {
+              Alert.alert(
+                "Delete failed",
+                error instanceof Error ? error.message : "Unable to delete notification.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const onPressItem = (notificationId: string) => {
     markNotificationRead(notificationId);
     refresh();
@@ -171,6 +198,14 @@ export default function NotificationsScreen() {
               </View>
 
               <View style={styles.cardRight}>
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={() => onDeleteItem(item.id)}
+                  activeOpacity={0.7}
+                  hitSlop={8}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
                 {item.avatar ? (
                   <Image source={item.avatar} style={styles.avatar} />
                 ) : null}
@@ -295,6 +330,13 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     paddingTop: 4,
     minWidth: 28,
+  },
+  deleteBtn: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
   },
   avatar: {
     width: 28,
