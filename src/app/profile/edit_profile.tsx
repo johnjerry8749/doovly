@@ -22,7 +22,7 @@ import {
   updateProfile,
   type ProfileEditData,
 } from "@/services/profile";
-import { uploadImage, UPLOAD_FOLDERS } from "@/services/cloudinary";
+import { uploadImage, UPLOAD_FOLDERS } from "@/services/cloudinary";\nimport { listCitiesAsync } from "@/services/cities";\nimport { listServiceCategoriesAsync } from "@/services/professionals";
 
 const PRIMARY = "#159447";
 const TEXT_DARK = "#111827";
@@ -39,7 +39,7 @@ export default function EditProfile() {
   const [profession, setProfession] = useState("");
   const [bio, setBio] = useState("");
   const [city, setCity] = useState("");
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUri, setImageUri] = useState<string | null>(null);\n  const [cities, setCities] = useState<string[]>([]);\n  const [categories, setCategories] = useState<{ name: string; icon?: string }[]>([]);\n  const [picker, setPicker] = useState<"city" | "profession" | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
     right: 14,
     top: 14,
   },
-  saveBtn: {
+  pickerOverlay: {\n    flex: 1,\n    backgroundColor: "rgba(0,0,0,0.4)",\n    justifyContent: "flex-end",\n  },\n  pickerSheet: {\n    backgroundColor: "#FFFFFF",\n    borderTopLeftRadius: 20,\n    borderTopRightRadius: 20,\n    maxHeight: "75%",\n    padding: 20,\n  },\n  pickerHeader: {\n    flexDirection: "row",\n    alignItems: "center",\n    justifyContent: "space-between",\n    marginBottom: 12,\n  },\n  pickerTitle: {\n    fontSize: 18,\n    fontWeight: "700",\n    color: TEXT_DARK,\n  },\n  pickerItem: {\n    paddingVertical: 14,\n    borderBottomWidth: 1,\n    borderBottomColor: "#F3F4F6",\n  },\n  pickerItemText: {\n    fontSize: 15,\n    color: TEXT_DARK,\n  },\n  saveBtn: {
     marginTop: 12,
     backgroundColor: PRIMARY,
     borderRadius: 14,
