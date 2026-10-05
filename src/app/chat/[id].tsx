@@ -272,16 +272,12 @@ export default function ChatConversation() {
     const msg = await acceptBooking(conversationId, proDisplayName);
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Accepted");
-
-    setBookingStatus("Accepted");
   };
 
   const onDecline = async () => {
     if (!conversation) return;
     const msg = await declineBooking(conversationId, proDisplayName);
     setMessages((prev) => [...prev, msg]);
-    setBookingStatus("Declined");
-
     setBookingStatus("Declined");
   };
 
