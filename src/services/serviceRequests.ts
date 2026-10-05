@@ -148,6 +148,29 @@ export async function addServiceRequestComment(input: AddCommentInput): Promise<
   if (error) throw error; invalidateServiceRequestsCache(); return mapServiceRequestComment(data);
 }
 
+export async function updateServiceRequestComment(commentId: string, text: string): Promise<ServiceRequestComment | null> {
+  const s = await loadSessionUser(true);
+  const value = text.trim();
+  if (!s || !value) return null;
+  const { data, error } = await supabase.from("service_request_comments")
+    .update({ text: value }).eq("id", commentId).eq("user_id", s.uuid)
+    .select("id,mock_id,user_id,user_name,user_avatar_url,text,time_ago,created_at").maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  invalidateServiceRequestsCache();
+  return mapServiceRequestComment(data);
+}
+
+export async function deleteServiceRequestComment(commentId: string): Promise<boolean> {
+  const s = await loadSessionUser(true);
+  if (!s) return false;
+  const { error } = await supabase.from("service_request_comments")
+    .delete().eq("id", commentId).eq("user_id", s.uuid);
+  if (error) throw error;
+  invalidateServiceRequestsCache();
+  return true;
+}
+
 export async function likeServiceRequest(requestId: string, liked: boolean): Promise<number> {
   const s = await loadSessionUser(true); if (!s) throw new Error("Not logged in");
   const rid = requestUuid(requestId);
