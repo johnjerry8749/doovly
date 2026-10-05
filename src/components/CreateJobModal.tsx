@@ -24,8 +24,8 @@ import {
   type ServiceRequestIcon,
 } from "@/services/serviceRequests";
 
-import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
-import { NIGERIA_CITIES } from "@/data/cities";
+import { listServiceCategoriesAsync } from "@/services/professionals";
+import { listCitiesAsync } from "@/services/cities";
 
 const GREEN = "#159447";
 const TEXT = "#111827";
@@ -60,9 +60,21 @@ export default function CreateJobModal({
   const [showCategories, setShowCategories] = useState(false);
   const [showCities, setShowCities] = useState(false);
   const [maxOffers, setMaxOffers] = useState(5);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
 
-  const categories = useMemo(() => SERVICE_CATEGORIES, []);
-  const cities = useMemo(() => NIGERIA_CITIES, []);
+  useEffect(() => {
+    if (!visible) return;
+    let active = true;
+    Promise.all([listServiceCategoriesAsync(), listCitiesAsync()])
+      .then(([nextCategories, nextCities]) => {
+        if (!active) return;
+        setCategories(nextCategories ?? []);
+        setCities(nextCities ?? []);
+      })
+      .catch((error) => console.warn("[CreateJobModal] reference data load failed", error));
+    return () => { active = false; };
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -168,7 +180,7 @@ export default function CreateJobModal({
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSave || saving) return;
 
     setSaving(true);
@@ -187,7 +199,7 @@ export default function CreateJobModal({
       };
 
       if (isEditing && request) {
-        const updated = updateServiceRequest(request.id, payload);
+        const updated = await updateServiceRequest(request.id, payload);
 
         if (!updated) {
           Alert.alert(
@@ -202,7 +214,7 @@ export default function CreateJobModal({
         return;
       }
 
-      const created = createServiceRequest(payload);
+      const created = await createServiceRequest(payload);
       onSaved?.(created);
       onClose();
     } catch (error) {
