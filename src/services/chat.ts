@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { loadSessionUser } from "@/lib/session";
+import { tryToUuid } from "@/lib/ids";
 import { recordAcceptedOfferBooking, updateBookingStatus } from "@/services/bookings";
 import type { Booking } from "@/services/bookings";
 import type { ImageSourcePropType } from "react-native";
@@ -465,10 +466,12 @@ export async function openBookingChatAsync(
 
   if (!otherUuid) throw new Error("Chat participant not found");
 
+  const bookingUuid = tryToUuid("booking", String(booking.id)) ?? String(booking.id);
+
   const { data: existing, error: existingError } = await supabase
     .from("conversations")
     .select("id")
-    .eq("booking_id", String(booking.id))
+    .eq("booking_id", bookingUuid)
     .maybeSingle();
 
   if (existingError) throw existingError;
@@ -480,7 +483,7 @@ export async function openBookingChatAsync(
   return createConversation(
     otherUuid,
     {
-      bookingId: String(booking.id),
+      bookingId: bookingUuid,
       lastMessage: `Booking: ${booking.title}`,
     },
   );
