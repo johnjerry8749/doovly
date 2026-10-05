@@ -1,8 +1,5 @@
 /**
- * Professionals service
- * ---------------------
- * Screens import ONLY from here.
- * Function names + return shapes stay stable — UI never changes.
+ * Professionals service — Supabase only.
  */
 
 import { supabase } from "@/lib/supabase";
@@ -29,7 +26,6 @@ import {
 export type { Professional, ProService, ProReview, ServiceCategory };
 export { getDistanceKm, starsFromReviewCount };
 
-/** In-memory cache so existing sync callers keep working after first load. */
 let cache: Professional[] | null = null;
 let loadPromise: Promise<Professional[]> | null = null;
 
@@ -60,9 +56,7 @@ export function invalidateProfessionalsCache() {
 }
 
 export function listProfessionals(): Professional[] {
-  if (!cache) {
-    void ensureProfessionalsLoaded();
-  }
+  if (!cache) void ensureProfessionalsLoaded();
   return cache ?? [];
 }
 
@@ -89,8 +83,7 @@ export async function listProfessionalsByCityAsync(
 }
 
 export function getProfessionalById(id: string): Professional | undefined {
-  const all = listProfessionals();
-  return all.find((p) => String(p.id) === String(id));
+  return listProfessionals().find((p) => String(p.id) === String(id));
 }
 
 export async function getProfessionalByIdAsync(
@@ -112,29 +105,48 @@ export async function getProfessionalByIdAsync(
   return mapProfessionalRow(data);
 }
 
+/** Category chips — All exactly once. */
 export function listServiceCategories(): ServiceCategory[] {
-  return SERVICE_CATEGORIES;
+  const base = SERVICE_CATEGORIES.filter((c) => c.name !== "All");
+  return [{ name: "All", icon: "apps" }, ...base];
+}
+
+export async function listServiceCategoriesAsync(): Promise<ServiceCategory[]> {
+  const { data, error } = await supabase
+    .from("service_categories")
+    .select("name, icon")
+    .order("sort_order", { ascending: true });
+
+  if (error || !data?.length) return listServiceCategories();
+  const rows = data
+    .map((r) => ({ name: r.name, icon: r.icon || "briefcase-outline" }))
+    .filter((c) => c.name !== "All");
+  return [{ name: "All", icon: "apps" }, ...rows];
 }
 
 export async function addReview(
   professionalId: string,
-  input: { userName: string; comment: string; rating?: number },
+  payload: { userName: string; comment: string; userId?: string },
 ): Promise<ProReview> {
-  const proUuid = toUuid("professional", professionalId);
+  const proUuid = await resolveProfessionalUuid(professionalId);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const { data, error } = await supabase
     .from("reviews")
     .insert({
       professional_id: proUuid,
-      user_name: input.userName.trim(),
-      comment: input.comment.trim(),
-      rating: input.rating ?? null,
-      date_label: new Date().toLocaleDateString("en-US", {
+      user_id: user?.id ?? null,
+      user_name: payload.userName.trim() || "Anonymous",
+      comment: payload.comment.trim(),
+      display_date: new Date().toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
       }),
     })
-    .select("id, mock_id, user_name, comment, date_label, rating")
+    .select("id, mock_id, user_id, user_name, comment, display_date, created_at")
     .single();
 
   if (error) throw error;
@@ -150,19 +162,18 @@ export type ServiceInput = {
 };
 
 function parsePriceValue(price: string): number {
-  const n = Number(String(price).replace(/[^0-9.]/g, ""));
-  return Number.isFinite(n) ? n : 0;
+  return Number(String(price).replace(/[^0-9.]/g, "")) || 0;
 }
 
 function formatPrice(price: string): string {
-  const n = parsePriceValue(price);
-  if (!n) return price.trim() || "₦0";
-  return `₦${n.toLocaleString("en-NG")}`;
+  const trimmed = price.trim();
+  if (trimmed.startsWith("₦")) return trimmed;
+  return `₦${Number(price).toLocaleString()}`;
 }
 
 export function listMyServices(professionalId: string): ProService[] {
   const pro = getProfessionalById(professionalId);
-  return pro?.services ?? [];
+  return pro ? [...pro.services] : [];
 }
 
 export async function listMyServicesAsync(
@@ -172,11 +183,44 @@ export async function listMyServicesAsync(
   return listMyServices(professionalId);
 }
 
+async function resolveProfessionalUuid(professionalId: string): Promise<string> {
+  const key = String(professionalId);
+  const s = await loadSessionUser();
+  if (
+    s?.professionalUuid &&
+    (s.professionalId === key || s.professionalUuid === key || !key)
+  ) {
+    return s.professionalUuid;
+  }
+  const mapped = tryToUuid("professional", key);
+  if (mapped) return mapped;
+  if (key.includes("-") && key.length >= 32) {
+    const { data } = await supabase
+      .from("professionals")
+      .select("id")
+      .eq("id", key)
+      .maybeSingle();
+    if (data?.id) return data.id;
+  }
+  const { data, error } = await supabase
+    .from("professionals")
+    .select("id")
+    .or(`mock_id.eq.${key},id.eq.${key}`)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.id) {
+    throw new Error(
+      "No professional profile found. Sign in as a professional account.",
+    );
+  }
+  return data.id;
+}
+
 export async function createMyService(
   professionalId: string,
   input: ServiceInput,
 ): Promise<ProService> {
-  const proUuid = toUuid("professional", professionalId);
+  const proUuid = await resolveProfessionalUuid(professionalId);
   const priceValue = parsePriceValue(input.price);
   const price = formatPrice(input.price);
 
@@ -203,7 +247,7 @@ export async function updateMyService(
   serviceId: string,
   input: ServiceInput,
 ): Promise<ProService | null> {
-  const proUuid = toUuid("professional", professionalId);
+  const proUuid = await resolveProfessionalUuid(professionalId);
   const priceValue = parsePriceValue(input.price);
   const price = formatPrice(input.price);
 
@@ -243,7 +287,7 @@ export async function deleteMyService(
   professionalId: string,
   serviceId: string,
 ): Promise<boolean> {
-  const proUuid = toUuid("professional", professionalId);
+  const proUuid = await resolveProfessionalUuid(professionalId);
 
   let serviceUuid = serviceId;
   if (!serviceId.includes("-") || serviceId.startsWith("s")) {
