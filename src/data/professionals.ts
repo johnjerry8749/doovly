@@ -40,6 +40,8 @@ export type CompletedProject = {
 
 export type Professional = {
   id: string;
+  /** Supabase auth user id for profile navigation from comments/requests. */
+  userId?: string;
   name: string;
   profession: string;
   city: string;
