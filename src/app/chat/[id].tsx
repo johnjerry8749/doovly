@@ -17,34 +17,29 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-  getConversation,
-  getMessages,
+  getConversationAsync,
+  getMessagesAsync,
   sendMessage,
-  markConversationRead,
-  isSharingLocation,
+  markConversationReadAsync,
+  isSharingLocationAsync,
   shareLocation,
   stopSharingLocation,
   canOpenSharedLocation,
-  getBookingStatus,
-  canSendMessage,
-  isProfessionalInConversation,
+  getBookingStatusAsync,
+  canSendMessageAsync,
+  isAcceptorInConversationAsync,
   acceptBooking,
   declineBooking,
-  getConversationKind,
+  getConversationKindAsync,
+  ensureChatRealtime,
   type ChatMessage,
   type Conversation,
   type BookingChatStatus,
   type RequestCardData,
 } from "@/services/chat";
-import {
-  addInAppNotification,
-  getCurrentUserId,
-} from "@/services/inAppNotifications";
-import {
-  getLoggedInProfessionalId,
-  isCurrentUserPro,
-} from "@/services/savedProviders";
-import { getProfessionalById } from "@/services/professionals";
+import { loadSessionUser } from "@/lib/session";
+import { isCurrentUserPro } from "@/services/savedProviders";
+
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#DCFCE7";
@@ -197,27 +192,65 @@ export default function ChatConversation() {
   const [bookingStatus, setBookingStatus] =
     useState<BookingChatStatus>("Accepted");
   const listRef = useRef<FlatList>(null);
-  const currentUserId = getCurrentUserId();
-  const loggedInProId = getLoggedInProfessionalId();
-  const isAcceptor = Boolean(
-    (loggedInProId &&
-      isProfessionalInConversation(conversationId, loggedInProId)) ||
-      isProfessionalInConversation(conversationId, currentUserId),
-  );
-  const convKind = getConversationKind(conversationId);
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [isAcceptor, setIsAcceptor] = useState(false);
+  const [convKind, setConvKind] = useState<"booking" | "offer" | undefined>();
   const isProUser = isCurrentUserPro();
 
   useEffect(() => {
-    const conv = getConversation(conversationId);
-    setConversation(conv);
-    setMessages(getMessages(conversationId));
-    setSharing(isSharingLocation(conversationId));
-    setBookingStatus(getBookingStatus(conversationId));
-    markConversationRead(conversationId);
+    let active = true;
+    void loadSessionUser().then((session) => {
+      if (!active) return;
+      const uid = session?.uuid ?? "";
+      setCurrentUserId(uid);
+      if (uid) {
+        void isAcceptorInConversationAsync(conversationId, uid)
+          .then(setIsAcceptor)
+          .catch(() => setIsAcceptor(false));
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [conversationId]);
 
-  const proDisplayName =
-    getProfessionalById(loggedInProId ?? "")?.name ?? "You";
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const [conv, msgs, sharingNow, status, kind] = await Promise.all([
+          getConversationAsync(conversationId),
+          getMessagesAsync(conversationId),
+          isSharingLocationAsync(conversationId),
+          getBookingStatusAsync(conversationId),
+          getConversationKindAsync(conversationId),
+        ]);
+        if (!active) return;
+        setConversation(conv);
+        setMessages(msgs);
+        setSharing(sharingNow);
+        setBookingStatus(status);
+        setConvKind(kind);
+        void markConversationReadAsync(conversationId);
+        return kind;
+      } catch (error) {
+        console.warn("Chat conversation load failed:", error);
+      }
+    };
+    void load();
+    let cleanup: (() => void) | undefined;
+    void ensureChatRealtime(() => {
+      void load();
+    }).then((stop) => {
+      cleanup = stop;
+    });
+    return () => {
+      active = false;
+      cleanup?.();
+    };
+  }, [conversationId]);
+
+  const proDisplayName = "You";
 
   const onSend = async () => {
     const trimmed = text.trim();
@@ -234,38 +267,18 @@ export default function ChatConversation() {
     }
   };
 
-  const onAccept = () => {
+  const onAccept = async () => {
     if (!conversation) return;
-    const msg = acceptBooking(conversationId, proDisplayName);
+    const msg = await acceptBooking(conversationId, proDisplayName);
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Accepted");
-
-    const isOffer = convKind === "offer";
-    addInAppNotification({
-      userId: "u1",
-      type: "booking",
-      title: isOffer ? "Offer Accepted" : "Booking Accepted",
-      body: isOffer
-        ? `${proDisplayName} accepted your offer.`
-        : `${proDisplayName} accepted your booking.`,
-    });
   };
 
-  const onDecline = () => {
+  const onDecline = async () => {
     if (!conversation) return;
-    const msg = declineBooking(conversationId, proDisplayName);
+    const msg = await declineBooking(conversationId, proDisplayName);
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Declined");
-
-    const isOffer = convKind === "offer";
-    addInAppNotification({
-      userId: "u1",
-      type: "booking",
-      title: isOffer ? "Offer Declined" : "Booking Declined",
-      body: isOffer
-        ? `${proDisplayName} declined your offer.`
-        : `${proDisplayName} declined your booking.`,
-    });
   };
 
   const onCall = () => {
@@ -611,7 +624,7 @@ export default function ChatConversation() {
         )}
 
         <View style={styles.inputBar}>
-          {canSendMessage(conversationId) ? (
+          {bookingStatus === "Accepted" ? (
             <>
               <TouchableOpacity
                 style={styles.attachBtn}

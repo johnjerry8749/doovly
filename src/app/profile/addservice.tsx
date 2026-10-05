@@ -17,11 +17,11 @@ import { router } from "expo-router";
 
 import {
   getProfessionalById,
-  listMyServices,
+  listMyServicesAsync,
   createMyService,
   updateMyService,
   deleteMyService,
-  listServiceCategories,
+  listServiceCategoriesAsync,
   type ProService,
 } from "@/services/professionals";
 import { getLoggedInProfessionalId } from "@/services/savedProviders";
@@ -49,7 +49,7 @@ export default function AddService() {
   const proId = getLoggedInProfessionalId();
   const pro = proId ? getProfessionalById(proId) : undefined;
   const isPro = !!pro?.subscribed;
-  const categories = listServiceCategories();
+  const [categories, setCategories] = useState<{ name: string; icon?: string }[]>([]);
 
   const [services, setServices] = useState<ProService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,15 +64,28 @@ export default function AddService() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
 
-  const loadServices = useCallback(() => {
+  const loadServices = useCallback(async () => {
     if (!proId) {
       setServices([]);
       setLoading(false);
       return;
     }
-    const list = listMyServices(proId);
-    setServices(list);
-    setLoading(false);
+    try {
+      const [list, nextCategories] = await Promise.all([
+        listMyServicesAsync(proId),
+        listServiceCategoriesAsync(),
+      ]);
+      setServices(list);
+      setCategories(nextCategories.filter((item) => item.name !== "All"));
+    } catch (error) {
+      console.warn("My services load failed:", error);
+      Alert.alert(
+        "Could not load services",
+        "Please check your connection and try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }, [proId]);
 
   useEffect(() => {
@@ -175,12 +188,14 @@ export default function AddService() {
             icon: categoryIcon,
           },
         );
-        if (updated) {
-          setServices((prev) =>
-            prev.map((s) => (s.id === editingServiceId ? updated : s)),
-          );
-          Alert.alert("Service Updated", "Your service has been updated.");
+        if (!updated) {
+          throw new Error("The service could not be found or updated.");
         }
+
+        setServices((prev) =>
+          prev.map((s) => (s.id === editingServiceId ? updated : s)),
+        );
+        Alert.alert("Service Updated", "Your service has been updated.");
       } else {
         if (!proId) return;
         const created = await createMyService(proId, {
@@ -212,10 +227,16 @@ export default function AddService() {
           onPress: async () => {
             if (!proId) return;
             const ok = await deleteMyService(proId, id);
-            if (ok) {
-              setServices((prev) => prev.filter((s) => s.id !== id));
-              if (editingServiceId === id) closeModal();
+            if (!ok) {
+              Alert.alert(
+                "Could not delete",
+                "The service could not be deleted. Please check your connection and try again.",
+              );
+              return;
             }
+
+            setServices((prev) => prev.filter((s) => s.id !== id));
+            if (editingServiceId === id) closeModal();
           },
         },
       ],

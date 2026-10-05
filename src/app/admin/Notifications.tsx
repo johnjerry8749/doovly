@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import { useFocusEffect } from "expo-router";
 import {
   listAdminNotifications,
   sendAdminNotification,
-  resolveAudienceUsers,
+  resolveAudienceUsersAsync,
   type AdminNotification,
   type NotificationChannel,
   type NotificationAudience,
@@ -100,6 +100,7 @@ export default function Notifications() {
   const [link, setLink] = useState("");
   const [showLink, setShowLink] = useState(false);
   const [search, setSearch] = useState("");
+  const [audienceCount, setAudienceCount] = useState(0);
   const [channelFilter, setChannelFilter] = useState<
     "all" | NotificationChannel
   >("all");
@@ -122,10 +123,7 @@ export default function Notifications() {
     }, [loadHistory]),
   );
 
-  const audienceCount = useMemo(
-    () => resolveAudienceUsers(audience).length,
-    [audience, history],
-  );
+  useEffect(() => { resolveAudienceUsersAsync(audience).then((ids) => setAudienceCount(ids.length)).catch(() => setAudienceCount(0)); }, [audience]);
 
   const filteredHistory = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -311,8 +309,7 @@ export default function Notifications() {
             })}
           </View>
           <Text style={styles.audienceHint}>
-            ~{audienceCount} user(s) match this audience (mock). Use All or Free
-            to include the logged-in mock user.
+            ~{audienceCount} user(s) match this audience.
           </Text>
 
           <Text style={styles.sectionLabel}>Channels</Text>

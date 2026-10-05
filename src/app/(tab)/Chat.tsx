@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
-  listConversations,
+  listConversationsAsync,
+  ensureChatRealtime,
+  markConversationReadAsync,
   type Conversation,
 } from "@/services/chat";
 
@@ -26,9 +28,27 @@ export default function ChatList() {
 
   // Keep conversations in local state so unread counts
   // can disappear immediately when a chat is opened.
-  const [conversations, setConversations] = useState(
-    () => listConversations()
-  );
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    try {
+      setConversations(await listConversationsAsync());
+    } catch (error) {
+      console.warn("Chat list load failed:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+    let cleanup: (() => void) | undefined;
+    void ensureChatRealtime(refresh).then((stop) => {
+      cleanup = stop;
+    });
+    return () => cleanup?.();
+  }, [refresh]);
 
   const filtered = conversations.filter((conversation) => {
     const search = query.trim().toLowerCase();
@@ -48,7 +68,7 @@ export default function ChatList() {
   });
 
   const openChat = useCallback((item: Conversation) => {
-    // Clear unread count when the conversation is viewed.
+    void markConversationReadAsync(item.id);
     setConversations((current) =>
       current.map((conversation) =>
         conversation.id === item.id

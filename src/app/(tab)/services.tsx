@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,12 +18,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   listProfessionals,
+  listProfessionalsAsync,
   listServiceCategories,
+  listServiceCategoriesAsync,
   type Professional,
 } from "@/services/professionals";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
-import { NIGERIA_CITIES } from "@/data/cities";
+import { listCities, listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 
 const GREEN = "#159447";
@@ -32,8 +34,32 @@ export default function Services() {
   const [search, setSearch] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [favTick, setFavTick] = useState(0);
+  const [categories, setCategories] = useState(listServiceCategories());
+  const [professionals, setProfessionals] = useState(listProfessionals());
+  const [cities, setCities] = useState<string[]>(listCities());
 
-  const categories = useMemo(() => listServiceCategories(), []);
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      listServiceCategoriesAsync(),
+      listProfessionalsAsync(),
+      listCitiesAsync(),
+    ])
+      .then(([nextCategories, nextProfessionals, nextCities]) => {
+        if (!active) return;
+        setCategories(nextCategories);
+        setProfessionals(nextProfessionals);
+        setCities(nextCities);
+      })
+      .catch((error) => {
+        console.warn("Services data load failed:", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const {
     locationName,
@@ -51,10 +77,9 @@ export default function Services() {
     closeCityPicker,
   } = useLocation();
 
-  const professionals = listProfessionals();
 
-  const onToggleFavorite = useCallback((proId: string) => {
-    const result = toggleSave(proId);
+  const onToggleFavorite = useCallback(async (proId: string) => {
+    const result = await toggleSave(proId);
 
     if (!result.ok && result.reason === "limit") {
       Alert.alert(
@@ -71,6 +96,11 @@ export default function Services() {
       return;
     }
 
+    if (!result.ok && result.reason === "error") {
+      Alert.alert("Could not update", result.message || "Please check your connection and try again.");
+      return;
+    }
+
     if (result.ok) {
       setFavTick((t) => t + 1);
     }
@@ -78,9 +108,9 @@ export default function Services() {
 
   const filteredCities = useMemo(() => {
     const query = citySearch.trim().toLowerCase();
-    if (!query) return [...NIGERIA_CITIES];
-    return NIGERIA_CITIES.filter((city) => city.toLowerCase().includes(query));
-  }, [citySearch]);
+    if (!query) return [...cities];
+    return cities.filter((city) => city.toLowerCase().includes(query));
+  }, [citySearch, cities]);
 
   const matchesLocationCity = useCallback(
     (itemCity: string) => {

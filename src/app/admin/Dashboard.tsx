@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -30,6 +30,8 @@ type StatCardProps = {
 
 function MiniSpark({ color }: { color: string }) {
   const heights = [4, 7, 5, 9, 6, 11, 8, 12, 9, 14];
+  if (!stats) return <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) + 56 }]} />;
+
   return (
     <View style={styles.sparkRow}>
       {heights.map((h, i) => (
@@ -66,9 +68,10 @@ function formatNaira(n: number) {
 
 export default function Dashboard() {
   const insets = useSafeAreaInsets();
-  const [stats] = useState<DashboardStats>(() => getDashboardStats());
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  useEffect(() => { getDashboardStats().then(setStats).catch((e) => console.warn("[Admin Dashboard]", e)); }, []);
   const maxBar = useMemo(
-    () => Math.max(...stats.overviewSeries.map((s) => s.value), 1),
+    () => Math.max(...(stats?.overviewSeries ?? []).map((s) => s.value), 1),
     [stats.overviewSeries],
   );
 

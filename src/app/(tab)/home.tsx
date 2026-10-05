@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,13 +19,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   listProfessionals,
+  listProfessionalsAsync,
   listServiceCategories,
+  listServiceCategoriesAsync,
   starsFromReviewCount,
 } from "@/services/professionals";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
 
-import { NIGERIA_CITIES } from "@/data/cities";
+import { listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 
 export default function Home() {
@@ -45,14 +47,30 @@ export default function Home() {
     closeCityPicker,
   } = useLocation();
 
-  const services = listServiceCategories();
-  const professionals = listProfessionals();
+  const [services, setServices] = useState(listServiceCategories());
+  const [professionals, setProfessionals] = useState(listProfessionals());
+  const [cities, setCities] = useState<string[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([listServiceCategoriesAsync(), listProfessionalsAsync(), listCitiesAsync()])
+      .then(([nextServices, nextProfessionals, nextCities]) => {
+        if (!active) return;
+        setServices(nextServices);
+        setProfessionals(nextProfessionals);
+        setCities(nextCities);
+      })
+      .catch((error) => console.warn("Home data load failed:", error));
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [favTick, setFavTick] = useState(0);
 
-  const onToggleFavorite = useCallback((proId: string) => {
-    const result = toggleSave(proId);
+  const onToggleFavorite = useCallback(async (proId: string) => {
+    const result = await toggleSave(proId);
 
     if (!result.ok && result.reason === "limit") {
       Alert.alert(
@@ -74,6 +92,11 @@ export default function Home() {
       return;
     }
 
+    if (!result.ok && result.reason === "error") {
+      Alert.alert("Could not update", result.message || "Please check your connection and try again.");
+      return;
+    }
+
     if (result.ok) {
       setFavTick((t) => t + 1);
     }
@@ -83,13 +106,13 @@ export default function Home() {
     const query = citySearch.trim().toLowerCase();
 
     if (!query) {
-      return [...NIGERIA_CITIES];
+      return cities;
     }
 
-    return NIGERIA_CITIES.filter((city) =>
+    return cities.filter((city) =>
       city.toLowerCase().includes(query),
     );
-  }, [citySearch]);
+  }, [citySearch, cities]);
 
   const nearbyProfessionals = useMemo(() => {
     let list = professionals;

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  listUsers,
+  listUsersAsync,
   suspendUser,
   unsuspendUser,
   updateUser,
@@ -33,7 +33,7 @@ type DetailTab = "Overview" | "Profile" | "Activity" | "Subscription";
 
 export default function Users() {
   const insets = useSafeAreaInsets();
-  const [list, setList] = useState(() => listUsers());
+  const [list, setList] = useState<AdminUser[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AdminUser | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("Overview");
@@ -51,9 +51,11 @@ export default function Users() {
   const [notifTitle, setNotifTitle] = useState("");
   const [notifMessage, setNotifMessage] = useState("");
 
-  const refresh = useCallback(() => {
-    setList(listUsers());
+  const refresh = useCallback(async () => {
+    try { setList(await listUsersAsync()); } catch (e: any) { Alert.alert("Load failed", e?.message || "Could not load users."); }
   }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -85,8 +87,7 @@ export default function Users() {
           text: "Suspend",
           style: "destructive",
           onPress: () => {
-            suspendUser(selected.id);
-            refresh();
+            suspendUser(selected.id).then(refresh).catch((e:any) => Alert.alert("Update failed", e?.message || "Could not suspend user."));
             setSelected({ ...selected, isSuspended: true });
           },
         },
@@ -115,7 +116,7 @@ export default function Users() {
 
   const saveEdit = () => {
     if (!selected) return;
-    const updated = updateUser(selected.id, {
+    updateUser(selected.id, {
       name: editName.trim(),
       profession: editProfession.trim(),
       email: editEmail.trim(),
@@ -123,10 +124,7 @@ export default function Users() {
       location: editLocation.trim(),
       verificationStatus: editVerification,
       subscription: editSubscription,
-    });
-    refresh();
-    if (updated) setSelected(updated);
-    setEditVisible(false);
+    }).then((updated) => { refresh(); if (updated) setSelected(updated); setEditVisible(false); }).catch((e:any) => Alert.alert("Save failed", e?.message || "Could not update user."));
   };
 
   const sendInAppNotif = async () => {

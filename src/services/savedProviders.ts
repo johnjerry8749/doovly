@@ -170,44 +170,53 @@ export function getRemainingSlots(): number | null {
 
 export type SaveResult =
   | { ok: true; saved: boolean }
-  | { ok: false; reason: "limit" | "auth" };
+  | { ok: false; reason: "limit" | "auth" | "error"; message?: string };
 
-export function toggleSave(providerId: string): SaveResult {
-  const s = getCachedSessionUser();
+export async function toggleSave(providerId: string): Promise<SaveResult> {
+  const s = await loadSessionUser();
   if (!s) return { ok: false, reason: "auth" };
 
+  await ensureSavedLoaded();
   const id = String(providerId);
+  const currentlySaved = savedIds.includes(id);
 
-  if (savedIds.includes(id)) {
-    savedIds = savedIds.filter((x) => x !== id);
-    void removeSavedRemote(s.uuid, id);
-    return { ok: true, saved: false };
-  }
-
-  if (!canSaveMore()) {
+  if (!currentlySaved && !canSaveMore()) {
     return { ok: false, reason: "limit" };
   }
 
-  savedIds = [...savedIds, id];
-  void addSavedRemote(s.uuid, id);
-  return { ok: true, saved: true };
-}
+  const proUuid = tryToUuid("professional", id) ?? id;
 
-async function addSavedRemote(userUuid: string, providerId: string) {
-  const proUuid = toUuid("professional", providerId);
-  await supabase.from("saved_providers").upsert({
-    user_id: userUuid,
-    professional_id: proUuid,
-  });
-}
+  try {
+    if (currentlySaved) {
+      const { error } = await supabase
+        .from("saved_providers")
+        .delete()
+        .eq("user_id", s.uuid)
+        .eq("professional_id", proUuid);
 
-async function removeSavedRemote(userUuid: string, providerId: string) {
-  const proUuid = tryToUuid("professional", providerId) ?? providerId;
-  await supabase
-    .from("saved_providers")
-    .delete()
-    .eq("user_id", userUuid)
-    .eq("professional_id", proUuid);
+      if (error) throw error;
+      savedIds = savedIds.filter((x) => x !== id);
+      return { ok: true, saved: false };
+    }
+
+    const { error } = await supabase
+      .from("saved_providers")
+      .upsert(
+        { user_id: s.uuid, professional_id: proUuid },
+        { onConflict: "user_id,professional_id" },
+      );
+
+    if (error) throw error;
+    savedIds = [...savedIds.filter((x) => x !== id), id];
+    return { ok: true, saved: true };
+  } catch (error) {
+    console.warn("Saved provider update failed:", error);
+    return {
+      ok: false,
+      reason: "error",
+      message: error instanceof Error ? error.message : "Could not update saved provider.",
+    };
+  }
 }
 
 export function setMockSubscribed(subscribed: boolean) {

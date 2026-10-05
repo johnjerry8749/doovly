@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -18,6 +18,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { supabase } from "@/lib/supabase";
+import {
+  uploadImageFull,
+  UPLOAD_FOLDERS,
+} from "@/services/cloudinary";
 
 import {
   getLoggedInProfessionalId,
@@ -46,34 +51,97 @@ type PortfolioItem = {
   id: string;
   description: string;
   image: PortfolioImage;
+  storageKey?: string | null;
 };
 
 export default function PortfolioGallery() {
   // =========================================================
-  // PROFESSIONAL
+  // PROFESSIONAL / SUPABASE
   // =========================================================
 
   const proId = getLoggedInProfessionalId();
-
   const pro = proId ? getProfessionalById(proId) : undefined;
-
   const isPro = isCurrentUserPro();
 
   const portfolioLimit = isPro
     ? PRO_PORTFOLIO_LIMIT
     : FREE_PORTFOLIO_LIMIT;
 
-  // =========================================================
-  // EXISTING MOCK PORTFOLIO
-  // =========================================================
+  const [items, setItems] = useState<PortfolioItem[]>([]);
+  const [professionalUuid, setProfessionalUuid] = useState<string | null>(null);
+  const [loadingItems, setLoadingItems] = useState(true);
 
-  const [items, setItems] = useState<PortfolioItem[]>(() => {
-    if (!pro?.portfolio) {
-      return [];
-    }
+  useEffect(() => {
+    let active = true;
 
-    return [...pro.portfolio] as PortfolioItem[];
-  });
+    const loadPortfolio = async () => {
+      setLoadingItems(true);
+
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          if (active) setItems([]);
+          return;
+        }
+
+        const { data: professional, error: professionalError } =
+          await supabase
+            .from("professionals")
+            .select("id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+        if (professionalError) throw professionalError;
+
+        if (!professional) {
+          if (active) setItems([]);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("portfolio_items")
+          .select("id, description, image_key, image_url")
+          .eq("professional_id", professional.id)
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true });
+
+        if (error) throw error;
+
+        const mapped = (data ?? []).map((row) => ({
+          id: row.id,
+          description: row.description ?? "",
+          image: {
+            uri:
+              row.image_url ||
+              (row.image_key
+                ? supabase.storage
+                    .from("profile-images")
+                    .getPublicUrl(row.image_key).data.publicUrl
+                : ""),
+          },
+          storageKey: row.image_key ?? null,
+        })).filter((item) => Boolean((item.image as { uri: string }).uri));
+
+        if (active) {
+          setProfessionalUuid(professional.id);
+          setItems(mapped);
+        }
+      } catch (error) {
+        console.warn("Portfolio load failed:", error);
+      } finally {
+        if (active) setLoadingItems(false);
+      }
+    };
+
+    loadPortfolio();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // =========================================================
   // ADD MODAL
@@ -193,7 +261,7 @@ export default function PortfolioGallery() {
   // SAVE PORTFOLIO ITEM
   // =========================================================
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const trimmedDescription = description.trim();
 
     if (!selectedImage) {
@@ -201,7 +269,6 @@ export default function PortfolioGallery() {
         "Image required",
         "Please select one image for your portfolio.",
       );
-
       return;
     }
 
@@ -210,7 +277,6 @@ export default function PortfolioGallery() {
         "Description required",
         "Please enter a description for this portfolio item.",
       );
-
       return;
     }
 
@@ -221,38 +287,67 @@ export default function PortfolioGallery() {
           ? `Doovly Pro allows up to ${PRO_PORTFOLIO_LIMIT} portfolio photos.`
           : `Free accounts can have up to ${FREE_PORTFOLIO_LIMIT} portfolio photos.`,
       );
-
       return;
     }
 
     setIsSaving(true);
 
-    const newItem: PortfolioItem = {
-      id: `portfolio-${Date.now()}`,
-      description: trimmedDescription,
-      image: {
-        uri: selectedImage,
-      },
-    };
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    const updatedItems = [...items, newItem];
+      if (!user || !professionalUuid) {
+        throw new Error("Professional account not found.");
+      }
 
-    setItems(updatedItems);
+      const cloudinary = await uploadImageFull(
+        selectedImage,
+        UPLOAD_FOLDERS.portfolio,
+      );
 
-    // Keep the mock professional synchronized.
-    if (pro) {
-      pro.portfolio = updatedItems as typeof pro.portfolio;
+      const { data: row, error } = await supabase
+        .from("portfolio_items")
+        .insert({
+          professional_id: professionalUuid,
+          description: trimmedDescription,
+          image_key: cloudinary.public_id,
+          image_url: cloudinary.secure_url,
+          sort_order: items.length,
+        })
+        .select("id, description, image_key, image_url")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      const newItem: PortfolioItem = {
+        id: row.id,
+        description: row.description ?? trimmedDescription,
+        image: { uri: row.image_url || cloudinary.secure_url },
+        storageKey: row.image_key ?? cloudinary.public_id,
+      };
+
+      setItems((previous) => [...previous, newItem]);
+
+      setShowAddModal(false);
+      setSelectedImage(null);
+      setDescription("");
+
+      Alert.alert(
+        "Portfolio updated",
+        "Your portfolio photo has been added successfully.",
+      );
+    } catch (error) {
+      console.error("Portfolio save error:", error);
+      Alert.alert(
+        "Could not save",
+        "Your portfolio photo could not be saved. Please check your connection and try again.",
+      );
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsSaving(false);
-    setShowAddModal(false);
-    setSelectedImage(null);
-    setDescription("");
-
-    Alert.alert(
-      "Portfolio updated",
-      "Your portfolio photo has been added successfully.",
-    );
   };
 
   // =========================================================
@@ -264,24 +359,32 @@ export default function PortfolioGallery() {
       "Delete portfolio item?",
       "This photo and its description will be removed from your portfolio.",
       [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
+        { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            const updatedItems = items.filter(
-              (item) => item.id !== itemId,
-            );
+          onPress: async () => {
+            try {
+              const item = items.find((entry) => entry.id === itemId);
 
-            setItems(updatedItems);
+              const { error } = await supabase
+                .from("portfolio_items")
+                .delete()
+                .eq("id", itemId);
 
-            // Keep the mock professional synchronized.
-            if (pro) {
-              pro.portfolio =
-                updatedItems as typeof pro.portfolio;
+              if (error) throw error;
+
+              // Cloudinary hosts the image; deleting the DB row removes it from the user's portfolio.
+
+              setItems((previous) =>
+                previous.filter((entry) => entry.id !== itemId),
+              );
+            } catch (error) {
+              console.error("Portfolio delete error:", error);
+              Alert.alert(
+                "Could not delete",
+                "The portfolio item could not be deleted. Please try again.",
+              );
             }
           },
         },
@@ -360,7 +463,11 @@ export default function PortfolioGallery() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        {items.length === 0 ? (
+        {loadingItems ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>Loading portfolio...</Text>
+          </View>
+        ) : items.length === 0 ? (
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
               <Ionicons

@@ -26,7 +26,62 @@ export type ProfileEditData = {
   city: string;
   image: number;
   verified: boolean;
+  imageUrl?: string | null;
 };
+
+export async function getProfileForEditAsync(): Promise<ProfileEditData | null> {
+  const s = await loadSessionUser(true);
+  if (!s) return null;
+
+  const { data: row, error } = await supabase
+    .from("professionals")
+    .select(`
+      id,
+      user_id,
+      profession,
+      bio,
+      city,
+      email,
+      phone,
+      is_verified,
+      avatar_url,
+      avatar_key,
+      profiles!professionals_user_id_fkey (
+        full_name,
+        email,
+        phone,
+        avatar_url
+      )
+    `)
+    .eq("user_id", s.uuid)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const profile = row?.profiles;
+  const imageUrl =
+    row?.avatar_url ??
+    (row?.avatar_key
+      ? supabase.storage
+          .from("profile-images")
+          .getPublicUrl(row.avatar_key).data.publicUrl
+      : profile?.avatar_url);
+
+  return {
+    id: row?.id ?? s.publicId,
+    name: row?.profession
+      ? profile?.full_name ?? s.fullName ?? ""
+      : profile?.full_name ?? s.fullName ?? "",
+    phone: row?.phone ?? profile?.phone ?? s.phone ?? "",
+    email: row?.email ?? profile?.email ?? s.email ?? "",
+    profession: row?.profession ?? "",
+    bio: row?.bio ?? "",
+    city: row?.city ?? "",
+    image: imageUrl ? ({ uri: imageUrl } as any) : FALLBACK_IMG,
+    verified: Boolean(row?.is_verified ?? s.verified),
+  };
+}
+
 
 export type VerificationStepStatus =
   | "pending"
@@ -84,6 +139,7 @@ export type ProfileUpdateInput = {
   profession: string;
   bio: string;
   city: string;
+  imageUrl?: string | null;
 };
 
 async function resolveMyProfessionalUuid(
@@ -119,6 +175,7 @@ export async function updateProfile(
       phone: phone || null,
       email: email || null,
       city: city || null,
+      ...(input.imageUrl ? { avatar_url: input.imageUrl } : {}),
     })
     .eq("id", s.uuid);
 
@@ -137,11 +194,28 @@ export async function updateProfile(
         city: city || null,
         email: email || null,
         phone: phone || null,
+        ...(input.imageUrl ? { avatar_url: input.imageUrl } : {}),
       })
       .eq("id", proUuid);
 
     if (proErr) {
       return { ok: false, error: proErr.message };
+    }
+  } else {
+    const { error: createProErr } = await supabase
+      .from("professionals")
+      .insert({
+        user_id: s.uuid,
+        profession: profession || null,
+        bio: bio || null,
+        city: city || null,
+        email: email || null,
+        phone: phone || null,
+        avatar_url: input.imageUrl || null,
+      });
+
+    if (createProErr) {
+      return { ok: false, error: createProErr.message };
     }
   }
 

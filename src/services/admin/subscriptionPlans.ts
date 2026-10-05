@@ -1,53 +1,21 @@
-/**
- * Admin subscription plans service
- * -------------------------------
- * Admin Settings imports from @/services/admin/subscriptionPlans
- * (save / price updates)
- *
- * User Subscription screen uses @/services/subscriptionPlans (read-only)
- *
- * NOW  → mock src/data/subscriptionPlans.ts
- * LATER → apiRequest GET/PUT /admin/subscription-plans
- */
+import { supabase } from "@/lib/supabase";
 
-import {
-  getMockSubscriptionPlans,
-  updateMockSubscriptionPlans,
-  updateProPrices as updateMockProPrices,
-  getProMonthlyPrice as getMockProMonthlyPrice,
-  type SubscriptionPlansState,
-  type SubscriptionPlanConfig,
-  type PlanFeature,
-  type BillingPeriod,
-} from "@/data/subscriptionPlans";
+export type BillingPeriod = "monthly" | "yearly";
+export type PlanFeature = {id:string;label:string};
+export type SubscriptionPlanConfig = {id:string;name:string;tagline:string;monthlyPrice:number;yearlyPrice:number;popular:boolean;features:PlanFeature[]};
+export type SubscriptionPlansState = {plans:SubscriptionPlanConfig[];yearlySavePercent:number};
 
-export type {
-  SubscriptionPlansState,
-  SubscriptionPlanConfig,
-  PlanFeature,
-  BillingPeriod,
-};
-
-export function getSubscriptionPlans(): SubscriptionPlansState {
-  // TODO: GET /admin/subscription-plans
-  return getMockSubscriptionPlans();
+export async function getSubscriptionPlans():Promise<SubscriptionPlansState>{
+ const {data,error}=await supabase.from("subscription_plans").select("id,mock_id,name,tagline,monthly_price,yearly_price,popular,sort_order,subscription_plan_features(id,label,sort_order)").order("sort_order");
+ if(error)throw error;
+ const meta=await supabase.from("subscription_plan_meta").select("yearly_save_percent").limit(1).maybeSingle(); if(meta.error)throw meta.error;
+ return {plans:(data??[]).map((p:any)=>({id:p.mock_id??p.id,name:p.name??"",tagline:p.tagline??"",monthlyPrice:Number(p.monthly_price??0),yearlyPrice:Number(p.yearly_price??0),popular:Boolean(p.popular),features:(p.subscription_plan_features??[]).sort((a:any,b:any)=>(a.sort_order??0)-(b.sort_order??0)).map((f:any)=>({id:f.id,label:f.label??""}))})),yearlySavePercent:meta.data?.yearly_save_percent??0};
 }
-
-export function saveSubscriptionPlans(
-  state: SubscriptionPlansState,
-): SubscriptionPlansState {
-  // TODO: PUT /admin/subscription-plans
-  return updateMockSubscriptionPlans(state);
+export async function saveSubscriptionPlans(state:SubscriptionPlansState):Promise<SubscriptionPlansState>{
+ for(const p of state.plans){const row=await supabase.from("subscription_plans").upsert({mock_id:p.id,name:p.name,tagline:p.tagline,monthly_price:p.monthlyPrice,yearly_price:p.yearlyPrice,popular:p.popular,sort_order:p.id==="basic"?0:1},{onConflict:"mock_id"}).select("id").single();if(row.error)throw row.error;for(const f of p.features){const r=await supabase.from("subscription_plan_features").upsert({id:f.id,plan_id:row.data.id,label:f.label,sort_order:p.features.indexOf(f)});if(r.error)throw r.error;}} 
+ const m=await supabase.from("subscription_plan_meta").select("id").limit(1).maybeSingle(); if(m.error)throw m.error;
+ if(m.data){const r=await supabase.from("subscription_plan_meta").update({yearly_save_percent:state.yearlySavePercent}).eq("id",m.data.id);if(r.error)throw r.error;} else { const r=await supabase.from("subscription_plan_meta").insert({yearly_save_percent:state.yearlySavePercent}); if(r.error)throw r.error; }
+ return getSubscriptionPlans();
 }
-
-export function updateProPrices(
-  monthlyPrice: number,
-  yearlyPrice: number,
-): SubscriptionPlansState {
-  // TODO: PUT /admin/subscription-plans/pro/prices
-  return updateMockProPrices(monthlyPrice, yearlyPrice);
-}
-
-export function getProMonthlyPrice(): number {
-  return getMockProMonthlyPrice();
-}
+export async function updateProPrices(monthlyPrice:number,yearlyPrice:number){const state=await getSubscriptionPlans();const pro=state.plans.find(p=>p.id==="pro");if(!pro)throw new Error("Pro plan not found");pro.monthlyPrice=monthlyPrice;pro.yearlyPrice=yearlyPrice;return saveSubscriptionPlans(state);}
+export async function getProMonthlyPrice(){const s=await getSubscriptionPlans();return s.plans.find(p=>p.id==="pro")?.monthlyPrice??0;}

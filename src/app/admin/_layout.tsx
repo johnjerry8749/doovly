@@ -14,6 +14,7 @@ import {
 import { Tabs, router } from "expo-router";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+import { supabase } from "@/lib/supabase";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const GREEN = "#159447";
@@ -233,6 +234,21 @@ function AdminSidebar({ state, navigation }: BottomTabBarProps) {
 }
 
 export default function AdminLayout() {
+  const [checked, setChecked] = useState(false);
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!active) return;
+      if (!data.user) { router.replace("/(auth)/login"); return; }
+      const { data: profile } = await supabase.from("profiles").select("role,is_suspended").eq("id", data.user.id).maybeSingle();
+      if (!active) return;
+      if (profile?.role !== "admin" || profile?.is_suspended) { router.replace("/(tab)/home"); return; }
+      setChecked(true);
+    }).catch(() => router.replace("/(tab)/home"));
+    return () => { active = false; };
+  }, []);
+  if (!checked) return <View style={{ flex: 1, backgroundColor: "#F9FAFB" }} />;
+
   return (
     <Tabs
       tabBar={(props) => <AdminSidebar {...props} />}
