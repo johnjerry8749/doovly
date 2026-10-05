@@ -218,8 +218,8 @@ export default function ProfessionalProfile() {
     }
   };
 
-  const onToggleSave = () => {
-    const result = toggleSave(pro.id);
+  const onToggleSave = async () => {
+    const result = await toggleSave(pro.id);
 
     if (!result.ok && result.reason === "limit") {
       Alert.alert(
@@ -240,6 +240,11 @@ export default function ProfessionalProfile() {
         ],
       );
 
+      return;
+    }
+
+    if (!result.ok && result.reason === "error") {
+      Alert.alert("Could not update", result.message || "Please check your connection and try again.");
       return;
     }
 
