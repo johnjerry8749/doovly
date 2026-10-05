@@ -7,6 +7,10 @@ import React, {
 } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const LOGIN_AT_KEY = "doovly_login_at";
+const LOGIN_TTL_MS = 24 * 60 * 60 * 1000;
 
 type AuthContextValue = {
   user: User | null;
@@ -43,6 +47,17 @@ export function AuthProvider({
         }
 
         if (!mounted) return;
+
+        if (session) {
+          const loginAt = Number(await AsyncStorage.getItem(LOGIN_AT_KEY));
+          if (loginAt && Date.now() - loginAt >= LOGIN_TTL_MS) {
+            await supabase.auth.signOut();
+            await AsyncStorage.removeItem(LOGIN_AT_KEY);
+            setSession(null);
+            setUser(null);
+            return;
+          }
+        }
 
         setSession(session);
         setUser(session?.user ?? null);
@@ -81,6 +96,7 @@ export function AuthProvider({
     if (error) {
       throw error;
     }
+    await AsyncStorage.removeItem(LOGIN_AT_KEY);
   };
 
   const value = useMemo(
