@@ -2,6 +2,8 @@
  * App data readiness — service layer only (no UI / CSS).
  */
 
+import { supabase } from "@/lib/supabase";
+
 export type DataPhase = "idle" | "loading" | "ready" | "error" | "offline";
 
 export type DataState = {
@@ -25,11 +27,7 @@ const listeners = new Set<Listener>();
 function emit() {
   const snap = { ...state };
   listeners.forEach((fn) => {
-    try {
-      fn(snap);
-    } catch (e) {
-      console.warn("[dataState] listener", e);
-    }
+    try { fn(snap); } catch (e) { console.warn("[dataState] listener", e); }
   });
 }
 
@@ -43,10 +41,7 @@ export function subscribeDataState(fn: Listener): () => void {
   return () => listeners.delete(fn);
 }
 
-export function setDataPhase(
-  phase: DataPhase,
-  error: string | null = null,
-) {
+export function setDataPhase(phase: DataPhase, error: string | null = null) {
   state = {
     ...state,
     phase,
@@ -71,16 +66,28 @@ export function setOnline(online: boolean) {
 }
 
 export async function checkOnline(): Promise<boolean> {
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  if (!url) {
+    setOnline(true);
+    return true;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
   try {
-    // @ts-expect-error RN may not have navigator.onLine always
-    if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      setOnline(false);
-      return false;
-    }
+    // A 401/404 still proves the device can reach Supabase. We only need
+    // connectivity here; authentication and RLS are handled by Supabase.
+    await fetch(url, {
+      method: "HEAD",
+      signal: controller.signal,
+    });
     setOnline(true);
     return true;
   } catch {
     setOnline(false);
     return false;
+  } finally {
+    clearTimeout(timeout);
   }
 }
