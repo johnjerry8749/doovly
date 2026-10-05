@@ -17,20 +17,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-  getConversation,
-  getMessages,
+  getConversationAsync,
+  getMessagesAsync,
   sendMessage,
-  markConversationRead,
-  isSharingLocation,
+  markConversationReadAsync,
+  isSharingLocationAsync,
   shareLocation,
   stopSharingLocation,
   canOpenSharedLocation,
-  getBookingStatus,
-  canSendMessage,
-  isProfessionalInConversation,
+  getBookingStatusAsync,
+  canSendMessageAsync,
+  isAcceptorInConversationAsync,
   acceptBooking,
   declineBooking,
-  getConversationKind,
+  getConversationKindAsync,
+  ensureChatRealtime,
   type ChatMessage,
   type Conversation,
   type BookingChatStatus,
@@ -204,16 +205,43 @@ export default function ChatConversation() {
       isProfessionalInConversation(conversationId, loggedInProId)) ||
       isProfessionalInConversation(conversationId, currentUserId),
   );
-  const convKind = getConversationKind(conversationId);
+  const [convKind, setConvKind] = useState<"booking" | "offer" | undefined>();
   const isProUser = isCurrentUserPro();
 
   useEffect(() => {
-    const conv = getConversation(conversationId);
-    setConversation(conv);
-    setMessages(getMessages(conversationId));
-    setSharing(isSharingLocation(conversationId));
-    setBookingStatus(getBookingStatus(conversationId));
-    markConversationRead(conversationId);
+    let active = true;
+    const load = async () => {
+      try {
+        const [conv, msgs, sharingNow, status, kind] = await Promise.all([
+          getConversationAsync(conversationId),
+          getMessagesAsync(conversationId),
+          isSharingLocationAsync(conversationId),
+          getBookingStatusAsync(conversationId),
+          getConversationKindAsync(conversationId),
+        ]);
+        if (!active) return;
+        setConversation(conv);
+        setMessages(msgs);
+        setSharing(sharingNow);
+        setBookingStatus(status);
+        setConvKind(kind);
+        void markConversationReadAsync(conversationId);
+        return kind;
+      } catch (error) {
+        console.warn("Chat conversation load failed:", error);
+      }
+    };
+    void load();
+    let cleanup: (() => void) | undefined;
+    void ensureChatRealtime(() => {
+      void load();
+    }).then((stop) => {
+      cleanup = stop;
+    });
+    return () => {
+      active = false;
+      cleanup?.();
+    };
   }, [conversationId]);
 
   const proDisplayName =
@@ -234,9 +262,9 @@ export default function ChatConversation() {
     }
   };
 
-  const onAccept = () => {
+  const onAccept = async () => {
     if (!conversation) return;
-    const msg = acceptBooking(conversationId, proDisplayName);
+    const msg = await acceptBooking(conversationId, proDisplayName);
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Accepted");
 
@@ -251,9 +279,9 @@ export default function ChatConversation() {
     });
   };
 
-  const onDecline = () => {
+  const onDecline = async () => {
     if (!conversation) return;
-    const msg = declineBooking(conversationId, proDisplayName);
+    const msg = await declineBooking(conversationId, proDisplayName);
     setMessages((prev) => [...prev, msg]);
     setBookingStatus("Declined");
 
@@ -611,7 +639,7 @@ export default function ChatConversation() {
         )}
 
         <View style={styles.inputBar}>
-          {canSendMessage(conversationId) ? (
+          {bookingStatus === "Accepted" ? (
             <>
               <TouchableOpacity
                 style={styles.attachBtn}
