@@ -113,6 +113,7 @@ export function mapProfessionalRow(row: any): Professional {
 
   return {
     id: publicId("professional", row.mock_id, row.id),
+    userId: row.user_id ?? undefined,
     name: profile?.full_name ?? "Professional",
     profession: row.profession,
     city: row.city,
