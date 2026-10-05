@@ -67,6 +67,7 @@ export default function Home() {
   }, []);
 
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [search, setSearch] = useState("");
   const [favTick, setFavTick] = useState(0);
 
   const onToggleFavorite = useCallback(async (proId: string) => {
@@ -137,8 +138,18 @@ export default function Home() {
       });
     }
 
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.profession.toLowerCase().includes(q) ||
+          p.city.toLowerCase().includes(q),
+      );
+    }
+
     return list;
-  }, [locationName, showAllNigeria, professionals, selectedCategory]);
+  }, [locationName, showAllNigeria, professionals, selectedCategory, search]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -179,6 +190,17 @@ export default function Home() {
             <Ionicons name="notifications-outline" size={28} color="#111" />
             <View style={styles.notificationDot} />
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search professionals..."
+            placeholderTextColor="#9CA3AF"
+            value={search}
+            onChangeText={setSearch}
+          />
         </View>
 
         <View style={styles.bannerContainer}>
@@ -252,11 +274,7 @@ export default function Home() {
             </TouchableOpacity>
           </View>
         ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.professionalsContainer}
-          >
+          <View style={styles.professionalsGrid}>
             {nearbyProfessionals.map((person) => (
               <TouchableOpacity
                 key={`${person.id}-${favTick}`}
@@ -304,7 +322,7 @@ export default function Home() {
                 <Text style={styles.price}>From {person.priceFrom}</Text>
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
         )}
 
         <View style={styles.verifiedContainer}>
@@ -488,30 +506,36 @@ const styles = StyleSheet.create({
     marginBottom: 7,
   },
   serviceName: { fontSize: 12, fontWeight: "600", color: "#333", textAlign: "center" },
+  professionalsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingBottom: 25,
+  },
   professionalsContainer: { flexDirection: "row", gap: 12, paddingBottom: 8 },
   professionalCard: {
-    width: 140,
+    width: "31.5%",
     backgroundColor: "#fff",
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#E8E8E8",
+    borderColor: "#E1E1E1",
     padding: 10,
     position: "relative",
   },
   heartButton: { position: "absolute", right: 8, top: 8, zIndex: 5 },
   profileImageContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     alignSelf: "center",
     marginTop: 6,
     marginBottom: 8,
     overflow: "hidden",
     backgroundColor: "#E5E7EB",
   },
-  profileImage: { width: "100%", height: "100%", borderRadius: 32 },
+  profileImage: { width: "100%", height: "100%", borderRadius: 35 },
   nameContainer: { marginBottom: 2 },
-  professionalName: { fontSize: 13, fontWeight: "700", color: "#111" },
+  professionalName: { fontSize: 12, fontWeight: "700", color: "#111" },
   ratingContainer: { flexDirection: "row", alignItems: "center", marginBottom: 2 },
   rating: { fontSize: 11, fontWeight: "600", marginLeft: 3, color: "#333" },
   reviews: { fontSize: 10, color: "#777", marginLeft: 2 },
