@@ -55,10 +55,7 @@ let audienceCache: {
   suspended: boolean;
 }[] = [];
 
-async function audienceIds(audience: NotificationAudience): Promise<string[]> {
-  // Do not use nested PostgREST relationships here. The schema has multiple
-  // paths between profiles/professionals/subscriptions, which can make
-  // relationship inference ambiguous. Resolve each table explicitly.
+async function audienceIds(audienceType: NotificationAudience): Promise<string[]> {
   const [profilesRes, professionalsRes, subscriptionsRes] = await Promise.all([
     supabase.from("profiles").select("id,is_suspended"),
     supabase.from("professionals").select("user_id,is_verified"),
@@ -73,6 +70,7 @@ async function audienceIds(audience: NotificationAudience): Promise<string[]> {
   if (subscriptionsRes.error) throw subscriptionsRes.error;
 
   const verifiedByUser = new Map<string, boolean>();
+
   for (const professional of professionalsRes.data ?? []) {
     if (professional.user_id) {
       verifiedByUser.set(
@@ -89,15 +87,16 @@ async function audienceIds(audience: NotificationAudience): Promise<string[]> {
       .map(String),
   );
 
-  const audience = (profilesRes.data ?? []).filter((profile) => {
+  const selectedProfiles = (profilesRes.data ?? []).filter((profile) => {
     const userId = String(profile.id);
     const suspended = Boolean(profile.is_suspended);
+
     if (suspended) return false;
 
     const verified = Boolean(verifiedByUser.get(userId));
     const subscribed = subscribedUsers.has(userId);
 
-    switch (audience) {
+    switch (audienceType) {
       case "verified":
         return verified;
       case "subscribed":
@@ -110,14 +109,14 @@ async function audienceIds(audience: NotificationAudience): Promise<string[]> {
     }
   });
 
-  audienceCache = audience.map((profile) => ({
+  audienceCache = selectedProfiles.map((profile) => ({
     id: String(profile.id),
     verified: Boolean(verifiedByUser.get(String(profile.id))),
     pro: subscribedUsers.has(String(profile.id)),
     suspended: Boolean(profile.is_suspended),
   }));
 
-  return audience.map((profile) => String(profile.id));
+  return selectedProfiles.map((profile) => String(profile.id));
 }
 
 export async function resolveAudienceUsersAsync(
@@ -136,8 +135,7 @@ function map(row: any): AdminNotification {
     title: row.title,
     message: row.message,
     channels: (row.channels ?? []) as NotificationChannel[],
-    sentTo:
-      (row.sent_to ?? "all") as NotificationAudience,
+    sentTo: (row.sent_to ?? "all") as NotificationAudience,
     sentToLabel:
       row.sent_to_label ??
       labels[row.sent_to as NotificationAudience] ??
@@ -158,6 +156,7 @@ export async function listAdminNotifications(): Promise<AdminNotification[]> {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
+
   return (data ?? []).map(map);
 }
 
