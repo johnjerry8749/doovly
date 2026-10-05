@@ -37,7 +37,7 @@ async function uploadRequestImages(images: ImageSourcePropType[] | undefined) {
   for (const image of images ?? []) {
     const uri = typeof image === "object" && image && "uri" in image ? String((image as any).uri ?? "") : "";
     if (!uri) continue;
-    if (/^https?:\\/\\//i.test(uri)) { urls.push(uri); continue; }
+    if (/^https?:\/\//i.test(uri)) { urls.push(uri); continue; }
     const uploaded = await uploadImageFull(uri, UPLOAD_FOLDERS.requests);
     urls.push(uploaded.secure_url);
     keys.push(uploaded.public_id);
