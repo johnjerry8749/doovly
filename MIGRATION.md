@@ -1,40 +1,36 @@
-# Mock → Supabase migration
+# Mock → Supabase (production-oriented path)
 
-## What changed (no CSS / layout edits)
+## Done (service layer only — no CSS / layout)
 
-Only **service layer** + thin data-load effects in a few screens.
+### 1. Real auth
+- `src/lib/session.ts` — `loadSessionUser`, no mock fallbacks
+- Services use session or return empty / guest when signed out
+- `AuthContext` clears session cache on sign-out
 
-### New files
-- `src/lib/rowMappers.ts` — DB rows → app types (same shapes UI expects)
-- `src/lib/bootstrapData.ts` — loads caches once at app start
+### 2. Data loading / error / offline
+- `src/lib/dataState.ts` — `idle | loading | ready | error | offline`
+- `bootstrapAppData()` sets phase, retries via `retryBootstrap()`
+- Subscribe with `subscribeDataState` (no UI required)
 
-### Rewritten services (same export names)
-- `src/services/professionals.ts`
-- `src/services/bookings.ts`
-- `src/services/savedProviders.ts`
-- `src/services/inAppNotifications.ts`
-- `src/services/serviceRequests.ts`
+### 3. Services on Supabase
+- professionals, bookings, savedProviders, notifications, serviceRequests
+- In-memory cache + same function names for screens
 
-### Screen data refresh only (no StyleSheet changes)
-- `src/app/_layout.tsx` — calls `bootstrapAppData()`
-- `src/app/(tab)/home.tsx`
-- `src/app/(tab)/services.tsx`
-- `src/app/(tab)/bookings.tsx`
-- `src/app/(tab)/requests.tsx`
+### 4. Chat + realtime
+- `src/services/chat.ts` loads conversations/messages from DB
+- `bindChatRealtime()` listens to `messages` INSERT
+- Same exports (listConversations, sendMessage, acceptBooking, …)
 
-### Still on mock (same as before)
-- `src/services/chat.ts` — large in-memory chat; swap next using realtime
-- Admin services, subscriptionPlans, profile.ts (where still mock)
+### 5. Bootstrap
+- Loads session → all caches → binds auth + chat realtime
 
-## How to run
+## Run
+1. `.env` with Supabase URL + anon key
+2. `supabase db reset` (seed password `password123`)
+3. Sign in with a seed user (do not rely on mock session)
+4. `npx expo start`
 
-1. Copy `.env.example` → `.env` with real Supabase URL + anon key
-2. `supabase db reset` (applies migrations + seed; password `password123`)
-3. `npx expo start`
-
-## Design
-
-- **Sync exports** kept so existing screens do not break
-- **In-memory cache** filled from Supabase on bootstrap
-- **Mutations** update cache immediately and write to Supabase in background
-- **mock_id** preferred as public id so routes like `/professional/1` still work
+## Still not production-final
+- Hardening: retries, full RLS audit, E2E tests
+- Some booking/offer chat flows still optimistically local then persist
+- Screen loading indicators optional (use `getDataState()` if desired)
