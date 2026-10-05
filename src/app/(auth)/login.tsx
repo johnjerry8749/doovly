@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
@@ -77,6 +78,7 @@ export default function Login() {
     setLoading(true);
 
     await signInWithGoogle();
+    await AsyncStorage.setItem("doovly_login_at", String(Date.now()));
 
     router.replace("/(tab)/home");
   } catch (error) {
