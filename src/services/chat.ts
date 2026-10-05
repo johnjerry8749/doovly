@@ -452,6 +452,40 @@ async function createConversation(participantPublicId: string, options: { bookin
   return conv;
 }
 
+export async function openBookingChatAsync(
+  booking: Booking,
+  mainTab: "booked" | "received",
+): Promise<Conversation> {
+  const session = await loadSessionUser(true);
+  if (!session) throw new Error("Not logged in");
+
+  const professionalUuid = await getUserUuid(String(booking.professionalId));
+  const customerUuid = await getUserUuid(String(booking.customerId));
+  const otherUuid = mainTab === "booked" ? professionalUuid : customerUuid;
+
+  if (!otherUuid) throw new Error("Chat participant not found");
+
+  const { data: existing, error: existingError } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("booking_id", String(booking.id))
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing) {
+    const conv = await getConversationAsync(existing.id);
+    if (conv) return conv;
+  }
+
+  return createConversation(
+    otherUuid,
+    {
+      bookingId: String(booking.id),
+      lastMessage: `Booking: ${booking.title}`,
+    },
+  );
+}
+
 export async function createBookingConversationAsync(input: {
   professionalId: string;
   professionalName: string;
