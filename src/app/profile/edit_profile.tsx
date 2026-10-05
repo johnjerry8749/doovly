@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
-  getProfileForEdit,
+  getProfileForEditAsync,
   updateProfile,
   type ProfileEditData,
 } from "@/services/profile";
@@ -39,18 +39,38 @@ export default function EditProfile() {
   const [city, setCity] = useState("");
 
   useEffect(() => {
-    // TODO backend: this becomes an async fetch
-    const data = getProfileForEdit();
-    if (data) {
-      setProfile(data);
-      setName(data.name);
-      setPhone(data.phone);
-      setEmail(data.email);
-      setProfession(data.profession);
-      setBio(data.bio);
-      setCity(data.city);
-    }
-    setLoading(false);
+    let active = true;
+
+    getProfileForEditAsync()
+      .then((data) => {
+        if (!active) return;
+
+        if (data) {
+          setProfile(data);
+          setName(data.name);
+          setPhone(data.phone);
+          setEmail(data.email);
+          setProfession(data.profession);
+          setBio(data.bio);
+          setCity(data.city);
+        }
+      })
+      .catch((error) => {
+        console.warn("Edit profile load failed:", error);
+        if (active) {
+          Alert.alert(
+            "Could not load profile",
+            "Please check your connection and try again.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleSave = async () => {
