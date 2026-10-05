@@ -16,6 +16,7 @@ import {
   getSubscriptionPlansAsync,
   type BillingPeriod,
   type SubscriptionPlansState,
+  type SubscriptionPlanConfig,
 } from "@/services/subscriptionPlans";
 
 const PRIMARY = "#159447";
@@ -30,6 +31,8 @@ function formatNaira(n: number) {
     maximumFractionDigits: 0,
   })}`;
 }
+
+const EMPTY_PLAN: SubscriptionPlanConfig = { id: "basic", name: "", tagline: "", monthlyPrice: 0, yearlyPrice: 0, popular: false, features: [] };
 
 type CompareRow = {
   id: string;
@@ -68,8 +71,8 @@ export default function Subscription() {
     }, []),
   );
 
-  const pro = plansState.plans.find((p) => p.id === "pro")!;
-  const basic = plansState.plans.find((p) => p.id === "basic")!;
+  const pro = plansState.plans.find((p) => p.id === "pro") ?? { ...EMPTY_PLAN, id: "pro" as const };
+  const basic = plansState.plans.find((p) => p.id === "basic") ?? EMPTY_PLAN;
 
   const price =
     period === "monthly" ? pro.monthlyPrice : pro.yearlyPrice;
