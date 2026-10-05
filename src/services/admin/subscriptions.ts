@@ -123,6 +123,13 @@ export async function updateSubscription(
 
     if(error) throw error;
 
+    const { error: professionalError } = await supabase
+      .from("professionals")
+      .update({ subscribed: planCode === "pro" && statusCode === "active" })
+      .eq("id", existing.professionalId);
+
+    if (professionalError) throw professionalError;
+
     const refreshed=await listSubscriptionsAsync();
     return refreshed.find(x=>x.id===data.id);
   }
@@ -150,6 +157,13 @@ export async function updateSubscription(
     .eq("id",id);
 
   if(error) throw error;
+
+  const { error: professionalError } = await supabase
+    .from("professionals")
+    .update({ subscribed: planCode === "pro" && statusCode === "active" })
+    .eq("id", existing.professionalId);
+
+  if (professionalError) throw professionalError;
 
   const refreshed=await listSubscriptionsAsync();
   return refreshed.find(x=>x.id===id);
