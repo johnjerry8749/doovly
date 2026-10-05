@@ -101,6 +101,22 @@ export async function clearAllNotifications(userId?: string): Promise<void> {
   await writeLocal(cache);
 }
 
+export async function clearAllNotifications(userId?: string): Promise<void> {
+  const s = await loadSessionUser();
+  const uid = userId || s?.uuid;
+  if (!uid) return;
+
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("user_id", uid);
+
+  if (error) throw error;
+
+  cache = cache.filter((n) => n.userId !== String(uid));
+  await writeLocal(cache);
+}
+
 export async function markAllNotificationsRead(userId?: string): Promise<void> {
   const s = await loadSessionUser(); const uid = userId || s?.uuid; if (!uid) return;
   const { error } = await supabase.from("notifications").update({unread:false}).eq("user_id", uid);
