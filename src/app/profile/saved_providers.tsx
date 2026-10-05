@@ -37,9 +37,15 @@ export default function SavedProviders() {
     }, [refresh]),
   );
 
-  const onUnsave = (id: string) => {
-    const result: SaveResult = toggleSave(id);
-    if (result.ok) refresh();
+  const onUnsave = async (id: string) => {
+    const result: SaveResult = await toggleSave(id);
+    if (result.ok) {
+      refresh();
+      return;
+    }
+    if (result.reason === "error") {
+      Alert.alert("Could not remove", result.message || "Please check your connection and try again.");
+    }
   };
 
   const remaining = getRemainingSlots();
