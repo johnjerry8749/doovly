@@ -675,6 +675,8 @@ export async function acceptBooking(conversationId: string, acceptorDisplayName:
     .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,created_at")
     .single();
   if (error) throw error;
+  await touchConversation(conversationId, session.uuid, data.text, data.created_at);
+  await notifyUnread();
   return mapMessage(data, session.uuid);
 }
 
@@ -702,6 +704,8 @@ export async function declineBooking(conversationId: string, acceptorDisplayName
     .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,created_at")
     .single();
   if (error) throw error;
+  await touchConversation(conversationId, session.uuid, data.text, data.created_at);
+  await notifyUnread();
   return mapMessage(data, session.uuid);
 }
 
