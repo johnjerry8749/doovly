@@ -17,7 +17,7 @@ import {
   getNotificationsByUserId,
   getCurrentUserId,
   markNotificationRead,
-  markAllNotificationsRead,
+  clearAllNotifications,
   deleteNotification,
   type Notification,
   type NotifType,
@@ -109,9 +109,29 @@ export default function NotificationsScreen() {
     }, [refresh]),
   );
 
-  const markAllRead = () => {
-    markAllNotificationsRead(userId);
-    refresh();
+  const clearAll = () => {
+    Alert.alert(
+      "Clear all notifications",
+      "Are you sure you want to clear all your notifications?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear all",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await clearAllNotifications(userId);
+              refresh();
+            } catch (error) {
+              Alert.alert(
+                "Clear failed",
+                error instanceof Error ? error.message : "Unable to clear notifications.",
+              );
+            }
+          },
+        },
+      ],
+    );
   };
 
   const onDeleteItem = (notificationId: string) => {
@@ -162,10 +182,10 @@ export default function NotificationsScreen() {
 
         <TouchableOpacity
           style={styles.markReadBtn}
-          onPress={markAllRead}
+          onPress={clearAll}
           activeOpacity={0.7}
         >
-          <Text style={styles.markReadText}>Read all</Text>
+          <Text style={styles.markReadText}>Clear all</Text>
         </TouchableOpacity>
       </View>
 
