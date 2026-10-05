@@ -24,10 +24,7 @@ import {
   type Notification,
   type NotifType,
 } from "@/services/inAppNotifications";
-
-// ========== TEMPORARY - DELETE LATER ==========
-import { Notifications } from "@/services/notifications";
-// ========== TEMPORARY - DELETE LATER ==========
+import { getErrorMessage } from "@/utils/error";
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#E8F5E9";
@@ -128,7 +125,7 @@ export default function NotificationsScreen() {
             } catch (error) {
               Alert.alert(
                 "Clear failed",
-                error instanceof Error ? error.message : "Unable to clear notifications.",
+                getErrorMessage(error),
               );
             }
           },
@@ -153,7 +150,7 @@ export default function NotificationsScreen() {
             } catch (error) {
               Alert.alert(
                 "Delete failed",
-                error instanceof Error ? error.message : "Unable to delete notification.",
+                getErrorMessage(error),
               );
             }
           },
@@ -162,9 +159,15 @@ export default function NotificationsScreen() {
     );
   };
 
-  const onPressItem = (notificationId: string) => {
-    markNotificationRead(notificationId);
-    refresh();
+  const onPressItem = async (notificationId: string) => {
+    try {
+      // Mark read before refreshing so the unread dot disappears immediately.
+      await markNotificationRead(notificationId);
+      const list = await getNotificationsByUserIdAsync(userId);
+      setItems(list);
+    } catch (error) {
+      Alert.alert("Could not update notification", getErrorMessage(error));
+    }
     // Later: navigate by type (booking, chat, …)
   };
 
