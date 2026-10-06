@@ -18,7 +18,6 @@ import type {
   ServiceRequestIcon,
 } from "@/data/serviceRequests";
 import { bookingStatusToApp, resolveImageSource } from "@/lib/mappers";
-import { tryToMockId } from "@/lib/ids";
 
 const FALLBACK_AVATAR = require("@/assets/profile_1.jpg");
 
@@ -28,22 +27,20 @@ function asImage(source: ReturnType<typeof resolveImageSource>): ImageSourceProp
 }
 
 function publicId(
-  entity:
+  _entity:
     | "professional"
     | "user"
     | "booking"
     | "serviceRequest"
     | "conversation",
-  mockId: string | null | undefined,
+  _legacyId: string | null | undefined,
   uuid: string,
 ): string {
-  if (mockId) return String(mockId);
-  return tryToMockId(entity, uuid) ?? uuid;
+  return uuid;
 }
 
 export function mapServiceRow(row: {
   id: string;
-  mock_id?: string | null;
   name: string;
   description?: string | null;
   price: string;
@@ -51,7 +48,7 @@ export function mapServiceRow(row: {
   icon?: string | null;
 }): ProService {
   return {
-    id: row.mock_id ?? row.id,
+    id: row.id,
     name: row.name,
     description: row.description ?? "",
     price: row.price,
@@ -80,7 +77,7 @@ export function mapReviewRow(row: {
       : "");
 
   return {
-    id: row.mock_id ?? row.id,
+    id: row.id,
     userId: row.user_id ? publicId("user", null, row.user_id) : undefined,
     userName: row.user_name,
     comment: row.comment,
@@ -96,7 +93,7 @@ export function mapPortfolioRow(row: {
   image_url?: string | null;
 }): CompletedProject {
   return {
-    id: row.mock_id ?? row.id,
+    id: row.id,
     description: row.description ?? "",
     image: asImage(resolveImageSource(row.image_url, row.image_key)) as number,
   };
@@ -135,7 +132,6 @@ export function mapProfessionalRow(row: any): Professional {
 
 export const PROFESSIONAL_SELECT = `
   id,
-  mock_id,
   user_id,
   profession,
   bio,
@@ -263,7 +259,7 @@ export const BOOKING_SELECT = `
 export function mapNotificationRow(row: any): Notification {
   const avatar = resolveImageSource(row.avatar_url, null);
   return {
-    id: row.mock_id ?? row.id,
+    id: row.id,
     userId: publicId("user", null, row.user_id),
     type: (row.type as NotifType) || "general",
     title: row.title,
@@ -278,7 +274,7 @@ export function mapNotificationRow(row: any): Notification {
 
 export function mapServiceRequestComment(row: any): ServiceRequestComment {
   return {
-    id: row.mock_id ?? row.id,
+    id: row.id,
     userId: row.user_id ? publicId("user", null, row.user_id) : "",
     authUserId: row.user_id ?? undefined,
     userName: row.user_name,
