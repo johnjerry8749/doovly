@@ -5,6 +5,7 @@ import { tryToUuid } from "@/lib/ids";
 import { recordAcceptedOfferBooking, updateBookingStatus } from "@/services/bookings";
 import type { Booking } from "@/services/bookings";
 import type { ImageSourcePropType } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type ChatParticipant = {
   id: string;
@@ -50,6 +51,62 @@ export type Conversation = {
 export type BookingChatStatus = "Pending" | "Accepted" | "Declined";
 
 type Listener = (count: number) => void;
+
+const CONVERSATIONS_CACHE_PREFIX = "@doovly/chat/conversations/";
+const MESSAGES_CACHE_PREFIX = "@doovly/chat/messages/";
+
+function conversationCacheKey(userId: string) {
+  return CONVERSATIONS_CACHE_PREFIX + userId;
+}
+
+function messagesCacheKey(conversationId: string) {
+  return MESSAGES_CACHE_PREFIX + conversationId;
+}
+
+async function readCache<T>(key: string): Promise<T | null> {
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function writeCache<T>(key: string, value: T): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Cache failures must never block live chat.
+  }
+}
+
+export async function getCachedConversationsAsync(): Promise<Conversation[] | null> {
+  const session = await loadSessionUser();
+  if (!session) return null;
+  return readCache<Conversation[]>(conversationCacheKey(session.uuid));
+}
+
+export async function cacheConversationsAsync(conversations: Conversation[]): Promise<void> {
+  const session = await loadSessionUser();
+  if (!session) return;
+  await writeCache(conversationCacheKey(session.uuid), conversations);
+}
+
+export async function getCachedMessagesAsync(conversationId: string): Promise<ChatMessage[] | null> {
+  const conversationUuid =
+    tryToUuid("conversation", conversationId) ?? conversationId;
+  return readCache<ChatMessage[]>(messagesCacheKey(conversationUuid));
+}
+
+export async function cacheMessagesAsync(
+  conversationId: string,
+  messages: ChatMessage[],
+): Promise<void> {
+  const conversationUuid =
+    tryToUuid("conversation", conversationId) ?? conversationId;
+  await writeCache(messagesCacheKey(conversationUuid), messages);
+}
 const unreadListeners = new Set<Listener>();
 let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 let realtimeUserId: string | null = null;
@@ -164,6 +221,7 @@ export async function listConversationsAsync(): Promise<Conversation[]> {
       unreadCount: Number(read?.unread_count ?? 0),
     });
   }
+  await cacheConversationsAsync(result);
   return result;
 }
 
@@ -306,7 +364,9 @@ export async function getMessagesAsync(conversationId: string): Promise<ChatMess
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []).map((row) => mapMessage(row, session.uuid));
+  const messages = (data ?? []).map((row) => mapMessage(row, session.uuid));
+  await cacheMessagesAsync(conversationUuid, messages);
+  return messages;
 }
 
 export function getMessages(_conversationId: string): ChatMessage[] {
