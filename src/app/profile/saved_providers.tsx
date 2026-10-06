@@ -17,7 +17,7 @@ import {
   toggleSave,
   getRemainingSlots,
   getSaveLimit,
-  MOCK_USER,
+  getCurrentUser,
   type SaveResult,
 } from "@/services/savedProviders";
 import type { Professional } from "@/services/professionals";
@@ -67,14 +67,14 @@ export default function SavedProviders() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {!MOCK_USER.subscribed && limit != null && (
+      {!getCurrentUser().subscribed && limit != null && (
         <Text style={styles.limitHint}>
           {remaining} of {limit} free saves left
           {remaining === 0 ? " · Upgrade to Pro for unlimited" : ""}
         </Text>
       )}
 
-      {MOCK_USER.subscribed && (
+      {getCurrentUser().subscribed && (
         <Text style={styles.limitHint}>Pro · Unlimited saves</Text>
       )}
 
