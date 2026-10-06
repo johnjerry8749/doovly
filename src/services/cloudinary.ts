@@ -75,39 +75,22 @@ function getMimeType(uri: string) {
 async function createUploadForm(localUri: string, folder: UploadFolder) {
   const { type, extension } = getMimeType(localUri);
 
-  let imageResponse: Response;
-
-  try {
-    imageResponse = await fetch(localUri);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : String(error);
-
-    throw new Error(
-      `Could not read the selected image: ${message}`,
-    );
-  }
-
-  if (!imageResponse.ok) {
-    throw new Error(
-      `Could not read the selected image (${imageResponse.status}).`,
-    );
-  }
-
-  const blob = await imageResponse.blob();
-
-  if (!blob || blob.size <= 0) {
-    throw new Error("The selected image is empty or could not be read.");
+  if (!localUri) {
+    throw new Error("No image URI was provided.");
   }
 
   const form = new FormData();
 
-  // React Native 0.86 / Expo 57 does not reliably support the old
-  // { uri, type, name } FormData part. Use a real Blob instead.
+  // Expo ImagePicker returns a local file URI. Do not fetch() that URI:
+  // on Android it can produce a 404 before the file ever reaches Cloudinary.
+  // React Native FormData accepts the local file directly.
   form.append(
     "file",
-    blob,
-    `upload.${extension}`,
+    {
+      uri: localUri,
+      type,
+      name: `upload.${extension}`,
+    } as any,
   );
 
   form.append("upload_preset", UPLOAD_PRESET);
