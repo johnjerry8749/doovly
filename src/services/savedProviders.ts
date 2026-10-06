@@ -4,7 +4,7 @@
  */
 
 import { supabase } from "@/lib/supabase";
-import { toUuid, tryToUuid } from "@/lib/ids";
+
 import {
   loadSessionUser,
   getCachedSessionUser,
@@ -55,17 +55,6 @@ export function getCurrentUser(): AppUser {
   return sessionToAppUser(s);
 }
 
-export const MOCK_USER: AppUser = new Proxy({} as AppUser, {
-  get(_t, prop: string) {
-    return (getCurrentUser() as Record<string, unknown>)[prop];
-  },
-  set(_t, prop: string, value) {
-    const u = getCurrentUser() as Record<string, unknown>;
-    u[prop] = value;
-    return true;
-  },
-});
-
 export function getLoggedInProfessionalId(): string | null {
   return getCurrentUser().professionalId ?? null;
 }
@@ -113,15 +102,12 @@ async function fetchSavedIds(): Promise<string[]> {
 
   const { data, error } = await supabase
     .from("saved_providers")
-    .select("professional_id, professionals ( mock_id )")
+    .select("professional_id")
     .eq("user_id", s.uuid);
 
   if (error) throw error;
 
-  savedIds = (data ?? []).map((row: any) => {
-    const mock = row.professionals?.mock_id;
-    return mock ? String(mock) : String(row.professional_id);
-  });
+  savedIds = (data ?? []).map((row: any) => String(row.professional_id));
   savedLoaded = true;
   return savedIds;
 }
@@ -184,7 +170,7 @@ export async function toggleSave(providerId: string): Promise<SaveResult> {
     return { ok: false, reason: "limit" };
   }
 
-  const proUuid = tryToUuid("professional", id) ?? id;
+  const proUuid = id;
 
   try {
     if (currentlySaved) {
@@ -219,9 +205,5 @@ export async function toggleSave(providerId: string): Promise<SaveResult> {
   }
 }
 
-export function setMockSubscribed(subscribed: boolean) {
-  const s = getCachedSessionUser();
-  if (s) s.subscribed = subscribed;
-}
 
 export { getProfessionalById };
