@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
@@ -23,6 +24,7 @@ import {
   listServiceCategories,
   listServiceCategoriesAsync,
   starsFromReviewCount,
+  getDistanceKm,
 } from "@/services/professionals";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
@@ -50,6 +52,7 @@ export default function Home() {
   const [services, setServices] = useState(listServiceCategories());
   const [professionals, setProfessionals] = useState(listProfessionals());
   const [cities, setCities] = useState<string[]>([]);
+  const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
@@ -65,6 +68,78 @@ export default function Home() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadDistances = async () => {
+      if (!professionals.length) return;
+
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") return;
+
+        const current = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        const entries = await Promise.all(
+          professionals.map(async (professional) => {
+            let latitude = Number(professional.latitude);
+            let longitude = Number(professional.longitude);
+
+            if (
+              !Number.isFinite(latitude) ||
+              !Number.isFinite(longitude) ||
+              (latitude === 0 && longitude === 0)
+            ) {
+              const geocoded = await Location.geocodeAsync(
+                `${professional.city}, Nigeria`,
+              );
+              if (geocoded.length > 0) {
+                latitude = geocoded[0].latitude;
+                longitude = geocoded[0].longitude;
+              }
+            }
+
+            if (
+              Number.isFinite(latitude) &&
+              Number.isFinite(longitude) &&
+              !(latitude === 0 && longitude === 0)
+            ) {
+              return [
+                professional.id,
+                getDistanceKm(
+                  current.coords.latitude,
+                  current.coords.longitude,
+                  latitude,
+                  longitude,
+                ),
+              ] as const;
+            }
+
+            return null;
+          }),
+        );
+
+        if (!mounted) return;
+
+        const next: Record<string, number> = {};
+        entries.forEach((entry) => {
+          if (entry) next[entry[0]] = entry[1];
+        });
+        setDistanceByProfessionalId(next);
+      } catch (error) {
+        console.warn("Professional distance load failed:", error);
+      }
+    };
+
+    void loadDistances();
+
+    return () => {
+      mounted = false;
+    };
+  }, [professionals]);
 
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [search, setSearch] = useState("");
@@ -321,7 +396,12 @@ export default function Home() {
                   {person.profession}
                 </Text>
                 <Text style={styles.cityText} numberOfLines={1}>
-                  {person.city}
+                  <Ionicons name="location" size={10} color="#159447" />{" "}
+                  {distanceByProfessionalId[person.id] !== undefined
+                    ? `${distanceByProfessionalId[person.id] < 10
+                        ? distanceByProfessionalId[person.id].toFixed(1)
+                        : Math.round(distanceByProfessionalId[person.id])} km away`
+                    : person.city}
                 </Text>
                 <Text style={styles.price}>From {person.priceFrom}</Text>
               </TouchableOpacity>
