@@ -9,7 +9,7 @@ import type {
   ProService,
   ProReview,
   CompletedProject,
-} from "@/data/professionals";
+} from "@/services/professionals";
 import type { Booking } from "@/data/booking";
 import type { Notification, NotifType } from "@/data/notifications";
 import type {
