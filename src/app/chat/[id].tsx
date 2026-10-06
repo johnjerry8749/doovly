@@ -919,7 +919,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   header: {
-    height: 56,
+    height: 69,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
