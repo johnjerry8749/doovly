@@ -296,10 +296,13 @@ export async function getMessagesAsync(conversationId: string): Promise<ChatMess
   const session = await loadSessionUser();
   if (!session) return [];
 
+  const conversationUuid =
+    tryToUuid("conversation", conversationId) ?? conversationId;
+
   const { data, error } = await supabase
     .from("messages")
     .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
-    .eq("conversation_id", conversationId)
+    .eq("conversation_id", conversationUuid)
     .order("created_at", { ascending: true });
 
   if (error) throw error;
@@ -397,10 +400,13 @@ export async function markConversationReadAsync(conversationId: string): Promise
   const session = await loadSessionUser(true);
   if (!session) return;
 
+  const conversationUuid =
+    tryToUuid("conversation", conversationId) ?? conversationId;
+
   const { error } = await supabase
     .from("conversation_reads")
     .upsert(
-      { conversation_id: conversationId, user_id: session.uuid, unread_count: 0, last_read_at: new Date().toISOString() },
+      { conversation_id: conversationUuid, user_id: session.uuid, unread_count: 0, last_read_at: new Date().toISOString() },
       { onConflict: "conversation_id,user_id" },
     );
 
@@ -490,10 +496,13 @@ export function canOpenSharedLocation(_conversationId: string, message: ChatMess
 }
 
 async function conversationRowFor(id: string) {
+  const conversationUuid =
+    tryToUuid("conversation", id) ?? id;
+
   const { data, error } = await supabase
     .from("conversations")
     .select("id,booking_id,service_request_id,offer_id")
-    .eq("id", id)
+    .eq("id", conversationUuid)
     .maybeSingle();
   if (error) throw error;
   return data;
