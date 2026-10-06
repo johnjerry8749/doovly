@@ -758,9 +758,12 @@ ${item.description}
       <CreateJobModal
         visible={createVisible}
         onClose={() => setCreateVisible(false)}
-        onCreate={() => {
+        onSaved={(created) => {
+          setAllRequests((current) => [
+            created,
+            ...current.filter((item) => item.id !== created.id),
+          ]);
           setCreateVisible(false);
-          refreshRequests();
         }}
       />
 
