@@ -604,11 +604,8 @@ export default function ChatConversation() {
             {p.name}
           </Text>
           <Text style={styles.headerStatus}>
-            {chatPro ? "Doovly Pro • Unlimited chat" : String(chatCoins ?? 0) + " chat coins left"}
+            {conversation.participant.profession || "Professional"}
           </Text>
-          {sharing ? (
-            <Text style={styles.headerStatus}>Sharing location</Text>
-          ) : null}
         </View>
 
         <TouchableOpacity
