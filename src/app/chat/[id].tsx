@@ -239,7 +239,6 @@ export default function ChatConversation() {
         if (!active) return;
 
         if (conv) {
-          hasLiveConversation = true;
           setConversation(conv);
 
           try {
