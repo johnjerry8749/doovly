@@ -1,3 +1,23 @@
+export type NotifType =
+  | "booking"
+  | "upcoming"
+  | "message"
+  | "payment"
+  | "verification"
+  | "review"
+  | "general";
+
+export type Notification = {
+  id: string;
+  userId: string;
+  type: NotifType;
+  title: string;
+  body: string;
+  time: string;
+  unread: boolean;
+  avatar?: number | null;
+};
+
 export type NotificationPayload = {
   title: string;
   body: string;
