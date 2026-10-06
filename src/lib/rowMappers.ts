@@ -228,7 +228,6 @@ export function mapBookingRow(row: any): Booking {
 
 export const BOOKING_SELECT = `
   id,
-  mock_id,
   customer_id,
   professional_id,
   title,
@@ -322,7 +321,6 @@ export function mapServiceRequestRow(row: any): ServiceRequest {
 
 export const SERVICE_REQUEST_SELECT = `
   id,
-  mock_id,
   title,
   category,
   profession,
