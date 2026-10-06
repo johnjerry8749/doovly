@@ -175,10 +175,13 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
   const session = await loadSessionUser();
   if (!session || !conversationId) return undefined;
 
+  const conversationUuid =
+    tryToUuid("conversation", conversationId) ?? conversationId;
+
   const { data: row, error } = await supabase
     .from("conversations")
     .select("id,participant_a,participant_b,last_message,last_message_at")
-    .eq("id", conversationId)
+    .eq("id", conversationUuid)
     .or(`participant_a.eq.${session.uuid},participant_b.eq.${session.uuid}`)
     .maybeSingle();
 
@@ -187,14 +190,29 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
 
   const otherId =
     row.participant_a === session.uuid ? row.participant_b : row.participant_a;
-  const participant = await getParticipant(otherId);
 
-  const { data: read } = await supabase
+  let participant: ChatParticipant;
+  try {
+    participant = await getParticipant(otherId);
+  } catch {
+    participant = {
+      id: otherId,
+      name: "User",
+      image: require("@/assets/profile_1.jpg"),
+      verified: false,
+      online: false,
+      phone: null,
+    };
+  }
+
+  const { data: read, error: readError } = await supabase
     .from("conversation_reads")
     .select("unread_count")
     .eq("conversation_id", row.id)
     .eq("user_id", session.uuid)
     .maybeSingle();
+
+  if (readError) throw readError;
 
   return {
     id: row.id,
