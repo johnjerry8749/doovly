@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   getConversationAsync,
@@ -36,9 +37,12 @@ import {
   type Conversation,
   type BookingChatStatus,
   type RequestCardData,
+  getChatCreditsAsync,
+  isCurrentUserChatProAsync,
+  sendImageMessage,
 } from "@/services/chat";
 import { loadSessionUser } from "@/lib/session";
-import { isCurrentUserPro } from "@/services/savedProviders";
+
 
 
 const PRIMARY = "#159447";
@@ -195,7 +199,8 @@ export default function ChatConversation() {
   const [currentUserId, setCurrentUserId] = useState("");
   const [isAcceptor, setIsAcceptor] = useState(false);
   const [convKind, setConvKind] = useState<"booking" | "offer" | undefined>();
-  const isProUser = isCurrentUserPro();
+  const [chatCoins, setChatCoins] = useState<number | null>(15);
+  const [chatPro, setChatPro] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -231,6 +236,14 @@ export default function ChatConversation() {
         setSharing(sharingNow);
         setBookingStatus(status);
         setConvKind(kind);
+        const [proNow, coinsNow] = await Promise.all([
+          isCurrentUserChatProAsync(),
+          getChatCreditsAsync(),
+        ]);
+        if (active) {
+          setChatPro(proNow);
+          setChatCoins(coinsNow);
+        }
         void markConversationReadAsync(conversationId);
         return kind;
       } catch (error) {
