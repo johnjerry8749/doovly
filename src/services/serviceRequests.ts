@@ -2,6 +2,7 @@
  * Service requests service — Supabase source of truth.
  * UI/API contract is preserved; no screen styling or layout changes.
  */
+import type { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { ImageSourcePropType } from "react-native";
 export type ServiceRequestIcon = keyof typeof MaterialCommunityIcons.glyphMap;
 
@@ -43,14 +44,10 @@ export type ServiceRequest = {
 };
 
 import { supabase } from "@/lib/supabase";
-import type { MaterialCommunityIcons } from "@expo/vector-icons";
-import type { ImageSourcePropType } from "react-native";
 import { loadSessionUser, getCachedSessionUser } from "@/lib/session";
 import { mapServiceRequestRow, mapServiceRequestComment, SERVICE_REQUEST_SELECT } from "@/lib/rowMappers";
 import { uploadImageFull, UPLOAD_FOLDERS } from "@/services/cloudinary";
 import { notifyBookingRecipient } from "@/services/notifications";
-
-export type { ServiceRequest, ServiceRequestComment, ServiceRequestIcon };
 
 export type CreateServiceRequestInput = {
   category: string; title: string; description: string; location: string; city: string;
