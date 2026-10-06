@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { loadSessionUser } from "@/lib/session";
+import { uploadImage } from "@/services/cloudinary";
 import { tryToUuid } from "@/lib/ids";
 import { recordAcceptedOfferBooking, updateBookingStatus } from "@/services/bookings";
 import type { Booking } from "@/services/bookings";
@@ -11,6 +12,7 @@ export type ChatParticipant = {
   image: ImageSourcePropType;
   verified?: boolean;
   online?: boolean;
+  phone?: string | null;
 };
 
 export type RequestCardData = {
@@ -32,7 +34,8 @@ export type ChatMessage = {
   createdAt: string;
   isMine: boolean;
   location?: { label: string; latitude?: number; longitude?: number };
-  kind?: "text" | "location" | "location_stopped" | "request_card";
+  kind?: "text" | "image" | "location" | "location_stopped" | "request_card";
+  imageUrl?: string;
   card?: RequestCardData;
 };
 
@@ -82,7 +85,7 @@ async function getUserUuid(publicId: string): Promise<string | null> {
 async function getParticipant(userId: string): Promise<ChatParticipant> {
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id,mock_id,full_name,avatar_url")
+    .select("id,mock_id,full_name,avatar_url,phone")
     .eq("id", userId)
     .maybeSingle();
 
@@ -98,6 +101,7 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
     image: imageFromUrl(pro?.avatar_url ?? pro?.profiles?.avatar_url ?? profile?.avatar_url),
     verified: Boolean(pro?.is_verified),
     online: false,
+    phone: profile?.phone ?? null,
   };
 }
 
@@ -233,6 +237,7 @@ function mapMessage(row: any, currentUserId: string): ChatMessage {
     isMine: row.sender_id === currentUserId,
     kind,
     card: card ?? undefined,
+    imageUrl: row.image_url ?? undefined,
     location:
       row.location_label
         ? { label: row.location_label, latitude: row.latitude ?? undefined, longitude: row.longitude ?? undefined }
@@ -246,7 +251,7 @@ export async function getMessagesAsync(conversationId: string): Promise<ChatMess
 
   const { data, error } = await supabase
     .from("messages")
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,created_at")
+    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
 
@@ -256,6 +261,68 @@ export async function getMessagesAsync(conversationId: string): Promise<ChatMess
 
 export function getMessages(_conversationId: string): ChatMessage[] {
   return [];
+}
+\nexport async function getChatCreditsAsync(): Promise<number | null> {
+  const session = await loadSessionUser();
+  if (!session) return 0;
+
+  const { data: professional } = await supabase
+    .from("professionals")
+    .select("subscribed")
+    .eq("user_id", session.uuid)
+    .maybeSingle();
+
+  if (professional?.subscribed) return null;
+
+  const { data, error } = await supabase
+    .from("chat_credits")
+    .select("remaining")
+    .eq("user_id", session.uuid)
+    .maybeSingle();
+
+  if (error) throw error;
+  return Number(data?.remaining ?? 15);
+}
+
+export async function isCurrentUserChatProAsync(): Promise<boolean> {
+  const session = await loadSessionUser();
+  if (!session) return false;
+  const { data } = await supabase
+    .from("professionals")
+    .select("subscribed")
+    .eq("user_id", session.uuid)
+    .maybeSingle();
+  return Boolean(data?.subscribed);
+}
+
+export async function sendImageMessage(conversationId: string, localUri: string): Promise<ChatMessage> {
+  const session = await loadSessionUser(true);
+  if (!session) throw new Error("Not logged in");
+  if (!localUri) throw new Error("No image selected");
+  if (!(await canSendMessageAsync(conversationId))) {
+    throw new Error("Messaging is locked until the request is accepted");
+  }
+  if (!(await isCurrentUserChatProAsync())) {
+    throw new Error("IMAGE_CHAT_PRO_REQUIRED");
+  }
+
+  const imageUrl = await uploadImage(localUri, "doovly/chat");
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: session.uuid,
+      text: "📷 Image",
+      kind: "image",
+      image_url: imageUrl,
+    })
+    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
+    .single();
+
+  if (error) throw error;
+  await touchConversation(conversationId, session.uuid, "📷 Image", data.created_at);
+  await notifyUnread();
+  return mapMessage(data, session.uuid);
 }
 
 export async function sendMessage(conversationId: string, text: string): Promise<ChatMessage> {
@@ -274,7 +341,7 @@ export async function sendMessage(conversationId: string, text: string): Promise
       text: text.trim(),
       kind: "text",
     })
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,created_at")
+    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
     .single();
 
   if (error) throw error;
@@ -343,7 +410,7 @@ export async function shareLocation(conversationId: string, location: { label: s
       latitude: location.latitude ?? null,
       longitude: location.longitude ?? null,
     })
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,created_at")
+    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
     .single();
 
   if (error) throw error;
@@ -366,7 +433,7 @@ export async function stopSharingLocation(conversationId: string): Promise<ChatM
       text: "Location sharing stopped",
       kind: "location_stopped",
     })
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,created_at")
+    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
     .single();
 
   if (error) throw error;
@@ -722,7 +789,7 @@ export async function acceptBooking(conversationId: string, acceptorDisplayName:
       text: `${acceptorDisplayName} accepted the request`,
       kind: "text",
     })
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,created_at")
+    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
     .single();
   if (error) throw error;
   await touchConversation(conversationId, session.uuid, data.text, data.created_at);
@@ -751,7 +818,7 @@ export async function declineBooking(conversationId: string, acceptorDisplayName
       text: `${acceptorDisplayName} declined the request`,
       kind: "text",
     })
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,created_at")
+    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
     .single();
   if (error) throw error;
   await touchConversation(conversationId, session.uuid, data.text, data.created_at);
