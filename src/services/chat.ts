@@ -861,7 +861,9 @@ export async function createOfferConversationAsync(input: {
     .eq("request_id", requestUuid)
     .eq("professional_id", professionalUuid)
     .eq("user_id", session.uuid)
-    .eq("status", "pending")
+    .in("status", ["pending", "accepted"])
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (!offer?.id) throw new Error("Offer not found");
