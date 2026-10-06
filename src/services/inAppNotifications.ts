@@ -6,7 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import { loadSessionUser, getCachedSessionUser } from "@/lib/session";
 import { mapNotificationRow } from "@/lib/rowMappers";
-import type { Notification, NotifType } from "@/data/notifications";
+import type { Notification, NotifType } from "@/services/notifications/types";
 
 export type { Notification, NotifType };
 const CACHE_KEY = "doovly_notifications_cache_v1";
