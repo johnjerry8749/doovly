@@ -10,7 +10,7 @@ import type {
   ProReview,
   CompletedProject,
 } from "@/services/professionals";
-import type { Booking } from "@/data/booking";
+import type { Booking } from "@/services/bookings";
 import type { Notification, NotifType } from "@/data/notifications";
 import type {
   ServiceRequest,
