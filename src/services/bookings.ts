@@ -49,20 +49,68 @@ export async function createBookingRequest(input:{
   if(!s) throw new Error("Not logged in");
   const professionalUuid=tryToUuid("professional",input.professionalId) ?? input.professionalId;
   const displayDate=input.bookingDate ?? new Date().toLocaleDateString("en-NG",{day:"numeric",month:"short",year:"numeric"});
+  const title=input.title.trim();
+  const location=input.location.trim();
+
+  // Return the existing active booking instead of creating another order/chat.
+  const {data: existing, error: existingError}=await supabase
+    .from("bookings")
+    .select(BOOKING_SELECT)
+    .eq("customer_id",s.uuid)
+    .eq("professional_id",professionalUuid)
+    .ilike("title",title)
+    .eq("amount",input.amount)
+    .ilike("location",location)
+    .in("status",["pending","accepted"])
+    .order("created_at",{ascending:false})
+    .limit(1)
+    .maybeSingle();
+
+  if(existingError) throw existingError;
+  if(existing) {
+    invalidateBookingsCache();
+    return mapBookingRow(existing);
+  }
+
   const {data,error}=await supabase.from("bookings").insert({
     customer_id:s.uuid,
     professional_id:professionalUuid,
-    title:input.title,
+    title,
     professional_name:input.professionalName,
     customer_name:s.fullName ?? "Customer",
     status:"pending",
     amount:input.amount,
-    location:input.location,
+    location,
     display_date:displayDate,
     rating:5,
     reviews_count:0,
   }).select(BOOKING_SELECT).single();
-  if(error) throw error;
+
+  if(error) {
+    // A second tap/request can race the lookup above. The DB unique index
+    // protects the order; return the already-created booking in that case.
+    if(String(error.code)==="23505") {
+      const {data: duplicate,error:duplicateError}=await supabase
+        .from("bookings")
+        .select(BOOKING_SELECT)
+        .eq("customer_id",s.uuid)
+        .eq("professional_id",professionalUuid)
+        .ilike("title",title)
+        .eq("amount",input.amount)
+        .ilike("location",location)
+        .in("status",["pending","accepted"])
+        .order("created_at",{ascending:false})
+        .limit(1)
+        .maybeSingle();
+      if(duplicateError) throw duplicateError;
+      if(duplicate) {
+        invalidateBookingsCache();
+        return mapBookingRow(duplicate);
+      }
+    }
+    throw error;
+  }
+
   invalidateBookingsCache();
   return mapBookingRow(data);
 }
