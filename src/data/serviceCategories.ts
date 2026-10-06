@@ -20,4 +20,5 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
   { name: "Nail Tech", icon: "nail" },
   { name: "Massage", icon: "spa" },
   { name: "Carpentry", icon: "hammer" },
+  { name: "Other", icon: "briefcase-outline" },
 ];
