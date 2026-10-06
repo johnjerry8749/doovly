@@ -4,7 +4,7 @@ import { Stack, useRouter } from "expo-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 
 import { LocationProvider } from "@/context/LocationContext";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { queryClient } from "@/lib/queryClient";
 import {
   addNotificationResponseListener,
@@ -14,6 +14,17 @@ import {
 import { bootstrapAppData, retryBootstrap } from "@/lib/bootstrapData";
 import { loadSessionUser } from "@/lib/session";
 import SystemNotificationBanner from "@/components/SystemNotificationBanner";
+import { initRevenueCat } from "@/lib/revenuecat";
+
+function RevenueCatBootstrap() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    void initRevenueCat(user?.id ?? null);
+  }, [user?.id]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const router = useRouter();
@@ -60,6 +71,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <SystemNotificationBanner />
       <AuthProvider>
+        <RevenueCatBootstrap />
         <LocationProvider>
           <Stack
             screenOptions={{
