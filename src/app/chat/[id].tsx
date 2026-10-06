@@ -245,6 +245,9 @@ export default function ChatConversation() {
 
         if (conv) {
           setConversation(conv);
+          // Show the DM shell immediately. Messages/status can finish loading
+          // inside the chat instead of blocking the whole screen.
+          setLoadingConversation(false);
 
           // Fetch the two things needed to render the DM in parallel.
           // Do not make location/status/kind/credits block the first paint.
@@ -541,7 +544,7 @@ export default function ChatConversation() {
     openMapsForLocation(item.location);
   };
 
-  if (loadingConversation) {
+  if (loadingConversation && !conversation) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.centered}>
@@ -654,6 +657,13 @@ export default function ChatConversation() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messages}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            loadingConversation ? (
+              <View style={styles.centered}>
+                <ActivityIndicator size="large" color={PRIMARY} />
+              </View>
+            ) : null
+          }
           onContentSizeChange={() =>
             listRef.current?.scrollToEnd({ animated: false })
           }
