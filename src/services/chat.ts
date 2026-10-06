@@ -11,7 +11,7 @@ export type ChatParticipant = {
   name: string;
   image: ImageSourcePropType;
   verified?: boolean;
-  online?: boolean;
+  profession?: string | null;
   phone?: string | null;
 };
 
@@ -147,7 +147,7 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
       .maybeSingle(),
     supabase
       .from("professionals")
-      .select("id,is_verified,avatar_url,profiles!professionals_user_id_fkey(full_name,avatar_url)")
+      .select("id,is_verified,avatar_url,profession,profiles!professionals_user_id_fkey(full_name,avatar_url)")
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
@@ -157,7 +157,7 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
     name: profile?.full_name ?? pro?.profiles?.full_name ?? "User",
     image: imageFromUrl(pro?.avatar_url ?? pro?.profiles?.avatar_url ?? profile?.avatar_url),
     verified: Boolean(pro?.is_verified),
-    online: false,
+    profession: pro?.profession ?? null,
     phone: profile?.phone ?? null,
   };
 }
@@ -259,7 +259,7 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
       name: "User",
       image: require("@/assets/profile_1.jpg"),
       verified: false,
-      online: false,
+      profession: null,
       phone: null,
     };
   }
