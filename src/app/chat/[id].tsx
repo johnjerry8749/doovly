@@ -199,7 +199,10 @@ export default function ChatConversation() {
   const [sending, setSending] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [bookingStatus, setBookingStatus] =
-    useState<BookingChatStatus>("Accepted");
+    useState<BookingChatStatus>("Pending");
+  const [bookingStatusLoaded, setBookingStatusLoaded] = useState(false);
+  const [decisionProcessing, setDecisionProcessing] = useState(false);
+  const decisionInProgress = useRef(false);
   const listRef = useRef<FlatList>(null);
   const [currentUserId, setCurrentUserId] = useState("");
   const [isAcceptor, setIsAcceptor] = useState(false);
@@ -262,9 +265,13 @@ export default function ChatConversation() {
 
           try {
             const status = await getBookingStatusAsync(conv.id);
-            if (active) setBookingStatus(status);
+            if (active) {
+              setBookingStatus(status);
+              setBookingStatusLoaded(true);
+            }
           } catch (error) {
             console.warn("Could not refresh booking status:", error);
+            if (active) setBookingStatusLoaded(true);
           }
 
           try {
@@ -320,6 +327,9 @@ export default function ChatConversation() {
         }
 
         hasCachedConversation = true;
+        // Render cached DM immediately; action controls remain hidden until
+        // the real booking status has loaded, preventing the unlock flash.
+        setLoadingConversation(false);
       }
 
       // The live refresh was started above and runs underneath cached UI.
@@ -423,17 +433,35 @@ export default function ChatConversation() {
   };
 
   const onAccept = async () => {
-    if (!conversation) return;
-    const msg = await acceptBooking(conversationId, proDisplayName);
-    setMessages((prev) => [...prev, msg]);
-    setBookingStatus("Accepted");
+    if (!conversation || decisionInProgress.current || bookingStatus !== "Pending") return;
+    decisionInProgress.current = true;
+    setDecisionProcessing(true);
+    try {
+      const msg = await acceptBooking(conversationId, proDisplayName);
+      setMessages((prev) => prev.some((item) => item.id === msg.id) ? prev : [...prev, msg]);
+      setBookingStatus("Accepted");
+    } catch (error: any) {
+      Alert.alert("Could not accept", error?.message ?? "Please try again.");
+    } finally {
+      decisionInProgress.current = false;
+      setDecisionProcessing(false);
+    }
   };
 
   const onDecline = async () => {
-    if (!conversation) return;
-    const msg = await declineBooking(conversationId, proDisplayName);
-    setMessages((prev) => [...prev, msg]);
-    setBookingStatus("Declined");
+    if (!conversation || decisionInProgress.current || bookingStatus !== "Pending") return;
+    decisionInProgress.current = true;
+    setDecisionProcessing(true);
+    try {
+      const msg = await declineBooking(conversationId, proDisplayName);
+      setMessages((prev) => prev.some((item) => item.id === msg.id) ? prev : [...prev, msg]);
+      setBookingStatus("Declined");
+    } catch (error: any) {
+      Alert.alert("Could not decline", error?.message ?? "Please try again.");
+    } finally {
+      decisionInProgress.current = false;
+      setDecisionProcessing(false);
+    }
   };
 
   const onCall = async () => {
@@ -792,30 +820,32 @@ export default function ChatConversation() {
           }}
         />
 
-        {bookingStatus === "Pending" && isAcceptor && (
+        {bookingStatusLoaded && bookingStatus === "Pending" && isAcceptor && (
           <View style={styles.acceptRow}>
             <TouchableOpacity
               onPress={onDecline}
               style={styles.declineBtn}
               activeOpacity={0.85}
+              disabled={decisionProcessing}
             >
-              <Ionicons name="close" size={18} color="#DC2626" />
-              <Text style={styles.declineBtnText}>Decline</Text>
+              {decisionProcessing ? <ActivityIndicator size="small" color="#DC2626" /> : <Ionicons name="close" size={18} color="#DC2626" />}
+              <Text style={styles.declineBtnText}>{decisionProcessing ? "Please wait..." : "Decline"}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={onAccept}
               style={styles.acceptBtn}
               activeOpacity={0.85}
+              disabled={decisionProcessing}
             >
-              <Ionicons name="checkmark" size={18} color="#fff" />
-              <Text style={styles.acceptBtnText}>Accept</Text>
+              {decisionProcessing ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="checkmark" size={18} color="#fff" />}
+              <Text style={styles.acceptBtnText}>{decisionProcessing ? "Please wait..." : "Accept"}</Text>
             </TouchableOpacity>
 
           </View>
         )}
 
-        <View style={styles.inputBar}>
+        {bookingStatusLoaded && <View style={styles.inputBar}>
           {bookingStatus === "Accepted" ? (
             <>
               {bookingStatus === "Accepted" && (
@@ -869,7 +899,7 @@ export default function ChatConversation() {
               </Text>
             </View>
           )}
-        </View>
+        </View>}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
