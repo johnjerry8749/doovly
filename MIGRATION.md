@@ -1,36 +1,33 @@
-# Mock → Supabase (production-oriented path)
+# Doovly Supabase migration status
 
-## Done (service layer only — no CSS / layout)
+Doovly now uses Supabase as the runtime data source for customer-facing data. The legacy mock-data and mock-ID compatibility layer is being removed on the `cleanup/remove-mock-system` branch.
 
-### 1. Real auth
-- `src/lib/session.ts` — `loadSessionUser`, no mock fallbacks
-- Services use session or return empty / guest when signed out
-- `AuthContext` clears session cache on sign-out
+## Current architecture
 
-### 2. Data loading / error / offline
-- `src/lib/dataState.ts` — `idle | loading | ready | error | offline`
-- `bootstrapAppData()` sets phase, retries via `retryBootstrap()`
-- Subscribe with `subscribeDataState` (no UI required)
+- Authentication and sessions use Supabase Auth.
+- Professionals, services, reviews and portfolio data come from Supabase.
+- Cities and service categories come from Supabase.
+- Bookings, service requests, offers, comments and likes use Supabase.
+- Notifications and chat use Supabase.
+- Cloudinary is used for user/request/portfolio images.
+- Application IDs are real UUIDs; no mock-ID translation is used by the app.
+- New normal user accounts do not automatically create a professional row.
 
-### 3. Services on Supabase
-- professionals, bookings, savedProviders, notifications, serviceRequests
-- In-memory cache + same function names for screens
+## Cleanup changes
 
-### 4. Chat + realtime
-- `src/services/chat.ts` loads conversations/messages from DB
-- `bindChatRealtime()` listens to `messages` INSERT
-- Same exports (listConversations, sendMessage, acceptBooking, …)
+- Removed the legacy `src/data/*` mock runtime modules.
+- Removed the mock ID map and compatibility helpers.
+- Removed the unused mock notification service.
+- Removed the repository seed data.
+- Added a migration to remove legacy `mock_id` columns after replacing the signup trigger.
+- Request filters now load categories and cities from Supabase.
 
-### 5. Bootstrap
-- Loads session → all caches → binds auth + chat realtime
+## Validation before merging
 
-## Run
-1. `.env` with Supabase URL + anon key
-2. `supabase db reset` (seed password `password123`)
-3. Sign in with a seed user (do not rely on mock session)
-4. `npx expo start`
+1. Run the Supabase migrations on a preview/staging branch.
+2. Verify sign-up creates a profile but does not create a professional unless the account is explicitly professional.
+3. Verify Home, Services, Requests, Bookings, Saved Professionals and Chat using UUIDs only.
+4. Verify notifications and Cloudinary uploads.
+5. Run the TypeScript/Expo build and real-device smoke tests.
 
-## Still not production-final
-- Hardening: retries, full RLS audit, E2E tests
-- Some booking/offer chat flows still optimistically local then persist
-- Screen loading indicators optional (use `getDataState()` if desired)
+No production database changes are made by this Git branch alone.
