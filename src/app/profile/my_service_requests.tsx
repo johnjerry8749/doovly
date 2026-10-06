@@ -63,8 +63,15 @@ export default function MyServiceRequestsScreen() {
   const [chatText, setChatText] = useState("");
   const commentListRef = useRef<FlatList>(null);
 
-  const refresh = useCallback(() => {
-    setRequests(listMyServiceRequests());
+  const refresh = useCallback(async () => {
+    try {
+      const next = await import("@/services/serviceRequests").then(
+        (module) => module.listMyServiceRequestsAsync(),
+      );
+      setRequests(next);
+    } catch (error) {
+      console.warn("[MyServiceRequests] refresh failed:", error);
+    }
   }, []);
 
   useFocusEffect(
@@ -101,15 +108,20 @@ export default function MyServiceRequestsScreen() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            const ok = deleteServiceRequest(item.id);
-            if (ok) {
-              if (chatRequest?.id === item.id) {
-                setChatRequest(null);
-                setChatText("");
-              }
-              refresh();
-            } else {
+          onPress: async () => {
+            const previous = requests;
+            setRequests((current) => current.filter((request) => request.id !== item.id));
+            if (chatRequest?.id === item.id) {
+              setChatRequest(null);
+              setChatText("");
+            }
+
+            try {
+              const ok = await deleteServiceRequest(item.id);
+              if (!ok) throw new Error("Delete was not accepted.");
+              await refresh();
+            } catch (error) {
+              setRequests(previous);
               Alert.alert(
                 "Could not delete",
                 "Only your own posts can be deleted.",
