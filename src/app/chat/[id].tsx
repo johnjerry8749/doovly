@@ -604,7 +604,10 @@ export default function ChatConversation() {
             {p.name}
           </Text>
           <Text style={styles.headerStatus}>
-            {conversation.participant.profession || "Professional"} · 🪙 {chatCoins ?? 0} coins
+            {conversation.participant.profession || "Professional"}
+          </Text>
+          <Text style={styles.headerStatus}>
+            🪙 {chatCoins ?? 0} coins
           </Text>
         </View>
 
