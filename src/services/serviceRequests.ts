@@ -35,14 +35,31 @@ function requestUuid(id: string): string { return tryToUuid("serviceRequest", id
 async function uploadRequestImages(images: ImageSourcePropType[] | undefined) {
   const urls: string[] = [];
   const keys: string[] = [];
+
   for (const image of images ?? []) {
-    const uri = typeof image === "object" && image && "uri" in image ? String((image as any).uri ?? "") : "";
+    const uri =
+      typeof image === "object" && image && "uri" in image
+        ? String((image as any).uri ?? "")
+        : "";
+
     if (!uri) continue;
-    if (/^https?:\/\//i.test(uri)) { urls.push(uri); continue; }
-    const uploaded = await uploadImageFull(uri, UPLOAD_FOLDERS.requests);
-    urls.push(uploaded.secure_url);
-    keys.push(uploaded.public_id);
+
+    if (/^https?:\/\//i.test(uri)) {
+      urls.push(uri);
+      continue;
+    }
+
+    try {
+      const uploaded = await uploadImageFull(uri, UPLOAD_FOLDERS.requests);
+      urls.push(uploaded.secure_url);
+      keys.push(uploaded.public_id);
+    } catch (error) {
+      // Photos are optional. Do not prevent the service request itself
+      // from being created when Cloudinary cannot read/upload one image.
+      console.warn("[ServiceRequests] request image upload failed:", error);
+    }
   }
+
   return { urls, keys };
 }
 
