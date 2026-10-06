@@ -622,7 +622,7 @@ async function conversationRowFor(id: string) {
 
   const { data, error } = await supabase
     .from("conversations")
-    .select("id,booking_id,service_request_id,offer_id,text_allowed,text_allowed_by,text_allowed_at")
+    .select("id,booking_id,service_request_id,offer_id,text_allowed,text_allowed_by,text_allowed_at,blocked_by,blocked_at")
     .eq("id", conversationUuid)
     .maybeSingle();
   if (error) throw error;
