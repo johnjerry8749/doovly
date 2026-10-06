@@ -16,7 +16,7 @@ import type {
   ServiceRequest,
   ServiceRequestComment,
   ServiceRequestIcon,
-} from "@/data/serviceRequests";
+} from "@/services/serviceRequests";
 import { bookingStatusToApp, resolveImageSource } from "@/lib/mappers";
 
 const FALLBACK_AVATAR = require("@/assets/profile_1.jpg");
