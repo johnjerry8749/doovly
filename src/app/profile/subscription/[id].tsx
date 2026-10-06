@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { MOCK_USER, isCurrentUserPro } from "@/services/savedProviders";
+import { getCurrentUser, isCurrentUserPro } from "@/services/savedProviders";
 import Subscription from "./subscription";
 
 const PRIMARY = "#159447";
@@ -186,7 +186,7 @@ function ActivityItem({
 }
 
 function ProDashboard() {
-  const firstName = MOCK_USER.name.split(" ")[0] || "there";
+  const firstName = getCurrentUser().name.split(" ")[0] || "there";
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
