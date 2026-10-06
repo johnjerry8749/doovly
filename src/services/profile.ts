@@ -74,7 +74,7 @@ export async function getProfileForEditAsync(): Promise<ProfileEditData | null> 
       : profile?.full_name ?? s.fullName ?? "",
     phone: row?.phone ?? profile?.phone ?? s.phone ?? "",
     email: row?.email ?? profile?.email ?? s.email ?? "",
-    profession: row?.profession ?? "",
+    profession: row?.profession ?? "Other",
     bio: row?.bio ?? "",
     city: row?.city ?? "",
     image: imageUrl ? ({ uri: imageUrl } as any) : FALLBACK_IMG,
@@ -111,7 +111,7 @@ export function getProfileForEdit(): ProfileEditData | null {
       name: pro.name || s.fullName || "",
       phone: (pro as { phone?: string }).phone ?? "",
       email: (pro as { email?: string }).email ?? s.email ?? "",
-      profession: pro.profession ?? "",
+      profession: pro.profession ?? "Other",
       bio: pro.bio ?? "",
       city: pro.city ?? "",
       image: (pro.image as number) ?? FALLBACK_IMG,
@@ -124,7 +124,7 @@ export function getProfileForEdit(): ProfileEditData | null {
     name: s.fullName ?? "",
     phone: "",
     email: s.email ?? "",
-    profession: "",
+    profession: "Other",
     bio: "",
     city: "",
     image: FALLBACK_IMG,
@@ -164,9 +164,9 @@ export async function updateProfile(
   const name = input.name.trim();
   const phone = input.phone.trim();
   const email = input.email.trim();
-  const profession = input.profession.trim();
+  const profession = input.profession.trim() || "Other";
   const bio = input.bio.trim();
-  const city = input.city.trim();
+  const city = input.city.trim() || "Lagos";
 
   const { error: profileErr } = await supabase
     .from("profiles")
@@ -174,7 +174,7 @@ export async function updateProfile(
       full_name: name || null,
       phone: phone || null,
       email: email || null,
-      city: city || null,
+      city,
       ...(input.imageUrl ? { avatar_url: input.imageUrl } : {}),
     })
     .eq("id", s.uuid);
@@ -189,9 +189,9 @@ export async function updateProfile(
     const { error: proErr } = await supabase
       .from("professionals")
       .update({
-        profession: profession || null,
+        profession,
         bio: bio || null,
-        city: city || null,
+        city,
         email: email || null,
         phone: phone || null,
         ...(input.imageUrl ? { avatar_url: input.imageUrl } : {}),
@@ -206,9 +206,11 @@ export async function updateProfile(
       .from("professionals")
       .insert({
         user_id: s.uuid,
-        profession: profession || null,
+        profession,
         bio: bio || null,
-        city: city || null,
+        city,
+        price_from: "₦0",
+        price_from_value: 0,
         email: email || null,
         phone: phone || null,
         avatar_url: input.imageUrl || null,
