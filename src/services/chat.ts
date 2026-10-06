@@ -357,11 +357,14 @@ export async function getMessagesAsync(conversationId: string): Promise<ChatMess
     .from("messages")
     .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
     .eq("conversation_id", conversationUuid)
-    .neq("kind", "request_card")
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  const messages = (data ?? []).filter((row) => row.kind !== "request_card").map((row) => mapMessage(row, session.uuid));
+
+  // Request cards are part of the real conversation history. Keep them in
+  // the live message stream so an existing one-to-one DM shows the booking
+  // or offer details instead of only the accept/decline controls.
+  const messages = (data ?? []).map((row) => mapMessage(row, session.uuid));
   return messages;
 }
 
