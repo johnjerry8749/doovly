@@ -26,6 +26,7 @@ import {
   invalidateProfessionalsCache,
   getDistanceKm,
   addReview,
+  starsFromReviewCount,
   type ProReview,
   type Professional,
 } from "@/services/professionals";
