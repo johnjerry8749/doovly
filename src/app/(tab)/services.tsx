@@ -23,6 +23,7 @@ import {
   listServiceCategories,
   listServiceCategoriesAsync,
   getDistanceKm,
+  starsFromReviewCount,
   type Professional,
 } from "@/services/professionals";
 import { getCurrentUserId } from "@/services/inAppNotifications";
@@ -247,7 +248,7 @@ export default function Services() {
 
   const renderProfessional = ({ item }: { item: Professional }) => {
     const saved = isSaved(item.id);
-    const stars = Math.min(5, Math.floor((item.reviews?.length || 0) / 10));
+    const stars = starsFromReviewCount(item.reviews?.length || 0);
 
     return (
       <TouchableOpacity
@@ -288,8 +289,14 @@ export default function Services() {
           </View>
 
           <View style={styles.ratingRow}>
-            <Ionicons name="star" size={11} color="#F59E0B" />
-            <Text style={styles.ratingText}>{stars}</Text>
+            {Array.from({ length: 5 }, (_, index) => (
+              <Ionicons
+                key={"star-" + item.id + "-" + index}
+                name={index < stars ? "star" : "star-outline"}
+                size={12}
+                color="#F4C400"
+              />
+            ))}
             <Text style={styles.reviewCount}>
               ({item.reviews?.length || 0})
             </Text>
