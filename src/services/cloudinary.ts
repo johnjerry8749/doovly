@@ -1,3 +1,5 @@
+import { File } from "expo-file-system";
+
 /**
  * Cloudinary image upload service
  * Screens / other services import from @/services/cloudinary
@@ -79,20 +81,32 @@ async function createUploadForm(localUri: string, folder: UploadFolder) {
     throw new Error("No image URI was provided.");
   }
 
+  let base64: string;
+
+  try {
+    // Read the Expo ImagePicker file through Expo FileSystem.
+    // Do not fetch() the local URI and do not append { uri, type, name }
+    // because React Native 0.86 can reject that FormDataPart implementation.
+    const file = new File(localUri);
+    base64 = await file.base64();
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+
+    throw new Error(
+      `Could not read the selected image: ${message}`,
+    );
+  }
+
+  if (!base64) {
+    throw new Error("The selected image is empty or could not be read.");
+  }
+
   const form = new FormData();
 
-  // Expo ImagePicker returns a local file URI. Do not fetch() that URI:
-  // on Android it can produce a 404 before the file ever reaches Cloudinary.
-  // React Native FormData accepts the local file directly.
-  form.append(
-    "file",
-    {
-      uri: localUri,
-      type,
-      name: `upload.${extension}`,
-    } as any,
-  );
-
+  // Cloudinary accepts a data URI as the file field. This keeps the
+  // FormData part as a plain string, which is supported by RN 0.86.
+  form.append("file", `data:${type};base64,${base64}`);
   form.append("upload_preset", UPLOAD_PRESET);
   form.append("folder", folder);
 
