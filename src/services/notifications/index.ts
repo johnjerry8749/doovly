@@ -106,6 +106,33 @@ export function bindPushAuthListener(): () => void {
   return () => data.subscription.unsubscribe();
 }
 
+export async function notifyBookingRecipient(input: {
+  kind: "booking" | "offer";
+  bookingId?: string;
+  offerId?: string;
+  title: string;
+  body: string;
+  data?: Record<string, any>;
+}): Promise<void> {
+  try {
+    // The Edge Function resolves the recipient, creates the durable in-app
+    // notification, and sends the remote push when a token is available.
+    await supabase.functions.invoke("send-booking-notification", {
+      body: {
+        kind: input.kind,
+        bookingId: input.bookingId,
+        offerId: input.offerId,
+        title: input.title,
+        message: input.body,
+        data: input.data ?? {},
+      },
+    });
+  } catch (error) {
+    // Notifications must never make a successful booking/offer fail.
+    console.warn("[Notifications] booking notification failed:", error);
+  }
+}
+
 export const Notifications = {
   newBooking: () =>
     sendNotification({
