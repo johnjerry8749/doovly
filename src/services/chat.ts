@@ -303,14 +303,10 @@ export async function getChatCreditsAsync(): Promise<number | null> {
 
   if (professional?.subscribed) return null;
 
-  const { data, error } = await supabase
-    .from("chat_credits")
-    .select("remaining")
-    .eq("user_id", session.uuid)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_my_chat_credits");
 
   if (error) throw error;
-  return Number(data?.remaining ?? 15);
+  return Number(data ?? 15);
 }
 
 export async function isCurrentUserChatProAsync(): Promise<boolean> {
