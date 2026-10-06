@@ -9,7 +9,7 @@ import {
   mapReviewRow,
   PROFESSIONAL_SELECT,
 } from "@/lib/rowMappers";
-import { toUuid, tryToUuid } from "@/lib/ids";
+
 import { loadSessionUser } from "@/lib/session";
 import {
   getDistanceKm,
@@ -90,11 +90,11 @@ export async function getProfessionalByIdAsync(
   const fromCache = getProfessionalById(id);
   if (fromCache) return fromCache;
 
-  const uuid = tryToUuid("professional", id) ?? id;
+  const uuid = id;
   const { data, error } = await supabase
     .from("professionals")
     .select(PROFESSIONAL_SELECT)
-    .or(`id.eq.${uuid},mock_id.eq.${id}`)
+    .eq("id", uuid)
     .maybeSingle();
 
   if (error) throw error;
@@ -146,7 +146,7 @@ export async function addReview(
         year: "numeric",
       }),
     })
-    .select("id, mock_id, user_id, user_name, comment, display_date, created_at")
+    .select("id, user_id, user_name, comment, display_date, created_at")
     .single();
 
   if (error) throw error;
@@ -192,8 +192,6 @@ async function resolveProfessionalUuid(professionalId: string): Promise<string> 
   ) {
     return s.professionalUuid;
   }
-  const mapped = tryToUuid("professional", key);
-  if (mapped) return mapped;
   if (key.includes("-") && key.length >= 32) {
     const { data } = await supabase
       .from("professionals")
@@ -205,7 +203,7 @@ async function resolveProfessionalUuid(professionalId: string): Promise<string> 
   const { data, error } = await supabase
     .from("professionals")
     .select("id")
-    .or(`mock_id.eq.${key},id.eq.${key}`)
+    .eq("id", key)
     .maybeSingle();
   if (error) throw error;
   if (!data?.id) {
@@ -234,7 +232,7 @@ export async function createMyService(
       price_value: priceValue,
       icon: input.icon || "briefcase-outline",
     })
-    .select("id, mock_id, name, description, price, price_value, icon")
+    .select("id, name, description, price, price_value, icon")
     .single();
 
   if (error) throw error;
@@ -257,7 +255,7 @@ export async function updateMyService(
       .from("services")
       .select("id")
       .eq("professional_id", proUuid)
-      .or(`mock_id.eq.${serviceId},id.eq.${serviceId}`)
+      .eq("id", serviceId)
       .maybeSingle();
     if (!found) return null;
     serviceUuid = found.id;
@@ -316,7 +314,7 @@ export async function deleteMyService(
   return true;
 }
 
-export async function resolveMyProfessionalMockId(): Promise<string | null> {
+export async function resolveMyProfessionalId(): Promise<string | null> {
   const s = await loadSessionUser();
   return s?.professionalId ?? null;
 }
