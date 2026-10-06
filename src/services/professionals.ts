@@ -18,7 +18,7 @@ import {
   type ProService,
   type ProReview,
 } from "@/data/professionals";
-import type { ServiceCategory } from "@/data/serviceCategories";
+export type ServiceCategory = { name: string; icon: string; };
 
 export type { Professional, ProService, ProReview, ServiceCategory };
 export { getDistanceKm, starsFromReviewCount };
