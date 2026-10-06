@@ -59,7 +59,6 @@ export function mapServiceRow(row: {
 
 export function mapReviewRow(row: {
   id: string;
-  mock_id?: string | null;
   user_id?: string | null;
   user_name: string;
   comment: string;
@@ -87,7 +86,6 @@ export function mapReviewRow(row: {
 
 export function mapPortfolioRow(row: {
   id: string;
-  mock_id?: string | null;
   description?: string | null;
   image_key?: string | null;
   image_url?: string | null;
@@ -109,7 +107,7 @@ export function mapProfessionalRow(row: any): Professional {
   );
 
   return {
-    id: publicId("professional", row.mock_id, row.id),
+    id: publicId("professional", row.id, row.id),
     userId: row.user_id ?? undefined,
     name: profile?.full_name ?? "Professional",
     profession: row.profession,
@@ -154,7 +152,6 @@ export const PROFESSIONAL_SELECT = `
   ),
   services (
     id,
-    mock_id,
     name,
     description,
     price,
@@ -163,7 +160,6 @@ export const PROFESSIONAL_SELECT = `
   ),
   reviews (
     id,
-    mock_id,
     user_id,
     user_name,
     comment,
@@ -172,7 +168,6 @@ export const PROFESSIONAL_SELECT = `
   ),
   portfolio_items (
     id,
-    mock_id,
     description,
     image_key,
     image_url
@@ -206,13 +201,13 @@ export function mapBookingRow(row: any): Booking {
       : "");
 
   return {
-    id: publicId("booking", row.mock_id, row.id),
+    id: publicId("booking", row.id, row.id),
     professionalId: publicId(
       "professional",
-      pro?.mock_id,
+      pro?.id,
       row.professional_id,
     ),
-    customerId: publicId("user", customer?.mock_id, row.customer_id),
+    customerId: publicId("user", customer?.id, row.customer_id),
     title: row.title,
     professionalName:
       row.professional_name ?? pro?.profiles?.full_name ?? "Professional",
@@ -248,7 +243,6 @@ export const BOOKING_SELECT = `
   rating,
   reviews_count,
   professionals (
-    mock_id,
     is_verified,
     avatar_url,
     avatar_key,
@@ -294,7 +288,7 @@ export function mapServiceRequestRow(row: any): ServiceRequest {
     );
 
   return {
-    id: publicId("serviceRequest", row.mock_id, row.id),
+    id: publicId("serviceRequest", row.id, row.id),
     title: row.title,
     category: row.category,
     profession: row.profession,
@@ -353,7 +347,6 @@ export const SERVICE_REQUEST_SELECT = `
   longitude,
   service_request_comments (
     id,
-    mock_id,
     user_id,
     user_name,
     user_avatar_url,
