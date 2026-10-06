@@ -10,7 +10,7 @@ export async function getDashboardStats():Promise<DashboardStats>{
   supabase.from("professional_subscriptions").select("id,plan_id,plan_code,status").eq("status","active"),
   supabase.from("service_requests").select("id",{count:"exact",head:true}),
   supabase.from("bookings").select("id",{count:"exact",head:true}),
-  supabase.from("subscription_plans").select("id,monthly_price").eq("code","pro").maybeSingle(),
+  supabase.from("subscription_plans").select("id,monthly_price").eq("name","Pro").maybeSingle(),
  ]);
 
  const err=[users,verified,subs,posts,bookings,proPlan].find(r=>r.error)?.error;
