@@ -14,7 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 
 // Keep the native splash visible while this screen prepares
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function Splash() {
   const router = useRouter();
@@ -42,6 +42,14 @@ export default function Splash() {
   const loadingWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // =========================
+    // HIDE NATIVE SPLASH EARLY (Android fix)
+    // =========================
+    // Hide as soon as this screen mounts so the custom splash
+    // is fully visible for the whole duration instead of only
+    // a fraction of a second after the native one finally disappears.
+    SplashScreen.hideAsync().catch(() => {});
+
     // =========================
     // LOGO + GLOW INTRO
     // =========================
@@ -144,8 +152,6 @@ export default function Splash() {
           AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY),
         ]);
 
-        await SplashScreen.hideAsync();
-
         if (sessionData.session?.access_token) {
           router.replace("/(tab)/home");
           return;
@@ -160,7 +166,6 @@ export default function Splash() {
         router.replace("/(auth)/login");
       } catch (error) {
         console.error("[Splash] Session bootstrap failed:", error);
-        await SplashScreen.hideAsync();
         router.replace("/(auth)/login");
       }
     }, 3200);
