@@ -109,6 +109,7 @@ export async function cacheMessagesAsync(
 }
 const unreadListeners = new Set<Listener>();
 const chatRealtimeListeners = new Set<() => void>();
+const conversationMemoryCache = new Map<string, Conversation>();
 let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 let realtimeUserId: string | null = null;
 
@@ -215,13 +216,15 @@ export async function listConversationsAsync(): Promise<Conversation[]> {
       .eq("user_id", session.uuid)
       .maybeSingle();
 
-    result.push({
+    const conversation: Conversation = {
       id: row.id,
       participant,
       lastMessage: row.last_message,
       lastMessageAt: formatTime(row.last_message_at),
       unreadCount: Number(read?.unread_count ?? 0),
-    });
+    };
+    conversationMemoryCache.set(row.id, conversation);
+    result.push(conversation);
   }
   await cacheConversationsAsync(result);
   return result;
@@ -265,6 +268,14 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
     };
   }
 
+  conversationMemoryCache.set(row.id, {
+    id: row.id,
+    participant,
+    lastMessage: row.last_message,
+    lastMessageAt: formatTime(row.last_message_at),
+    unreadCount: 0,
+  });
+
   // The DM screen does not need unread_count before rendering. The unread
   // badge is maintained by the chat list/realtime listener, so avoid an extra
   // round trip here.
@@ -278,7 +289,7 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
 }
 
 export function getConversation(_conversationId: string): Conversation | undefined {
-  return undefined;
+  return conversationMemoryCache.get(_conversationId);
 }
 
 async function touchConversation(conversationId: string, senderId: string, preview: string, createdAt: string) {
