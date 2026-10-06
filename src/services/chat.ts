@@ -141,17 +141,18 @@ async function getUserUuid(publicId: string): Promise<string | null> {
 }
 
 async function getParticipant(userId: string): Promise<ChatParticipant> {
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id,mock_id,full_name,avatar_url,phone")
-    .eq("id", userId)
-    .maybeSingle();
-
-  const { data: pro } = await supabase
-    .from("professionals")
-    .select("mock_id,is_verified,avatar_url,profiles!professionals_user_id_fkey(full_name,avatar_url)")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const [{ data: profile }, { data: pro }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id,mock_id,full_name,avatar_url,phone")
+      .eq("id", userId)
+      .maybeSingle(),
+    supabase
+      .from("professionals")
+      .select("mock_id,is_verified,avatar_url,profiles!professionals_user_id_fkey(full_name,avatar_url)")
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
 
   return {
     id: pro?.mock_id ?? profile?.mock_id ?? userId,
@@ -264,21 +265,15 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
     };
   }
 
-  const { data: read, error: readError } = await supabase
-    .from("conversation_reads")
-    .select("unread_count")
-    .eq("conversation_id", row.id)
-    .eq("user_id", session.uuid)
-    .maybeSingle();
-
-  if (readError) throw readError;
-
+  // The DM screen does not need unread_count before rendering. The unread
+  // badge is maintained by the chat list/realtime listener, so avoid an extra
+  // round trip here.
   return {
     id: row.id,
     participant,
     lastMessage: row.last_message,
     lastMessageAt: formatTime(row.last_message_at),
-    unreadCount: Number(read?.unread_count ?? 0),
+    unreadCount: 0,
   };
 }
 
