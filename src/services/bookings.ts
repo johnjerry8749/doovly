@@ -33,8 +33,6 @@ export const statusColors: Record<BookingStatus, { bg: string; text: string }> =
 import { getProfessionalById } from "@/services/professionals";
 import { notifyBookingRecipient } from "@/services/notifications";
 
-export type { Booking, BookingStatus };
-export { statusColors };
 export const BOOKING_LIST_STATUSES: BookingStatus[] = ["Pending","Accepted","Declined"];
 
 let bookedCache: Booking[] | null = null;
