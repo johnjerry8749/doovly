@@ -321,7 +321,7 @@ export async function updateMyService(
     })
     .eq("id", serviceUuid)
     .eq("professional_id", proUuid)
-    .select("id, mock_id, name, description, price, price_value, icon")
+    .select("id, name, description, price, price_value, icon")
     .maybeSingle();
 
   if (error) throw error;
@@ -342,7 +342,7 @@ export async function deleteMyService(
       .from("services")
       .select("id")
       .eq("professional_id", proUuid)
-      .or(`mock_id.eq.${serviceId},id.eq.${serviceId}`)
+      .eq("id", serviceId)
       .maybeSingle();
     if (!found) return false;
     serviceUuid = found.id;
