@@ -3,7 +3,7 @@
  * Keep service return types stable; map inside services/* only.
  */
 
-import type { BookingStatus } from "@/data/booking";
+import type { BookingStatus } from "@/services/bookings";
 
 /** DB booking.status (lowercase) → app BookingStatus */
 export type DbBookingStatus =
