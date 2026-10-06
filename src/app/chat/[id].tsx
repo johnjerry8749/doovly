@@ -351,42 +351,52 @@ export default function ChatConversation() {
     setBookingStatus("Declined");
   };
 
-  const onCall = () => {
+  const onCall = async () => {
     if (!conversation) return;
 
-    if (!isProUser) {
+    const proNow = await isCurrentUserChatProAsync();
+    if (!proNow) {
       Alert.alert(
         "Pro feature",
-        "Voice calls are available on Doovly Pro. Upgrade to call from chat.",
+        "Calls are available on Doovly Pro. Upgrade to call from chat.",
         [
           { text: "Not now", style: "cancel" },
-          {
-            text: "Subscribe",
-            onPress: () => router.push("/profile/subscription/subscription"),
-          },
+          { text: "Subscribe", onPress: () => router.push("/profile/subscription/subscription") },
         ],
       );
       return;
     }
 
-    Alert.alert(
-      "Call",
-      `Call ${conversation.participant.name}?\n\n(Voice call will connect when backend is ready.)`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Call",
-          onPress: () =>
-            Alert.alert(
-              "Calling…",
-              `Connecting to ${conversation.participant.name}`,
-            ),
+    const phone = conversation.participant.phone?.trim();
+    if (!phone) {
+      Alert.alert("No phone number", "This user does not have a phone number on their profile.");
+      return;
+    }
+
+    Alert.alert("Call", "Call " + conversation.participant.name + "?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Call",
+        onPress: async () => {
+          try {
+            const url = "tel:" + phone.replace(/[^+\\d]/g, "");
+            const supported = await Linking.canOpenURL(url);
+            if (!supported) throw new Error("Phone calls are not available on this device.");
+            await Linking.openURL(url);
+          } catch (error: any) {
+            Alert.alert("Call failed", error?.message ?? "Could not start the call.");
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
-  const onShareLocation = () => {
+  const onShareLocation = async () => {
+    const status = await getBookingStatusAsync(conversationId);
+    if (status !== "Accepted") {
+      Alert.alert("Location locked", "Your location can only be shared after the provider approves the booking.");
+      return;
+    }
     Alert.alert(
       "Share location",
       "Share your location in this chat? You can stop sharing anytime for privacy.",
