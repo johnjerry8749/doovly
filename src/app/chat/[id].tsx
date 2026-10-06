@@ -36,6 +36,8 @@ import {
   acceptBooking,
   declineBooking,
   getConversationKindAsync,
+  isTextAllowedAsync,
+  allowTextAsync,
   ensureChatRealtime,
   type ChatMessage,
   type Conversation,
@@ -204,6 +206,7 @@ export default function ChatConversation() {
   const [currentUserId, setCurrentUserId] = useState("");
   const [isAcceptor, setIsAcceptor] = useState(false);
   const [convKind, setConvKind] = useState<"booking" | "offer" | undefined>();
+  const [textAllowed, setTextAllowed] = useState(false);
   const [chatCoins, setChatCoins] = useState<number | null>(15);
   const [chatPro, setChatPro] = useState(false);
 
@@ -258,6 +261,13 @@ export default function ChatConversation() {
             if (active) setBookingStatus(status);
           } catch (error) {
             console.warn("Could not refresh booking status:", error);
+          }
+
+          try {
+            const allowed = await isTextAllowedAsync(conv.id);
+            if (active) setTextAllowed(allowed);
+          } catch (error) {
+            console.warn("Could not refresh text permission:", error);
           }
 
           try {
@@ -412,6 +422,16 @@ export default function ChatConversation() {
       }
     } finally {
       setSending(false);
+    }
+  };
+
+  const onAllowText = async () => {
+    if (!conversation || textAllowed || bookingStatus !== "Pending" || !isAcceptor) return;
+    try {
+      await allowTextAsync(conversationId);
+      setTextAllowed(true);
+    } catch (error: any) {
+      Alert.alert("Could not allow text", error?.message ?? "Please try again.");
     }
   };
 
@@ -804,31 +824,46 @@ export default function ChatConversation() {
               <Ionicons name="checkmark" size={18} color="#fff" />
               <Text style={styles.acceptBtnText}>Accept</Text>
             </TouchableOpacity>
+
+            {!textAllowed && (
+              <TouchableOpacity
+                onPress={onAllowText}
+                style={styles.acceptBtn}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="chatbubble-outline" size={18} color="#fff" />
+                <Text style={styles.acceptBtnText}>Allow text</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
         <View style={styles.inputBar}>
-          {bookingStatus === "Accepted" ? (
+          {bookingStatus === "Accepted" || (bookingStatus === "Pending" && textAllowed) ? (
             <>
-              <TouchableOpacity
-                style={styles.attachBtn}
-                activeOpacity={0.7}
-                onPress={onPickImage}
-              >
-                <Ionicons name="image-outline" size={22} color={chatPro ? TEXT_MUTED : "#D1D5DB"} />
-              </TouchableOpacity>
+              {bookingStatus === "Accepted" && (
+                <>
+                  <TouchableOpacity
+                    style={styles.attachBtn}
+                    activeOpacity={0.7}
+                    onPress={onPickImage}
+                  >
+                    <Ionicons name="image-outline" size={22} color={chatPro ? TEXT_MUTED : "#D1D5DB"} />
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.attachBtn}
-                activeOpacity={0.7}
-                onPress={sharing ? onStopSharing : onShareLocation}
-              >
-                <Ionicons
-                  name={sharing ? "location" : "location-outline"}
-                  size={22}
-                  color={sharing ? "#DC2626" : TEXT_MUTED}
-                />
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.attachBtn}
+                    activeOpacity={0.7}
+                    onPress={sharing ? onStopSharing : onShareLocation}
+                  >
+                    <Ionicons
+                      name={sharing ? "location" : "location-outline"}
+                      size={22}
+                      color={sharing ? "#DC2626" : TEXT_MUTED}
+                    />
+                  </TouchableOpacity>
+                </>
+              )}
 
               <TextInput
                 style={styles.input}
