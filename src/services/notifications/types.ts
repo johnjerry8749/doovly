@@ -11,7 +11,7 @@ export interface NotificationService {
   send(payload: NotificationPayload): Promise<void>;
 
   /**
-   * Request permission and return a token (mock or real Expo push token)
+   * Request permission and return a real Expo push token
    */
   register(): Promise<string | null>;
 }
