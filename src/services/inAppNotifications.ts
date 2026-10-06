@@ -133,7 +133,7 @@ async function syncPendingReads(ids: string[]): Promise<void> {
   for (const id of ids) {
     try {
       const { error } = await supabase.from("notifications").update({ unread:false })
-        .or(`id.eq.${id},mock_id.eq.${id}`).eq("user_id", s.uuid);
+        .eq("id", id).eq("user_id", s.uuid);
       if (error) {
         if (isNetworkError(error)) remaining.push(id);
       }
@@ -159,7 +159,7 @@ export async function markNotificationRead(notificationId: string): Promise<void
 
   try {
     const { error } = await supabase.from("notifications").update({ unread:false })
-      .or(`id.eq.${notificationId},mock_id.eq.${notificationId}`).eq("user_id", s.uuid);
+      .eq("id", notificationId).eq("user_id", s.uuid);
     if (error) {
       if (isNetworkError(error)) return;
       throw error;
@@ -177,7 +177,7 @@ export type InAppNotificationInput = { userId:string; type:NotifType; title:stri
 export async function addInAppNotification(input: InAppNotificationInput): Promise<Notification> {
   const { data, error } = await supabase.from("notifications").insert({
     user_id: input.userId, type: input.type, title: input.title, body: input.body, unread:true,
-  }).select("id,mock_id,user_id,type,title,body,time_label,unread,avatar_url,created_at").single();
+  }).select("id,user_id,type,title,body,time_label,unread,avatar_url,created_at").single();
   if (error) throw error;
   const row = mapNotificationRow(data); cache = [row, ...cache.filter(n => n.id !== row.id)]; loaded = true; await writeLocal(cache); return row;
 }
