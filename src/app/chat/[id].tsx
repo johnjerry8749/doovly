@@ -622,7 +622,7 @@ export default function ChatConversation() {
             {conversation.participant.profession || "Professional"}
           </Text>
           <Text style={[styles.headerStatus, { paddingBottom: 2 }]}>
-            🪙 {chatCoins ?? 0} coins
+            🪙 {chatPro ? "Unlimited" : `${chatCoins ?? 0} coins`}
           </Text>
         </View>
 
