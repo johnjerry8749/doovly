@@ -40,7 +40,7 @@ export default function EditProfile() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [profession, setProfession] = useState("");
+  const [profession, setProfession] = useState("Other");
   const [bio, setBio] = useState("");
   const [city, setCity] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export default function EditProfile() {
           setName(data.name);
           setPhone(data.phone);
           setEmail(data.email);
-          setProfession(data.profession);
+          setProfession(data.profession || "Other");
           setBio(data.bio);
           setCity(data.city);
         }
