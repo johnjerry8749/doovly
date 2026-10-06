@@ -231,8 +231,13 @@ export default function ChatConversation() {
     let active = true;
 
     let hasCachedConversation = false;
+    let liveLoadInProgress = false;
 
     const loadLive = async () => {
+      // Realtime can fire several times in quick succession. Avoid overlapping
+      // full conversation refreshes, which can cause stale state to win.
+      if (liveLoadInProgress || !active) return;
+      liveLoadInProgress = true;
       try {
         const conv = await getConversationAsync(conversationId);
         if (!active) return;
@@ -299,13 +304,16 @@ export default function ChatConversation() {
       } catch (error) {
         console.warn("Chat conversation refresh failed:", error);
       } finally {
+        liveLoadInProgress = false;
         if (active) setLoadingConversation(false);
       }
     };
 
     const start = async () => {
-      // Render the previous conversation immediately, exactly like a
-      // cache-first messenger. Network refresh happens underneath it.
+      // Start the server refresh immediately instead of waiting for local
+      // cache reads; cache can still render while the network request runs.
+      void loadLive();
+
       const cachedConversations = await getCachedConversationsAsync();
       const cachedConversation = cachedConversations?.find(
         (item) => item.id === conversationId,
@@ -323,9 +331,7 @@ export default function ChatConversation() {
         setLoadingConversation(false);
       }
 
-      // If there is no cache, show the first-load state until Supabase
-      // returns. If cache exists, this runs silently in the background.
-      await loadLive();
+      // The live refresh was started above and runs underneath cached UI.
     };
 
     void start();
