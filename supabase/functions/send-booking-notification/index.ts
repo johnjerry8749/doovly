@@ -77,6 +77,8 @@ Deno.serve(async (req) => {
       const { data: request, error: requestError } = await admin.from("service_requests").select("created_by").eq("id", requestId).maybeSingle();
       if (requestError) throw requestError;
       if (!request) return json({ error: "Request not found." }, 404);
+      const { data: like } = await admin.from("service_request_likes").select("request_id").eq("request_id", requestId).eq("user_id", user.id).maybeSingle();
+      if (!like) return json({ error: "Like not found for this user." }, 403);
       recipientUserId = request.created_by ? String(request.created_by) : null;
     } else if (kind === "offer" && offerId) {
       const { data: offer, error } = await admin
