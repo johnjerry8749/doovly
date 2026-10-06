@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { loadSessionUser } from "@/lib/session";
 import { uploadImage } from "@/services/cloudinary";
-import { tryToUuid } from "@/lib/ids";
 import { recordAcceptedOfferBooking, updateBookingStatus } from "@/services/bookings";
 import type { Booking } from "@/services/bookings";
 import type { ImageSourcePropType } from "react-native";
@@ -94,8 +93,7 @@ export async function cacheConversationsAsync(conversations: Conversation[]): Pr
 }
 
 export async function getCachedMessagesAsync(conversationId: string): Promise<ChatMessage[] | null> {
-  const conversationUuid =
-    tryToUuid("conversation", conversationId) ?? conversationId;
+  const conversationUuid = conversationId;
   return readCache<ChatMessage[]>(messagesCacheKey(conversationUuid));
 }
 
