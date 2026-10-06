@@ -19,6 +19,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { supabase } from "@/lib/supabase";
 
 import {
   listServiceRequests,
@@ -26,6 +27,7 @@ import {
   submitServiceRequestOffer,
   addServiceRequestComment,
   deleteServiceRequestComment,
+  likeServiceRequest,
   type ServiceRequest,
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
@@ -262,8 +264,32 @@ export default function RequestsScreen() {
 
   const refreshRequests = () => setAllRequests(listServiceRequests());
 
-  const toggleLike = (id: string) =>
-    setLikedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleLike = async (id: string) => {
+    const liked = !likedIds[id];
+    setLikedIds((prev) => ({ ...prev, [id]: liked }));
+
+    try {
+      await likeServiceRequest(id, liked);
+
+      if (liked) {
+        const request = allRequests.find((item) => item.id === id);
+        const currentUserId = getCurrentUserId();
+        if (request && String(request.createdByUserId) !== String(currentUserId)) {
+          void supabase.functions.invoke("send-booking-notification", {
+            body: {
+              kind: "like",
+              requestId: id,
+              title: "Request Liked",
+              message: "Someone liked your service request.",
+              data: { type: "like", screen: "requests", requestId: id },
+            },
+          });
+        }
+      }
+    } catch {
+      setLikedIds((prev) => ({ ...prev, [id]: !liked }));
+    }
+  };
 
   const shareRequest = async (item: ServiceRequest) => {
     try {
