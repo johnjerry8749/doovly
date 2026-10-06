@@ -66,8 +66,13 @@ const TYPE_META: Record<
   },
 };
 
-function NotifIcon({ type }: { type: NotifType }) {
-  const meta = type !== "general" ? TYPE_META[type] : null;
+function NotifIcon({ type, title }: { type: NotifType; title?: string }) {
+  const isOffer = /new offer/i.test(title ?? "");
+  const meta = isOffer
+    ? { icon: "pricetag-outline" as keyof typeof Ionicons.glyphMap, bg: "#FFF7ED", color: "#F59E0B" }
+    : type !== "general"
+      ? TYPE_META[type]
+      : null;
 
   // No type / general / unknown → Doovly app logo
   if (!meta) {
@@ -213,7 +218,7 @@ export default function NotificationsScreen() {
               activeOpacity={0.8}
               onPress={() => onPressItem(item.id)}
             >
-              <NotifIcon type={item.type} />
+              <NotifIcon type={item.type} title={item.title} />
 
               <View style={styles.cardBody}>
                 <Text style={styles.cardTitle}>{item.title}</Text>
