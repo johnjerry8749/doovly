@@ -583,6 +583,7 @@ export default function ChatConversation() {
 
             if (
               item.senderId === "system" ||
+              item.kind === "system" ||
               item.kind === "location_stopped"
             ) {
               return (
