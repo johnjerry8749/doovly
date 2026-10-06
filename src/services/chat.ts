@@ -326,9 +326,36 @@ async function touchConversation(conversationId: string, senderId: string, previ
   if (readError) throw readError;
 }
 
+function normalizeRequestCard(value: unknown): RequestCardData | undefined {
+  if (!value) return undefined;
+
+  let card: any = value;
+  if (typeof card === "string") {
+    try {
+      card = JSON.parse(card);
+    } catch {
+      return undefined;
+    }
+  }
+
+  if (!card || typeof card !== "object") return undefined;
+  if (card.kind !== "booking" && card.kind !== "offer") return undefined;
+
+  return {
+    kind: card.kind,
+    title: String(card.title ?? "Booking request"),
+    category: card.category ? String(card.category) : undefined,
+    location: card.location ? String(card.location) : undefined,
+    description: card.description ? String(card.description) : undefined,
+    amount: card.amount == null ? undefined : Number(card.amount),
+    date: card.date ? String(card.date) : undefined,
+    statusLabel: String(card.statusLabel ?? "Pending"),
+  };
+}
+
 function mapMessage(row: any, currentUserId: string): ChatMessage {
   const kind = row.kind as ChatMessage["kind"];
-  const card = row.card as RequestCardData | null;
+  const card = normalizeRequestCard(row.card);
   return {
     id: row.id,
     conversationId: row.conversation_id,
@@ -337,7 +364,7 @@ function mapMessage(row: any, currentUserId: string): ChatMessage {
     createdAt: formatTime(row.created_at),
     isMine: row.sender_id === currentUserId,
     kind,
-    card: card ?? undefined,
+    card,
     imageUrl: row.image_url ?? undefined,
     location:
       row.location_label
