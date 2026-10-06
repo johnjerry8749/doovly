@@ -301,14 +301,14 @@ export default function Services() {
 
           <Text style={styles.city} numberOfLines={1}>
             <Ionicons name="location" size={10} color={GREEN} />{" "}
-            {distanceByProfessionalId[item.id] !== undefined
-              ? `${distanceByProfessionalId[item.id] < 10
-                  ? distanceByProfessionalId[item.id].toFixed(1)
-                  : Math.round(distanceByProfessionalId[item.id])} km away`
-              : item.city}
+            {item.city}
           </Text>
 
-          <Text style={styles.price}>{String(item.priceFrom).replace(/^₦\s*/, "").replace(/^NGN\s*/i, "")}</Text>
+          <Text style={styles.price}>
+            {distanceByProfessionalId[item.id] !== undefined
+              ? `${distanceByProfessionalId[item.id] < 10 ? distanceByProfessionalId[item.id].toFixed(1) : Math.round(distanceByProfessionalId[item.id])} km away`
+              : ""}
+          </Text>
         </View>
       </TouchableOpacity>
     );
