@@ -11,7 +11,7 @@ import type {
   CompletedProject,
 } from "@/services/professionals";
 import type { Booking } from "@/services/bookings";
-import type { Notification, NotifType } from "@/data/notifications";
+import type { Notification, NotifType } from "@/services/notifications/types";
 import type {
   ServiceRequest,
   ServiceRequestComment,
