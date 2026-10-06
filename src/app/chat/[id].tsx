@@ -606,7 +606,7 @@ export default function ChatConversation() {
           <Text style={styles.headerStatus}>
             {conversation.participant.profession || "Professional"}
           </Text>
-          <Text style={styles.headerStatus}>
+          <Text style={[styles.headerStatus, { paddingBottom: 2 }]}>
             🪙 {chatCoins ?? 0} coins
           </Text>
         </View>
