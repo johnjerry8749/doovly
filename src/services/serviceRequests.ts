@@ -160,7 +160,7 @@ export async function createServiceRequest(input: CreateServiceRequestInput): Pr
     likes_count: 0, max_offers: Math.max(1, Math.min(20, input.maxOffers)), offers_count: 0, offered_by: [],
   }).select(SERVICE_REQUEST_SELECT).single();
   if (error) throw error;
-  invalidateServiceRequestsCache(); return mapServiceRequestRow(data);
+  const created = mapServiceRequestRow(data);\n  cache = [created, ...(cache ?? [])];\n  return created;
 }
 
 export async function updateServiceRequest(id: string, input: UpdateServiceRequestInput): Promise<ServiceRequest | null> {
