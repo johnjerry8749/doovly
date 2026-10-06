@@ -308,7 +308,7 @@ export default function Services() {
               : item.city}
           </Text>
 
-          <Text style={styles.price}>From {item.priceFrom}</Text>
+          <Text style={styles.price}>{String(item.priceFrom).replace(/^₦\s*/, "").replace(/^NGN\s*/i, "")}</Text>
         </View>
       </TouchableOpacity>
     );
