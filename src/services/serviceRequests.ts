@@ -191,7 +191,9 @@ export async function deleteServiceRequest(id: string): Promise<boolean> {
   const s = await loadSessionUser(true); if (!s) return false;
   const { error } = await supabase.from("service_requests").delete()
     .eq("id", requestUuid(id)).eq("created_by", s.uuid);
-  if (error) throw error; invalidateServiceRequestsCache(); return true;
+  if (error) throw error;
+  cache = (cache ?? []).filter((request) => request.id !== id);
+  return true;
 }
 
 export async function addServiceRequestComment(input: AddCommentInput): Promise<ServiceRequestComment | null> {
