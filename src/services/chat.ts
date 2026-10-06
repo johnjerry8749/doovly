@@ -45,6 +45,7 @@ export type Conversation = {
   lastMessage: string;
   lastMessageAt: string;
   unreadCount: number;
+  bookingStatus?: BookingChatStatus;
 };
 
 export type BookingChatStatus = "Pending" | "Accepted" | "Declined";
@@ -195,7 +196,7 @@ export async function listConversationsAsync(): Promise<Conversation[]> {
 
   const { data, error } = await supabase
     .from("conversations")
-    .select("id,participant_a,participant_b,last_message,last_message_at")
+     .select("id,participant_a,participant_b,last_message,last_message_at,booking_id,service_request_id,offer_id")
     .or(`participant_a.eq.${session.uuid},participant_b.eq.${session.uuid}`)
     .order("last_message_at", { ascending: false });
 
@@ -213,12 +214,32 @@ export async function listConversationsAsync(): Promise<Conversation[]> {
       .eq("user_id", session.uuid)
       .maybeSingle();
 
+    let bookingStatus: BookingChatStatus = "Accepted";
+    if (row.booking_id) {
+      const { data: booking } = await supabase
+        .from("bookings")
+        .select("status")
+        .eq("id", row.booking_id)
+        .maybeSingle();
+      const status = String(booking?.status ?? "").toLowerCase();
+      bookingStatus = status === "pending" ? "Pending" : status === "declined" || status === "cancelled" ? "Declined" : "Accepted";
+    } else if (row.service_request_id && row.offer_id) {
+      const { data: offer } = await supabase
+        .from("service_request_offers")
+        .select("status")
+        .eq("id", row.offer_id)
+        .maybeSingle();
+      const status = String(offer?.status ?? "").toLowerCase();
+      bookingStatus = status === "pending" ? "Pending" : status === "declined" ? "Declined" : "Accepted";
+    }
+
     const conversation: Conversation = {
       id: row.id,
       participant,
       lastMessage: row.last_message,
       lastMessageAt: formatTime(row.last_message_at),
       unreadCount: Number(read?.unread_count ?? 0),
+      bookingStatus,
     };
     conversationMemoryCache.set(row.id, conversation);
     result.push(conversation);
