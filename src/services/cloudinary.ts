@@ -46,30 +46,30 @@ function assertConfig() {
 }
 
 function getMimeType(uri: string) {
-  const cleanUri = uri.split("?")[0].split("#")[0];
-  const extension = cleanUri.split(".").pop()?.toLowerCase() || "";
+  const cleanUri = String(uri || "").split("?")[0].split("#")[0];
+  const lastSegment = cleanUri.substring(cleanUri.lastIndexOf("/") + 1);
+  const dotIndex = lastSegment.lastIndexOf(".");
+  const extension =
+    dotIndex >= 0
+      ? lastSegment.substring(dotIndex + 1).toLowerCase()
+      : "";
 
-  switch (extension) {
-    case "png":
-      return { type: "image/png", extension: "png" };
-
-    case "webp":
-      return { type: "image/webp", extension: "webp" };
-
-    case "heic":
-    case "heif":
-      return {
-        type: extension === "heic" ? "image/heic" : "image/heif",
-        extension,
-      };
-
-    case "jpg":
-    case "jpeg":
-      return { type: "image/jpeg", extension: "jpg" };
-
-    default:
-      return { type: "image/jpeg", extension: "jpg" };
+  if (extension === "png") {
+    return { type: "image/png", extension: "png" };
   }
+
+  if (extension === "webp") {
+    return { type: "image/webp", extension: "webp" };
+  }
+
+  if (extension === "heic" || extension === "heif") {
+    return {
+      type: extension === "heic" ? "image/heic" : "image/heif",
+      extension,
+    };
+  }
+
+  return { type: "image/jpeg", extension: "jpg" };
 }
 
 async function createUploadForm(localUri: string, folder: UploadFolder) {
