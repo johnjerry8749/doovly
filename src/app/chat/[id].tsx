@@ -231,6 +231,7 @@ export default function ChatConversation() {
     let active = true;
 
     let hasCachedConversation = false;
+    let hasLiveConversation = false;
     let liveLoadInProgress = false;
 
     const loadLive = async () => {
@@ -245,6 +246,7 @@ export default function ChatConversation() {
         // A temporary network miss must not wipe a conversation already
         // rendered from cache.
         if (conv) {
+          hasLiveConversation = true;
           setConversation(conv);
 
           try {
@@ -319,11 +321,11 @@ export default function ChatConversation() {
         (item) => item.id === conversationId,
       );
 
-      if (active && cachedConversation) {
+      if (active && cachedConversation && !hasLiveConversation) {
         setConversation(cachedConversation);
 
         const cachedMessages = await getCachedMessagesAsync(conversationId);
-        if (active && cachedMessages) {
+        if (active && !hasLiveConversation && cachedMessages) {
           setMessages(cachedMessages);
         }
 
