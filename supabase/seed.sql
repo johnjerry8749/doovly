@@ -230,7 +230,8 @@ INSERT INTO public.service_categories (mock_id, name, icon, sort_order) VALUES
   ('plumbing','Plumbing','pipe',0),('electrical','Electrical','flash',1),
   ('cleaning','Cleaning','broom',2),('mechanic','Mechanic','car-wrench',3),
   ('barber','Barber','content-cut',4),('nail-tech','Nail Tech','nail',5),
-  ('massage','Massage','spa',6),('carpentry','Carpentry','hammer',7);
+  ('massage','Massage','spa',6),('carpentry','Carpentry','hammer',7),
+  ('other','Other','briefcase-outline',8);
 
 -- ========== PLANS ==========
 DELETE FROM public.subscription_plan_features;
