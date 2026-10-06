@@ -273,7 +273,7 @@ export default function RequestsScreen() {
   const getComments = (item: ServiceRequest): ServiceRequestComment[] =>
     item.comments || [];
 
-  const refreshRequests = () => setAllRequests(listServiceRequests());
+  const refreshRequests = async () => {\n    try {\n      const next = await import("@/services/serviceRequests").then((module) => module.listServiceRequestsAsync());\n      setAllRequests(next);\n    } catch (error) {\n      console.warn("[Requests] refresh failed:", error);\n    }\n  };
 
   const toggleLike = async (id: string) => {
     const liked = !likedIds[id];
