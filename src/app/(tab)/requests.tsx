@@ -273,7 +273,14 @@ export default function RequestsScreen() {
   const getComments = (item: ServiceRequest): ServiceRequestComment[] =>
     item.comments || [];
 
-  const refreshRequests = async () => {\n    try {\n      const next = await import("@/services/serviceRequests").then((module) => module.listServiceRequestsAsync());\n      setAllRequests(next);\n    } catch (error) {\n      console.warn("[Requests] refresh failed:", error);\n    }\n  };
+  const refreshRequests = async () => {
+    try {
+      const next = await import("@/services/serviceRequests").then((module) => module.listServiceRequestsAsync());
+      setAllRequests(next);
+    } catch (error) {
+      console.warn("[Requests] refresh failed:", error);
+    }
+  };
 
   const toggleLike = async (id: string) => {
     const liked = !likedIds[id];
@@ -306,7 +313,12 @@ export default function RequestsScreen() {
     try {
       await Share.share({
         title: item.title,
-        message: `${item.title}\n${item.category} @ ${item.location}, ${item.city}\n\n${item.description}\n\n— Shared from Doovly`,
+        message: `${item.title}
+${item.category} @ ${item.location}, ${item.city}
+
+${item.description}
+
+— Shared from Doovly`,
       });
     } catch {
       // cancelled
