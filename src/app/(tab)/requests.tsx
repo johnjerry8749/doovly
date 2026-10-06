@@ -33,7 +33,6 @@ import {
 } from "@/services/serviceRequests";
 import {
   getCurrentUserId,
-  addInAppNotification,
 } from "@/services/inAppNotifications";
 import { createOfferConversationAsync } from "@/services/chat";
 import { getLoggedInProfessionalId } from "@/services/savedProviders";
@@ -441,12 +440,6 @@ export default function RequestsScreen() {
       return;
     }
 
-    addInAppNotification({
-      userId: result.recipientUserId,
-      type: "general",
-      title: "New Offer",
-      body: `Someone sent an offer of ₦${amountNum.toLocaleString()} on "${offerRequest.title}".`,
-    });
 
     const offererProId = getLoggedInProfessionalId() ?? getCurrentUserId();
     const offererPro = getProfessionalById(String(offererProId));
