@@ -69,7 +69,9 @@ export type Professional = {
 // =========================
 
 export function starsFromReviewCount(count: number): number {
-  return Math.min(5, Math.floor(count / 10));
+  const total = Math.max(0, Number(count) || 0);
+  if (total === 0) return 0;
+  return Math.min(5, Math.max(1, Math.ceil(total / 10)));
 }
 
 // =========================
