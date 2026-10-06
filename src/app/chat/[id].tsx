@@ -20,6 +20,7 @@ import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   getConversationAsync,
+  getConversation,
   getMessagesAsync,
   sendMessage,
   markConversationReadAsync,
@@ -189,8 +190,13 @@ export default function ChatConversation() {
         ? initialMessage[0]
         : "";
 
-  const [conversation, setConversation] = useState<Conversation | undefined>();
-  const [loadingConversation, setLoadingConversation] = useState(true);
+  const cachedConversation = getConversation(conversationId);
+  const [conversation, setConversation] = useState<Conversation | undefined>(
+    cachedConversation,
+  );
+  const [loadingConversation, setLoadingConversation] = useState(
+    !cachedConversation,
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState(draftFromRoute || "");
   const [sending, setSending] = useState(false);
