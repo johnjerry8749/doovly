@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     if (profileError) throw profileError;
 
     const token = String(profile?.expo_push_token ?? "").trim();
-    if (!token) return json({ ok: true, sent: false, reason: "recipient_has_no_push_token" });
+    if (!token) return json({ ok: true, sent: false, recipientUserId, reason: "recipient_has_no_push_token" });
 
     const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
