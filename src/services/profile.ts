@@ -174,6 +174,7 @@ export async function updateProfile(
       full_name: name || null,
       phone: phone || null,
       email: email || null,
+      profession,
       city,
       ...(input.imageUrl ? { avatar_url: input.imageUrl } : {}),
     })
