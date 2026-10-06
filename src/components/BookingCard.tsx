@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { statusColors, type Booking } from "@/services/bookings";
 import { openBookingChatAsync } from "@/services/chat";
 
@@ -35,8 +35,21 @@ export function BookingCard({ item, mainTab }: Props) {
 
   /** Customer (booked) may cancel only while Pending */
   const showCancel = mainTab === "booked" && item.status === "Pending";
+  const openingChatRef = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      openingChatRef.current = false;
+      return () => {
+        openingChatRef.current = false;
+      };
+    }, []),
+  );
 
   const openChat = async () => {
+    if (openingChatRef.current) return;
+    openingChatRef.current = true;
+
     try {
       const conv = await openBookingChatAsync(item, mainTab);
       router.push({
@@ -44,6 +57,7 @@ export function BookingCard({ item, mainTab }: Props) {
         params: { id: conv.id },
       });
     } catch (error) {
+      openingChatRef.current = false;
       Alert.alert(
         "Could not open chat",
         error instanceof Error ? error.message : "Please try again.",
