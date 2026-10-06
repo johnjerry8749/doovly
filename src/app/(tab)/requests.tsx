@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -40,16 +40,15 @@ import {
   listProfessionals,
   listProfessionalsAsync,
   getProfessionalById,
+  listServiceCategoriesAsync,
 } from "@/services/professionals";
-import { SERVICE_CATEGORIES } from "@/data/serviceCategories";
-import { NIGERIA_CITIES } from "@/data/cities";
+import { listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 import CreateJobModal from "@/components/CreateJobModal";
 import RequestImageSlider from "@/components/RequestImageSlider";
 
 const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
-const CATEGORY_FILTERS = ["All", ...SERVICE_CATEGORIES.map((c) => c.name)];
 const PROFILE_NAV_COOLDOWN_MS = 4500;
 
 const normalize = (value?: string | number | null) =>
@@ -185,6 +184,8 @@ export default function RequestsScreen() {
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [categoryFilters, setCategoryFilters] = useState<string[]>(["All"]);
+  const [cities, setCities] = useState<string[]>([]);
   const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
   const [allRequests, setAllRequests] = useState(() => listServiceRequests());
   const [createVisible, setCreateVisible] = useState(false);
@@ -194,11 +195,23 @@ export default function RequestsScreen() {
   const [chatText, setChatText] = useState("");
   const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
 
+  useEffect(() => {
+    let active = true;
+    Promise.all([listServiceCategoriesAsync(), listCitiesAsync()])
+      .then(([categories, nextCities]) => {
+        if (!active) return;
+        setCategoryFilters(categories.map((category) => category.name));
+        setCities(nextCities);
+      })
+      .catch((error) => console.warn("[Requests] failed to load filters:", error));
+    return () => { active = false; };
+  }, []);
+
   const filteredCities = useMemo(() => {
     const q = citySearch.trim().toLowerCase();
-    if (!q) return [...NIGERIA_CITIES];
-    return NIGERIA_CITIES.filter((c) => c.toLowerCase().includes(q));
-  }, [citySearch]);
+    if (!q) return cities;
+    return cities.filter((c) => c.toLowerCase().includes(q));
+  }, [citySearch, cities]);
 
   const matchesLocationCity = (itemCity?: string, itemArea?: string) => {
     if (
@@ -696,7 +709,7 @@ export default function RequestsScreen() {
           contentContainerStyle={styles.filtersRow}
           keyboardShouldPersistTaps="handled"
         >
-          {CATEGORY_FILTERS.map((category) => {
+          {categoryFilters.map((category) => {
             const active = categoryFilter === category;
             return (
               <TouchableOpacity
