@@ -361,10 +361,11 @@ export async function getMessagesAsync(conversationId: string): Promise<ChatMess
     .from("messages")
     .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
     .eq("conversation_id", conversationUuid)
+    .neq("kind", "request_card")
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  const messages = (data ?? []).map((row) => mapMessage(row, session.uuid));
+  const messages = (data ?? []).filter((row) => row.kind !== "request_card").map((row) => mapMessage(row, session.uuid));
   await cacheMessagesAsync(conversationUuid, messages);
   return messages;
 }
@@ -405,8 +406,8 @@ export async function sendImageMessage(conversationId: string, localUri: string)
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
   if (!localUri) throw new Error("No image selected");
-  if (!(await canSendMessageAsync(conversationId))) {
-    throw new Error("Messaging is locked until the request is accepted");
+  if ((await getBookingStatusAsync(conversationId)) !== "Accepted") {
+    throw new Error("Image messaging is available after the request is accepted");
   }
   if (!(await isCurrentUserChatProAsync())) {
     throw new Error("IMAGE_CHAT_PRO_REQUIRED");
@@ -561,7 +562,7 @@ async function conversationRowFor(id: string) {
 
   const { data, error } = await supabase
     .from("conversations")
-    .select("id,booking_id,service_request_id,offer_id")
+    .select("id,booking_id,service_request_id,offer_id,text_allowed,text_allowed_by,text_allowed_at")
     .eq("id", conversationUuid)
     .maybeSingle();
   if (error) throw error;
@@ -591,8 +592,27 @@ export function getBookingStatus(_conversationId: string): BookingChatStatus {
   return "Accepted";
 }
 
+export async function isTextAllowedAsync(conversationId: string): Promise<boolean> {
+  const row = await conversationRowFor(conversationId);
+  return Boolean(row?.text_allowed);
+}
+
+export async function allowTextAsync(conversationId: string): Promise<boolean> {
+  const session = await loadSessionUser(true);
+  if (!session) throw new Error("Not logged in");
+  const uuid = tryToUuid("conversation", conversationId) ?? conversationId;
+  const { data, error } = await supabase.rpc("allow_conversation_text", {
+    p_conversation_id: uuid,
+  });
+  if (error) throw error;
+  return Boolean(data);
+}
+
 export async function canSendMessageAsync(conversationId: string): Promise<boolean> {
-  return (await getBookingStatusAsync(conversationId)) === "Accepted";
+  const status = await getBookingStatusAsync(conversationId);
+  if (status === "Accepted") return true;
+  if (status !== "Pending") return false;
+  return isTextAllowedAsync(conversationId);
 }
 
 export function canSendMessage(_conversationId: string): boolean {
@@ -775,36 +795,6 @@ export async function openBookingChatAsync(
       lastMessage: `Booking: ${booking.title}`,
     },
   );
-
-  const { data: existingCard } = await supabase
-    .from("messages")
-    .select("id")
-    .eq("conversation_id", conversation.id)
-    .eq("kind", "request_card")
-    .limit(1)
-    .maybeSingle();
-
-  if (!existingCard) {
-    await supabase.from("messages").insert({
-      conversation_id: conversation.id,
-      sender_id: session.uuid,
-      text: `Booking request: ${booking.title}`,
-      kind: "request_card",
-      card: {
-        kind: "booking",
-        title: booking.title,
-        location: booking.location,
-        amount: booking.amount,
-        date: booking.date,
-        statusLabel:
-          booking.status === "Pending"
-            ? "Waiting for professional to accept"
-            : booking.status === "Declined"
-              ? "This booking was declined"
-              : "Accepted",
-      },
-    });
-  }
 
   return conversation;
 }
