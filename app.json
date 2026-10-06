@@ -20,6 +20,7 @@
         "NSPhotoLibraryUsageDescription": "Doovly needs access to your photos so you can attach images when reporting an issue.",
         "NSCameraUsageDescription": "Doovly needs camera access so you can take photos when reporting an issue.",
         "UIBackgroundModes": [
+          "remote-notification",
           "remote-notification"
         ]
       }
@@ -34,8 +35,14 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
         "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.CAMERA",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECORD_AUDIO"
       ]
     },
@@ -91,6 +98,12 @@
       "eas": {
         "projectId": "8c730012-8237-4f60-83af-53a64e6beaf8"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8c730012-8237-4f60-83af-53a64e6beaf8"
     }
   }
 }
