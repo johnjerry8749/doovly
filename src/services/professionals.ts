@@ -2,6 +2,50 @@
  * Professionals service — Supabase only.
  */
 
+export type ProService = {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  priceValue: number;
+  icon: string;
+};
+
+export type ProReview = {
+  id: string;
+  userId?: string;
+  userName: string;
+  comment: string;
+  date: string;
+};
+
+export type CompletedProject = {
+  id: string;
+  description: string;
+  image: number;
+};
+
+export type Professional = {
+  id: string;
+  userId?: string;
+  name: string;
+  profession: string;
+  city: string;
+  priceFrom: string;
+  image: number;
+  verified: boolean;
+  subscribed: boolean;
+  latitude: number;
+  longitude: number;
+  role: string;
+  email: string;
+  phone: string;
+  bio?: string;
+  services: ProService[];
+  portfolio: CompletedProject[];
+  reviews: ProReview[];
+};
+
 import { supabase } from "@/lib/supabase";
 import {
   mapProfessionalRow,
@@ -11,17 +55,24 @@ import {
 } from "@/lib/rowMappers";
 
 import { loadSessionUser } from "@/lib/session";
-import {
-  getDistanceKm,
-  starsFromReviewCount,
-  type Professional,
-  type ProService,
-  type ProReview,
-} from "@/data/professionals";
+
 export type ServiceCategory = { name: string; icon: string; };
 
 export type { Professional, ProService, ProReview, ServiceCategory };
-export { getDistanceKm, starsFromReviewCount };
+
+export function starsFromReviewCount(count: number): number {
+  const total = Math.max(0, Number(count) || 0);
+  if (total === 0) return 0;
+  return Math.min(5, Math.max(1, Math.ceil(total / 10)));
+}
+
+export function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 let cache: Professional[] | null = null;
 let loadPromise: Promise<Professional[]> | null = null;
