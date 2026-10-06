@@ -14,6 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
   listConversationsAsync,
+  getCachedConversationsAsync,
+  cacheConversationsAsync,
   ensureChatRealtime,
   markConversationReadAsync,
   type Conversation,
@@ -31,23 +33,47 @@ export default function ChatList() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (showInitialLoading = false) => {
+    if (showInitialLoading) setLoading(true);
+
     try {
-      setConversations(await listConversationsAsync());
+      const fresh = await listConversationsAsync();
+      setConversations(fresh);
+      await cacheConversationsAsync(fresh);
     } catch (error) {
-      console.warn("Chat list load failed:", error);
+      console.warn("Chat list refresh failed:", error);
     } finally {
-      setLoading(false);
+      if (showInitialLoading) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void refresh();
+    let active = true;
+    const start = async () => {
+      const cached = await getCachedConversationsAsync();
+
+      if (active && cached?.length) {
+        setConversations(cached);
+        setLoading(false);
+      }
+
+      // Always refresh from Supabase in the background.
+      await refresh(!cached);
+    };
+
+    void start();
+
     let cleanup: (() => void) | undefined;
-    void ensureChatRealtime(refresh).then((stop) => {
+    void ensureChatRealtime(() => {
+      void refresh(false);
+    }).then((stop) => {
       cleanup = stop;
     });
-    return () => cleanup?.();
+
+    return () => {
+      active = false;
+      cleanup?.();
+    };
   }, [refresh]);
 
   const filtered = conversations.filter((conversation) => {
