@@ -42,6 +42,7 @@ import {
   getChatCreditsAsync,
   isCurrentUserChatProAsync,
   sendImageMessage,
+  isConversationBlockedAsync,
 } from "@/services/chat";
 import { loadSessionUser } from "@/lib/session";
 
@@ -212,6 +213,7 @@ export default function ChatConversation() {
   const [convKind, setConvKind] = useState<"booking" | "offer" | undefined>();
   const [chatCoins, setChatCoins] = useState<number | null>(15);
   const [chatPro, setChatPro] = useState(false);
+  const [chatBlocked, setChatBlocked] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -257,10 +259,11 @@ export default function ChatConversation() {
 
           // Fetch the two things needed to render the DM in parallel.
           // Do not make location/status/kind/credits block the first paint.
-          const [msgsResult, statusResult, kindResult] = await Promise.allSettled([
+          const [msgsResult, statusResult, kindResult, blockedResult] = await Promise.allSettled([
             getMessagesAsync(conv.id),
             getBookingStatusAsync(conv.id),
             getConversationKindAsync(conv.id),
+            isConversationBlockedAsync(conv.id),
           ]);
 
           if (active && msgsResult.status === "fulfilled") {
@@ -279,6 +282,10 @@ export default function ChatConversation() {
 
           if (active && kindResult.status === "fulfilled") {
             setConvKind(kindResult.value);
+          }
+
+          if (active && blockedResult.status === "fulfilled") {
+            setChatBlocked(blockedResult.value);
           }
 
           // These are secondary and can finish after the conversation is visible.
@@ -332,7 +339,7 @@ export default function ChatConversation() {
 
   const onSend = async () => {
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    if (chatBlocked || !trimmed || sending) return;
 
     setSending(true);
     setText("");
@@ -354,7 +361,11 @@ export default function ChatConversation() {
           ],
         );
       } else {
-        Alert.alert("Message failed", message || "Could not send your message.");
+        if (message.includes("CHAT_BLOCKED")) {
+          Alert.alert("Chat blocked", "You cannot send messages in this chat.");
+        } else {
+          Alert.alert("Message failed", message || "Could not send your message.");
+        }
       }
     } finally {
       setSending(false);
@@ -362,6 +373,8 @@ export default function ChatConversation() {
   };
 
   const onPickImage = async () => {
+    if (chatBlocked) return;
+
     if (!chatPro) {
       Alert.alert(
         "Pro feature",
@@ -390,7 +403,9 @@ export default function ChatConversation() {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (error: any) {
       const message = String(error?.message ?? error);
-      if (message.includes("IMAGE_CHAT_PRO_REQUIRED")) {
+      if (message.includes("CHAT_BLOCKED")) {
+        Alert.alert("Chat blocked", "You cannot send messages in this chat.");
+      } else if (message.includes("IMAGE_CHAT_PRO_REQUIRED")) {
         Alert.alert("Pro feature", "Image messages require Doovly Pro.");
       } else if (message.includes("CHAT_CREDITS_EXHAUSTED")) {
         Alert.alert("Chat coins finished", "Subscribe to Doovly Pro for unlimited chat.");
@@ -819,7 +834,12 @@ export default function ChatConversation() {
         )}
 
         {bookingStatusLoaded && <View style={styles.inputBar}>
-          {bookingStatus === "Accepted" ? (
+          {chatBlocked ? (
+            <View style={styles.lockedBar}>
+              <Ionicons name="ban-outline" size={14} color={TEXT_MUTED} />
+              <Text style={styles.lockedText}>This chat is blocked. Messaging is disabled.</Text>
+            </View>
+          ) : bookingStatus === "Accepted" ? (
             <>
               {bookingStatus === "Accepted" && (
                 <>
