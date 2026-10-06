@@ -37,6 +37,8 @@ Deno.serve(async (req) => {
     const kind = String(body.kind ?? "");
     const bookingId = String(body.bookingId ?? "").trim();
     const offerId = String(body.offerId ?? "").trim();
+    const commentId = String(body.commentId ?? "").trim();
+    const requestId = String(body.requestId ?? "").trim();
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
@@ -63,6 +65,19 @@ Deno.serve(async (req) => {
       } else {
         return json({ error: "You are not a participant in this booking." }, 403);
       }
+    } else if (kind === "comment" && commentId) {
+      const { data: comment, error } = await admin.from("service_request_comments").select("id,user_id,request_id").eq("id", commentId).maybeSingle();
+      if (error) throw error;
+      if (!comment) return json({ error: "Comment not found." }, 404);
+      if (String(comment.user_id) !== user.id) return json({ error: "You are not the comment author." }, 403);
+      const { data: request, error: requestError } = await admin.from("service_requests").select("created_by").eq("id", comment.request_id).maybeSingle();
+      if (requestError) throw requestError;
+      recipientUserId = request?.created_by ? String(request.created_by) : null;
+    } else if (kind === "like" && requestId) {
+      const { data: request, error: requestError } = await admin.from("service_requests").select("created_by").eq("id", requestId).maybeSingle();
+      if (requestError) throw requestError;
+      if (!request) return json({ error: "Request not found." }, 404);
+      recipientUserId = request.created_by ? String(request.created_by) : null;
     } else if (kind === "offer" && offerId) {
       const { data: offer, error } = await admin
         .from("service_request_offers")
