@@ -17,13 +17,14 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 
 import {
   listServiceRequests,
   listServiceRequestsAsync,
+  subscribeServiceRequests,
   canSendOfferOnRequest,
   submitServiceRequestOffer,
   addServiceRequestComment,
@@ -282,6 +283,18 @@ export default function RequestsScreen() {
       console.warn("[Requests] refresh failed:", error);
     }
   };
+
+  useEffect(() => {
+    return subscribeServiceRequests((next) => {
+      setAllRequests(next);
+    });
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void refreshRequests();
+    }, []),
+  );
 
   const toggleLike = async (id: string) => {
     const liked = !likedIds[id];
