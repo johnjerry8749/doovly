@@ -4,7 +4,6 @@
 import { supabase } from "@/lib/supabase";
 import { mapBookingRow, BOOKING_SELECT } from "@/lib/rowMappers";
 import { bookingStatusToDb } from "@/lib/mappers";
-import { tryToUuid } from "@/lib/ids";
 import { loadSessionUser } from "@/lib/session";
 import type { Booking, BookingStatus } from "@/data/booking";
 import { statusColors } from "@/data/booking";
@@ -48,7 +47,7 @@ export async function createBookingRequest(input:{
 }):Promise<Booking>{
   const s=await loadSessionUser();
   if(!s) throw new Error("Not logged in");
-  const professionalUuid=tryToUuid("professional",input.professionalId) ?? input.professionalId;
+  const professionalUuid=input.professionalId;
   const displayDate=input.bookingDate ?? new Date().toLocaleDateString("en-NG",{day:"numeric",month:"short",year:"numeric"});
   const title=input.title.trim();
   const location=input.location.trim();
