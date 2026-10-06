@@ -140,13 +140,38 @@ export async function deleteServiceRequest(id: string): Promise<boolean> {
 }
 
 export async function addServiceRequestComment(input: AddCommentInput): Promise<ServiceRequestComment | null> {
-  const s = await loadSessionUser(true); if (!s || !input.text.trim()) return null;
-  const request = await getServiceRequestByIdAsync(input.requestId); if (!request) return null;
+  const s = await loadSessionUser(true);
+  if (!s || !input.text.trim()) return null;
+  const request = await getServiceRequestByIdAsync(input.requestId);
+  if (!request) return null;
+
   const { data, error } = await supabase.from("service_request_comments").insert({
-    request_id: requestUuid(input.requestId), user_id: s.uuid,
-    user_name: input.userName?.trim() || s.fullName || "You", user_avatar_url: null, text: input.text.trim(), time_ago: "Just now",
+    request_id: requestUuid(input.requestId),
+    user_id: s.uuid,
+    user_name: input.userName?.trim() || s.fullName || "You",
+    user_avatar_url: null,
+    text: input.text.trim(),
+    time_ago: "Just now",
   }).select("id,mock_id,user_id,user_name,user_avatar_url,text,time_ago,created_at").single();
-  if (error) throw error; invalidateServiceRequestsCache(); return mapServiceRequestComment(data);
+
+  if (error) throw error;
+  invalidateServiceRequestsCache();
+
+  if (String(request.createdByUserId) !== String(s.uuid)) {
+    void supabase.functions.invoke("send-booking-notification", {
+      body: {
+        kind: "comment",
+        commentId: String(data.id),
+        title: "New Comment",
+        message: `${s.fullName || "Someone"} commented on your service request.`,
+        data: { type: "comment", screen: "requests", requestId: String(request.id) },
+      },
+    }).catch((notificationError) => {
+      console.warn("[Notifications] comment notification failed:", notificationError);
+    });
+  }
+
+  return mapServiceRequestComment(data);
 }
 
 export async function updateServiceRequestComment(commentId: string, text: string): Promise<ServiceRequestComment | null> {
