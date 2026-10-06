@@ -3,10 +3,50 @@
  * UI/API contract is preserved; no screen styling or layout changes.
  */
 import type { ImageSourcePropType } from "react-native";
+export type ServiceRequestIcon = keyof typeof MaterialCommunityIcons.glyphMap;
+
+export type ServiceRequestComment = {
+  id: string;
+  userId?: string;
+  authUserId?: string;
+  userName: string;
+  userAvatar: ImageSourcePropType;
+  text: string;
+  timeAgo: string;
+};
+
+export type ServiceRequest = {
+  id: string;
+  title: string;
+  category: string;
+  profession: string;
+  location: string;
+  city: string;
+  price?: string;
+  timeAgo: string;
+  icon: ServiceRequestIcon;
+  iconBackground: string;
+  latitude?: number;
+  longitude?: number;
+  images: ImageSourcePropType[];
+  description: string;
+  isNew: boolean;
+  createdByUserId: string;
+  posterName: string;
+  posterAvatar: ImageSourcePropType;
+  posterVerified?: boolean;
+  likesCount: number;
+  maxOffers: number;
+  offersCount: number;
+  offeredByUserIds?: string[];
+  comments: ServiceRequestComment[];
+};
+
 import { supabase } from "@/lib/supabase";
+import type { MaterialCommunityIcons } from "@expo/vector-icons";
+import type { ImageSourcePropType } from "react-native";
 import { loadSessionUser, getCachedSessionUser } from "@/lib/session";
 import { mapServiceRequestRow, mapServiceRequestComment, SERVICE_REQUEST_SELECT } from "@/lib/rowMappers";
-import type { ServiceRequest, ServiceRequestComment, ServiceRequestIcon } from "@/data/serviceRequests";
 import { uploadImageFull, UPLOAD_FOLDERS } from "@/services/cloudinary";
 import { notifyBookingRecipient } from "@/services/notifications";
 
