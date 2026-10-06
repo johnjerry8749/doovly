@@ -223,29 +223,62 @@ export default function ChatConversation() {
     let active = true;
     const load = async () => {
       try {
-        const [conv, msgs, sharingNow, status, kind] = await Promise.all([
-          getConversationAsync(conversationId),
-          getMessagesAsync(conversationId),
-          isSharingLocationAsync(conversationId),
-          getBookingStatusAsync(conversationId),
-          getConversationKindAsync(conversationId),
-        ]);
+        // Load the conversation first. Auxiliary data must not make a valid
+        // conversation appear as "Conversation not found".
+        const conv = await getConversationAsync(conversationId);
         if (!active) return;
+
         setConversation(conv);
-        setMessages(msgs);
-        setSharing(sharingNow);
-        setBookingStatus(status);
-        setConvKind(kind);
-        const [proNow, coinsNow] = await Promise.all([
-          isCurrentUserChatProAsync(),
-          getChatCreditsAsync(),
-        ]);
-        if (active) {
-          setChatPro(proNow);
-          setChatCoins(coinsNow);
+
+        if (!conv) {
+          console.warn("Conversation not found:", conversationId);
+          return;
         }
-        void markConversationReadAsync(conversationId);
-        return kind;
+
+        try {
+          const msgs = await getMessagesAsync(conv.id);
+          if (active) setMessages(msgs);
+        } catch (error) {
+          console.warn("Could not load chat messages:", error);
+        }
+
+        try {
+          const sharingNow = await isSharingLocationAsync(conv.id);
+          if (active) setSharing(sharingNow);
+        } catch (error) {
+          console.warn("Could not load location state:", error);
+        }
+
+        try {
+          const status = await getBookingStatusAsync(conv.id);
+          if (active) setBookingStatus(status);
+        } catch (error) {
+          console.warn("Could not load booking status:", error);
+        }
+
+        try {
+          const kind = await getConversationKindAsync(conv.id);
+          if (active) setConvKind(kind);
+        } catch (error) {
+          console.warn("Could not load conversation kind:", error);
+        }
+
+        try {
+          const [proNow, coinsNow] = await Promise.all([
+            isCurrentUserChatProAsync(),
+            getChatCreditsAsync(),
+          ]);
+          if (active) {
+            setChatPro(proNow);
+            setChatCoins(coinsNow);
+          }
+        } catch (error) {
+          console.warn("Could not load chat credits:", error);
+        }
+
+        void markConversationReadAsync(conv.id).catch((error) => {
+          console.warn("Could not mark conversation read:", error);
+        });
       } catch (error) {
         console.warn("Chat conversation load failed:", error);
       }
