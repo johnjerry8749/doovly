@@ -144,7 +144,7 @@ export async function updateSubscription(
     const {data:planRow,error:planError}=await supabase
       .from("subscription_plans")
       .select("id")
-      .eq("mock_id",planCode==="pro"?"pro":"basic")
+      .eq("code",planCode==="pro"?"pro":"basic")
       .maybeSingle();
 
     if(planError) throw planError;
