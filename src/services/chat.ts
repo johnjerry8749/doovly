@@ -101,8 +101,7 @@ export async function cacheMessagesAsync(
   conversationId: string,
   messages: ChatMessage[],
 ): Promise<void> {
-  const conversationUuid =
-    tryToUuid("conversation", conversationId) ?? conversationId;
+  const conversationUuid = conversationId;
   await writeCache(messagesCacheKey(conversationUuid), messages);
 }
 const unreadListeners = new Set<Listener>();
@@ -134,7 +133,7 @@ async function getUserUuid(publicId: string): Promise<string | null> {
   const { data: professional } = await supabase
     .from("professionals")
     .select("user_id")
-    .or(`id.eq.${value},mock_id.eq.${value}`)
+    .eq("id", value)
     .maybeSingle();
   return professional?.user_id ?? null;
 }
@@ -143,18 +142,18 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
   const [{ data: profile }, { data: pro }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id,mock_id,full_name,avatar_url,phone")
+      .select("id,full_name,avatar_url,phone")
       .eq("id", userId)
       .maybeSingle(),
     supabase
       .from("professionals")
-      .select("mock_id,is_verified,avatar_url,profiles!professionals_user_id_fkey(full_name,avatar_url)")
+      .select("id,is_verified,avatar_url,profiles!professionals_user_id_fkey(full_name,avatar_url)")
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
 
   return {
-    id: pro?.mock_id ?? profile?.mock_id ?? userId,
+    id: pro?.id ?? profile?.id ?? userId,
     name: profile?.full_name ?? pro?.profiles?.full_name ?? "User",
     image: imageFromUrl(pro?.avatar_url ?? pro?.profiles?.avatar_url ?? profile?.avatar_url),
     verified: Boolean(pro?.is_verified),
@@ -236,8 +235,7 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
   const session = await loadSessionUser();
   if (!session || !conversationId) return undefined;
 
-  const conversationUuid =
-    tryToUuid("conversation", conversationId) ?? conversationId;
+  const conversationUuid = conversationId;
 
   const { data: row, error } = await supabase
     .from("conversations")
@@ -386,8 +384,7 @@ export async function getMessagesAsync(conversationId: string): Promise<ChatMess
   const session = await loadSessionUser();
   if (!session) return [];
 
-  const conversationUuid =
-    tryToUuid("conversation", conversationId) ?? conversationId;
+  const conversationUuid = conversationId;
 
   const { data, error } = await supabase
     .from("messages")
@@ -495,8 +492,7 @@ export async function markConversationReadAsync(conversationId: string): Promise
   const session = await loadSessionUser(true);
   if (!session) return;
 
-  const conversationUuid =
-    tryToUuid("conversation", conversationId) ?? conversationId;
+  const conversationUuid = conversationId;
 
   const { error } = await supabase
     .from("conversation_reads")
@@ -591,8 +587,7 @@ export function canOpenSharedLocation(_conversationId: string, message: ChatMess
 }
 
 async function conversationRowFor(id: string) {
-  const conversationUuid =
-    tryToUuid("conversation", id) ?? id;
+  const conversationUuid = id;
 
   const { data, error } = await supabase
     .from("conversations")
@@ -634,7 +629,7 @@ export async function isTextAllowedAsync(conversationId: string): Promise<boolea
 export async function allowTextAsync(conversationId: string): Promise<boolean> {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
-  const uuid = tryToUuid("conversation", conversationId) ?? conversationId;
+  const uuid = conversationId;
   const { data, error } = await supabase.rpc("allow_conversation_text", {
     p_conversation_id: uuid,
   });
@@ -720,12 +715,8 @@ async function createConversation(
     throw new Error("You cannot start a conversation with yourself");
   }
 
-  const bookingUuid = options.bookingId
-    ? tryToUuid("booking", options.bookingId) ?? options.bookingId
-    : null;
-  const requestUuid = options.serviceRequestId
-    ? tryToUuid("serviceRequest", options.serviceRequestId) ?? options.serviceRequestId
-    : null;
+  const bookingUuid = options.bookingId ?? null;
+  const requestUuid = options.serviceRequestId ?? null;
   const offerUuid = options.offerId
     ? options.offerId
     : null;
@@ -820,7 +811,7 @@ export async function openBookingChatAsync(
 
   if (!otherUuid) throw new Error("Chat participant not found");
 
-  const bookingUuid = tryToUuid("booking", String(booking.id)) ?? String(booking.id);
+  const bookingUuid = String(booking.id);
 
   const { data: existing, error: existingError } = await supabase
     .from("conversations")
@@ -886,10 +877,8 @@ export async function createOfferConversationAsync(input: {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
 
-  const requestUuid = tryToUuid("serviceRequest", input.requestId) ?? input.requestId;
-  const professionalUuid =
-    tryToUuid("professional", input.offererProfessionalId) ??
-    input.offererProfessionalId;
+  const requestUuid = input.requestId;
+  const professionalUuid = input.offererProfessionalId;
 
   const { data: offer } = await supabase
     .from("service_request_offers")
@@ -952,7 +941,7 @@ export async function acceptBooking(conversationId: string, acceptorDisplayName:
       if (request?.created_by && offer.professional_id) {
         const { data: professional } = await supabase
           .from("professionals")
-          .select("profiles!professionals_user_id_fkey(full_name),mock_id")
+          .select("profiles!professionals_user_id_fkey(full_name)")
           .eq("id", offer.professional_id)
           .maybeSingle();
 
