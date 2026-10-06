@@ -43,7 +43,7 @@ alter table public.messages drop constraint if exists messages_kind_check;
 alter table public.messages add constraint messages_kind_check
 check (kind = any (array[
   'text'::text, 'image'::text, 'location'::text,
-  'location_stopped'::text, 'request_card'::text
+  'location_stopped'::text, 'request_card'::text, 'system'::text
 ]));
 
 create or replace function public.is_chat_pro(p_user_id uuid)
