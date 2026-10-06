@@ -105,7 +105,20 @@ Deno.serve(async (req) => {
     if (profileError) throw profileError;
 
     const token = String(profile?.expo_push_token ?? "").trim();
-    if (!token) return json({ ok: true, sent: false, recipientUserId, reason: "recipient_has_no_push_token" });
+
+    // Persist the in-app notification first. Push delivery is best-effort and
+    // must never prevent the in-app notification from being created.
+    const { error: notificationError } = await admin.from("notifications").insert({
+      user_id: recipientUserId,
+      type: "booking",
+      title,
+      body: message,
+      unread: true,
+      data,
+    });
+    if (notificationError) throw notificationError;
+
+    if (!token) return json({ ok: true, sent: false, recipientUserId, inApp: true, reason: "recipient_has_no_push_token" });
 
     const expoResponse = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
