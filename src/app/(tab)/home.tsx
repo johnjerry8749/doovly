@@ -307,10 +307,14 @@ export default function Home() {
                   </Text>
                 </View>
                 <View style={styles.ratingContainer}>
-                  <Ionicons name="star" size={12} color="#F4C400" />
-                  <Text style={styles.rating}>
-                    {starsFromReviewCount(person.reviews.length)}
-                  </Text>
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <Ionicons
+                      key={"star-" + person.id + "-" + index}
+                      name={index < starsFromReviewCount(person.reviews.length) ? "star" : "star-outline"}
+                      size={12}
+                      color="#F4C400"
+                    />
+                  ))}
                   <Text style={styles.reviews}>({person.reviews.length})</Text>
                 </View>
                 <Text style={styles.profession} numberOfLines={1}>
