@@ -158,7 +158,7 @@ export async function recordAcceptedOfferBooking(input:{title:string;amount:numb
 
 export async function updateBookingStatus(bookingId:string,status:BookingStatus):Promise<Booking|null>{
   const s=await loadSessionUser(); if(!s) throw new Error("Not logged in");
-  const uuid=tryToUuid("booking",bookingId)??bookingId;
-  const {data,error}=await supabase.from("bookings").update({status:bookingStatusToDb(status)}).or(`id.eq.${uuid},mock_id.eq.${bookingId}`).select(BOOKING_SELECT).maybeSingle();
+  const uuid=bookingId;
+  const {data,error}=await supabase.from("bookings").update({status:bookingStatusToDb(status)}).eq("id", uuid).select(BOOKING_SELECT).maybeSingle();
   if(error) throw error; if(!data)return null; invalidateBookingsCache(); return mapBookingRow(data);
 }
