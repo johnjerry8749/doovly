@@ -246,58 +246,51 @@ export default function ChatConversation() {
         if (conv) {
           setConversation(conv);
 
-          try {
-            const msgs = await getMessagesAsync(conv.id);
-            if (active) setMessages(msgs);
-          } catch (error) {
-            console.warn("Could not refresh chat messages:", error);
+          // Fetch the two things needed to render the DM in parallel.
+          // Do not make location/status/kind/credits block the first paint.
+          const [msgsResult, statusResult, kindResult] = await Promise.allSettled([
+            getMessagesAsync(conv.id),
+            getBookingStatusAsync(conv.id),
+            getConversationKindAsync(conv.id),
+          ]);
+
+          if (active && msgsResult.status === "fulfilled") {
+            setMessages(msgsResult.value);
+          } else if (msgsResult.status === "rejected") {
+            console.warn("Could not refresh chat messages:", msgsResult.reason);
           }
 
-          try {
-            const sharingNow = await isSharingLocationAsync(conv.id);
-            if (active) setSharing(sharingNow);
-          } catch (error) {
-            console.warn("Could not refresh location state:", error);
+          if (active && statusResult.status === "fulfilled") {
+            setBookingStatus(statusResult.value);
+            setBookingStatusLoaded(true);
+          } else if (active) {
+            console.warn("Could not refresh booking status:", statusResult.status === "rejected" ? statusResult.reason : "unknown error");
+            setBookingStatusLoaded(true);
           }
 
-          try {
-            const status = await getBookingStatusAsync(conv.id);
-            if (active) {
-              setBookingStatus(status);
-              setBookingStatusLoaded(true);
-            }
-          } catch (error) {
-            console.warn("Could not refresh booking status:", error);
-            if (active) setBookingStatusLoaded(true);
+          if (active && kindResult.status === "fulfilled") {
+            setConvKind(kindResult.value);
           }
 
-          try {
-            const kind = await getConversationKindAsync(conv.id);
-            if (active) setConvKind(kind);
-          } catch (error) {
-            console.warn("Could not refresh conversation kind:", error);
-          }
-
-          void markConversationReadAsync(conv.id).catch((error) => {
-            console.warn("Could not mark conversation read:", error);
-          });
+          // These are secondary and can finish after the conversation is visible.
+          void Promise.allSettled([
+            isSharingLocationAsync(conv.id).then((value) => {
+              if (active) setSharing(value);
+            }),
+            markConversationReadAsync(conv.id),
+            isCurrentUserChatProAsync().then((value) => {
+              if (active) setChatPro(value);
+            }),
+            getChatCreditsAsync().then((value) => {
+              if (active) setChatCoins(value);
+            }),
+          ]);
         } else {
           setConversation(undefined);
           setMessages([]);
         }
 
-        try {
-          const [proNow, coinsNow] = await Promise.all([
-            isCurrentUserChatProAsync(),
-            getChatCreditsAsync(),
-          ]);
-          if (active) {
-            setChatPro(proNow);
-            setChatCoins(coinsNow);
-          }
-        } catch (error) {
-          console.warn("Could not refresh chat credits:", error);
-        }
+
       } catch (error) {
         console.warn("Chat conversation refresh failed:", error);
       } finally {
