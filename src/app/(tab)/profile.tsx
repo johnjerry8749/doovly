@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { Alert } from "react-native";
+import { useAuth } from "@/context/AuthContext";
 
 import {
   ensureProfessionalsLoaded,
@@ -98,6 +100,8 @@ function MenuIcon({
 }
 
 export default function Profile() {
+  const { signOut } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
   const role = getCurrentUserRole();
   const proId = getLoggedInProfessionalId();
   const [loadedProId, setLoadedProId] = useState<string | null>(proId);
@@ -315,9 +319,45 @@ export default function Profile() {
         </View>
 
         {/* Log Out */}
-        <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          activeOpacity={0.8}
+          disabled={loggingOut}
+          onPress={() => {
+            Alert.alert(
+              "Log Out",
+              "Are you sure you want to log out?",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Log Out",
+                  style: "destructive",
+                  onPress: async () => {
+                    if (loggingOut) return;
+
+                    setLoggingOut(true);
+
+                    try {
+                      await signOut();
+                      router.replace("/(auth)/login");
+                    } catch (error) {
+                      console.error("[Profile] logout failed:", error);
+                      setLoggingOut(false);
+                      Alert.alert(
+                        "Logout Failed",
+                        "We could not log you out. Please try again.",
+                      );
+                    }
+                  },
+                },
+              ],
+            );
+          }}
+        >
           <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>
+            {loggingOut ? "Logging Out..." : "Log Out"}
+          </Text>
         </TouchableOpacity>
 
         {/* Admin */}
