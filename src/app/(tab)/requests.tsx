@@ -23,6 +23,7 @@ import { supabase } from "@/lib/supabase";
 
 import {
   listServiceRequests,
+  listServiceRequestsAsync,
   canSendOfferOnRequest,
   submitServiceRequestOffer,
   addServiceRequestComment,
@@ -275,7 +276,7 @@ export default function RequestsScreen() {
 
   const refreshRequests = async () => {
     try {
-      const next = await import("@/services/serviceRequests").then((module) => module.listServiceRequestsAsync());
+      const next = await listServiceRequestsAsync();
       setAllRequests(next);
     } catch (error) {
       console.warn("[Requests] refresh failed:", error);
