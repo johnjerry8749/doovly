@@ -50,7 +50,11 @@
           "image": "./assets/images/splash_screen.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#16A34A"
+          "backgroundColor": "#16A34A",
+          "android": {
+            "image": "./assets/images/splash_android.png",
+            "imageWidth": 288
+          }
         }
       ],
       "expo-asset",
