@@ -172,8 +172,37 @@ export function listConversations(): Conversation[] {
 }
 
 export async function getConversationAsync(conversationId: string): Promise<Conversation | undefined> {
-  const list = await listConversationsAsync();
-  return list.find((item) => item.id === conversationId);
+  const session = await loadSessionUser();
+  if (!session || !conversationId) return undefined;
+
+  const { data: row, error } = await supabase
+    .from("conversations")
+    .select("id,participant_a,participant_b,last_message,last_message_at")
+    .eq("id", conversationId)
+    .or(`participant_a.eq.${session.uuid},participant_b.eq.${session.uuid}`)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!row) return undefined;
+
+  const otherId =
+    row.participant_a === session.uuid ? row.participant_b : row.participant_a;
+  const participant = await getParticipant(otherId);
+
+  const { data: read } = await supabase
+    .from("conversation_reads")
+    .select("unread_count")
+    .eq("conversation_id", row.id)
+    .eq("user_id", session.uuid)
+    .maybeSingle();
+
+  return {
+    id: row.id,
+    participant,
+    lastMessage: row.last_message,
+    lastMessageAt: formatTime(row.last_message_at),
+    unreadCount: Number(read?.unread_count ?? 0),
+  };
 }
 
 export function getConversation(_conversationId: string): Conversation | undefined {
@@ -538,39 +567,95 @@ export function getConversationKind(_conversationId: string): "booking" | "offer
   return undefined;
 }
 
-async function createConversation(participantPublicId: string, options: { bookingId?: string; serviceRequestId?: string; offerId?: string; lastMessage?: string }) {
+async function createConversation(
+  participantPublicId: string,
+  options: {
+    bookingId?: string;
+    serviceRequestId?: string;
+    offerId?: string;
+    lastMessage?: string;
+  },
+) {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
 
   const participantUuid = await getUserUuid(participantPublicId);
   if (!participantUuid) throw new Error("Conversation participant not found");
-  if (participantUuid === session.uuid) throw new Error("You cannot start a conversation with yourself");
+  if (participantUuid === session.uuid) {
+    throw new Error("You cannot start a conversation with yourself");
+  }
 
-  const existingQuery = supabase
-    .from("conversations")
-    .select("id,participant_a,participant_b,last_message,last_message_at")
-    .or(`and(participant_a.eq.${session.uuid},participant_b.eq.${participantUuid}),and(participant_a.eq.${participantUuid},participant_b.eq.${session.uuid})`);
+  const bookingUuid = options.bookingId
+    ? tryToUuid("booking", options.bookingId) ?? options.bookingId
+    : null;
+  const requestUuid = options.serviceRequestId
+    ? tryToUuid("serviceRequest", options.serviceRequestId) ?? options.serviceRequestId
+    : null;
+  const offerUuid = options.offerId
+    ? options.offerId
+    : null;
 
-  const { data: existing } = await existingQuery.maybeSingle();
-  if (existing) return (await listConversationsAsync()).find((c) => c.id === existing.id)!;
+  // Reuse the conversation tied to this exact booking/offer/request first.
+  // Do not accidentally reuse an unrelated chat between the same two users.
+  let existing: { id: string } | null = null;
+
+  if (bookingUuid) {
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("booking_id", bookingUuid)
+      .maybeSingle();
+    if (error) throw error;
+    existing = data;
+  }
+
+  if (!existing && offerUuid) {
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("offer_id", offerUuid)
+      .maybeSingle();
+    if (error) throw error;
+    existing = data;
+  }
+
+  if (!existing && requestUuid) {
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("service_request_id", requestUuid)
+      .eq("participant_a", session.uuid)
+      .eq("participant_b", participantUuid)
+      .maybeSingle();
+    if (error) throw error;
+    existing = data;
+  }
+
+  if (existing) {
+    const conversation = await getConversationAsync(existing.id);
+    if (conversation) return conversation;
+  }
 
   const { data, error } = await supabase
     .from("conversations")
     .insert({
       participant_a: session.uuid,
       participant_b: participantUuid,
-      booking_id: options.bookingId ?? null,
-      service_request_id: options.serviceRequestId ?? null,
-      offer_id: options.offerId ?? null,
+      booking_id: bookingUuid,
+      service_request_id: requestUuid,
+      offer_id: offerUuid,
       last_message: options.lastMessage ?? "",
     })
     .select("id")
     .single();
 
   if (error) throw error;
-  const conv = (await listConversationsAsync()).find((c) => c.id === data.id);
-  if (!conv) throw new Error("Conversation created but could not be loaded");
-  return conv;
+
+  const conversation = await getConversationAsync(data.id);
+  if (!conversation) {
+    throw new Error("Conversation created but could not be loaded");
+  }
+  return conversation;
 }
 
 export async function openBookingChatAsync(
@@ -683,11 +768,15 @@ export async function createOfferConversationAsync(input: {
   if (!session) throw new Error("Not logged in");
 
   const requestUuid = tryToUuid("serviceRequest", input.requestId) ?? input.requestId;
+  const professionalUuid =
+    tryToUuid("professional", input.offererProfessionalId) ??
+    input.offererProfessionalId;
+
   const { data: offer } = await supabase
     .from("service_request_offers")
     .select("id")
     .eq("request_id", requestUuid)
-    .eq("professional_id", input.offererProfessionalId)
+    .eq("professional_id", professionalUuid)
     .eq("user_id", session.uuid)
     .eq("status", "pending")
     .maybeSingle();
