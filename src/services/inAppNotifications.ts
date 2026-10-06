@@ -62,7 +62,7 @@ async function fetchMine(): Promise<Notification[]> {
   const s = await loadSessionUser();
   if (!s) { cache = await readLocal(); loaded = true; return cache; }
   const { data, error } = await supabase.from("notifications")
-    .select("id,mock_id,user_id,type,title,body,time_label,unread,avatar_url,created_at")
+    .select("id,user_id,type,title,body,time_label,unread,avatar_url,created_at")
     .eq("user_id", s.uuid).order("created_at", { ascending:false });
   if (error) {
     cache = await readLocal(); loaded = true; return cache;
@@ -116,7 +116,7 @@ export async function deleteNotification(notificationId: string): Promise<void> 
   const { error } = await supabase
     .from("notifications")
     .delete()
-    .or(`id.eq.${notificationId},mock_id.eq.${notificationId}`)
+    .eq("id", notificationId)
     .eq("user_id", s.uuid);
 
   if (error) throw error;
