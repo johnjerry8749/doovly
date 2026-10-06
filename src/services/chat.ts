@@ -46,6 +46,7 @@ export type Conversation = {
   lastMessageAt: string;
   unreadCount: number;
   bookingStatus?: BookingChatStatus;
+  blocked?: boolean;
 };
 
 export type BookingChatStatus = "Pending" | "Accepted" | "Declined";
@@ -196,7 +197,7 @@ export async function listConversationsAsync(): Promise<Conversation[]> {
 
   const { data, error } = await supabase
     .from("conversations")
-     .select("id,participant_a,participant_b,last_message,last_message_at,booking_id,service_request_id,offer_id")
+     .select("id,participant_a,participant_b,last_message,last_message_at,booking_id,service_request_id,offer_id,blocked_by,blocked_at")
     .or(`participant_a.eq.${session.uuid},participant_b.eq.${session.uuid}`)
     .order("last_message_at", { ascending: false });
 
@@ -240,6 +241,7 @@ export async function listConversationsAsync(): Promise<Conversation[]> {
       lastMessageAt: formatTime(row.last_message_at),
       unreadCount: Number(read?.unread_count ?? 0),
       bookingStatus,
+      blocked: Boolean(row.blocked_by),
     };
     conversationMemoryCache.set(row.id, conversation);
     result.push(conversation);
@@ -260,7 +262,7 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
 
   const { data: row, error } = await supabase
     .from("conversations")
-    .select("id,participant_a,participant_b,last_message,last_message_at")
+    .select("id,participant_a,participant_b,last_message,last_message_at,blocked_by,blocked_at")
     .eq("id", conversationUuid)
     .or(`participant_a.eq.${session.uuid},participant_b.eq.${session.uuid}`)
     .maybeSingle();
@@ -291,6 +293,7 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
     lastMessage: row.last_message,
     lastMessageAt: formatTime(row.last_message_at),
     unreadCount: 0,
+    blocked: Boolean(row.blocked_by),
   });
 
   // The DM screen does not need unread_count before rendering. The unread
@@ -302,6 +305,7 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
     lastMessage: row.last_message,
     lastMessageAt: formatTime(row.last_message_at),
     unreadCount: 0,
+    blocked: Boolean(row.blocked_by),
   };
 }
 
@@ -458,6 +462,9 @@ export async function sendImageMessage(conversationId: string, localUri: string)
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
   if (!localUri) throw new Error("No image selected");
+  if (await isConversationBlockedAsync(conversationId)) {
+    throw new Error("CHAT_BLOCKED");
+  }
   if ((await getBookingStatusAsync(conversationId)) !== "Accepted") {
     throw new Error("Image messaging is available after the request is accepted");
   }
@@ -488,6 +495,9 @@ export async function sendMessage(conversationId: string, text: string): Promise
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
   if (!text.trim()) throw new Error("Message cannot be empty");
+  if (await isConversationBlockedAsync(conversationId)) {
+    throw new Error("CHAT_BLOCKED");
+  }
   if (!(await canSendMessageAsync(conversationId))) {
     throw new Error("Messaging is locked until the request is accepted");
   }
@@ -645,6 +655,32 @@ export function getBookingStatus(_conversationId: string): BookingChatStatus {
 export async function isTextAllowedAsync(conversationId: string): Promise<boolean> {
   const row = await conversationRowFor(conversationId);
   return Boolean(row?.text_allowed);
+}
+
+export async function isConversationBlockedAsync(conversationId: string): Promise<boolean> {
+  const row = await conversationRowFor(conversationId);
+  return Boolean(row?.blocked_by);
+}
+
+export async function blockConversationAsync(conversationId: string): Promise<void> {
+  const session = await loadSessionUser(true);
+  if (!session) throw new Error("Not logged in");
+  const { error } = await supabase.from("conversations").update({
+    blocked_by: session.uuid,
+    blocked_at: new Date().toISOString(),
+  }).eq("id", conversationId).or(`participant_a.eq.${session.uuid},participant_b.eq.${session.uuid}`);
+  if (error) throw error;
+  conversationMemoryCache.delete(conversationId);
+}
+
+export async function deleteConversationAsync(conversationId: string): Promise<void> {
+  const session = await loadSessionUser(true);
+  if (!session) throw new Error("Not logged in");
+  const { error } = await supabase.rpc("delete_my_conversation", { p_conversation_id: conversationId });
+  if (error) throw error;
+  conversationMemoryCache.delete(conversationId);
+  await AsyncStorage.removeItem(messagesCacheKey(conversationId));
+  await notifyUnread();
 }
 
 export async function allowTextAsync(conversationId: string): Promise<boolean> {
