@@ -379,7 +379,7 @@ export default function ChatConversation() {
         text: "Call",
         onPress: async () => {
           try {
-            const url = "tel:" + phone.replace(/[^+\\d]/g, "");
+            const url = "tel:" + phone.replace(/[^+\d]/g, "");
             const supported = await Linking.canOpenURL(url);
             if (!supported) throw new Error("Phone calls are not available on this device.");
             await Linking.openURL(url);
