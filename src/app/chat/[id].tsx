@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
+  ActivityIndicator,
   StyleSheet,
   FlatList,
   TextInput,
@@ -189,6 +190,7 @@ export default function ChatConversation() {
         : "";
 
   const [conversation, setConversation] = useState<Conversation | undefined>();
+  const [loadingConversation, setLoadingConversation] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState(draftFromRoute || "");
   const [sending, setSending] = useState(false);
@@ -223,6 +225,7 @@ export default function ChatConversation() {
     let active = true;
     const load = async () => {
       try {
+        setLoadingConversation(true);
         // Load the conversation first. Auxiliary data must not make a valid
         // conversation appear as "Conversation not found".
         const conv = await getConversationAsync(conversationId);
@@ -281,6 +284,8 @@ export default function ChatConversation() {
         });
       } catch (error) {
         console.warn("Chat conversation load failed:", error);
+      } finally {
+        if (active) setLoadingConversation(false);
       }
     };
     void load();
@@ -499,6 +504,17 @@ export default function ChatConversation() {
     }
     openMapsForLocation(item.location);
   };
+
+  if (loadingConversation) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={PRIMARY} />
+          <Text style={styles.emptyText}>Loading conversation...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!conversation) {
     return (
