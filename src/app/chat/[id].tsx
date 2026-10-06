@@ -228,11 +228,16 @@ export default function ChatConversation() {
     let active = true;
 
     let liveLoadInProgress = false;
+    let refreshQueued = false;
 
     const loadLive = async () => {
-      // Realtime can fire several times in quick succession. Avoid overlapping
-      // full conversation refreshes, which can cause stale state to win.
-      if (liveLoadInProgress || !active) return;
+      // Realtime can fire several times in quick succession. Queue one extra
+      // refresh instead of dropping an update that arrives during a fetch.
+      if (!active) return;
+      if (liveLoadInProgress) {
+        refreshQueued = true;
+        return;
+      }
       liveLoadInProgress = true;
       try {
         const conv = await getConversationAsync(conversationId);
@@ -298,6 +303,10 @@ export default function ChatConversation() {
       } finally {
         liveLoadInProgress = false;
         if (active) setLoadingConversation(false);
+        if (active && refreshQueued) {
+          refreshQueued = false;
+          void loadLive();
+        }
       }
     };
 
