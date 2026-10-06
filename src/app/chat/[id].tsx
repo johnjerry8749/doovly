@@ -274,7 +274,64 @@ export default function ChatConversation() {
     try {
       const msg = await sendMessage(conversationId, trimmed);
       setMessages((prev) => [...prev, msg]);
+      setChatCoins(await getChatCreditsAsync());
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+    } catch (error: any) {
+      setText(trimmed);
+      const message = String(error?.message ?? error);
+      if (message.includes("CHAT_CREDITS_EXHAUSTED")) {
+        Alert.alert(
+          "Chat coins finished",
+          "You have used your 15 free chat coins. Subscribe to Doovly Pro for unlimited messages.",
+          [
+            { text: "Not now", style: "cancel" },
+            { text: "Subscribe", onPress: () => router.push("/profile/subscription/subscription") },
+          ],
+        );
+      } else {
+        Alert.alert("Message failed", message || "Could not send your message.");
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const onPickImage = async () => {
+    if (!chatPro) {
+      Alert.alert(
+        "Pro feature",
+        "Image messages are available on Doovly Pro. Upgrade to send images in chat.",
+        [
+          { text: "Not now", style: "cancel" },
+          { text: "Subscribe", onPress: () => router.push("/profile/subscription/subscription") },
+        ],
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: false,
+      quality: 0.8,
+      exif: false,
+    });
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+
+    setSending(true);
+    try {
+      const msg = await sendImageMessage(conversationId, result.assets[0].uri);
+      setMessages((prev) => [...prev, msg]);
+      setChatCoins(await getChatCreditsAsync());
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+    } catch (error: any) {
+      const message = String(error?.message ?? error);
+      if (message.includes("IMAGE_CHAT_PRO_REQUIRED")) {
+        Alert.alert("Pro feature", "Image messages require Doovly Pro.");
+      } else if (message.includes("CHAT_CREDITS_EXHAUSTED")) {
+        Alert.alert("Chat coins finished", "Subscribe to Doovly Pro for unlimited chat.");
+      } else {
+        Alert.alert("Image failed", message || "Could not send image.");
+      }
     } finally {
       setSending(false);
     }
