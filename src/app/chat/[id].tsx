@@ -606,13 +606,9 @@ export default function ChatConversation() {
           <Text style={styles.headerStatus}>
             {chatPro ? "Doovly Pro • Unlimited chat" : String(chatCoins ?? 0) + " chat coins left"}
           </Text>
-          <Text style={styles.headerStatus}>
-            {sharing
-              ? "Sharing location"
-              : p.online
-                ? "Online"
-                : "Offline"}
-          </Text>
+          {sharing ? (
+            <Text style={styles.headerStatus}>Sharing location</Text>
+          ) : null}
         </View>
 
         <TouchableOpacity
