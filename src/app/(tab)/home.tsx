@@ -397,13 +397,13 @@ export default function Home() {
                 </Text>
                 <Text style={styles.cityText} numberOfLines={1}>
                   <Ionicons name="location" size={10} color="#159447" />{" "}
-                  {distanceByProfessionalId[person.id] !== undefined
-                    ? `${distanceByProfessionalId[person.id] < 10
-                        ? distanceByProfessionalId[person.id].toFixed(1)
-                        : Math.round(distanceByProfessionalId[person.id])} km away`
-                    : person.city}
+                  {person.city}
                 </Text>
-                <Text style={styles.price}>{String(person.priceFrom).replace(/^₦\s*/, "").replace(/^NGN\s*/i, "")}</Text>
+                <Text style={styles.price}>
+                  {distanceByProfessionalId[person.id] !== undefined
+                    ? `${distanceByProfessionalId[person.id] < 10 ? distanceByProfessionalId[person.id].toFixed(1) : Math.round(distanceByProfessionalId[person.id])} km away`
+                    : ""}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
