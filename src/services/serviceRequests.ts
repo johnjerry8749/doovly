@@ -6,7 +6,6 @@ import type { ImageSourcePropType } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { loadSessionUser, getCachedSessionUser } from "@/lib/session";
 import { mapServiceRequestRow, mapServiceRequestComment, SERVICE_REQUEST_SELECT } from "@/lib/rowMappers";
-import { tryToUuid } from "@/lib/ids";
 import type { ServiceRequest, ServiceRequestComment, ServiceRequestIcon } from "@/data/serviceRequests";
 import { uploadImageFull, UPLOAD_FOLDERS } from "@/services/cloudinary";
 import { notifyBookingRecipient } from "@/services/notifications";
@@ -30,7 +29,7 @@ let loadPromise: Promise<ServiceRequest[]> | null = null;
 function currentUuid(): string | null {
   return getCachedSessionUser()?.uuid ?? null;
 }
-function requestUuid(id: string): string { return tryToUuid("serviceRequest", id) ?? id; }
+function requestUuid(id: string): string { return id; }
 
 async function uploadRequestImages(images: ImageSourcePropType[] | undefined) {
   const urls: string[] = [];
@@ -104,7 +103,7 @@ export function getServiceRequestById(id: string): ServiceRequest | undefined {
 export async function getServiceRequestByIdAsync(id: string): Promise<ServiceRequest | undefined> {
   const local = getServiceRequestById(id); if (local) return local;
   const { data, error } = await supabase.from("service_requests").select(SERVICE_REQUEST_SELECT)
-    .or(`id.eq.${requestUuid(id)},mock_id.eq.${id}`).maybeSingle();
+    .or(`id.eq.${requestUuid(id)}.eq.${id}`).maybeSingle();
   if (error) throw error; return data ? mapServiceRequestRow(data) : undefined;
 }
 export function listRecentServiceRequests(limit = 5): ServiceRequest[] { return listServiceRequests().slice(0, limit); }
@@ -169,7 +168,7 @@ export async function addServiceRequestComment(input: AddCommentInput): Promise<
     user_avatar_url: null,
     text: input.text.trim(),
     time_ago: "Just now",
-  }).select("id,mock_id,user_id,user_name,user_avatar_url,text,time_ago,created_at").single();
+  }).select("id,user_id,user_name,user_avatar_url,text,time_ago,created_at").single();
 
   if (error) throw error;
   invalidateServiceRequestsCache();
@@ -197,7 +196,7 @@ export async function updateServiceRequestComment(commentId: string, text: strin
   if (!s || !value) return null;
   const { data, error } = await supabase.from("service_request_comments")
     .update({ text: value }).eq("id", commentId).eq("user_id", s.uuid)
-    .select("id,mock_id,user_id,user_name,user_avatar_url,text,time_ago,created_at").maybeSingle();
+    .select("id,user_id,user_name,user_avatar_url,text,time_ago,created_at").maybeSingle();
   if (error) throw error;
   if (!data) return null;
   invalidateServiceRequestsCache();
