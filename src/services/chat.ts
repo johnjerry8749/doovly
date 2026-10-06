@@ -108,6 +108,7 @@ export async function cacheMessagesAsync(
   await writeCache(messagesCacheKey(conversationUuid), messages);
 }
 const unreadListeners = new Set<Listener>();
+const chatRealtimeListeners = new Set<() => void>();
 let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 let realtimeUserId: string | null = null;
 
@@ -1005,31 +1006,36 @@ export async function ensureChatRealtime(onChange?: () => void): Promise<() => v
   const session = await loadSessionUser();
   if (!session) return () => {};
 
-  if (realtimeChannel && realtimeUserId === session.uuid) {
-    return () => {};
+  if (onChange) chatRealtimeListeners.add(onChange);
+
+  if (!realtimeChannel || realtimeUserId !== session.uuid) {
+    realtimeChannel?.unsubscribe();
+    realtimeUserId = session.uuid;
+
+    realtimeChannel = supabase
+      .channel(`doovly-chat-${session.uuid}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => {
+        void notifyUnread();
+        chatRealtimeListeners.forEach((listener) => listener());
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => {
+        void notifyUnread();
+        chatRealtimeListeners.forEach((listener) => listener());
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_reads" }, () => {
+        void notifyUnread();
+        chatRealtimeListeners.forEach((listener) => listener());
+      })
+      .subscribe();
   }
 
-  realtimeChannel?.unsubscribe();
-  realtimeUserId = session.uuid;
-
-  realtimeChannel = supabase
-    .channel(`doovly-chat-${session.uuid}`)
-    .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => {
-      void notifyUnread();
-      onChange?.();
-    })
-    .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => {
-      void notifyUnread();
-      onChange?.();
-    })
-    .on("postgres_changes", { event: "*", schema: "public", table: "conversation_reads" }, () => {
-      void notifyUnread();
-      onChange?.();
-    })
-    .subscribe();
-
+  let active = true;
   return () => {
-    if (realtimeChannel) {
+    if (!active) return;
+    active = false;
+    if (onChange) chatRealtimeListeners.delete(onChange);
+
+    if (chatRealtimeListeners.size === 0 && realtimeChannel) {
       void realtimeChannel.unsubscribe();
       realtimeChannel = null;
       realtimeUserId = null;
