@@ -1,16 +1,26 @@
 import { supabase } from "@/lib/supabase";
-import {
-  type SubscriptionPlansState,
-  type SubscriptionPlanConfig,
-  type PlanFeature,
-  type BillingPeriod,
-} from "@/data/subscriptionPlans";
+export type BillingPeriod = "monthly" | "yearly";
 
-export type {
-  SubscriptionPlansState,
-  SubscriptionPlanConfig,
-  PlanFeature,
-  BillingPeriod,
+export type PlanFeature = {
+  id: string;
+  label: string;
+};
+
+export type SubscriptionPlanConfig = {
+  id: "basic" | "pro";
+  name: string;
+  tagline: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  features: PlanFeature[];
+  popular?: boolean;
+};
+
+export type SubscriptionPlansState = {
+  plans: SubscriptionPlanConfig[];
+  promoTitle: string;
+  promoSubtitle: string;
+  yearlySavePercent: number;
 };
 
 let cache: SubscriptionPlansState | null = null;
