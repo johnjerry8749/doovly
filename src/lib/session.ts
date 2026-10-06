@@ -63,23 +63,23 @@ export async function loadSessionUser(
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("mock_id, full_name, email, role")
+      .select("id, full_name, email, role")
       .eq("id", user.id)
       .maybeSingle();
 
     const { data: pro } = await supabase
       .from("professionals")
-      .select("id, mock_id, subscribed, is_verified")
+      .select("id, subscribed, is_verified")
       .eq("user_id", user.id)
       .maybeSingle();
 
     cached = {
       uuid: user.id,
-      publicId: profile?.mock_id ?? user.id,
+      publicId: user.id,
       email: profile?.email ?? user.email ?? null,
       fullName: profile?.full_name ?? null,
       role: profile?.role ?? "user",
-      professionalId: pro ? (pro.mock_id ?? pro.id) : null,
+      professionalId: pro?.id ?? null,
       professionalUuid: pro?.id ?? null,
       subscribed: Boolean(pro?.subscribed),
       verified: Boolean(pro?.is_verified),
