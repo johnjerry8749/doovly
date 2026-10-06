@@ -5,8 +5,31 @@ import { supabase } from "@/lib/supabase";
 import { mapBookingRow, BOOKING_SELECT } from "@/lib/rowMappers";
 import { bookingStatusToDb } from "@/lib/mappers";
 import { loadSessionUser } from "@/lib/session";
-import type { Booking, BookingStatus } from "@/data/booking";
-import { statusColors } from "@/data/booking";
+export type BookingStatus = "Pending" | "Accepted" | "Declined";
+
+export type Booking = {
+  id: string;
+  professionalId: string;
+  customerId: string;
+  title: string;
+  professionalName: string;
+  professionalVerified: boolean;
+  professionalImage: number;
+  customerName: string;
+  customerImage: number;
+  rating: number;
+  reviews: number;
+  date: string;
+  location: string;
+  status: BookingStatus;
+  amount?: number;
+};
+
+export const statusColors: Record<BookingStatus, { bg: string; text: string }> = {
+  Pending: { bg: "#E8F8EF", text: "#16A34A" },
+  Accepted: { bg: "#DBEAFE", text: "#2563EB" },
+  Declined: { bg: "#FEE2E2", text: "#DC2626" },
+};
 import { getProfessionalById } from "@/services/professionals";
 import { notifyBookingRecipient } from "@/services/notifications";
 
