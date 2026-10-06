@@ -62,6 +62,20 @@ export type AddCommentInput = { requestId: string; text: string; userName?: stri
 
 let cache: ServiceRequest[] | null = null;
 let loadPromise: Promise<ServiceRequest[]> | null = null;
+const requestListeners = new Set<(requests: ServiceRequest[]) => void>();
+
+function notifyRequestListeners() {
+  const snapshot = cache ?? [];
+  requestListeners.forEach((listener) => listener(snapshot));
+}
+
+export function subscribeServiceRequests(
+  listener: (requests: ServiceRequest[]) => void,
+): () => void {
+  requestListeners.add(listener);
+  if (cache) listener(cache);
+  return () => requestListeners.delete(listener);
+}
 
 function currentUuid(): string | null {
   return getCachedSessionUser()?.uuid ?? null;
@@ -105,6 +119,7 @@ async function fetchAll(): Promise<ServiceRequest[]> {
     .order("created_at", { ascending: false });
   if (error) throw error;
   cache = (data ?? []).map(mapServiceRequestRow);
+  notifyRequestListeners();
   return cache;
 }
 export async function ensureServiceRequestsLoaded(): Promise<ServiceRequest[]> {
@@ -162,6 +177,7 @@ export async function createServiceRequest(input: CreateServiceRequestInput): Pr
   if (error) throw error;
   const created = mapServiceRequestRow(data);
   cache = [created, ...(cache ?? [])];
+  notifyRequestListeners();
   return created;
 }
 
@@ -193,6 +209,7 @@ export async function deleteServiceRequest(id: string): Promise<boolean> {
     .eq("id", requestUuid(id)).eq("created_by", s.uuid);
   if (error) throw error;
   cache = (cache ?? []).filter((request) => request.id !== id);
+  notifyRequestListeners();
   return true;
 }
 
