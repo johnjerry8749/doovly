@@ -58,8 +58,6 @@ import { loadSessionUser } from "@/lib/session";
 
 export type ServiceCategory = { name: string; icon: string; };
 
-export type { Professional, ProService, ProReview, ServiceCategory };
-
 export function starsFromReviewCount(count: number): number {
   const total = Math.max(0, Number(count) || 0);
   if (total === 0) return 0;
