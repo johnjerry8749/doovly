@@ -458,6 +458,24 @@ export default function ProfessionalProfile() {
             )}
           </View>
 
+          <View style={styles.locationRow}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Ionicons
+                key={index}
+                name={
+                  index < starsFromReviewCount(reviews.length)
+                    ? "star"
+                    : "star-outline"
+                }
+                size={16}
+                color="#F59E0B"
+              />
+            ))}
+            <Text style={styles.locationText}>
+              {reviews.length} {reviews.length === 1 ? "review" : "reviews"}
+            </Text>
+          </View>
+
           {(pro.verified || pro.subscribed) && (
             <View style={styles.badgeRow}>
               {pro.verified ? (
