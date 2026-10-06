@@ -33,7 +33,7 @@ import {
   getCurrentUserId,
   addInAppNotification,
 } from "@/services/inAppNotifications";
-import { createOfferConversation } from "@/services/chat";
+import { createOfferConversationAsync } from "@/services/chat";
 import { getLoggedInProfessionalId } from "@/services/savedProviders";
 import {
   listProfessionals,
@@ -343,12 +343,12 @@ export default function RequestsScreen() {
     setOfferPrice("");
   };
 
-  const submitOffer = () => {
+  const submitOffer = async () => {
     if (!offerRequest) return;
     const amountNum = Number(offerPrice.replace(/[^\d]/g, ""));
     if (!amountNum) return;
 
-    const result = submitServiceRequestOffer({
+    const result = await submitServiceRequestOffer({
       requestId: offerRequest.id,
       amount: amountNum,
     });
@@ -379,7 +379,7 @@ export default function RequestsScreen() {
       .filter(Boolean)
       .join(", ");
 
-    const conv = createOfferConversation({
+    const conv = await createOfferConversationAsync({
       requestId: offerRequest.id,
       requestTitle: offerRequest.title,
       requestCategory: offerRequest.category,
