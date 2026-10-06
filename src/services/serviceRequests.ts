@@ -201,9 +201,30 @@ export async function submitServiceRequestOffer(input: SubmitOfferInput): Promis
   if (!input.amount || input.amount <= 0) return {ok:false,requestId:input.requestId,amount:0,recipientUserId:"",reason:"invalid"};
   const request = await getServiceRequestByIdAsync(input.requestId); if (!request) return null;
   if (isOwnServiceRequest(request)) return {ok:false,requestId:request.id,amount:input.amount,recipientUserId:request.createdByUserId,reason:"own"};
-  const allowed = canSendOfferOnRequest(request); if (!allowed.ok) return {ok:false,requestId:request.id,amount:input.amount,recipientUserId:request.createdByUserId,reason:allowed.reason};
+  const rid = requestUuid(input.requestId);
+
+  // If this professional already had an accepted offer with this requester,
+  // allow another offer and let the database continue the existing chat.
+  const { data: previousOffer, error: previousOfferError } = await supabase
+    .from("service_request_offers")
+    .select("id,status,created_at")
+    .eq("request_id", rid)
+    .eq("user_id", s.uuid)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (previousOfferError) throw previousOfferError;
+
+  const hasAcceptedPreviousOffer =
+    String(previousOffer?.status ?? "").toLowerCase() === "accepted";
+
+  if (!hasAcceptedPreviousOffer) {
+    const allowed = canSendOfferOnRequest(request);
+    if (!allowed.ok) return {ok:false,requestId:request.id,amount:input.amount,recipientUserId:request.createdByUserId,reason:allowed.reason};
+  }
+
   const { error } = await supabase.from("service_request_offers").insert({
-    request_id: requestUuid(input.requestId), user_id: s.uuid,
+    request_id: rid, user_id: s.uuid,
     professional_id: s.professionalUuid, amount: input.amount, message: input.message?.trim() || null, status: "pending",
   });
   if (error) throw error;
