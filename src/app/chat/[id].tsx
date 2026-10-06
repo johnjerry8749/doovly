@@ -230,8 +230,6 @@ export default function ChatConversation() {
   useEffect(() => {
     let active = true;
 
-    let hasCachedConversation = false;
-    let hasLiveConversation = false;
     let liveLoadInProgress = false;
 
     const loadLive = async () => {
@@ -284,8 +282,9 @@ export default function ChatConversation() {
           void markConversationReadAsync(conv.id).catch((error) => {
             console.warn("Could not mark conversation read:", error);
           });
-        } else if (!hasCachedConversation) {
+        } else {
           setConversation(undefined);
+          setMessages([]);
         }
 
         try {
@@ -308,34 +307,8 @@ export default function ChatConversation() {
       }
     };
 
-    const start = async () => {
-      // Start the server refresh immediately instead of waiting for local
-      // cache reads; cache can still render while the network request runs.
-      void loadLive();
-
-      const cachedConversations = await getCachedConversationsAsync();
-      const cachedConversation = cachedConversations?.find(
-        (item) => item.id === conversationId,
-      );
-
-      if (active && cachedConversation && !hasLiveConversation) {
-        setConversation(cachedConversation);
-
-        const cachedMessages = await getCachedMessagesAsync(conversationId);
-        if (active && !hasLiveConversation && cachedMessages) {
-          setMessages(cachedMessages);
-        }
-
-        hasCachedConversation = true;
-        // Render cached DM immediately; action controls remain hidden until
-        // the real booking status has loaded, preventing the unlock flash.
-        setLoadingConversation(false);
-      }
-
-      // The live refresh was started above and runs underneath cached UI.
-    };
-
-    void start();
+    // Use Supabase as the only source for this conversation and its messages.
+    void loadLive();
 
     let cleanup: (() => void) | undefined;
     void ensureChatRealtime(() => {
