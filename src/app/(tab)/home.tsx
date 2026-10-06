@@ -403,7 +403,7 @@ export default function Home() {
                         : Math.round(distanceByProfessionalId[person.id])} km away`
                     : person.city}
                 </Text>
-                <Text style={styles.price}>From {person.priceFrom}</Text>
+                <Text style={styles.price}>{String(person.priceFrom).replace(/^₦\s*/, "").replace(/^NGN\s*/i, "")}</Text>
               </TouchableOpacity>
             ))}
           </View>
