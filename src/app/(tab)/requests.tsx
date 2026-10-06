@@ -97,8 +97,7 @@ const getCommentUserId = (comment: ServiceRequestComment) => {
     c.authUserId ??
     c.userId ??
     c.createdByUserId ??
-    c.authorId ??
-    c.posterUserId
+    c.authorId
   );
 };
 
