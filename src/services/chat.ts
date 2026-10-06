@@ -34,7 +34,7 @@ export type ChatMessage = {
   createdAt: string;
   isMine: boolean;
   location?: { label: string; latitude?: number; longitude?: number };
-  kind?: "text" | "image" | "location" | "location_stopped" | "request_card";
+  kind?: "text" | "image" | "location" | "location_stopped" | "request_card" | "system";
   imageUrl?: string;
   card?: RequestCardData;
 };
@@ -787,7 +787,7 @@ export async function acceptBooking(conversationId: string, acceptorDisplayName:
       conversation_id: conversationId,
       sender_id: session.uuid,
       text: `${acceptorDisplayName} accepted the request`,
-      kind: "text",
+      kind: "system",
     })
     .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
     .single();
@@ -816,7 +816,7 @@ export async function declineBooking(conversationId: string, acceptorDisplayName
       conversation_id: conversationId,
       sender_id: session.uuid,
       text: `${acceptorDisplayName} declined the request`,
-      kind: "text",
+      kind: "system",
     })
     .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
     .single();
