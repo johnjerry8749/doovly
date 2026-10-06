@@ -320,7 +320,6 @@ export default function ChatConversation() {
         }
 
         hasCachedConversation = true;
-        setLoadingConversation(false);
       }
 
       // The live refresh was started above and runs underneath cached UI.
