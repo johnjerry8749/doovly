@@ -27,6 +27,7 @@ const TEXT_MUTED = "#6B7280";
 
 export default function ChatList() {
   const [query, setQuery] = useState("");
+  const [hidePending, setHidePending] = useState(false);
 
   // Keep conversations in local state so unread counts
   // can disappear immediately when a chat is opened.
@@ -77,6 +78,10 @@ export default function ChatList() {
   }, [refresh]);
 
   const filtered = conversations.filter((conversation) => {
+    if (hidePending && conversation.bookingStatus === "Pending") {
+      return false;
+    }
+
     const search = query.trim().toLowerCase();
 
     if (!search) {
@@ -132,9 +137,10 @@ export default function ChatList() {
         <TouchableOpacity
           style={styles.headerIcon}
           activeOpacity={0.7}
+          onPress={() => setHidePending((current) => !current)}
         >
           <Ionicons
-            name="options-outline"
+            name={hidePending ? "filter" : "options-outline"}
             size={22}
             color={PRIMARY}
           />
