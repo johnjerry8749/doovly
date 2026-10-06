@@ -9,6 +9,7 @@ import { mapServiceRequestRow, mapServiceRequestComment, SERVICE_REQUEST_SELECT 
 import { tryToUuid } from "@/lib/ids";
 import type { ServiceRequest, ServiceRequestComment, ServiceRequestIcon } from "@/data/serviceRequests";
 import { uploadImageFull, UPLOAD_FOLDERS } from "@/services/cloudinary";
+import { notifyBookingRecipient } from "@/services/notifications";
 
 export type { ServiceRequest, ServiceRequestComment, ServiceRequestIcon };
 
@@ -195,7 +196,7 @@ export function canSendOfferOnRequest(request: ServiceRequest): { ok: boolean; r
 }
 
 export async function submitServiceRequestOffer(input: SubmitOfferInput): Promise<{
-  ok:boolean; requestId:string; amount:number; recipientUserId:string; reason?: "own"|"full"|"already"|"invalid"
+  ok:boolean; requestId:string; amount:number; recipientUserId:string; offerId?:string; reason?: "own"|"full"|"already"|"invalid"
 }|null> {
   const s = await loadSessionUser(true); if (!s) throw new Error("Not logged in");
   if (!input.amount || input.amount <= 0) return {ok:false,requestId:input.requestId,amount:0,recipientUserId:"",reason:"invalid"};
@@ -223,11 +224,23 @@ export async function submitServiceRequestOffer(input: SubmitOfferInput): Promis
     if (!allowed.ok) return {ok:false,requestId:request.id,amount:input.amount,recipientUserId:request.createdByUserId,reason:allowed.reason};
   }
 
-  const { error } = await supabase.from("service_request_offers").insert({
+  const { data: offer, error } = await supabase.from("service_request_offers").insert({
     request_id: rid, user_id: s.uuid,
     professional_id: s.professionalUuid, amount: input.amount, message: input.message?.trim() || null, status: "pending",
-  });
+  }).select("id,status").single();
   if (error) throw error;
   invalidateServiceRequestsCache();
-  return {ok:true,requestId:request.id,amount:input.amount,recipientUserId:request.createdByUserId};
+
+  const acceptedAutomatically = String(offer?.status ?? "").toLowerCase() === "accepted";
+  void notifyBookingRecipient({
+    kind: "offer",
+    offerId: String(offer.id),
+    title: acceptedAutomatically ? "New Offer Added" : "New Offer Request",
+    body: acceptedAutomatically
+      ? `${s.fullName ?? "Professional"} sent another offer and continued your existing conversation.`
+      : `${s.fullName ?? "Professional"} sent you an offer of ₦${input.amount.toLocaleString("en-NG")}.`,
+    data: { type: "booking_offer", screen: "bookings", requestId: request.id, offerId: String(offer.id) },
+  });
+
+  return {ok:true,requestId:request.id,amount:input.amount,recipientUserId:request.createdByUserId,offerId:String(offer.id)};
 }
