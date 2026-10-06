@@ -127,7 +127,7 @@ async function getUserUuid(publicId: string): Promise<string | null> {
   const { data: profile } = await supabase
     .from("profiles")
     .select("id")
-    .or(`id.eq.${value},mock_id.eq.${value}`)
+    .eq("id", value)
     .maybeSingle();
   if (profile?.id) return profile.id;
 
