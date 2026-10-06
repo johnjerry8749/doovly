@@ -9,6 +9,7 @@ import { loadSessionUser } from "@/lib/session";
 import type { Booking, BookingStatus } from "@/data/booking";
 import { statusColors } from "@/data/booking";
 import { getProfessionalById } from "@/services/professionals";
+import { notifyBookingRecipient } from "@/services/notifications";
 
 export type { Booking, BookingStatus };
 export { statusColors };
@@ -112,7 +113,18 @@ export async function createBookingRequest(input:{
   }
 
   invalidateBookingsCache();
-  return mapBookingRow(data);
+  const booking = mapBookingRow(data);
+  const acceptedAutomatically = String((data as any)?.status ?? "").toLowerCase() === "accepted";
+  void notifyBookingRecipient({
+    kind: "booking",
+    bookingId: String((data as any).id),
+    title: acceptedAutomatically ? "New Booking Added" : "New Booking Request",
+    body: acceptedAutomatically
+      ? `${s.fullName ?? "Customer"} added a new booking to your existing conversation.`
+      : `${s.fullName ?? "Customer"} sent you a new booking request for ${title}.`,
+    data: { type: "booking", screen: "bookings", bookingId: String((data as any).id) },
+  });
+  return booking;
 }
 export async function recordAcceptedOfferBooking(input:{title:string;amount:number;location:string;professionalId:string;professionalName:string;professionalImage:number;customerId:string;customerName:string;customerImage:number;}):Promise<Booking>{
   const s=await loadSessionUser(); if(!s) throw new Error("Not logged in");
