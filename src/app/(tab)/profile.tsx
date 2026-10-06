@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
-import { getProfessionalById } from "@/services/professionals";
+import {
+  ensureProfessionalsLoaded,
+  getProfessionalById,
+} from "@/services/professionals";
+import { loadSessionUser } from "@/lib/session";
 import {
   getCurrentUserRole,
   getLoggedInProfessionalId,
@@ -96,11 +100,46 @@ function MenuIcon({
 export default function Profile() {
   const role = getCurrentUserRole();
   const proId = getLoggedInProfessionalId();
-  const pro = proId ? getProfessionalById(proId) : undefined;
+  const [loadedProId, setLoadedProId] = useState<string | null>(proId);
+  const [pro, setPro] = useState<ReturnType<typeof getProfessionalById>>( 
+    proId ? getProfessionalById(proId) : undefined,
+  );
   const isPro = isCurrentUserPro();
   const requestCount = listMyServiceRequests().length;
 
-  if (!pro) {
+  useEffect(() => {
+    let active = true;
+
+    const loadProfile = async () => {
+      const session = await loadSessionUser(true);
+      if (!session?.professionalId) {
+        if (active) {
+          setLoadedProId(null);
+          setPro(undefined);
+        }
+        return;
+      }
+
+      await ensureProfessionalsLoaded();
+      const nextPro = getProfessionalById(session.professionalId);
+
+      if (active) {
+        setLoadedProId(session.professionalId);
+        setPro(nextPro);
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const resolvedPro =
+    loadedProId && pro ? pro : proId ? getProfessionalById(proId) : undefined;
+
+  if (!resolvedPro) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.emptyContainer}>
@@ -113,7 +152,7 @@ export default function Profile() {
   const goToSubscription = () => {
     router.push({
       pathname: "/profile/subscription/[id]",
-      params: { id: String(pro.id) },
+      params: { id: String(resolvedPro.id) },
     });
   };
 
@@ -125,12 +164,12 @@ export default function Profile() {
       <View style={styles.header}>
         <View style={styles.profileHeaderContent}>
           <View style={styles.avatarWrapper}>
-            <Image source={pro.image} style={styles.avatar} />
+            <Image source={resolvedPro.image} style={styles.avatar} />
           </View>
 
           <View style={styles.profileInfo}>
             <View style={styles.nameRow}>
-              <Text style={styles.name}>{pro.name}</Text>
+              <Text style={styles.name}>{resolvedPro.name}</Text>
               {isPro && (
                 <MaterialCommunityIcons
                   name="shield-check"
@@ -141,11 +180,11 @@ export default function Profile() {
               )}
             </View>
 
-            <Text style={styles.role}>{pro.profession}</Text>
+            <Text style={styles.role}>{resolvedPro.profession}</Text>
 
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={14} color="#6B7280" />
-              <Text style={styles.location}>{pro.city}</Text>
+              <Text style={styles.location}>{resolvedPro.city}</Text>
             </View>
           </View>
         </View>
@@ -222,7 +261,7 @@ export default function Profile() {
             onPress={() =>
               router.push({
                 pathname: "/professional/[id]",
-                params: { id: String(pro.id) },
+                params: { id: String(resolvedPro.id) },
               })
             }
           />
@@ -252,8 +291,8 @@ export default function Profile() {
           <MenuItem
             icon={<MenuIcon name="shield-checkmark-outline" />}
             title="Verification"
-            rightText={pro.verified ? "Verified" : "Not Verified"}
-            rightColor={pro.verified ? PRIMARY : "#6B7280"}
+            rightText={resolvedPro.verified ? "Verified" : "Not Verified"}
+            rightColor={resolvedPro.verified ? PRIMARY : "#6B7280"}
             onPress={() => router.push("/profile/verification")}
             isLast
           />
