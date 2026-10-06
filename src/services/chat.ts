@@ -366,7 +366,6 @@ export async function getMessagesAsync(conversationId: string): Promise<ChatMess
 
   if (error) throw error;
   const messages = (data ?? []).filter((row) => row.kind !== "request_card").map((row) => mapMessage(row, session.uuid));
-  await cacheMessagesAsync(conversationUuid, messages);
   return messages;
 }
 
@@ -610,9 +609,7 @@ export async function allowTextAsync(conversationId: string): Promise<boolean> {
 
 export async function canSendMessageAsync(conversationId: string): Promise<boolean> {
   const status = await getBookingStatusAsync(conversationId);
-  if (status === "Accepted") return true;
-  if (status !== "Pending") return false;
-  return isTextAllowedAsync(conversationId);
+  return status === "Accepted";
 }
 
 export function canSendMessage(_conversationId: string): boolean {
@@ -697,6 +694,20 @@ async function createConversation(
   const offerUuid = options.offerId
     ? options.offerId
     : null;
+
+  // One social-style thread per pair. A booking or offer never creates a second DM.
+  const { data: pairConversation, error: pairError } = await supabase
+    .from("conversations")
+    .select("id")
+    .or(`and(participant_a.eq.${session.uuid},participant_b.eq.${participantUuid}),and(participant_a.eq.${participantUuid},participant_b.eq.${session.uuid})`)
+    .order("last_message_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (pairError) throw pairError;
+  if (pairConversation?.id) {
+    const conversation = await getConversationAsync(pairConversation.id);
+    if (conversation) return conversation;
+  }
 
   // Reuse the conversation tied to this exact booking/offer/request first.
   // Do not accidentally reuse an unrelated chat between the same two users.
