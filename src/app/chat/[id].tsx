@@ -227,6 +227,8 @@ export default function ChatConversation() {
   useEffect(() => {
     let active = true;
 
+    let hasCachedConversation = false;
+
     const loadLive = async () => {
       try {
         const conv = await getConversationAsync(conversationId);
@@ -268,7 +270,7 @@ export default function ChatConversation() {
           void markConversationReadAsync(conv.id).catch((error) => {
             console.warn("Could not mark conversation read:", error);
           });
-        } else if (!conversation) {
+        } else if (!hasCachedConversation) {
           setConversation(undefined);
         }
 
@@ -307,6 +309,7 @@ export default function ChatConversation() {
           setMessages(cachedMessages);
         }
 
+        hasCachedConversation = true;
         setLoadingConversation(false);
       }
 
