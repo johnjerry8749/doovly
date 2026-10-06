@@ -8,6 +8,7 @@ import {
   Image,
   TextInput,
   StatusBar,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,6 +19,8 @@ import {
   cacheConversationsAsync,
   ensureChatRealtime,
   markConversationReadAsync,
+  deleteConversationAsync,
+  blockConversationAsync,
   type Conversation,
 } from "@/services/chat";
 
@@ -27,7 +30,6 @@ const TEXT_MUTED = "#6B7280";
 
 export default function ChatList() {
   const [query, setQuery] = useState("");
-  const [hidePending, setHidePending] = useState(false);
 
   // Keep conversations in local state so unread counts
   // can disappear immediately when a chat is opened.
@@ -78,10 +80,6 @@ export default function ChatList() {
   }, [refresh]);
 
   const filtered = conversations.filter((conversation) => {
-    if (hidePending && conversation.bookingStatus === "Pending") {
-      return false;
-    }
-
     const search = query.trim().toLowerCase();
 
     if (!search) {
@@ -97,6 +95,32 @@ export default function ChatList() {
         .includes(search)
     );
   });
+
+  const deleteChat = useCallback(async (item: Conversation) => {
+    try {
+      await deleteConversationAsync(item.id);
+      setConversations((current) => current.filter((conversation) => conversation.id !== item.id));
+    } catch (error: any) {
+      Alert.alert("Delete failed", error?.message ?? "Could not delete this chat.");
+    }
+  }, []);
+
+  const blockChat = useCallback(async (item: Conversation) => {
+    try {
+      await blockConversationAsync(item.id);
+      setConversations((current) => current.map((conversation) => conversation.id === item.id ? { ...conversation, blocked: true } : conversation));
+    } catch (error: any) {
+      Alert.alert("Block failed", error?.message ?? "Could not block this chat.");
+    }
+  }, []);
+
+  const onHoldChat = useCallback((item: Conversation) => {
+    Alert.alert(item.participant.name, "Choose an action", [
+      { text: "Delete chat", style: "destructive", onPress: () => void deleteChat(item) },
+      { text: "Block chat", style: "destructive", onPress: () => void blockChat(item) },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }, [blockChat, deleteChat]);
 
   const openChat = useCallback((item: Conversation) => {
     void markConversationReadAsync(item.id);
@@ -134,17 +158,7 @@ export default function ChatList() {
           Messages
         </Text>
 
-        <TouchableOpacity
-          style={styles.headerIcon}
-          activeOpacity={0.7}
-          onPress={() => setHidePending((current) => !current)}
-        >
-          <Ionicons
-            name={hidePending ? "filter" : "options-outline"}
-            size={22}
-            color={PRIMARY}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerIcon} />
       </View>
 
       {/* Search */}
@@ -207,6 +221,8 @@ export default function ChatList() {
           <TouchableOpacity
             style={styles.row}
             onPress={() => openChat(item)}
+            onLongPress={() => onHoldChat(item)}
+            delayLongPress={500}
             activeOpacity={0.7}
           >
             {/* Avatar + Verification */}
