@@ -510,6 +510,9 @@ export default function ChatConversation() {
             {p.name}
           </Text>
           <Text style={styles.headerStatus}>
+            {chatPro ? "Doovly Pro • Unlimited chat" : String(chatCoins ?? 0) + " chat coins left"}
+          </Text>
+          <Text style={styles.headerStatus}>
             {sharing
               ? "Sharing location"
               : p.online
@@ -585,6 +588,17 @@ export default function ChatConversation() {
               return (
                 <View style={styles.systemWrap}>
                   <Text style={styles.systemText}>{item.text}</Text>
+                </View>
+              );
+            }
+
+            if (item.kind === "image" && item.imageUrl) {
+              return (
+                <View style={[styles.bubbleWrap, item.isMine ? styles.bubbleWrapMine : styles.bubbleWrapTheirs]}>
+                  <View style={[styles.bubble, item.isMine ? styles.bubbleMine : styles.bubbleTheirs, styles.imageBubble]}>
+                    <Image source={{ uri: item.imageUrl }} style={styles.chatImage} resizeMode="cover" />
+                  </View>
+                  <Text style={[styles.time, item.isMine ? styles.timeMine : styles.timeTheirs]}>{item.createdAt}</Text>
                 </View>
               );
             }
@@ -706,6 +720,14 @@ export default function ChatConversation() {
         <View style={styles.inputBar}>
           {bookingStatus === "Accepted" ? (
             <>
+              <TouchableOpacity
+                style={styles.attachBtn}
+                activeOpacity={0.7}
+                onPress={onPickImage}
+              >
+                <Ionicons name="image-outline" size={22} color={chatPro ? TEXT_MUTED : "#D1D5DB"} />
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.attachBtn}
                 activeOpacity={0.7}
@@ -965,6 +987,15 @@ const styles = StyleSheet.create({
   },
   locationBubbleLocked: {
     opacity: 0.75,
+  },
+  imageBubble: {
+    padding: 4,
+    overflow: "hidden",
+  },
+  chatImage: {
+    width: 220,
+    height: 220,
+    borderRadius: 12,
   },
   locationRow: {
     flexDirection: "row",
