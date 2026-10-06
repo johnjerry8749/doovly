@@ -262,7 +262,7 @@ export async function getMessagesAsync(conversationId: string): Promise<ChatMess
 export function getMessages(_conversationId: string): ChatMessage[] {
   return [];
 }
-\nexport async function getChatCreditsAsync(): Promise<number | null> {
+export async function getChatCreditsAsync(): Promise<number | null> {
   const session = await loadSessionUser();
   if (!session) return 0;
 
