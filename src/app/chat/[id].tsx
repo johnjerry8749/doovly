@@ -21,6 +21,9 @@ import { router, useLocalSearchParams } from "expo-router";
 import {
   getConversationAsync,
   getMessagesAsync,
+  getCachedConversationsAsync,
+  getCachedMessagesAsync,
+  cacheMessagesAsync,
   sendMessage,
   markConversationReadAsync,
   isSharingLocationAsync,
@@ -223,47 +226,50 @@ export default function ChatConversation() {
 
   useEffect(() => {
     let active = true;
-    const load = async () => {
+
+    const loadLive = async () => {
       try {
-        setLoadingConversation(true);
-        // Load the conversation first. Auxiliary data must not make a valid
-        // conversation appear as "Conversation not found".
         const conv = await getConversationAsync(conversationId);
         if (!active) return;
 
-        setConversation(conv);
+        // A temporary network miss must not wipe a conversation already
+        // rendered from cache.
+        if (conv) {
+          setConversation(conv);
 
-        if (!conv) {
-          console.warn("Conversation not found:", conversationId);
-          return;
-        }
+          try {
+            const msgs = await getMessagesAsync(conv.id);
+            if (active) setMessages(msgs);
+          } catch (error) {
+            console.warn("Could not refresh chat messages:", error);
+          }
 
-        try {
-          const msgs = await getMessagesAsync(conv.id);
-          if (active) setMessages(msgs);
-        } catch (error) {
-          console.warn("Could not load chat messages:", error);
-        }
+          try {
+            const sharingNow = await isSharingLocationAsync(conv.id);
+            if (active) setSharing(sharingNow);
+          } catch (error) {
+            console.warn("Could not refresh location state:", error);
+          }
 
-        try {
-          const sharingNow = await isSharingLocationAsync(conv.id);
-          if (active) setSharing(sharingNow);
-        } catch (error) {
-          console.warn("Could not load location state:", error);
-        }
+          try {
+            const status = await getBookingStatusAsync(conv.id);
+            if (active) setBookingStatus(status);
+          } catch (error) {
+            console.warn("Could not refresh booking status:", error);
+          }
 
-        try {
-          const status = await getBookingStatusAsync(conv.id);
-          if (active) setBookingStatus(status);
-        } catch (error) {
-          console.warn("Could not load booking status:", error);
-        }
+          try {
+            const kind = await getConversationKindAsync(conv.id);
+            if (active) setConvKind(kind);
+          } catch (error) {
+            console.warn("Could not refresh conversation kind:", error);
+          }
 
-        try {
-          const kind = await getConversationKindAsync(conv.id);
-          if (active) setConvKind(kind);
-        } catch (error) {
-          console.warn("Could not load conversation kind:", error);
+          void markConversationReadAsync(conv.id).catch((error) => {
+            console.warn("Could not mark conversation read:", error);
+          });
+        } else if (!conversation) {
+          setConversation(undefined);
         }
 
         try {
@@ -276,25 +282,48 @@ export default function ChatConversation() {
             setChatCoins(coinsNow);
           }
         } catch (error) {
-          console.warn("Could not load chat credits:", error);
+          console.warn("Could not refresh chat credits:", error);
         }
-
-        void markConversationReadAsync(conv.id).catch((error) => {
-          console.warn("Could not mark conversation read:", error);
-        });
       } catch (error) {
-        console.warn("Chat conversation load failed:", error);
+        console.warn("Chat conversation refresh failed:", error);
       } finally {
         if (active) setLoadingConversation(false);
       }
     };
-    void load();
+
+    const start = async () => {
+      // Render the previous conversation immediately, exactly like a
+      // cache-first messenger. Network refresh happens underneath it.
+      const cachedConversations = await getCachedConversationsAsync();
+      const cachedConversation = cachedConversations?.find(
+        (item) => item.id === conversationId,
+      );
+
+      if (active && cachedConversation) {
+        setConversation(cachedConversation);
+
+        const cachedMessages = await getCachedMessagesAsync(conversationId);
+        if (active && cachedMessages) {
+          setMessages(cachedMessages);
+        }
+
+        setLoadingConversation(false);
+      }
+
+      // If there is no cache, show the first-load state until Supabase
+      // returns. If cache exists, this runs silently in the background.
+      await loadLive();
+    };
+
+    void start();
+
     let cleanup: (() => void) | undefined;
     void ensureChatRealtime(() => {
-      void load();
+      void loadLive();
     }).then((stop) => {
       cleanup = stop;
     });
+
     return () => {
       active = false;
       cleanup?.();
@@ -311,7 +340,11 @@ export default function ChatConversation() {
     setText("");
     try {
       const msg = await sendMessage(conversationId, trimmed);
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => {
+        const next = [...prev, msg];
+        void cacheMessagesAsync(conversationId, next);
+        return next;
+      });
       setChatCoins(await getChatCreditsAsync());
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (error: any) {
@@ -358,7 +391,11 @@ export default function ChatConversation() {
     setSending(true);
     try {
       const msg = await sendImageMessage(conversationId, result.assets[0].uri);
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => {
+        const next = [...prev, msg];
+        void cacheMessagesAsync(conversationId, next);
+        return next;
+      });
       setChatCoins(await getChatCreditsAsync());
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (error: any) {
