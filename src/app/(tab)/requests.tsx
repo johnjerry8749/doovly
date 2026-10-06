@@ -317,25 +317,74 @@ export default function RequestsScreen() {
     ]);
   };
 
-  const sendChatMessage = () => {
+  const sendChatMessage = async () => {
     if (!chatRequest) return;
     const text = chatText.trim();
     if (!text) return;
 
     const currentUserId = getCurrentUserId();
     const currentProfessional = findProfessionalForUser(currentUserId);
-    const comment = addServiceRequestComment({
-      requestId: chatRequest.id,
-      text,
+    const optimistic = {
+      id: `local-${Date.now()}`,
+      userId: currentUserId,
       userName: currentProfessional?.name || "You",
       userAvatar: currentProfessional?.image || MY_AVATAR,
-    });
-    if (!comment) return;
+      text,
+      time: "Just now",
+    } as ServiceRequestComment;
 
-    refreshRequests();
-    setChatRequest({ ...chatRequest });
+    const previousRequest = chatRequest;
     setChatText("");
-    setTimeout(() => commentListRef.current?.scrollToEnd({ animated: true }), 100);
+    setChatRequest({
+      ...chatRequest,
+      comments: [...(chatRequest.comments || []), optimistic],
+    });
+    setAllRequests((current) =>
+      current.map((request) =>
+        request.id === chatRequest.id
+          ? { ...request, comments: [...(request.comments || []), optimistic] }
+          : request,
+      ),
+    );
+
+    try {
+      const comment = await addServiceRequestComment({
+        requestId: chatRequest.id,
+        text,
+        userName: currentProfessional?.name || "You",
+        userAvatar: currentProfessional?.image || MY_AVATAR,
+      });
+
+      if (!comment) throw new Error("Comment could not be posted.");
+
+      setAllRequests((current) =>
+        current.map((request) =>
+          request.id === previousRequest.id
+            ? { ...request, comments: [...(request.comments || []).filter((x) => x.id !== optimistic.id), comment] }
+            : request,
+        ),
+      );
+      setChatRequest((current) =>
+        current?.id === previousRequest.id
+          ? { ...current, comments: [...(current.comments || []).filter((x) => x.id !== optimistic.id), comment] }
+          : current,
+      );
+      requestAnimationFrame(() => commentListRef.current?.scrollToEnd({ animated: true }));
+    } catch {
+      setAllRequests((current) =>
+        current.map((request) =>
+          request.id === previousRequest.id
+            ? { ...request, comments: (request.comments || []).filter((x) => x.id !== optimistic.id) }
+            : request,
+        ),
+      );
+      setChatRequest((current) =>
+        current?.id === previousRequest.id
+          ? { ...current, comments: (current.comments || []).filter((x) => x.id !== optimistic.id) }
+          : current,
+      );
+      Alert.alert("Could not post comment", "Please try again.");
+    }
   };
 
   const closeOffer = () => {
