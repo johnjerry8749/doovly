@@ -21,9 +21,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import {
   getConversationAsync,
   getMessagesAsync,
-  getCachedConversationsAsync,
-  getCachedMessagesAsync,
-  cacheMessagesAsync,
   sendMessage,
   markConversationReadAsync,
   isSharingLocationAsync,
@@ -241,8 +238,6 @@ export default function ChatConversation() {
         const conv = await getConversationAsync(conversationId);
         if (!active) return;
 
-        // A temporary network miss must not wipe a conversation already
-        // rendered from cache.
         if (conv) {
           hasLiveConversation = true;
           setConversation(conv);
@@ -333,11 +328,7 @@ export default function ChatConversation() {
     setText("");
     try {
       const msg = await sendMessage(conversationId, trimmed);
-      setMessages((prev) => {
-        const next = [...prev, msg];
-        void cacheMessagesAsync(conversationId, next);
-        return next;
-      });
+      setMessages((prev) => [...prev, msg]);
       setChatCoins(await getChatCreditsAsync());
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (error: any) {
@@ -384,11 +375,7 @@ export default function ChatConversation() {
     setSending(true);
     try {
       const msg = await sendImageMessage(conversationId, result.assets[0].uri);
-      setMessages((prev) => {
-        const next = [...prev, msg];
-        void cacheMessagesAsync(conversationId, next);
-        return next;
-      });
+      setMessages((prev) => [...prev, msg]);
       setChatCoins(await getChatCreditsAsync());
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (error: any) {
