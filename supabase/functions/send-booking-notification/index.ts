@@ -125,9 +125,15 @@ Deno.serve(async (req) => {
 
     // Persist the in-app notification first. Push delivery is best-effort and
     // must never prevent the in-app notification from being created.
+    const notificationType =
+      kind === "comment" ? "message" :
+      kind === "like" ? "general" :
+      kind === "offer" ? "booking" :
+      "booking";
+
     const { error: notificationError } = await admin.from("notifications").insert({
       user_id: recipientUserId,
-      type: "booking",
+      type: notificationType,
       title,
       body: message,
       unread: true,
