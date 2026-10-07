@@ -38,6 +38,7 @@ export default function RequestDetailModal({
   const [imageWidth, setImageWidth] = useState(0);
   const [showOffer, setShowOffer] = useState(false);
   const [offerPrice, setOfferPrice] = useState("");
+  const [sendingOffer, setSendingOffer] = useState(false);
   const images = request?.images ?? [];
 
   const closeOffer = () => {
@@ -51,20 +52,27 @@ export default function RequestDetailModal({
   const showSendOffer = Boolean(offerGate.ok);
 
   const sendOffer = async () => {
-    if (!request) return;
+    if (!request || sendingOffer) return;
     const amount = offerPrice.replace(/[^\d]/g, "");
     if (!amount) return;
 
-    const result = await submitServiceRequestOffer({
-      requestId: request.id,
-      amount: Number(amount),
-    });
-    if (!result?.ok) {
+    setSendingOffer(true);
+    try {
+      const result = await submitServiceRequestOffer({
+        requestId: request.id,
+        amount: Number(amount),
+      });
+
+      if (!result?.ok) {
+        closeOffer();
+        return;
+      }
+
       closeOffer();
-      return;
+      onClose();
+    } finally {
+      setSendingOffer(false);
     }
-    closeOffer();
-    onClose();
   };
 
   const onImageLayout = (e: LayoutChangeEvent) => {
