@@ -40,6 +40,21 @@ function ActiveSubscription() {
       let active = true;
       (async () => {
         try {
+          const sessionUser = getCachedSessionUser();
+          if (sessionUser?.proTrialEndsAt && !sessionUser.paidSubscribed) {
+            const trialEnd = new Date(sessionUser.proTrialEndsAt);
+            if (trialEnd.getTime() > Date.now()) {
+              setIsTrial(true);
+              setExpiresLabel(
+                trialEnd.toLocaleDateString("en-NG", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                }),
+              );
+            }
+          }
+
           const info = await getCustomerInfo();
           if (!active || !info) return;
           const ent = info.entitlements.active[PRO_ENTITLEMENT];
