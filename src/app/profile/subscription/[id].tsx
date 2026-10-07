@@ -12,7 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { getCurrentUser, isCurrentUserPro } from "@/services/savedProviders";\nimport { getCachedSessionUser } from "@/lib/session";
+import { getCurrentUser, isCurrentUserPro } from "@/services/savedProviders";
+import { getCachedSessionUser } from "@/lib/session";
 import Subscription from "./subscription";
 import {
   getCustomerInfo,
@@ -31,7 +32,8 @@ function ActiveSubscription() {
   const firstName = (user.name || "there").split(" ")[0];
   const [restoring, setRestoring] = useState(false);
   const [planLabel, setPlanLabel] = useState("Doovly Pro");
-  const [expiresLabel, setExpiresLabel] = useState<string | null>(null);\n  const [isTrial, setIsTrial] = useState(false);
+  const [expiresLabel, setExpiresLabel] = useState<string | null>(null);
+  const [isTrial, setIsTrial] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
