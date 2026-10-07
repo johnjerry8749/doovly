@@ -193,6 +193,7 @@ export default function RequestsScreen() {
   const [createVisible, setCreateVisible] = useState(false);
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
   const [offerPrice, setOfferPrice] = useState("");
+  const [sendingOffer, setSendingOffer] = useState(false);
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
   const [chatText, setChatText] = useState("");
   const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
@@ -456,30 +457,32 @@ ${item.description}
   };
 
   const submitOffer = async () => {
-    if (!offerRequest) return;
+    if (!offerRequest || sendingOffer) return;
     const amountNum = Number(offerPrice.replace(/[^\d]/g, ""));
     if (!amountNum) return;
 
-    const result = await submitServiceRequestOffer({
-      requestId: offerRequest.id,
-      amount: amountNum,
-    });
+    setSendingOffer(true);
+    try {
+      const result = await submitServiceRequestOffer({
+        requestId: offerRequest.id,
+        amount: amountNum,
+      });
 
-    if (!result?.ok) {
-      const messages: Record<string, string> = {
+      if (!result?.ok) {
+        const messages: Record<string, string> = {
         own: "You cannot send an offer on your own request.",
         already: "You already sent an offer on this request.",
         full: "This request is no longer accepting offers.",
       };
-      Alert.alert(
-        result?.reason === "own" ? "Not allowed" : result?.reason === "already" ? "Already sent" : "Error",
-        messages[result?.reason ?? ""] || "Could not send offer. Try again.",
-      );
-      return;
-    }
+        Alert.alert(
+          result?.reason === "own" ? "Not allowed" : result?.reason === "already" ? "Already sent" : "Error",
+          messages[result?.reason ?? ""] || "Could not send offer. Try again.",
+        );
+        return;
+      }
 
 
-    const offererProId = getLoggedInProfessionalId() ?? getCurrentUserId();
+      const offererProId = getLoggedInProfessionalId() ?? getCurrentUserId();
     const offererPro = getProfessionalById(String(offererProId));
     const locationLabel = [offerRequest.location, offerRequest.city]
       .filter(Boolean)
@@ -504,9 +507,15 @@ ${item.description}
         (require("@/assets/profile_1.jpg") as number),
     });
 
-    setAllRequests(listServiceRequests());
-    closeOffer();
-    router.push({ pathname: "/chat/[id]", params: { id: conv.id } });
+      setAllRequests(listServiceRequests());
+      closeOffer();
+      router.push({ pathname: "/chat/[id]", params: { id: conv.id } });
+    } catch (error) {
+      console.warn("[Requests] offer submission failed:", error);
+      Alert.alert("Could not send offer", "Please try again.");
+    } finally {
+      setSendingOffer(false);
+    }
   };
 
   const renderOfferButton = (item: ServiceRequest) => {
