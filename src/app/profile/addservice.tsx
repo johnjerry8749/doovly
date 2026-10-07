@@ -24,7 +24,7 @@ import {
   listServiceCategoriesAsync,
   type ProService,
 } from "@/services/professionals";
-import { getLoggedInProfessionalId } from "@/services/savedProviders";
+import {\n  getLoggedInProfessionalId,\n  isCurrentUserPro,\n} from "@/services/savedProviders";
 
 const PRIMARY = "#16A34A";
 const LIGHT_GREEN = "#EAF8F0";
@@ -48,7 +48,7 @@ function formatPrice(value: string): string {
 export default function AddService() {
   const proId = getLoggedInProfessionalId();
   const pro = proId ? getProfessionalById(proId) : undefined;
-  const isPro = !!pro?.subscribed;
+  const isPro = isCurrentUserPro();
   const [categories, setCategories] = useState<{ name: string; icon?: string }[]>([]);
 
   const [services, setServices] = useState<ProService[]>([]);
