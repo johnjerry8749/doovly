@@ -63,7 +63,7 @@ export async function loadSessionUser(
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id, full_name, email, role")
+      .select("id, full_name, email, role, pro_trial_ends_at")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -73,7 +73,7 @@ export async function loadSessionUser(
       .eq("user_id", user.id)
       .maybeSingle();
 
-    cached = {
+    const trialActive = Boolean(\n      profile?.pro_trial_ends_at &&\n        new Date(profile.pro_trial_ends_at).getTime() > Date.now(),\n    );\n\n    cached = {
       uuid: user.id,
       publicId: user.id,
       email: profile?.email ?? user.email ?? null,
@@ -81,7 +81,7 @@ export async function loadSessionUser(
       role: profile?.role ?? "user",
       professionalId: pro?.id ?? null,
       professionalUuid: pro?.id ?? null,
-      subscribed: Boolean(pro?.subscribed),
+      subscribed: Boolean(pro?.subscribed) || trialActive,
       verified: Boolean(pro?.is_verified),
     };
     return cached;
