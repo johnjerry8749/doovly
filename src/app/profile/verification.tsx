@@ -53,7 +53,7 @@ export default function Verification() {
       setState(await fetchVerificationStatus());
     } catch (error) {
       console.warn("[Verification] status load failed:", error);
-      setState(await fetchVerificationStatus());
+      setState(getVerificationStatus());
     } finally {
       setLoading(false);
     }
