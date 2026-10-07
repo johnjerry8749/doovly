@@ -22,6 +22,8 @@ export type SessionUser = {
   professionalId: string | null;
   professionalUuid: string | null;
   subscribed: boolean;
+  paidSubscribed: boolean;
+  proTrialEndsAt: string | null;
   verified: boolean;
 };
 
@@ -81,10 +83,12 @@ export async function loadSessionUser(
       role: profile?.role ?? "user",
       professionalId: pro?.id ?? null,
       professionalUuid: pro?.id ?? null,
-      subscribed: Boolean(pro?.subscribed),\n      paidSubscribed: Boolean(pro?.subscribed),\n      proTrialEndsAt: profile?.pro_trial_ends_at ?? null,
+      subscribed: Boolean(pro?.subscribed),
+      paidSubscribed: Boolean(pro?.subscribed),
+      proTrialEndsAt: profile?.pro_trial_ends_at ?? null,
       verified: Boolean(pro?.is_verified),
     };
-    return cached;
+    return getCachedSessionUser();
   })().finally(() => {
     loadPromise = null;
   });
@@ -93,7 +97,17 @@ export async function loadSessionUser(
 }
 
 export function getCachedSessionUser(): SessionUser | null {
-  return cached;
+  if (!cached) return null;
+
+  const trialActive = Boolean(
+    cached.proTrialEndsAt &&
+      new Date(cached.proTrialEndsAt).getTime() > Date.now(),
+  );
+
+  return {
+    ...cached,
+    subscribed: cached.subscribed || trialActive,
+  };
 }
 
 export function clearSessionCache() {
