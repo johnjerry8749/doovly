@@ -282,7 +282,27 @@ export async function likeServiceRequest(requestId: string, liked: boolean): Pro
     if (error) throw error;
   }
   const { count, error } = await supabase.from("service_request_likes").select("request_id", { count: "exact", head: true }).eq("request_id", rid);
-  if (error) throw error; invalidateServiceRequestsCache(); return count ?? 0;
+  if (error) throw error;
+  invalidateServiceRequestsCache();
+
+  if (liked && String(requestId)) {
+    const request = await getServiceRequestByIdAsync(requestId);
+    if (request && String(request.createdByUserId) !== String(s.uuid)) {
+      void supabase.functions.invoke("send-booking-notification", {
+        body: {
+          kind: "like",
+          requestId: rid,
+          title: "New Like",
+          message: `${s.fullName || "Someone"} liked your service request.`,
+          data: { type: "request_like", screen: "requests", requestId: rid },
+        },
+      }).catch((notificationError) => {
+        console.warn("[Notifications] like notification failed:", notificationError);
+      });
+    }
+  }
+
+  return count ?? 0;
 }
 
 export function canSendOfferOnRequest(request: ServiceRequest): { ok: boolean; reason?: "own"|"full"|"already"|"missing" } {
@@ -303,31 +323,59 @@ export async function submitServiceRequestOffer(input: SubmitOfferInput): Promis
   if (isOwnServiceRequest(request)) return {ok:false,requestId:request.id,amount:input.amount,recipientUserId:request.createdByUserId,reason:"own"};
   const rid = requestUuid(input.requestId);
 
-  // If this professional already had an accepted offer with this requester,
-  // allow another offer and let the database continue the existing chat.
+  // A user may submit exactly one offer for a request.
+  // The database unique index is the final race-safe guard; this check keeps the
+  // button state and normal error path fast for the common case.
   const { data: previousOffer, error: previousOfferError } = await supabase
     .from("service_request_offers")
-    .select("id,status,created_at")
+    .select("id")
     .eq("request_id", rid)
     .eq("user_id", s.uuid)
-    .order("created_at", { ascending: false })
-    .limit(1)
     .maybeSingle();
   if (previousOfferError) throw previousOfferError;
 
-  const hasAcceptedPreviousOffer =
-    String(previousOffer?.status ?? "").toLowerCase() === "accepted";
+  if (previousOffer) {
+    return {
+      ok:false,
+      requestId:request.id,
+      amount:input.amount,
+      recipientUserId:request.createdByUserId,
+      reason:"already",
+    };
+  }
 
-  if (!hasAcceptedPreviousOffer) {
-    const allowed = canSendOfferOnRequest(request);
-    if (!allowed.ok) return {ok:false,requestId:request.id,amount:input.amount,recipientUserId:request.createdByUserId,reason:allowed.reason};
+  const allowed = canSendOfferOnRequest(request);
+  if (!allowed.ok) {
+    return {
+      ok:false,
+      requestId:request.id,
+      amount:input.amount,
+      recipientUserId:request.createdByUserId,
+      reason:allowed.reason,
+    };
   }
 
   const { data: offer, error } = await supabase.from("service_request_offers").insert({
     request_id: rid, user_id: s.uuid,
     professional_id: s.professionalUuid, amount: input.amount, message: input.message?.trim() || null, status: "pending",
   }).select("id,status").single();
-  if (error) throw error;
+
+  // A second tap/request can race the first one. The unique database index
+  // turns that race into the same safe "already sent" result.
+  if (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "23505") {
+      return {
+        ok:false,
+        requestId:request.id,
+        amount:input.amount,
+        recipientUserId:request.createdByUserId,
+        reason:"already",
+      };
+    }
+    throw error;
+  }
+
   invalidateServiceRequestsCache();
 
   const acceptedAutomatically = String(offer?.status ?? "").toLowerCase() === "accepted";
