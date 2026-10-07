@@ -399,7 +399,6 @@ export async function uploadVerificationStep(
         user_id: s.uuid,
         status: "pending",
         email: s.email,
-        phone: s.phone,
       })
       .select("id")
       .single();
@@ -499,7 +498,6 @@ export async function submitVerification(): Promise<VerificationState> {
       submitted_at: submittedAt,
       admin_notified_at: null,
       email: s.email,
-      phone: s.phone,
     })
     .eq("id", existing.id)
     .eq("professional_id", proUuid);
