@@ -24,7 +24,10 @@ import {
   listServiceCategoriesAsync,
   type ProService,
 } from "@/services/professionals";
-import {\n  getLoggedInProfessionalId,\n  isCurrentUserPro,\n} from "@/services/savedProviders";
+import {
+  getLoggedInProfessionalId,
+  isCurrentUserPro,
+} from "@/services/savedProviders";
 
 const PRIMARY = "#16A34A";
 const LIGHT_GREEN = "#EAF8F0";
