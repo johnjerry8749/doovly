@@ -81,7 +81,7 @@ export async function loadSessionUser(
       role: profile?.role ?? "user",
       professionalId: pro?.id ?? null,
       professionalUuid: pro?.id ?? null,
-      subscribed: Boolean(pro?.subscribed) || trialActive,
+      subscribed: Boolean(pro?.subscribed),\n      proTrialEndsAt: profile?.pro_trial_ends_at ?? null,
       verified: Boolean(pro?.is_verified),
     };
     return cached;
