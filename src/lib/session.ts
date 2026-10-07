@@ -73,7 +73,7 @@ export async function loadSessionUser(
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const trialActive = Boolean(\n      profile?.pro_trial_ends_at &&\n        new Date(profile.pro_trial_ends_at).getTime() > Date.now(),\n    );\n\n    cached = {
+    cached = {
       uuid: user.id,
       publicId: user.id,
       email: profile?.email ?? user.email ?? null,
