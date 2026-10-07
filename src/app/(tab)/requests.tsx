@@ -545,7 +545,7 @@ ${item.description}
 
   const renderRequest = ({ item }: { item: ServiceRequest }) => {
     const liked = !!likedIds[item.id];
-    const likesDisplay = (item.likesCount || 0) + (liked ? 1 : 0);
+    const likesDisplay = item.likesCount || 0;
     const comments = getComments(item);
     const commentCount = comments.length;
     const firstComment = comments[0];
