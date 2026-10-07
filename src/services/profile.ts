@@ -366,23 +366,31 @@ const STEP_TITLE: Record<"governmentId" | "selfie" | "certificate", string> = {
 
 export async function uploadVerificationStep(
   step: "governmentId" | "selfie" | "certificate",
+  localUri: string,
 ): Promise<VerificationState> {
   const s = await loadSessionUser(true);
   if (!s) throw new Error("Not logged in");
+
   const proUuid = await resolveMyProfessionalUuid(s.uuid, s.professionalUuid);
   if (!proUuid) throw new Error("Professional profile required");
+  if (!localUri) throw new Error("Please select an image.");
 
   let appId: string | null = null;
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("verification_applications")
-    .select("id, status")
+    .select("id,status")
     .eq("professional_id", proUuid)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
+  if (existingError) throw existingError;
+
   if (existing) {
     appId = existing.id;
+    if (existing.status === "verified") {
+      throw new Error("Your verification is already approved.");
+    }
   } else {
     const { data: created, error } = await supabase
       .from("verification_applications")
@@ -391,70 +399,130 @@ export async function uploadVerificationStep(
         user_id: s.uuid,
         status: "pending",
         email: s.email,
+        phone: s.phone,
       })
       .select("id")
       .single();
+
     if (error) throw error;
     appId = created.id;
   }
 
   const title = STEP_TITLE[step];
-  const { data: doc } = await supabase
+  const { uploadImageFull, UPLOAD_FOLDERS } = await import("@/services/cloudinary");
+  const uploaded = await uploadImageFull(localUri, UPLOAD_FOLDERS.verification);
+
+  const { data: doc, error: docError } = await supabase
     .from("verification_documents")
     .select("id")
     .eq("application_id", appId)
     .eq("title", title)
     .maybeSingle();
 
+  if (docError) throw docError;
+
+  const values = {
+    uploaded: true,
+    file_name: `${step}-${Date.now()}.jpg`,
+    doc_type: "image",
+    preview_key: uploaded.public_id,
+    file_url: uploaded.secure_url,
+  };
+
   if (doc) {
-    await supabase
+    const { error } = await supabase
       .from("verification_documents")
-      .update({ uploaded: true })
+      .update(values)
       .eq("id", doc.id);
+    if (error) throw error;
   } else {
-    await supabase.from("verification_documents").insert({
-      application_id: appId,
-      title,
-      file_name: `${step}.jpg`,
-      doc_type: "image",
-      uploaded: true,
-    });
+    const { error } = await supabase
+      .from("verification_documents")
+      .insert({
+        application_id: appId,
+        title,
+        ...values,
+      });
+    if (error) throw error;
   }
 
+  verificationCache = null;
   return fetchVerificationStatus();
 }
 
 export async function submitVerification(): Promise<VerificationState> {
   const s = await loadSessionUser(true);
   if (!s) throw new Error("Not logged in");
+
   const proUuid = await resolveMyProfessionalUuid(s.uuid, s.professionalUuid);
   if (!proUuid) throw new Error("Professional profile required");
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("verification_applications")
-    .select("id")
+    .select("id,status")
     .eq("professional_id", proUuid)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (existing) {
-    await supabase
-      .from("verification_applications")
-      .update({
-        status: "pending",
-        submitted_on: new Date().toISOString().slice(0, 10),
-      })
-      .eq("id", existing.id);
-  } else {
-    await supabase.from("verification_applications").insert({
-      professional_id: proUuid,
-      user_id: s.uuid,
-      status: "pending",
-      submitted_on: new Date().toISOString().slice(0, 10),
-      email: s.email,
-    });
+  if (existingError) throw existingError;
+  if (!existing) throw new Error("Please upload your documents first.");
+  if (existing.status === "verified") {
+    throw new Error("Your verification is already approved.");
   }
 
+  const { data: docs, error: docsError } = await supabase
+    .from("verification_documents")
+    .select("title,uploaded")
+    .eq("application_id", existing.id);
+
+  if (docsError) throw docsError;
+
+  const list = docs ?? [];
+  const hasGovernmentId = list.some(
+    (d) => d.uploaded && String(d.title).toLowerCase().includes("government"),
+  );
+  const hasSelfie = list.some(
+    (d) => d.uploaded && String(d.title).toLowerCase().includes("selfie"),
+  );
+
+  if (!hasGovernmentId || !hasSelfie) {
+    throw new Error("Government ID and Selfie are required before submitting.");
+  }
+
+  const submittedAt = new Date().toISOString();
+  const { error: updateError } = await supabase
+    .from("verification_applications")
+    .update({
+      status: "pending",
+      submitted_on: submittedAt.slice(0, 10),
+      submitted_at: submittedAt,
+      admin_notified_at: null,
+      email: s.email,
+      phone: s.phone,
+    })
+    .eq("id", existing.id)
+    .eq("professional_id", proUuid);
+
+  if (updateError) throw updateError;
+
+  const { data: notificationResult, error: notificationError } =
+    await supabase.functions.invoke("notify-verification-submission", {
+      body: { applicationId: existing.id },
+    });
+
+  if (notificationError) {
+    console.warn(
+      "[Verification] Admin notification failed after submission:",
+      notificationError.message,
+    );
+  } else if (notificationResult?.emailErrors?.length) {
+    console.warn(
+      "[Verification] Admin email warning:",
+      notificationResult.emailErrors,
+    );
+  }
+
+  verificationCache = null;
   return fetchVerificationStatus();
 }
