@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   View,
   Text,
@@ -13,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
+  fetchVerificationStatus,
   getVerificationStatus,
   uploadVerificationStep,
   submitVerification,
@@ -45,10 +47,16 @@ export default function Verification() {
   const [busyStep, setBusyStep] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const load = useCallback(() => {
-    // TODO backend: async fetch
-    setState(getVerificationStatus());
-    setLoading(false);
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      setState(await fetchVerificationStatus());
+    } catch (error) {
+      console.warn("[Verification] status load failed:", error);
+      setState(await fetchVerificationStatus());
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -57,11 +65,54 @@ export default function Verification() {
 
   const onUpload = async (step: "governmentId" | "selfie" | "certificate") => {
     setBusyStep(step);
+
     try {
-      const next = await uploadVerificationStep(step);
+      let result: ImagePicker.ImagePickerResult;
+
+      if (step === "selfie") {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+        if (!permission.granted) {
+          Alert.alert(
+            "Camera permission required",
+            "Please allow camera access to take your selfie.",
+          );
+          return;
+        }
+
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ["images"],
+          quality: 0.85,
+        });
+      } else {
+        const permission =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (!permission.granted) {
+          Alert.alert(
+            "Photo permission required",
+            "Please allow photo access to upload your document.",
+          );
+          return;
+        }
+
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          quality: 0.85,
+        });
+      }
+
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+
+      const next = await uploadVerificationStep(
+        step,
+        result.assets[0].uri,
+      );
       setState(next);
-    } catch {
-      Alert.alert("Upload failed", "Please try again.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Please try again.";
+      Alert.alert("Upload failed", message);
     } finally {
       setBusyStep(null);
     }
