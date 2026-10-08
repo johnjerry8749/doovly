@@ -36,6 +36,7 @@ export const PRO_PACKAGE_IDS = {
 let configured = false;
 let configurePromise: Promise<void> | null = null;
 let configuredAppUserId: string | null = null;
+let cachedProEntitlement = false;
 
 function getApiKey(): string {
   if (__DEV__) return REVENUECAT_TEST_STORE_API_KEY;
@@ -72,6 +73,7 @@ async function configureRevenueCat(appUserId?: string | null): Promise<void> {
       });
       configured = true;
       configuredAppUserId = appUserId ?? null;
+      cachedProEntitlement = false;
     })()
       .catch((error) => {
         configured = false;
@@ -155,7 +157,9 @@ export async function restorePurchases(): Promise<CustomerInfo> {
 export async function getCustomerInfo(): Promise<CustomerInfo | null> {
   try {
     await ensureRevenueCatConfigured();
-    return await Purchases.getCustomerInfo();
+    const info = await Purchases.getCustomerInfo();
+    cachedProEntitlement = hasProEntitlement(info);
+    return info;
   } catch (error) {
     console.warn("[RevenueCat] getCustomerInfo failed:", error);
     return null;
@@ -172,6 +176,10 @@ export async function isProFromRevenueCat(): Promise<boolean> {
   return hasProEntitlement(await getCustomerInfo());
 }
 
+export function isProEntitlementCached(): boolean {
+  return cachedProEntitlement;
+}
+
 export async function setPurchaseContext(
   attributes: Record<string, string>,
 ): Promise<void> {
@@ -183,7 +191,10 @@ export async function setPurchaseContext(
 export function addCustomerInfoListener(
   listener: (info: CustomerInfo) => void,
 ): () => void {
-  Purchases.addCustomerInfoUpdateListener(listener);
+  Purchases.addCustomerInfoUpdateListener((info) => {
+    cachedProEntitlement = hasProEntitlement(info);
+    listener(info);
+  });
   return () => {
     Purchases.removeCustomerInfoUpdateListener(listener);
   };
