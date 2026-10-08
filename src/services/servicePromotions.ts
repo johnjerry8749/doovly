@@ -176,11 +176,19 @@ export async function promoteServiceAsync(
       activated,
     };
   } catch (error) {
-    await supabase
-      .from("service_promotions")
-      .update({ status: "cancelled" })
-      .eq("id", promotion.id)
-      .eq("status", "pending");
+    const purchaseError = error as { userCancelled?: boolean; code?: string };
+    const isPendingPayment =
+      purchaseError.code === "PAYMENT_PENDING_ERROR" ||
+      purchaseError.code === "paymentPendingError";
+
+    if (!isPendingPayment) {
+      await supabase
+        .from("service_promotions")
+        .update({ status: "cancelled" })
+        .eq("id", promotion.id)
+        .eq("status", "pending");
+    }
+
     throw error;
   }
 }
