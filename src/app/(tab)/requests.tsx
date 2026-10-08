@@ -28,6 +28,7 @@ import {
   addServiceRequestComment,
   deleteServiceRequestComment,
   likeServiceRequest,
+  listLikedServiceRequestIds,
   type ServiceRequest,
   type ServiceRequestComment,
 } from "@/services/serviceRequests";
@@ -195,6 +196,21 @@ export default function RequestsScreen() {
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
   const [chatText, setChatText] = useState("");
   const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
+
+  useEffect(() => {
+    let active = true;
+    listLikedServiceRequestIds()
+      .then((ids) => {
+        if (!active) return;
+        setLikedIds((current) => {
+          const next: Record<string, boolean> = {};
+          ids.forEach((id) => { next[id] = true; });
+          return { ...current, ...next };
+        });
+      })
+      .catch((error) => console.warn("[Requests] failed to load liked requests:", error));
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
