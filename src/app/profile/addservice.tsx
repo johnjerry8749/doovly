@@ -483,6 +483,7 @@ export default function AddService() {
                 <Pressable
                   style={styles.editBtn}
                   onPress={() => void handlePromote(service)}
+                  disabled={service.promotionActive}
                 >
                   <Ionicons
                     name={service.promotionActive ? "checkmark-circle" : "megaphone-outline"}
