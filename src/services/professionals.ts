@@ -9,6 +9,8 @@ export type ProService = {
   price: string;
   priceValue: number;
   icon: string;
+  promotionActive?: boolean;
+  promotionEndsAt?: string;
 };
 
 export type ProReview = {
