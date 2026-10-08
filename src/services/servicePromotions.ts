@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { loadSessionUser } from "@/lib/session";
-import { getOfferings, purchasePackage } from "@/lib/revenuecat";
+import { getOfferings, purchasePackage, setPurchaseContext } from "@/lib/revenuecat";
 import type { ProService } from "@/services/professionals";
 
 export type PromotionPackage = {
@@ -137,12 +137,10 @@ export async function promoteServiceAsync(
   const promotion = mapPromotion(pending);
 
   try {
-    const { default: Purchases } = await import("react-native-purchases");
-    await Purchases.setAttributes({
+    await setPurchaseContext({
       doovly_promotion_id: promotion.id,
       doovly_service_id: service.id,
     });
-    await Purchases.syncAttributesAndOfferingsIfNeeded();
 
     const offering = await getOfferings();
     const purchasePackage = offering?.availablePackages.find(
