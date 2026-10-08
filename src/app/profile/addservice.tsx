@@ -22,6 +22,7 @@ import {
   updateMyService,
   deleteMyService,
   listServiceCategoriesAsync,
+  invalidateProfessionalsCache,
   type ProService,
 } from "@/services/professionals";
 import {
@@ -249,6 +250,7 @@ export default function AddService() {
             );
 
             if (result.activated) {
+              invalidateProfessionalsCache();
               const refreshed = await listMyServicesAsync(proId ?? "");
               setServices(refreshed);
               Alert.alert(
