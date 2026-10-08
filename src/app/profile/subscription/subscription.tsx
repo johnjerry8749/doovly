@@ -14,9 +14,9 @@ import { router, useFocusEffect } from "expo-router";
 import { Alert } from "react-native";
 
 import {
-  getOfferings,
+  getProPackages,
+  hasProEntitlement,
   purchasePackage,
-  REVENUECAT_PRODUCTS,
 } from "@/lib/revenuecat";
 
 import {
@@ -32,13 +32,6 @@ const LIGHT_GREEN = "#E8F5E9";
 const TEXT_DARK = "#111827";
 const TEXT_MUTED = "#6B7280";
 const BORDER = "#E5E7EB";
-
-function formatNaira(n: number) {
-  return `₦${n.toLocaleString("en-NG", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
-}
 
 const EMPTY_PLAN: SubscriptionPlanConfig = { id: "basic", name: "", tagline: "", monthlyPrice: 0, yearlyPrice: 0, popular: false, features: [] };
 
@@ -82,21 +75,41 @@ export default function Subscription() {
   const pro = plansState.plans.find((p) => p.id === "pro") ?? { ...EMPTY_PLAN, id: "pro" as const };
   const basic = plansState.plans.find((p) => p.id === "basic") ?? EMPTY_PLAN;
 
-  const price =
-    period === "monthly" ? pro.monthlyPrice : pro.yearlyPrice;
+  const [proPriceStrings, setProPriceStrings] = useState({
+    monthly: "",
+    yearly: "",
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    getProPackages()
+      .then(({ monthly, yearly }) => {
+        if (!active) return;
+        setProPriceStrings({
+          monthly: monthly?.product.priceString ?? "",
+          yearly: yearly?.product.priceString ?? "",
+        });
+      })
+      .catch((error) => {
+        console.warn("[Subscription] RevenueCat offerings load failed:", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const priceString =
+    period === "monthly"
+      ? proPriceStrings.monthly
+      : proPriceStrings.yearly;
   const periodWord = period === "monthly" ? "monthly" : "yearly";
 
   async function handleUpgrade() {
     try {
-      const productId =
-        period === "monthly"
-          ? REVENUECAT_PRODUCTS.proMonthly
-          : REVENUECAT_PRODUCTS.proYearly;
-
-      const offering = await getOfferings();
-      const pkg = offering?.availablePackages.find(
-        (item) => item.product.identifier === productId,
-      );
+      const { monthly, yearly } = await getProPackages();
+      const pkg = period === "monthly" ? monthly : yearly;
 
       if (!pkg) {
         Alert.alert(
@@ -108,7 +121,7 @@ export default function Subscription() {
 
       const customerInfo = await purchasePackage(pkg);
 
-      if (customerInfo.entitlements.active.pro) {
+      if (hasProEntitlement(customerInfo)) {
         Alert.alert("Doovly Pro", "Your Pro subscription is now active.");
         router.back();
         return;
@@ -124,7 +137,8 @@ export default function Subscription() {
       console.warn("[Subscription] purchase failed:", error);
       Alert.alert(
         "Purchase failed",
-        error?.message ?? "We could not complete your Pro purchase. Please try again.",
+        error?.message ??
+          "We could not complete your Pro purchase. Please try again.",
       );
     }
   }
@@ -272,7 +286,7 @@ export default function Subscription() {
           onPress={() => void handleUpgrade()}
         >
           <Text style={styles.upgradeBtnText}>
-            Upgrade for {formatNaira(price)}
+            Upgrade for {priceString || "..."}
           </Text>
         </TouchableOpacity>
         <Text style={styles.footerNote}>
