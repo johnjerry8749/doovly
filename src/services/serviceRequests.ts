@@ -63,37 +63,10 @@ export type AddCommentInput = { requestId: string; text: string; userName?: stri
 let cache: ServiceRequest[] | null = null;
 let loadPromise: Promise<ServiceRequest[]> | null = null;
 const requestListeners = new Set<(requests: ServiceRequest[]) => void>();
-let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
-
-function ensureServiceRequestRealtime() {
-  if (realtimeChannel) return;
-
-  realtimeChannel = supabase
-    .channel("service-requests-likes-count")
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "service_requests" },
-      (payload) => {
-        const row = payload.new as Record<string, unknown>;
-        const id = String(row.id ?? "");
-        if (!id || !cache) return;
-
-        const likesCount = Number(row.likes_count ?? 0);
-        cache = cache.map((request) =>
-          request.id === id ? { ...request, likesCount } : request,
-        );
-        notifyRequestListeners();
-      },
-    )
-    .subscribe((status) => {
-      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        realtimeChannel?.unsubscribe();
-        realtimeChannel = null;
-      }
-    });
-}
-
 function notifyRequestListeners() {
+  const snapshot = cache ?? [];
+  requestListeners.forEach((listener) => listener(snapshot));
+}function notifyRequestListeners() {
   const snapshot = cache ?? [];
   requestListeners.forEach((listener) => listener(snapshot));
 }
