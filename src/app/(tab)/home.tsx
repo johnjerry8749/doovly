@@ -205,9 +205,15 @@ export default function Home() {
       const cat = selectedCategory.toLowerCase();
       list = list.filter((p) => {
         const prof = p.profession.toLowerCase();
+        const serviceMatch = p.services.some(
+          (service) =>
+            service.name.toLowerCase().includes(cat) ||
+            service.description.toLowerCase().includes(cat),
+        );
         return (
           prof === cat ||
           prof.includes(cat) ||
+          serviceMatch ||
           (cat === "spa" && prof.includes("massage"))
         );
       });
@@ -219,7 +225,12 @@ export default function Home() {
         (p) =>
           p.name.toLowerCase().includes(q) ||
           p.profession.toLowerCase().includes(q) ||
-          p.city.toLowerCase().includes(q),
+          p.city.toLowerCase().includes(q) ||
+          p.services.some(
+            (service) =>
+              service.name.toLowerCase().includes(q) ||
+              service.description.toLowerCase().includes(q),
+          ),
       );
     }
 
