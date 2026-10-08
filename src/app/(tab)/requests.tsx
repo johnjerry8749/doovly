@@ -510,7 +510,20 @@ ${item.description}
         (require("@/assets/profile_1.jpg") as number),
     });
 
-      setAllRequests(listServiceRequests());
+      const currentUserId = getCurrentUserId();
+      setAllRequests((current) =>
+        current.map((request) =>
+          request.id === offerRequest.id
+            ? {
+                ...request,
+                offeredByUserIds: Array.from(
+                  new Set([...(request.offeredByUserIds || []), currentUserId]),
+                ),
+                offersCount: (request.offersCount || 0) + 1,
+              }
+            : request,
+        ),
+      );
       closeOffer();
       router.push({ pathname: "/chat/[id]", params: { id: conv.id } });
     } catch (error) {
