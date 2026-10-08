@@ -271,6 +271,18 @@ export async function deleteServiceRequestComment(commentId: string): Promise<bo
   return true;
 }
 
+
+export async function listLikedServiceRequestIds(): Promise<string[]> {
+  const s = await loadSessionUser(true);
+  if (!s) return [];
+  const { data, error } = await supabase
+    .from("service_request_likes")
+    .select("request_id")
+    .eq("user_id", s.uuid);
+  if (error) throw error;
+  return (data ?? []).map((row) => String(row.request_id));
+}
+
 export async function likeServiceRequest(requestId: string, liked: boolean): Promise<number> {
   const s = await loadSessionUser(true); if (!s) throw new Error("Not logged in");
   const rid = requestUuid(requestId);
