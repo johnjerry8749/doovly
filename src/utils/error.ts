@@ -9,6 +9,7 @@ export function getErrorMessage(error: any): string {
     (typeof error === "string" ? error : null) ||
     error?.message ||
     error?.error_description ||
+    error?.cause?.message ||
     "";
 
   const lower = String(msg).toLowerCase();
@@ -24,7 +25,13 @@ export function getErrorMessage(error: any): string {
     lower.includes("aborted") ||
     lower.includes("connection refused") ||
     lower.includes("connection reset") ||
-    lower.includes("connection closed")
+    lower.includes("connection closed") ||
+    lower.includes("network is unreachable") ||
+    lower.includes("internet connection") ||
+    lower.includes("fetch failed") ||
+    lower.includes("load failed") ||
+    lower.includes("dns") ||
+    lower.includes("socket hang up")
   ) {
     return "No internet connection. Please check your network and try again.";
   }
