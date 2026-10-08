@@ -26,7 +26,7 @@ const REVENUECAT_APPLE_API_KEY =
 const REVENUECAT_GOOGLE_API_KEY =
   process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY ?? "";
 
-export const PRO_ENTITLEMENT = "doovly_pro";
+export const PRO_ENTITLEMENT = process.env.PRO_ENTITLEMENT ?? "";
 
 export const PRO_PACKAGE_IDS = {
   monthly: "$rc_monthly",
