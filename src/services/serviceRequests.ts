@@ -66,9 +66,6 @@ const requestListeners = new Set<(requests: ServiceRequest[]) => void>();
 function notifyRequestListeners() {
   const snapshot = cache ?? [];
   requestListeners.forEach((listener) => listener(snapshot));
-}function notifyRequestListeners() {
-  const snapshot = cache ?? [];
-  requestListeners.forEach((listener) => listener(snapshot));
 }
 
 export function subscribeServiceRequests(
