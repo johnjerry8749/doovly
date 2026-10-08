@@ -303,22 +303,6 @@ export default function RequestsScreen() {
 
     try {
       await likeServiceRequest(id, liked);
-
-      if (liked) {
-        const request = allRequests.find((item) => item.id === id);
-        const currentUserId = getCurrentUserId();
-        if (request && String(request.createdByUserId) !== String(currentUserId)) {
-          void supabase.functions.invoke("send-booking-notification", {
-            body: {
-              kind: "like",
-              requestId: id,
-              title: "Request Liked",
-              message: "Someone liked your service request.",
-              data: { type: "like", screen: "requests", requestId: id },
-            },
-          });
-        }
-      }
     } catch {
       setLikedIds((prev) => ({ ...prev, [id]: !liked }));
     }
