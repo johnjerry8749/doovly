@@ -46,6 +46,10 @@ function getApiKey(): string {
 }
 
 async function configureRevenueCat(appUserId?: string | null): Promise<void> {
+  if (configurePromise) {
+    await configurePromise;
+  }
+
   if (configured) {
     if (appUserId && appUserId !== configuredAppUserId) {
       await Purchases.logIn(appUserId);
@@ -53,6 +57,7 @@ async function configureRevenueCat(appUserId?: string | null): Promise<void> {
     } else if (!appUserId && configuredAppUserId) {
       await Purchases.logOut();
       configuredAppUserId = null;
+      cachedProEntitlement = false;
     }
     return;
   }
@@ -64,26 +69,24 @@ async function configureRevenueCat(appUserId?: string | null): Promise<void> {
     );
   }
 
-  if (!configurePromise) {
-    configurePromise = (async () => {
-      Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.VERBOSE : LOG_LEVEL.INFO);
-      await Purchases.configure({
-        apiKey,
-        appUserID: appUserId ?? undefined,
-      });
-      configured = true;
-      configuredAppUserId = appUserId ?? null;
-      cachedProEntitlement = false;
-    })()
-      .catch((error) => {
-        configured = false;
-        configuredAppUserId = null;
-        throw error;
-      })
-      .finally(() => {
-        configurePromise = null;
-      });
-  }
+  configurePromise = (async () => {
+    Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.VERBOSE : LOG_LEVEL.INFO);
+    await Purchases.configure({
+      apiKey,
+      appUserID: appUserId ?? undefined,
+    });
+    configured = true;
+    configuredAppUserId = appUserId ?? null;
+    cachedProEntitlement = false;
+  })()
+    .catch((error) => {
+      configured = false;
+      configuredAppUserId = null;
+      throw error;
+    })
+    .finally(() => {
+      configurePromise = null;
+    });
 
   await configurePromise;
 }
@@ -191,11 +194,14 @@ export async function setPurchaseContext(
 export function addCustomerInfoListener(
   listener: (info: CustomerInfo) => void,
 ): () => void {
-  Purchases.addCustomerInfoUpdateListener((info) => {
+  const wrappedListener = (info: CustomerInfo) => {
     cachedProEntitlement = hasProEntitlement(info);
     listener(info);
-  });
+  };
+
+  Purchases.addCustomerInfoUpdateListener(wrappedListener);
+
   return () => {
-    Purchases.removeCustomerInfoUpdateListener(listener);
+    Purchases.removeCustomerInfoUpdateListener(wrappedListener);
   };
 }
