@@ -244,7 +244,7 @@ export default function AddService() {
         return;
       }
 
-      const buttons = packages.slice(0, 3).map((pkg) => ({
+      const buttons = packages.map((pkg) => ({
         text: pkg.priceString ? `${pkg.name} · ${pkg.priceString}` : pkg.name,
         onPress: async () => {
           try {
