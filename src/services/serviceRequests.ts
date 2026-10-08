@@ -122,7 +122,6 @@ async function fetchAll(): Promise<ServiceRequest[]> {
   return cache;
 }
 export async function ensureServiceRequestsLoaded(): Promise<ServiceRequest[]> {
-  ensureServiceRequestRealtime();
   if (cache) return cache;
   if (!loadPromise) loadPromise = fetchAll().finally(() => { loadPromise = null; });
   return loadPromise;
