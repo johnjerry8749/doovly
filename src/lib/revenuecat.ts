@@ -34,6 +34,15 @@ export const PRO_PACKAGE_IDS = {
   yearly: "$rc_annual",
 } as const;
 
+export const BOOST_OFFERING_ID = "boosts";
+
+export const BOOST_PRODUCT_IDS = [
+  "boost_2days",
+  "boost_5days",
+  "boost_14days",
+  "boost_30days",
+] as const;
+
 
 let configured = false;
 let configurePromise: Promise<void> | null = null;
@@ -132,36 +141,26 @@ export async function getProPackages(): Promise<{
   };
 }
 
-export async function getNonSubscriptionProducts(
-  productIds: string[],
-): Promise<PurchasesStoreProduct[]> {
+export async function getBoostPackages(): Promise<PurchasesPackage[]> {
   await ensureRevenueCatConfigured();
-  if (!productIds.length) return [];
 
-  // Expo Go uses RevenueCat Browser Mode (purchases-js). The native
-  // getProducts/getProductInfo path is not supported there. Browser Mode
-  // exposes purchasable products through Offerings instead.
-  if (isExpoGo()) {
-    const offerings = await Purchases.getOfferings();
-    const availablePackages = offerings.current?.availablePackages ?? [];
-    const products = availablePackages
-      .map((pkg) => pkg.product)
-      .filter((product) => productIds.includes(product.identifier));
+  const offerings = await Purchases.getOfferings();
+  const packages = offerings.all[BOOST_OFFERING_ID]?.availablePackages ?? [];
 
-    if (!products.length) {
-      console.warn(
-        "[RevenueCat] Expo Go Test Store products are not present in the current offering:",
-        productIds,
-      );
-    }
+  return packages
+    .filter((pkg) =>
+      BOOST_PRODUCT_IDS.includes(
+        pkg.product.identifier as (typeof BOOST_PRODUCT_IDS)[number],
+      ),
+    )
+    .sort((a, b) => a.product.price - b.product.price);
+}
 
-    return products;
-  }
-
-  return Purchases.getProducts(
-    productIds,
-    PRODUCT_CATEGORY.NON_SUBSCRIPTION,
-  );
+export async function getBoostPackage(
+  productId: string,
+): Promise<PurchasesPackage | null> {
+  const packages = await getBoostPackages();
+  return packages.find((pkg) => pkg.product.identifier === productId) ?? null;
 }
 
 export async function purchasePackage(
@@ -172,33 +171,12 @@ export async function purchasePackage(
   return customerInfo;
 }
 
-export async function purchaseBoostProduct(
-  product: PurchasesStoreProduct,
-): Promise<{ customerInfo: CustomerInfo; productIdentifier: string }> {
+export async function purchaseBoostPackage(
+  pkg: PurchasesPackage,
+): Promise<CustomerInfo> {
   await ensureRevenueCatConfigured();
-
-  // Expo Go Browser Mode purchases Packages from Offerings. Native
-  // development/production builds continue using the StoreProduct API.
-  if (isExpoGo()) {
-    const offerings = await Purchases.getOfferings();
-    const pkg = offerings.current?.availablePackages.find(
-      (item) => item.product.identifier === product.identifier,
-    );
-
-    if (!pkg) {
-      throw new Error(
-        "This promotion is not configured in the RevenueCat current offering.",
-      );
-    }
-
-    const { customerInfo } = await Purchases.purchasePackage(pkg);
-    return {
-      customerInfo,
-      productIdentifier: product.identifier,
-    };
-  }
-
-  return Purchases.purchaseStoreProduct(product);
+  const { customerInfo } = await Purchases.purchasePackage(pkg);
+  return customerInfo;
 }
 
 export async function restorePurchases(): Promise<CustomerInfo> {
