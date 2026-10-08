@@ -39,6 +39,7 @@ export default function RequestDetailModal({
   const [showOffer, setShowOffer] = useState(false);
   const [offerPrice, setOfferPrice] = useState("");
   const [sendingOffer, setSendingOffer] = useState(false);
+  const [offerSentLocally, setOfferSentLocally] = useState(false);
   const images = request?.images ?? [];
 
   const closeOffer = () => {
@@ -49,10 +50,12 @@ export default function RequestDetailModal({
   const offerGate = request
     ? canSendOfferOnRequest(request)
     : { ok: false as const, reason: "missing" as const };
-  const showSendOffer = Boolean(offerGate.ok);
+  const alreadySent =
+    offerSentLocally || (!offerGate.ok && offerGate.reason === "already");
+  const showSendOffer = Boolean(offerGate.ok) && !offerSentLocally;
 
   const sendOffer = async () => {
-    if (!request || sendingOffer) return;
+    if (!request || sendingOffer || alreadySent) return;
     const amount = offerPrice.replace(/[^\d]/g, "");
     if (!amount) return;
 
@@ -64,10 +67,14 @@ export default function RequestDetailModal({
       });
 
       if (!result?.ok) {
+        if (result?.reason === "already") {
+          setOfferSentLocally(true);
+        }
         closeOffer();
         return;
       }
 
+      setOfferSentLocally(true);
       closeOffer();
       onClose();
     } finally {
@@ -97,6 +104,7 @@ export default function RequestDetailModal({
       onRequestClose={onClose}
       onShow={() => {
         setActiveImageIndex(0);
+        setOfferSentLocally(false);
         closeOffer();
       }}
     >
@@ -289,12 +297,18 @@ export default function RequestDetailModal({
                     <Text style={styles.ctaText}>Send Offer</Text>
                   </TouchableOpacity>
                 )}
-                {!showSendOffer && offerGate.reason === "full" && (
+                {alreadySent && (
+                  <View style={[styles.ctaButton, styles.ctaDisabled]}>
+                    <Ionicons name="checkmark" size={20} color="#fff" />
+                    <Text style={styles.ctaText}>Offer sent</Text>
+                  </View>
+                )}
+                {!showSendOffer && !alreadySent && offerGate.reason === "full" && (
                   <Text style={styles.offersFullText}>
                     This request has received the maximum number of offers.
                   </Text>
                 )}
-                {!showSendOffer && offerGate.reason === "own" && (
+                {!showSendOffer && !alreadySent && offerGate.reason === "own" && (
                   <Text style={styles.offersFullText}>
                     You cannot send an offer on your own request.
                   </Text>
@@ -337,16 +351,20 @@ export default function RequestDetailModal({
                       placeholderTextColor="#9CA3AF"
                       keyboardType="numeric"
                       style={styles.offerInput}
+                      editable={!sendingOffer}
                     />
                   </View>
 
                   <TouchableOpacity
                     style={[
                       styles.ctaButton,
-                      !offerPrice.replace(/[^\d]/g, "") && styles.ctaDisabled,
+                      (!offerPrice.replace(/[^\d]/g, "") || sendingOffer) &&
+                        styles.ctaDisabled,
                     ]}
                     activeOpacity={0.85}
-                    disabled={!offerPrice.replace(/[^\d]/g, "")}
+                    disabled={
+                      !offerPrice.replace(/[^\d]/g, "") || sendingOffer
+                    }
                     onPress={sendOffer}
                   >
                     <Ionicons
@@ -354,7 +372,9 @@ export default function RequestDetailModal({
                       size={20}
                       color="#fff"
                     />
-                    <Text style={styles.ctaText}>Send Offer</Text>
+                    <Text style={styles.ctaText}>
+                      {sendingOffer ? "Sending..." : "Send Offer"}
+                    </Text>
                   </TouchableOpacity>
                 </Pressable>
               </Pressable>
