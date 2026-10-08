@@ -26,6 +26,7 @@
       }
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "package": "com.johnjerry.doovly",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
