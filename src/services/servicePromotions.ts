@@ -1,8 +1,9 @@
 import { supabase } from "@/lib/supabase";
 import { loadSessionUser } from "@/lib/session";
 import {
-  getNonSubscriptionProducts,
-  purchaseBoostProduct,
+  getBoostPackage,
+  getBoostPackages,
+  purchaseBoostPackage,
   setPurchaseContext,
 } from "@/lib/revenuecat";
 import type { ProService } from "@/services/professionals";
@@ -75,11 +76,12 @@ export async function listPromotionPackagesAsync(): Promise<PromotionPackage[]> 
   if (!packages.length) return [];
 
   try {
-    const products = await getNonSubscriptionProducts(
-      packages.map((pkg) => pkg.productId),
-    );
+    const boostPackages = await getBoostPackages();
     const prices = new Map(
-      products.map((product) => [product.identifier, product.priceString]),
+      boostPackages.map((pkg) => [
+        pkg.product.identifier,
+        pkg.product.priceString,
+      ]),
     );
 
     return packages.map((pkg) => ({
@@ -179,18 +181,15 @@ export async function promoteServiceAsync(
       doovly_service_id: service.id,
     });
 
-    const products = await getNonSubscriptionProducts([pkg.product_id]);
-    const product = products.find(
-      (item) => item.identifier === pkg.product_id,
-    );
+    const boostPackage = await getBoostPackage(pkg.product_id);
 
-    if (!product) {
+    if (!boostPackage) {
       throw new Error(
         "This promotion is not available for purchase yet. Please try again later.",
       );
     }
 
-    await purchaseBoostProduct(product);
+    await purchaseBoostPackage(boostPackage);
 
     const activated = await waitForPromotionActivation(promotion.id);
     const latest = await getServicePromotionAsync(service.id);
