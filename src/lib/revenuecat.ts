@@ -66,6 +66,11 @@ export async function getOfferings(): Promise<PurchasesOffering | null> {
   }
 }
 
+export async function setPurchaseContext(attributes: Record<string, string>): Promise<void> {
+  await Purchases.setAttributes(attributes);
+  await Purchases.syncAttributesAndOfferingsIfNeeded();
+}
+
 export async function purchasePackage(
   pkg: PurchasesPackage,
 ): Promise<CustomerInfo> {
