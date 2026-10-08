@@ -183,10 +183,30 @@ export function getServiceRequestById(id: string): ServiceRequest | undefined {
   return listServiceRequests().find(r => String(r.id) === String(id));
 }
 export async function getServiceRequestByIdAsync(id: string): Promise<ServiceRequest | undefined> {
-  const local = getServiceRequestById(id); if (local) return local;
-  const { data, error } = await supabase.from("service_requests").select(SERVICE_REQUEST_SELECT)
-    .or(`id.eq.${requestUuid(id)}.eq.${id}`).maybeSingle();
-  if (error) throw error; return data ? mapServiceRequestRow(data) : undefined;
+  // The database is authoritative here. A cached request can outlive a deleted
+  // row, and using that stale object for offers would cause a service_request_offers
+  // foreign-key violation.
+  const uuid = requestUuid(id);
+  const { data, error } = await supabase
+    .from("service_requests")
+    .select(SERVICE_REQUEST_SELECT)
+    .eq("id", uuid)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (!data) {
+    cache = (cache ?? []).filter((request) => request.id !== String(id));
+    notifyRequestListeners();
+    return undefined;
+  }
+
+  const mapped = mapServiceRequestRow(data);
+  if (cache) {
+    cache = cache.map((request) => request.id === mapped.id ? mapped : request);
+    notifyRequestListeners();
+  }
+  return mapped;
 }
 export function listRecentServiceRequests(limit = 5): ServiceRequest[] { return listServiceRequests().slice(0, limit); }
 export function isOwnServiceRequest(request: ServiceRequest): boolean {
