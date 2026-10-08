@@ -1,92 +1,92 @@
 /**
- * RevenueCat helpers for Doovly subscriptions and service promotion.
+ * RevenueCat integration for Doovly.
  *
- * Development:
- * - RevenueCat Test Store API key is used for both iOS and Android.
- *
- * Production:
- * - Set platform-specific EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY /
- *   EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY.
- *
- * Test Store is development-only. Never ship the test key in a release build.
+ * Pro subscriptions are purchased from the current RevenueCat offering.
+ * Service promotions are non-subscription products and are fulfilled by the
+ * Supabase RevenueCat webhook. Prices always come from RevenueCat.
  */
 import { Platform } from "react-native";
 import Purchases, {
   LOG_LEVEL,
-  type PurchasesPackage,
+  PRODUCT_CATEGORY,
   type CustomerInfo,
   type PurchasesOffering,
+  type PurchasesPackage,
+  type PurchasesStoreProduct,
 } from "react-native-purchases";
 
-const TEST_STORE_KEY =
+// Keep RevenueCat configuration in one place. Replace only the production keys
+// when the real App Store / Google Play products are ready.
+const REVENUECAT_TEST_STORE_API_KEY =
   process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY ??
   "test_EoROVstxqPGDHoriXKHBqOoyWQQ";
+const REVENUECAT_APPLE_API_KEY =
+  process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY ?? "";
+const REVENUECAT_GOOGLE_API_KEY =
+  process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY ?? "";
 
-const APPLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY ?? "";
-const GOOGLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY ?? "";
+export const PRO_ENTITLEMENT = "doovly_pro";
 
-/** Entitlement identifier configured in the RevenueCat dashboard. */
-export const PRO_ENTITLEMENT = "pro";
-
-/** RevenueCat product identifiers supplied for the current Test Store setup. */
-export const REVENUECAT_PRODUCTS = {
-  proYearly: "prod393e52028e",
-  proMonthly: "prod86278c9fdf",
-  promotion: "prod406f177b8e",
+export const PRO_PACKAGE_IDS = {
+  monthly: "$rc_monthly",
+  yearly: "$rc_annual",
 } as const;
+
+export const BOOST_PRODUCT_IDS = [
+  "boost_2days",
+  "boost_5days",
+  "boost_14days",
+  "boost_30days",
+] as const;
 
 let configured = false;
 let configurePromise: Promise<void> | null = null;
 let configuredAppUserId: string | null = null;
 
 function getApiKey(): string {
-  if (__DEV__) {
-    // Test Store is intentionally used for local/development testing.
-    return TEST_STORE_KEY;
-  }
-
-  return Platform.OS === "ios" ? APPLE_KEY : GOOGLE_KEY;
+  if (__DEV__) return REVENUECAT_TEST_STORE_API_KEY;
+  return Platform.OS === "ios"
+    ? REVENUECAT_APPLE_API_KEY
+    : REVENUECAT_GOOGLE_API_KEY;
 }
 
 async function configureRevenueCat(appUserId?: string | null): Promise<void> {
   if (configured) {
     if (appUserId && appUserId !== configuredAppUserId) {
-      try {
-        await Purchases.logIn(appUserId);
-        configuredAppUserId = appUserId;
-      } catch (e) {
-        console.warn("[RevenueCat] logIn failed:", e);
-      }
+      await Purchases.logIn(appUserId);
+      configuredAppUserId = appUserId;
+    } else if (!appUserId && configuredAppUserId) {
+      await Purchases.logOut();
+      configuredAppUserId = null;
     }
     return;
   }
 
   const apiKey = getApiKey();
-
   if (!apiKey) {
     throw new Error(
-      "RevenueCat is not configured. Add the Test Store API key for development or the platform API key for production.",
+      "RevenueCat is not configured. Add the Test Store key for development or the platform key for production.",
     );
   }
 
   if (!configurePromise) {
     configurePromise = (async () => {
       Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.VERBOSE : LOG_LEVEL.INFO);
-
       await Purchases.configure({
         apiKey,
         appUserID: appUserId ?? undefined,
       });
-
       configured = true;
       configuredAppUserId = appUserId ?? null;
-    })().catch((error) => {
-      configured = false;
-      configuredAppUserId = null;
-      throw error;
-    }).finally(() => {
-      configurePromise = null;
-    });
+    })()
+      .catch((error) => {
+        configured = false;
+        configuredAppUserId = null;
+        throw error;
+      })
+      .finally(() => {
+        configurePromise = null;
+      });
   }
 
   await configurePromise;
@@ -95,33 +95,44 @@ async function configureRevenueCat(appUserId?: string | null): Promise<void> {
 export async function initRevenueCat(appUserId?: string | null): Promise<void> {
   try {
     await configureRevenueCat(appUserId);
-  } catch (e) {
-    console.warn("[RevenueCat] configure failed:", e);
+  } catch (error) {
+    console.warn("[RevenueCat] configure failed:", error);
   }
 }
 
 async function ensureRevenueCatConfigured(): Promise<void> {
-  if (configured) return;
-  await configureRevenueCat();
+  if (!configured) await configureRevenueCat();
 }
 
 export async function getOfferings(): Promise<PurchasesOffering | null> {
-  try {
-    await ensureRevenueCatConfigured();
-    const offerings = await Purchases.getOfferings();
-    return offerings.current ?? null;
-  } catch (e) {
-    console.warn("[RevenueCat] getOfferings failed:", e);
-    return null;
-  }
+  await ensureRevenueCatConfigured();
+  const offerings = await Purchases.getOfferings();
+  return offerings.current ?? null;
 }
 
-export async function setPurchaseContext(
-  attributes: Record<string, string>,
-): Promise<void> {
+export async function getProPackages(): Promise<{
+  monthly: PurchasesPackage | null;
+  yearly: PurchasesPackage | null;
+}> {
+  const offering = await getOfferings();
+  return {
+    monthly:
+      offering?.availablePackages.find(
+        (pkg) => pkg.identifier === PRO_PACKAGE_IDS.monthly,
+      ) ?? null,
+    yearly:
+      offering?.availablePackages.find(
+        (pkg) => pkg.identifier === PRO_PACKAGE_IDS.yearly,
+      ) ?? null,
+  };
+}
+
+export async function getBoostProducts(): Promise<PurchasesStoreProduct[]> {
   await ensureRevenueCatConfigured();
-  await Purchases.setAttributes(attributes);
-  await Purchases.syncAttributesAndOfferingsIfNeeded();
+  return Purchases.getProducts(
+    [...BOOST_PRODUCT_IDS],
+    PRODUCT_CATEGORY.NON_SUBSCRIPTION,
+  );
 }
 
 export async function purchasePackage(
@@ -130,6 +141,13 @@ export async function purchasePackage(
   await ensureRevenueCatConfigured();
   const { customerInfo } = await Purchases.purchasePackage(pkg);
   return customerInfo;
+}
+
+export async function purchaseBoostProduct(
+  product: PurchasesStoreProduct,
+): Promise<{ customerInfo: CustomerInfo; productIdentifier: string }> {
+  await ensureRevenueCatConfigured();
+  return Purchases.purchaseStoreProduct(product);
 }
 
 export async function restorePurchases(): Promise<CustomerInfo> {
@@ -141,8 +159,8 @@ export async function getCustomerInfo(): Promise<CustomerInfo | null> {
   try {
     await ensureRevenueCatConfigured();
     return await Purchases.getCustomerInfo();
-  } catch (e) {
-    console.warn("[RevenueCat] getCustomerInfo failed:", e);
+  } catch (error) {
+    console.warn("[RevenueCat] getCustomerInfo failed:", error);
     return null;
   }
 }
@@ -150,11 +168,24 @@ export async function getCustomerInfo(): Promise<CustomerInfo | null> {
 export function hasProEntitlement(
   info: CustomerInfo | null | undefined,
 ): boolean {
-  if (!info) return false;
-  return !!info.entitlements.active[PRO_ENTITLEMENT];
+  return Boolean(info?.entitlements.active[PRO_ENTITLEMENT]);
 }
 
 export async function isProFromRevenueCat(): Promise<boolean> {
-  const info = await getCustomerInfo();
-  return hasProEntitlement(info);
+  return hasProEntitlement(await getCustomerInfo());
+}
+
+export async function setPurchaseContext(
+  attributes: Record<string, string>,
+): Promise<void> {
+  await ensureRevenueCatConfigured();
+  await Purchases.setAttributes(attributes);
+  await Purchases.syncAttributesAndOfferingsIfNeeded();
+}
+
+export function addCustomerInfoListener(
+  listener: (info: CustomerInfo) => void,
+): () => void {
+  const subscription = Purchases.addCustomerInfoUpdateListener(listener);
+  return () => subscription.remove();
 }
