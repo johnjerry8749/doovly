@@ -17,8 +17,9 @@ import Purchases, {
 
 // Keep RevenueCat configuration in one place. Replace only the production keys
 // when the real App Store / Google Play products are ready.
+// Expo Go must always use the RevenueCat Test Store key. Do not let a
+// platform/App Store/Google Play key from .env override this in development.
 const REVENUECAT_TEST_STORE_API_KEY =
-  process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY ??
   "test_EoROVstxqPGDHoriXKHBqOoyWQQ";
 const REVENUECAT_APPLE_API_KEY =
   process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY ?? "";
