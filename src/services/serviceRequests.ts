@@ -283,7 +283,12 @@ export async function likeServiceRequest(requestId: string, liked: boolean): Pro
   }
   const { count, error } = await supabase.from("service_request_likes").select("request_id", { count: "exact", head: true }).eq("request_id", rid);
   if (error) throw error;
-  invalidateServiceRequestsCache();
+  if (cache) {
+    cache = cache.map((request) =>
+      request.id === rid ? { ...request, likesCount: count ?? 0 } : request,
+    );
+    notifyRequestListeners();
+  }
 
   if (liked && String(requestId)) {
     const request = await getServiceRequestByIdAsync(requestId);
