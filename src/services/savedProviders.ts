@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "@/lib/supabase";
+import { isProEntitlementCached } from "@/lib/revenuecat";
 
 import {
   loadSessionUser,
@@ -77,10 +78,10 @@ export function isOwnProfessionalProfile(professionalId: string): boolean {
 export function isCurrentUserPro(): boolean {
   const s = getCachedSessionUser();
   if (!s) return false;
-  if (s.subscribed) return true;
-  const proId = s.professionalId;
-  if (!proId) return false;
-  return getProfessionalById(proId)?.subscribed ?? false;
+
+  // Pro access is controlled only by RevenueCat's doovly_pro entitlement.
+  // Do not trust the legacy Supabase subscribed flags for feature access.
+  return isProEntitlementCached();
 }
 
 export function isCurrentUserVerified(): boolean {
