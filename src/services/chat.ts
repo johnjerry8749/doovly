@@ -13,6 +13,7 @@ export type ChatParticipant = {
   verified?: boolean;
   profession?: string | null;
   phone?: string | null;
+  isSystem?: boolean;
 };
 
 export type RequestCardData = {
@@ -144,7 +145,7 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
   const [{ data: profile }, { data: pro }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id,full_name,avatar_url,phone")
+      .select("id,full_name,avatar_url,phone,email,role")
       .eq("id", userId)
       .maybeSingle(),
     supabase
@@ -154,13 +155,18 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
       .maybeSingle(),
   ]);
 
+  const isSystem = profile?.email?.toLowerCase() === "system@doovly.app";
+
   return {
-    id: pro?.id ?? profile?.id ?? userId,
-    name: profile?.full_name ?? pro?.profiles?.full_name ?? "User",
-    image: imageFromUrl(pro?.avatar_url ?? pro?.profiles?.avatar_url ?? profile?.avatar_url),
-    verified: Boolean(pro?.is_verified),
-    profession: pro?.profession ?? null,
+    id: profile?.id ?? pro?.id ?? userId,
+    name: isSystem ? "Doovly" : profile?.full_name ?? pro?.profiles?.full_name ?? "User",
+    image: isSystem
+      ? require("@/assets/images/icon.png")
+      : imageFromUrl(pro?.avatar_url ?? pro?.profiles?.avatar_url ?? profile?.avatar_url),
+    verified: isSystem ? false : Boolean(pro?.is_verified),
+    profession: isSystem ? "Official Doovly" : pro?.profession ?? null,
     phone: profile?.phone ?? null,
+    isSystem,
   };
 }
 
