@@ -230,25 +230,44 @@ Deno.serve(async (req) => {
       return json({ ok: true, duplicate: true });
     }
 
+    // RevenueCat can represent subscriber attributes differently between
+    // SDK/web-billing event payloads. Prefer the explicit promotion id, but
+    // safely fall back to the newest pending promotion owned by this user
+    // for the purchased boost product.
     const promotionAttribute =
-      event?.subscriber_attributes?.doovly_promotion_id;
+      event?.subscriber_attributes?.doovly_promotion_id ??
+      event?.subscriber_attributes?.["doovly_promotion_id"] ??
+      payload?.subscriber_attributes?.doovly_promotion_id ??
+      payload?.subscriber_attributes?.["doovly_promotion_id"];
 
     const promotionId =
       promotionAttribute?.value ??
       promotionAttribute ??
       null;
 
-    if (!promotionId) {
-      return json({ ok: true, ignored: "missing promotion id" });
-    }
-
-    const { data: promotion, error: promotionError } = await admin
+    let promotionQuery = admin
       .from("service_promotions")
       .select(
         "id,service_id,user_id,package_id,product_id,status,professional_id",
       )
-      .eq("id", promotionId)
+      .eq("user_id", appUserId)
+      .eq("product_id", productId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
+
+    if (promotionId) {
+      promotionQuery = admin
+        .from("service_promotions")
+        .select(
+          "id,service_id,user_id,package_id,product_id,status,professional_id",
+        )
+        .eq("id", String(promotionId))
+        .maybeSingle();
+    }
+
+    const { data: promotion, error: promotionError } = await promotionQuery;
 
     if (promotionError) throw promotionError;
 
@@ -342,12 +361,30 @@ Deno.serve(async (req) => {
       .eq("id", promotion.service_id)
       .maybeSingle();
 
-    await sendPromotionChat(
-      promotion.user_id,
-      service?.name ?? "Your service",
-      pkg.name,
-      endsAt.toISOString(),
-    );
+    // Promotion access is already activated above. Chat/notification are
+    // secondary side effects and must never turn a successful purchase into
+    // a failed webhook response.
+    try {
+      await sendPromotionChat(
+        promotion.user_id,
+        service?.name ?? "Your service",
+        pkg.name,
+        endsAt.toISOString(),
+      );
+    } catch (error) {
+      console.error("[revenuecat-promotion-webhook] chat delivery failed", error);
+    }
+
+    try {
+      await sendPromotionNotification(
+        promotion.user_id,
+        service?.name ?? "Your service",
+        pkg.name,
+        endsAt.toISOString(),
+      );
+    } catch (error) {
+      console.error("[revenuecat-promotion-webhook] notification delivery failed", error);
+    }
 
     console.log(
       JSON.stringify({
@@ -380,3 +417,69 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function sendPromotionNotification(
+  userId: string,
+  serviceName: string,
+  packageName: string,
+  endsAt: string,
+) {
+  const formattedEnd = new Date(endsAt).toLocaleDateString("en-NG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  const title = "Promotion successful";
+  const body =
+    '"' +
+    serviceName +
+    '" is now promoted with the ' +
+    packageName +
+    " package until " +
+    formattedEnd +
+    ".";
+
+  const { error } = await admin.from("notifications").insert({
+    user_id: userId,
+    type: "general",
+    title,
+    body,
+    unread: true,
+    data: {
+      type: "promotion_success",
+      screen: "chat",
+    },
+  });
+
+  if (error) throw error;
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("expo_push_token")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const token = String(profile?.expo_push_token ?? "").trim();
+  if (!token) return;
+
+  const response = await fetch("https://exp.host/--/api/v2/push/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      to: token,
+      sound: "default",
+      title,
+      body,
+      data: {
+        type: "promotion_success",
+        screen: "chat",
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Expo push notification failed: " + await response.text());
+  }
+}
+
