@@ -186,6 +186,8 @@ export async function setPurchaseContext(
 export function addCustomerInfoListener(
   listener: (info: CustomerInfo) => void,
 ): () => void {
-  const subscription = Purchases.addCustomerInfoUpdateListener(listener);
-  return () => subscription.remove();
+  Purchases.addCustomerInfoUpdateListener(listener);
+  return () => {
+    Purchases.removeCustomerInfoUpdateListener(listener);
+  };
 }
