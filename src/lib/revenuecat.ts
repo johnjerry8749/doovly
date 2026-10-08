@@ -5,6 +5,7 @@
  * Service promotions are non-subscription products and are fulfilled by the
  * Supabase RevenueCat webhook. Prices always come from RevenueCat.
  */
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 import Purchases, {
   LOG_LEVEL,
@@ -38,6 +39,10 @@ let configured = false;
 let configurePromise: Promise<void> | null = null;
 let configuredAppUserId: string | null = null;
 let cachedProEntitlement = false;
+
+function isExpoGo(): boolean {
+  return Constants.appOwnership === "expo";
+}
 
 function getApiKey(): string {
   if (__DEV__) return REVENUECAT_TEST_STORE_API_KEY;
@@ -132,6 +137,27 @@ export async function getNonSubscriptionProducts(
 ): Promise<PurchasesStoreProduct[]> {
   await ensureRevenueCatConfigured();
   if (!productIds.length) return [];
+
+  // Expo Go uses RevenueCat Browser Mode (purchases-js). The native
+  // getProducts/getProductInfo path is not supported there. Browser Mode
+  // exposes purchasable products through Offerings instead.
+  if (isExpoGo()) {
+    const offerings = await Purchases.getOfferings();
+    const availablePackages = offerings.current?.availablePackages ?? [];
+    const products = availablePackages
+      .map((pkg) => pkg.product)
+      .filter((product) => productIds.includes(product.identifier));
+
+    if (!products.length) {
+      console.warn(
+        "[RevenueCat] Expo Go Test Store products are not present in the current offering:",
+        productIds,
+      );
+    }
+
+    return products;
+  }
+
   return Purchases.getProducts(
     productIds,
     PRODUCT_CATEGORY.NON_SUBSCRIPTION,
@@ -150,6 +176,28 @@ export async function purchaseBoostProduct(
   product: PurchasesStoreProduct,
 ): Promise<{ customerInfo: CustomerInfo; productIdentifier: string }> {
   await ensureRevenueCatConfigured();
+
+  // Expo Go Browser Mode purchases Packages from Offerings. Native
+  // development/production builds continue using the StoreProduct API.
+  if (isExpoGo()) {
+    const offerings = await Purchases.getOfferings();
+    const pkg = offerings.current?.availablePackages.find(
+      (item) => item.product.identifier === product.identifier,
+    );
+
+    if (!pkg) {
+      throw new Error(
+        "This promotion is not configured in the RevenueCat current offering.",
+      );
+    }
+
+    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    return {
+      customerInfo,
+      productIdentifier: product.identifier,
+    };
+  }
+
   return Purchases.purchaseStoreProduct(product);
 }
 
