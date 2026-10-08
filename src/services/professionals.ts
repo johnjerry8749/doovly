@@ -82,7 +82,10 @@ async function fetchAll(): Promise<Professional[]> {
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  const list = (data ?? []).map(mapProfessionalRow);
+  // The official Doovly account is a system-chat identity, never a public professional card.
+  const list = (data ?? [])
+    .filter((row: any) => row.profiles?.email?.toLowerCase() !== "system@doovly.app")
+    .map(mapProfessionalRow);
   cache = list;
   return list;
 }
@@ -147,7 +150,9 @@ export async function getProfessionalByIdAsync(
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return undefined;
+  if (!data || data.profiles?.email?.toLowerCase() === "system@doovly.app") {
+    return undefined;
+  }
   return mapProfessionalRow(data);
 }
 
