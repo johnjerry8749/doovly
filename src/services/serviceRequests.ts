@@ -93,7 +93,7 @@ async function uploadRequestImages(images: ImageSourcePropType[] | undefined) {
 
     if (!uri) continue;
 
-    if (/^https?:\/\//i.test(uri)) {
+    if (/^https?:\/\/i.test(uri)) {
       urls.push(uri);
       continue;
     }
@@ -345,9 +345,31 @@ export function canSendOfferOnRequest(request: ServiceRequest): { ok: boolean; r
   if (!request) return { ok:false, reason:"missing" };
   if (isOwnServiceRequest(request)) return { ok:false, reason:"own" };
   const uid = currentUuid(); if (!uid) return { ok:false, reason:"already" };
-  if ((request.offeredByUserIds || []).includes(uid)) return { ok:false, reason:"already" };
+  const offered = (request.offeredByUserIds || []).map(String);
+  if (offered.includes(String(uid))) return { ok:false, reason:"already" };
   if ((request.offersCount ?? 0) >= (request.maxOffers ?? 5)) return { ok:false, reason:"full" };
   return { ok:true };
+}
+
+function markOfferSentInCache(requestId: string, userId: string) {
+  if (!cache) return;
+  const rid = String(requestId);
+  const uid = String(userId);
+  cache = cache.map((request) => {
+    if (String(request.id) !== rid) return request;
+    const offered = Array.from(
+      new Set([...(request.offeredByUserIds || []).map(String), uid]),
+    );
+    const wasAlready = (request.offeredByUserIds || []).map(String).includes(uid);
+    return {
+      ...request,
+      offeredByUserIds: offered,
+      offersCount: wasAlready
+        ? request.offersCount
+        : (request.offersCount ?? 0) + 1,
+    };
+  });
+  notifyRequestListeners();
 }
 
 export async function submitServiceRequestOffer(input: SubmitOfferInput): Promise<{
@@ -371,6 +393,8 @@ export async function submitServiceRequestOffer(input: SubmitOfferInput): Promis
   if (previousOfferError) throw previousOfferError;
 
   if (previousOffer) {
+    // Keep list UI in sync even if offered_by was never written historically.
+    markOfferSentInCache(request.id, s.uuid);
     return {
       ok:false,
       requestId:request.id,
@@ -382,6 +406,9 @@ export async function submitServiceRequestOffer(input: SubmitOfferInput): Promis
 
   const allowed = canSendOfferOnRequest(request);
   if (!allowed.ok) {
+    if (allowed.reason === "already") {
+      markOfferSentInCache(request.id, s.uuid);
+    }
     return {
       ok:false,
       requestId:request.id,
@@ -401,6 +428,7 @@ export async function submitServiceRequestOffer(input: SubmitOfferInput): Promis
   if (error) {
     const code = (error as { code?: string }).code;
     if (code === "23505") {
+      markOfferSentInCache(request.id, s.uuid);
       return {
         ok:false,
         requestId:request.id,
@@ -412,7 +440,24 @@ export async function submitServiceRequestOffer(input: SubmitOfferInput): Promis
     throw error;
   }
 
-  invalidateServiceRequestsCache();
+  // Persist offered_by + offers_count so refresh / re-open still disables the button.
+  const nextOfferedBy = Array.from(
+    new Set([...(request.offeredByUserIds || []).map(String), String(s.uuid)]),
+  );
+  const nextOffersCount = (request.offersCount ?? 0) + 1;
+  const { error: updateError } = await supabase
+    .from("service_requests")
+    .update({
+      offered_by: nextOfferedBy,
+      offers_count: nextOffersCount,
+    })
+    .eq("id", rid);
+  if (updateError) {
+    // Offer row already exists; still mark local cache so the button disables.
+    console.warn("[ServiceRequests] failed to update offered_by:", updateError);
+  }
+
+  markOfferSentInCache(request.id, s.uuid);
 
   const acceptedAutomatically = String(offer?.status ?? "").toLowerCase() === "accepted";
   void notifyBookingRecipient({
