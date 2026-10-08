@@ -93,7 +93,7 @@ async function uploadRequestImages(images: ImageSourcePropType[] | undefined) {
 
     if (!uri) continue;
 
-    if (/^https?:\/\/i.test(uri)) {
+    if (/^https?:\/\//i.test(uri)) {
       urls.push(uri);
       continue;
     }
