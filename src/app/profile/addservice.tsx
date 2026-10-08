@@ -397,8 +397,7 @@ export default function AddService() {
             </Text>
           </View>
           <Text style={styles.addNewSubtitle}>
-            {atFreeLimit
-              ? `Free accounts can add up to ${FREE_SERVICE_LIMIT} services. Go Pro for unlimited.`
+            {atFreeLimit              ? `Free accounts can add up to ${FREE_SERVICE_LIMIT} services. Go Pro for unlimited.`
               : isPro
                 ? "Pro plan — add unlimited services."
                 : `Offer more services and attract more customers. (${activeCount}/${FREE_SERVICE_LIMIT} used)`}
@@ -724,7 +723,7 @@ export default function AddService() {
       <Modal
         visible={promotionModalVisible}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={closePromotionModal}
       >
         <View style={styles.promotionOverlay}>
@@ -733,36 +732,57 @@ export default function AddService() {
             onPress={closePromotionModal}
           />
 
-          <View style={styles.promotionSheet}>
-            <View style={styles.promotionHandle} />
+          <View style={styles.promotionCard}>
+            <View style={styles.promotionTopBar}>
+              <View style={styles.promotionTopIcon}>
+                <Ionicons name="megaphone" size={20} color="#FFFFFF" />
+              </View>
 
-            <View style={styles.promotionHeader}>
-              <View style={styles.promotionHeaderIcon}>
-                <Ionicons name="megaphone" size={22} color={PRIMARY} />
-              </View>
-              <View style={styles.promotionHeaderText}>
-                <Text style={styles.promotionTitle}>Promote your service</Text>
-                <Text style={styles.promotionSubtitle} numberOfLines={1}>
-                  {promotionService?.name || "Choose a promotion package"}
-                </Text>
-              </View>
               <Pressable
+                style={styles.promotionClose}
                 onPress={closePromotionModal}
                 disabled={promotionLoading}
-                hitSlop={12}
+                hitSlop={10}
               >
-                <Ionicons name="close" size={24} color={SECONDARY} />
+                <Ionicons name="close" size={20} color={TEXT} />
               </Pressable>
             </View>
 
-            <View style={styles.promotionInfo}>
-              <Ionicons name="trending-up" size={18} color={PRIMARY} />
-              <Text style={styles.promotionInfoText}>
-                Get priority visibility in relevant searches and help more customers discover your service.
-              </Text>
+            <Text style={styles.promotionTitle}>Boost your service</Text>
+            <Text style={styles.promotionSubtitle} numberOfLines={2}>
+              {promotionService?.name || "Choose a promotion package"}
+            </Text>
+
+            <View style={styles.promotionBenefits}>
+              <View style={styles.promotionBenefit}>
+                <View style={styles.promotionBenefitIcon}>
+                  <Ionicons name="trending-up" size={16} color={PRIMARY} />
+                </View>
+                <View style={styles.promotionBenefitText}>
+                  <Text style={styles.promotionBenefitTitle}>More visibility</Text>
+                  <Text style={styles.promotionBenefitDescription}>
+                    Appear higher in relevant searches.
+                  </Text>
+                </View>
+              </View>
+
+              <View style={[styles.promotionBenefit, { marginTop: 10 }]}>
+                <View style={styles.promotionBenefitIcon}>
+                  <Ionicons name="people-outline" size={16} color={PRIMARY} />
+                </View>
+                <View style={styles.promotionBenefitText}>
+                  <Text style={styles.promotionBenefitTitle}>Reach more customers</Text>
+                  <Text style={styles.promotionBenefitDescription}>
+                    Put your service in front of more people.
+                  </Text>
+                </View>
+              </View>
             </View>
 
-            <Text style={styles.promotionSectionTitle}>Choose duration</Text>
+            <View style={styles.promotionSectionRow}>
+              <Text style={styles.promotionSectionTitle}>Choose a package</Text>
+              <Text style={styles.promotionSectionHint}>One-time payment</Text>
+            </View>
 
             <ScrollView
               showsVerticalScrollIndicator={false}
@@ -770,6 +790,8 @@ export default function AddService() {
             >
               {promotionPackages.map((pkg) => {
                 const selected = selectedPromotionPackageId === pkg.id;
+                const recommended = pkg.durationDays === 30;
+
                 return (
                   <Pressable
                     key={pkg.id}
@@ -790,7 +812,17 @@ export default function AddService() {
                     </View>
 
                     <View style={styles.promotionOptionMain}>
-                      <Text style={styles.promotionOptionName}>{pkg.name}</Text>
+                      <View style={styles.promotionOptionTitleRow}>
+                        <Text style={styles.promotionOptionName}>{pkg.name}</Text>
+                        {recommended && (
+                          <View style={styles.promotionRecommended}>
+                            <Text style={styles.promotionRecommendedText}>
+                              BEST VALUE
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
                       <Text style={styles.promotionOptionDuration}>
                         {pkg.durationDays} {pkg.durationDays === 1 ? "day" : "days"} of priority visibility
                       </Text>
@@ -804,28 +836,28 @@ export default function AddService() {
               })}
             </ScrollView>
 
-            <Pressable
-              style={[
-                styles.promotionContinue,
-                (!selectedPromotionPackageId || promotionLoading) &&
-                  styles.promotionContinueDisabled,
-              ]}
-              onPress={() => void handlePromotionPurchase()}
-              disabled={!selectedPromotionPackageId || promotionLoading}
-            >
-              <Ionicons
-                name={promotionLoading ? "hourglass-outline" : "card-outline"}
-                size={20}
-                color="#FFFFFF"
-              />
-              <Text style={styles.promotionContinueText}>
-                {promotionLoading ? "Processing…" : "Continue to payment"}
+            <View style={styles.promotionFooter}>
+              <Text style={styles.promotionPriceNote}>
+                Price is supplied by the App Store or Google Play.
               </Text>
-            </Pressable>
 
-            <Text style={styles.promotionPriceNote}>
-              Price is supplied by the current App Store or Google Play purchase configuration.
-            </Text>
+              <Pressable
+                style={[
+                  styles.promotionContinue,
+                  (!selectedPromotionPackageId || promotionLoading) &&
+                    styles.promotionContinueDisabled,
+                ]}
+                onPress={() => void handlePromotionPurchase()}
+                disabled={!selectedPromotionPackageId || promotionLoading}
+              >
+                <Text style={styles.promotionContinueText}>
+                  {promotionLoading ? "Processing…" : "Continue to payment"}
+                </Text>
+                {!promotionLoading && (
+                  <Ionicons name="arrow-forward" size={19} color="#FFFFFF" />
+                )}
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1197,8 +1229,7 @@ const styles = StyleSheet.create({
   categoryList: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 14,
+    borderColor: BORDER,    borderRadius: 14,
     overflow: "hidden",
     backgroundColor: "#FFFFFF",
   },
@@ -1301,89 +1332,124 @@ const styles = StyleSheet.create({
 
   promotionOverlay: {
     flex: 1,
-    justifyContent: "flex-end",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 18,
   },
   promotionBackdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(17,24,39,0.58)",
   },
-  promotionSheet: {
+  promotionCard: {
+    width: "100%",
+    maxWidth: 460,
+    maxHeight: "88%",
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: Platform.OS === "ios" ? 22 : 16,
-    maxHeight: "82%",
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: Platform.OS === "ios" ? 18 : 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 12,
   },
-  promotionHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D5DB",
-    alignSelf: "center",
-    marginBottom: 14,
-  },
-  promotionHeader: {
+  promotionTopBar: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
   },
-  promotionHeaderIcon: {
+  promotionTopIcon: {
     width: 44,
     height: 44,
-    borderRadius: 13,
-    backgroundColor: LIGHT_GREEN,
+    borderRadius: 14,
+    backgroundColor: PRIMARY,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
-  promotionHeaderText: {
-    flex: 1,
+  promotionClose: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
   },
   promotionTitle: {
-    fontSize: 18,
+    fontSize: 21,
     fontWeight: "800",
     color: TEXT,
+    marginTop: 14,
   },
   promotionSubtitle: {
     fontSize: 13,
+    lineHeight: 18,
     color: SECONDARY,
-    marginTop: 3,
+    marginTop: 4,
   },
-  promotionInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F0FDF4",
+  promotionBenefits: {
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: "#BBF7D0",
-    borderRadius: 13,
+    borderColor: "#EEF2F7",
+    borderRadius: 16,
     padding: 12,
     marginTop: 16,
   },
-  promotionInfoText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 17,
-    color: SECONDARY,
-    marginLeft: 8,
+  promotionBenefit: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  promotionSectionTitle: {
-    fontSize: 14,
+  promotionBenefitIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: LIGHT_GREEN,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  promotionBenefitText: {
+    flex: 1,
+  },
+  promotionBenefitTitle: {
+    fontSize: 13,
     fontWeight: "700",
     color: TEXT,
+  },
+  promotionBenefitDescription: {
+    fontSize: 11,
+    color: SECONDARY,
+    marginTop: 2,
+  },
+  promotionSectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 18,
     marginBottom: 10,
   },
+  promotionSectionTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: TEXT,
+  },
+  promotionSectionHint: {
+    fontSize: 11,
+    color: SECONDARY,
+    fontWeight: "600",
+  },
   promotionOptions: {
-    paddingBottom: 6,
+    paddingBottom: 4,
   },
   promotionOption: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 14,
-    padding: 13,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 13,
     marginBottom: 9,
     backgroundColor: "#FFFFFF",
   },
@@ -1392,9 +1458,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#F0FDF4",
   },
   promotionRadio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 21,
+    height: 21,
+    borderRadius: 11,
     borderWidth: 1.5,
     borderColor: "#9CA3AF",
     alignItems: "center",
@@ -1405,23 +1471,42 @@ const styles = StyleSheet.create({
     borderColor: PRIMARY,
   },
   promotionRadioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
     backgroundColor: PRIMARY,
   },
   promotionOptionMain: {
     flex: 1,
+    minWidth: 0,
+  },
+  promotionOptionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
   },
   promotionOptionName: {
     fontSize: 14,
     fontWeight: "700",
     color: TEXT,
+    flexShrink: 1,
+  },
+  promotionRecommended: {
+    backgroundColor: "#DCFCE7",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  promotionRecommendedText: {
+    fontSize: 8,
+    fontWeight: "800",
+    color: PRIMARY,
+    letterSpacing: 0.3,
   },
   promotionOptionDuration: {
-    fontSize: 12,
+    fontSize: 11,
     color: SECONDARY,
-    marginTop: 3,
+    marginTop: 4,
   },
   promotionOptionPrice: {
     fontSize: 14,
@@ -1429,15 +1514,21 @@ const styles = StyleSheet.create({
     color: PRIMARY,
     marginLeft: 8,
   },
+  promotionFooter: {
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    marginTop: 8,
+    paddingTop: 12,
+  },
   promotionContinue: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: PRIMARY,
-    borderRadius: 14,
-    paddingVertical: 14,
-    gap: 8,
-    marginTop: 12,
+    borderRadius: 15,
+    minHeight: 50,
+    paddingHorizontal: 16,
+    gap: 9,
   },
   promotionContinueDisabled: {
     opacity: 0.55,
@@ -1445,13 +1536,13 @@ const styles = StyleSheet.create({
   promotionContinueText: {
     color: "#FFFFFF",
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   promotionPriceNote: {
-    fontSize: 11,
+    fontSize: 10,
     color: SECONDARY,
     textAlign: "center",
-    marginTop: 9,
-    lineHeight: 15,
+    marginBottom: 10,
+    lineHeight: 14,
   },
 });
