@@ -28,7 +28,7 @@ export const PRO_PACKAGE_IDS = {
 } as const;
 
 // RevenueCat offering identifier for Doovly service-promotion products.
-export const BOOST_OFFERING_ID = "ofrng393361aa3d";
+export const BOOST_OFFERING_ID = "boosts";
 
 export const BOOST_PRODUCT_IDS = [
   "boost_2days",
