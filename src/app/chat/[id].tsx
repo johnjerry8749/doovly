@@ -208,6 +208,7 @@ export default function ChatConversation() {
   const [decisionProcessing, setDecisionProcessing] = useState(false);
   const decisionInProgress = useRef(false);
   const listRef = useRef<FlatList>(null);
+  const initialScrollDone = useRef(false);
   const [currentUserId, setCurrentUserId] = useState("");
   const [isAcceptor, setIsAcceptor] = useState(false);
   const [convKind, setConvKind] = useState<"booking" | "offer" | undefined>();
@@ -333,6 +334,24 @@ export default function ChatConversation() {
       active = false;
       cleanup?.();
     };
+  }, [conversationId]);
+
+  // Always open a DM at the newest message instead of the beginning of the list.
+  // This is intentionally separate from the content-size handler so it also
+  // runs when messages arrive after the conversation shell has already loaded.
+  useEffect(() => {
+    if (!messages.length || initialScrollDone.current) return;
+
+    const timer = setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated: false });
+      initialScrollDone.current = true;
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [messages.length]);
+
+  useEffect(() => {
+    initialScrollDone.current = false;
   }, [conversationId]);
 
   const proDisplayName = "You";
