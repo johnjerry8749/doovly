@@ -669,9 +669,9 @@ export default function ChatConversation() {
           <Text style={styles.headerStatus}>
             {p.isSystem ? "Official Doovly" : conversation.participant.profession || "Professional"}
           </Text>
-          <Text style={[styles.headerStatus, { paddingBottom: 2 }]}>
+          {!p.isSystem && <Text style={[styles.headerStatus, { paddingBottom: 2 }]}>
             🪙 {chatPro ? "Unlimited" : `${chatCoins ?? 0} coins`}
-          </Text>
+          </Text>}
         </View>
 
         {!p.isSystem && <TouchableOpacity
@@ -905,7 +905,7 @@ export default function ChatConversation() {
             </View>
           ) : bookingStatus === "Accepted" ? (
             <>
-              {bookingStatus === "Accepted" && (
+              {bookingStatus === "Accepted" && !p.isSystem && (
                 <>
                   <TouchableOpacity
                     style={styles.attachBtn}
