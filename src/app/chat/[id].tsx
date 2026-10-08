@@ -667,22 +667,22 @@ export default function ChatConversation() {
             {p.name}
           </Text>
           <Text style={styles.headerStatus}>
-            {conversation.participant.profession || "Professional"}
+            {p.isSystem ? "Official Doovly" : conversation.participant.profession || "Professional"}
           </Text>
           <Text style={[styles.headerStatus, { paddingBottom: 2 }]}>
             🪙 {chatPro ? "Unlimited" : `${chatCoins ?? 0} coins`}
           </Text>
         </View>
 
-        <TouchableOpacity
+        {!p.isSystem && <TouchableOpacity
           style={styles.headerAction}
           onPress={onCall}
           activeOpacity={0.7}
         >
           <Ionicons name="call-outline" size={20} color={PRIMARY} />
-        </TouchableOpacity>
+        </TouchableOpacity>}
 
-        {sharing ? (
+        {!p.isSystem && (sharing ? (
           <TouchableOpacity
             style={styles.headerAction}
             onPress={onStopSharing}
@@ -698,10 +698,10 @@ export default function ChatConversation() {
           >
             <Ionicons name="location-outline" size={20} color={PRIMARY} />
           </TouchableOpacity>
-        )}
+        ))}
       </View>
 
-      {sharing && (
+      {!p.isSystem && sharing && (
         <View style={styles.sharingBar}>
           <Ionicons name="navigate" size={14} color={PRIMARY} />
           <Text style={styles.sharingBarText}>Location is being shared</Text>
@@ -750,7 +750,7 @@ export default function ChatConversation() {
 
             if (
               item.senderId === "system" ||
-              item.kind === "system" ||
+              (item.kind === "system" && !(p.isSystem && item.senderId === p.id)) ||
               item.kind === "location_stopped"
             ) {
               return (
@@ -835,20 +835,29 @@ export default function ChatConversation() {
                     : styles.bubbleWrapTheirs,
                 ]}
               >
-                <View
-                  style={[
-                    styles.bubble,
-                    item.isMine ? styles.bubbleMine : styles.bubbleTheirs,
-                  ]}
-                >
-                  <Text
+                <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+                  {p.isSystem && item.senderId === p.id && (
+                    <Image
+                      source={require("@/assets/images/icon.png")}
+                      style={{ width: 24, height: 24, borderRadius: 12, marginBottom: 2 }}
+                      resizeMode="contain"
+                    />
+                  )}
+                  <View
                     style={[
-                      styles.bubbleText,
-                      item.isMine && styles.bubbleTextMine,
+                      styles.bubble,
+                      item.isMine ? styles.bubbleMine : styles.bubbleTheirs,
                     ]}
                   >
-                    {item.text}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.bubbleText,
+                        item.isMine && styles.bubbleTextMine,
+                      ]}
+                    >
+                      {item.text}
+                    </Text>
+                  </View>
                 </View>
                 <Text
                   style={[
