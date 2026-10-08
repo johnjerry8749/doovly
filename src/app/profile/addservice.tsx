@@ -224,6 +224,11 @@ export default function AddService() {
   };
 
   const handlePromote = async (service: ProService) => {
+    if (!proId) {
+      Alert.alert("Promotion unavailable", "Your professional profile could not be loaded.");
+      return;
+    }
+
     if (service.promotionActive) {
       Alert.alert("Already promoted", "This service is currently being promoted.");
       return;
