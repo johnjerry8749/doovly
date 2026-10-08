@@ -239,7 +239,7 @@ export default function AddService() {
       }
 
       const buttons = packages.slice(0, 3).map((pkg) => ({
-        text: pkg.name,
+        text: pkg.priceString ? `${pkg.name} · ${pkg.priceString}` : pkg.name,
         onPress: async () => {
           try {
             const result = await promoteServiceAsync(
@@ -274,7 +274,7 @@ export default function AddService() {
 
       Alert.alert(
         "Promote Service",
-        "Choose a promotion package. The final price is shown by the App Store or Google Play.",
+        "Choose a promotion package. The price shown is the current App Store or Google Play price.",
         [...buttons, { text: "Cancel", style: "cancel" }],
       );
     } catch {
