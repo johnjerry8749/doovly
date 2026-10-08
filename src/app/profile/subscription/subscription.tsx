@@ -11,6 +11,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 
+import { Alert } from "react-native";
+
+import {
+  getOfferings,
+  purchasePackage,
+  REVENUECAT_PRODUCTS,
+} from "@/lib/revenuecat";
+
 import {
   getSubscriptionPlans,
   getSubscriptionPlansAsync,
@@ -77,6 +85,49 @@ export default function Subscription() {
   const price =
     period === "monthly" ? pro.monthlyPrice : pro.yearlyPrice;
   const periodWord = period === "monthly" ? "monthly" : "yearly";
+
+  async function handleUpgrade() {
+    try {
+      const productId =
+        period === "monthly"
+          ? REVENUECAT_PRODUCTS.proMonthly
+          : REVENUECAT_PRODUCTS.proYearly;
+
+      const offering = await getOfferings();
+      const pkg = offering?.availablePackages.find(
+        (item) => item.product.identifier === productId,
+      );
+
+      if (!pkg) {
+        Alert.alert(
+          "Subscription unavailable",
+          "This Pro plan is not available in the current RevenueCat offering yet.",
+        );
+        return;
+      }
+
+      const customerInfo = await purchasePackage(pkg);
+
+      if (customerInfo.entitlements.active.pro) {
+        Alert.alert("Doovly Pro", "Your Pro subscription is now active.");
+        router.back();
+        return;
+      }
+
+      Alert.alert(
+        "Purchase completed",
+        "The purchase completed, but Pro access has not been activated yet.",
+      );
+    } catch (error: any) {
+      if (error?.userCancelled) return;
+
+      console.warn("[Subscription] purchase failed:", error);
+      Alert.alert(
+        "Purchase failed",
+        error?.message ?? "We could not complete your Pro purchase. Please try again.",
+      );
+    }
+  }
 
   /** Merge Basic + Pro features into comparison rows */
   const rows: CompareRow[] = useMemo(() => {
@@ -218,9 +269,7 @@ export default function Subscription() {
         <TouchableOpacity
           style={styles.upgradeBtn}
           activeOpacity={0.85}
-          onPress={() => {
-            // TODO: payment — amount = price, period from mock/API
-          }}
+          onPress={() => void handleUpgrade()}
         >
           <Text style={styles.upgradeBtnText}>
             Upgrade for {formatNaira(price)}
