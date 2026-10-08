@@ -32,12 +32,6 @@ export const PRO_PACKAGE_IDS = {
   yearly: "$rc_annual",
 } as const;
 
-export const BOOST_PRODUCT_IDS = [
-  "boost_2days",
-  "boost_5days",
-  "boost_14days",
-  "boost_30days",
-] as const;
 
 let configured = false;
 let configurePromise: Promise<void> | null = null;
@@ -127,10 +121,13 @@ export async function getProPackages(): Promise<{
   };
 }
 
-export async function getBoostProducts(): Promise<PurchasesStoreProduct[]> {
+export async function getNonSubscriptionProducts(
+  productIds: string[],
+): Promise<PurchasesStoreProduct[]> {
   await ensureRevenueCatConfigured();
+  if (!productIds.length) return [];
   return Purchases.getProducts(
-    [...BOOST_PRODUCT_IDS],
+    productIds,
     PRODUCT_CATEGORY.NON_SUBSCRIPTION,
   );
 }
