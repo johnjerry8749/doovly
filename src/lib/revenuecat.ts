@@ -13,10 +13,6 @@ import Purchases, {
   type PurchasesPackage,
 } from "react-native-purchases";
 
-// Keep RevenueCat configuration in one place. Replace only the production keys
-// when the real App Store / Google Play products are ready.
-// Expo Go must always use the RevenueCat Test Store key. Do not let a
-// platform/App Store/Google Play key from .env override this in development.
 const REVENUECAT_TEST_STORE_API_KEY =
   "test_EoROVstxqPGDHoriXKHBqOoyWQQ";
 const REVENUECAT_APPLE_API_KEY =
@@ -31,7 +27,8 @@ export const PRO_PACKAGE_IDS = {
   yearly: "$rc_annual",
 } as const;
 
-export const BOOST_OFFERING_ID = "boosts";
+// RevenueCat offering identifier for Doovly service-promotion products.
+export const BOOST_OFFERING_ID = "ofrng393361aa3d";
 
 export const BOOST_PRODUCT_IDS = [
   "boost_2days",
@@ -39,7 +36,6 @@ export const BOOST_PRODUCT_IDS = [
   "boost_14days",
   "boost_30days",
 ] as const;
-
 
 let configured = false;
 let configurePromise: Promise<void> | null = null;
@@ -54,9 +50,7 @@ function getApiKey(): string {
 }
 
 async function configureRevenueCat(appUserId?: string | null): Promise<void> {
-  if (configurePromise) {
-    await configurePromise;
-  }
+  if (configurePromise) await configurePromise;
 
   if (configured) {
     if (appUserId && appUserId !== configuredAppUserId) {
@@ -138,7 +132,8 @@ export async function getBoostPackages(): Promise<PurchasesPackage[]> {
   await ensureRevenueCatConfigured();
 
   const offerings = await Purchases.getOfferings();
-  const packages = offerings.all[BOOST_OFFERING_ID]?.availablePackages ?? [];
+  const packages =
+    offerings.all[BOOST_OFFERING_ID]?.availablePackages ?? [];
 
   return packages
     .filter((pkg) =>
