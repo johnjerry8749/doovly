@@ -85,6 +85,12 @@ async function fetchAll(): Promise<Professional[]> {
 
   if (error) throw error;
   const list = (data ?? []).map(mapProfessionalRow);
+  list.sort((a, b) => {
+    const aPromoted = a.services.some((service) => service.promotionActive);
+    const bPromoted = b.services.some((service) => service.promotionActive);
+    if (aPromoted !== bPromoted) return aPromoted ? -1 : 1;
+    return 0;
+  });
   cache = list;
   return list;
 }
