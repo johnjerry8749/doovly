@@ -11,6 +11,7 @@ export type PromotionPackage = {
   productId: string;
   active: boolean;
   sortOrder: number;
+  priceString?: string;
 };
 
 export type ServicePromotion = {
@@ -63,7 +64,19 @@ export async function listPromotionPackagesAsync(): Promise<PromotionPackage[]> 
     .order("sort_order", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []).map(mapPackage);
+  const packages = (data ?? []).map(mapPackage);
+  try {
+    const offering = await getOfferings();
+    return packages.map((pkg) => ({
+      ...pkg,
+      priceString:
+        offering?.availablePackages.find(
+          (item) => item.product.identifier === pkg.productId,
+        )?.product.priceString,
+    }));
+  } catch {
+    return packages;
+  }
 }
 
 export async function getServicePromotionAsync(
