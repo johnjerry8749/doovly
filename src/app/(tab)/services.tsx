@@ -208,21 +208,33 @@ export default function Services() {
     [locationName, showAllNigeria],
   );
 
-  const matchesCategory = useCallback((profession: string, filter: string) => {
-    if (filter === "All") return true;
-    const category = filter.toLowerCase();
-    const professional = profession.toLowerCase();
-    if (professional === category || professional.includes(category))
-      return true;
-    if (
-      category === "spa" &&
-      (professional.includes("massage") || professional.includes("spa"))
-    ) {
-      return true;
-    }
-    if (category === "nail tech" && professional.includes("nail")) return true;
-    return false;
-  }, []);
+  const matchesCategory = useCallback(
+    (profession: string, filter: string, services = [] as Professional["services"]) => {
+      if (filter === "All") return true;
+      const category = filter.toLowerCase();
+      const professional = profession.toLowerCase();
+      const serviceMatch = services.some(
+        (service) =>
+          service.name.toLowerCase().includes(category) ||
+          service.description.toLowerCase().includes(category),
+      );
+      if (
+        professional === category ||
+        professional.includes(category) ||
+        serviceMatch
+      )
+        return true;
+      if (
+        category === "spa" &&
+        (professional.includes("massage") || professional.includes("spa"))
+      ) {
+        return true;
+      }
+      if (category === "nail tech" && professional.includes("nail")) return true;
+      return false;
+    },
+    [],
+  );
 
   const filteredProfessionals = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -231,10 +243,15 @@ export default function Services() {
         !q ||
         person.name.toLowerCase().includes(q) ||
         person.profession.toLowerCase().includes(q) ||
-        person.city.toLowerCase().includes(q);
+        person.city.toLowerCase().includes(q) ||
+        person.services.some(
+          (service) =>
+            service.name.toLowerCase().includes(q) ||
+            service.description.toLowerCase().includes(q),
+        );
       return (
         matchesSearch &&
-        matchesCategory(person.profession, selectedFilter) &&
+        matchesCategory(person.profession, selectedFilter, person.services) &&
         matchesLocationCity(person.city)
       );
     });
