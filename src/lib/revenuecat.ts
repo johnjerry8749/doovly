@@ -5,15 +5,12 @@
  * Service promotions are non-subscription products and are fulfilled by the
  * Supabase RevenueCat webhook. Prices always come from RevenueCat.
  */
-import Constants from "expo-constants";
 import { Platform } from "react-native";
 import Purchases, {
   LOG_LEVEL,
-  PRODUCT_CATEGORY,
   type CustomerInfo,
   type PurchasesOffering,
   type PurchasesPackage,
-  type PurchasesStoreProduct,
 } from "react-native-purchases";
 
 // Keep RevenueCat configuration in one place. Replace only the production keys
@@ -48,10 +45,6 @@ let configured = false;
 let configurePromise: Promise<void> | null = null;
 let configuredAppUserId: string | null = null;
 let cachedProEntitlement = false;
-
-function isExpoGo(): boolean {
-  return Constants.appOwnership === "expo";
-}
 
 function getApiKey(): string {
   if (__DEV__) return REVENUECAT_TEST_STORE_API_KEY;
