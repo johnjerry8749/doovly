@@ -300,7 +300,12 @@ export default function RequestsScreen() {
     setLikedIds((prev) => ({ ...prev, [id]: liked }));
 
     try {
-      await likeServiceRequest(id, liked);
+      const likesCount = await likeServiceRequest(id, liked);
+      setAllRequests((current) =>
+        current.map((request) =>
+          request.id === id ? { ...request, likesCount } : request,
+        ),
+      );
     } catch {
       setLikedIds((prev) => ({ ...prev, [id]: !liked }));
     }
