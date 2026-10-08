@@ -11,6 +11,7 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
   Linking,
   Alert,
 } from "react-native";
@@ -209,6 +210,7 @@ export default function ChatConversation() {
   const decisionInProgress = useRef(false);
   const listRef = useRef<FlatList>(null);
   const initialScrollDone = useRef(false);
+  const lastScrolledMessageCount = useRef(0);
   const [currentUserId, setCurrentUserId] = useState("");
   const [isAcceptor, setIsAcceptor] = useState(false);
   const [convKind, setConvKind] = useState<"booking" | "offer" | undefined>();
@@ -336,22 +338,49 @@ export default function ChatConversation() {
     };
   }, [conversationId]);
 
-  // Always open a DM at the newest message instead of the beginning of the list.
-  // This is intentionally separate from the content-size handler so it also
-  // runs when messages arrive after the conversation shell has already loaded.
+  // Open at the newest message after the real message list has finished
+  // arriving. Do not rely on the first render because cached/realtime loading
+  // can replace a partial list with the full conversation later.
   useEffect(() => {
-    if (!messages.length || initialScrollDone.current) return;
+    if (!messages.length) return;
+    if (messages.length === lastScrolledMessageCount.current) return;
 
     const timer = setTimeout(() => {
       listRef.current?.scrollToEnd({ animated: false });
+      lastScrolledMessageCount.current = messages.length;
       initialScrollDone.current = true;
-    }, 0);
+    }, 80);
 
     return () => clearTimeout(timer);
-  }, [messages.length]);
+  }, [messages.length, conversationId]);
+
+  // When the keyboard opens, make sure the composer and newest message are
+  // brought above it on both iOS and Android.
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, () => {
+      setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: true });
+      }, 80);
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: false });
+      }, 80);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     initialScrollDone.current = false;
+    lastScrolledMessageCount.current = 0;
   }, [conversationId]);
 
   const proDisplayName = "You";
@@ -684,8 +713,8 @@ export default function ChatConversation() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        behavior="padding"
+        keyboardVerticalOffset={0}
       >
         <FlatList
           ref={listRef}
@@ -693,6 +722,8 @@ export default function ChatConversation() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messages}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
           ListEmptyComponent={
             loadingConversation ? (
               <View style={styles.centered}>
@@ -700,9 +731,14 @@ export default function ChatConversation() {
               </View>
             ) : null
           }
-          onContentSizeChange={() =>
-            listRef.current?.scrollToEnd({ animated: false })
-          }
+          onContentSizeChange={() => {
+            if (messages.length > 0 && messages.length !== lastScrolledMessageCount.current) {
+              setTimeout(() => {
+                listRef.current?.scrollToEnd({ animated: false });
+                lastScrolledMessageCount.current = messages.length;
+              }, 80);
+            }
+          }}
           renderItem={({ item }) => {
             if (item.kind === "request_card" && item.card) {
               return (
