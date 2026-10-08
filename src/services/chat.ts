@@ -337,24 +337,9 @@ async function touchConversation(conversationId: string, senderId: string, previ
       ? conversation.participant_b
       : conversation.participant_a;
 
-  const { data: existingRead } = await supabase
-    .from("conversation_reads")
-    .select("unread_count")
-    .eq("conversation_id", conversationId)
-    .eq("user_id", recipient)
-    .maybeSingle();
-
-  const { error: readError } = await supabase
-    .from("conversation_reads")
-    .upsert(
-      {
-        conversation_id: conversationId,
-        user_id: recipient,
-        unread_count: Number(existingRead?.unread_count ?? 0) + 1,
-      },
-      { onConflict: "conversation_id,user_id" },
-    );
-
+  const { error: readError } = await supabase.rpc("increment_conversation_unread", {
+    p_conversation_id: conversationId,
+  });
   if (readError) throw readError;
 }
 
