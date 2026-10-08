@@ -28,6 +28,10 @@ import {
   getLoggedInProfessionalId,
   isCurrentUserPro,
 } from "@/services/savedProviders";
+import {
+  listPromotionPackagesAsync,
+  promoteServiceAsync,
+} from "@/services/servicePromotions";
 
 const PRIMARY = "#16A34A";
 const LIGHT_GREEN = "#EAF8F0";
@@ -218,6 +222,69 @@ export default function AddService() {
     }
   };
 
+  const handlePromote = async (service: ProService) => {
+    if (service.promotionActive) {
+      Alert.alert("Already promoted", "This service is currently being promoted.");
+      return;
+    }
+
+    try {
+      const packages = await listPromotionPackagesAsync();
+      if (!packages.length) {
+        Alert.alert(
+          "Promotion unavailable",
+          "Promotion packages are not available yet. Please try again later.",
+        );
+        return;
+      }
+
+      const buttons = packages.slice(0, 3).map((pkg) => ({
+        text: pkg.name,
+        onPress: async () => {
+          try {
+            const result = await promoteServiceAsync(
+              service,
+              proId ?? "",
+              pkg.id,
+            );
+
+            if (result.activated) {
+              const refreshed = await listMyServicesAsync(proId ?? "");
+              setServices(refreshed);
+              Alert.alert(
+                "Promotion Successful",
+                "Your service is now promoted and will receive priority visibility.",
+              );
+            } else {
+              Alert.alert(
+                "Payment Successful",
+                "Your payment was received. Promotion activation is still processing.",
+              );
+            }
+          } catch (error: any) {
+            const message =
+              error?.message === "PURCHASE_CANCELLED"
+                ? "The purchase was cancelled."
+                : error?.message ||
+                  "We could not complete the promotion. Please try again.";
+            Alert.alert("Promotion", message);
+          }
+        },
+      }));
+
+      Alert.alert(
+        "Promote Service",
+        "Choose a promotion package. The final price is shown by the App Store or Google Play.",
+        [...buttons, { text: "Cancel", style: "cancel" }],
+      );
+    } catch {
+      Alert.alert(
+        "Promotion unavailable",
+        "Please check your connection and try again.",
+      );
+    }
+  };
+
   const handleDelete = (id: string) => {
     Alert.alert(
       "Delete Service",
@@ -381,6 +448,11 @@ export default function AddService() {
                     <View style={styles.activeBadge}>
                       <Text style={styles.activeBadgeText}>Active</Text>
                     </View>
+                    {service.promotionActive && (
+                      <View style={styles.activeBadge}>
+                        <Text style={styles.activeBadgeText}>Promoted</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               </View>
@@ -392,6 +464,20 @@ export default function AddService() {
                 >
                   <Ionicons name="pencil" size={14} color={PRIMARY} />
                   <Text style={styles.editBtnText}>Edit</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.editBtn}
+                  onPress={() => void handlePromote(service)}
+                >
+                  <Ionicons
+                    name={service.promotionActive ? "checkmark-circle" : "megaphone-outline"}
+                    size={14}
+                    color={PRIMARY}
+                  />
+                  <Text style={styles.editBtnText}>
+                    {service.promotionActive ? "Promoted" : "Promote"}
+                  </Text>
                 </Pressable>
 
                 <Pressable
