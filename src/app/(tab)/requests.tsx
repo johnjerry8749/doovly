@@ -19,8 +19,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { supabase } from "@/lib/supabase";
-
 import {
   listServiceRequests,
   listServiceRequestsAsync,
