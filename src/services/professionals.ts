@@ -150,7 +150,9 @@ export async function getProfessionalByIdAsync(
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return undefined;
+  if (!data || data.profiles?.email?.toLowerCase() === "system@doovly.app") {
+    return undefined;
+  }
   return mapProfessionalRow(data);
 }
 
