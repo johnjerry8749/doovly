@@ -366,6 +366,9 @@ export default function Services() {
           price={item.price}
           priceValue={item.priceValue}
           avatarUrl={item.avatarUrl}
+          category={item.profession}
+          rating={item.rating}
+          reviewCount={item.reviewCount}
           cardStyle={styles.professionalCard}
           DescriptionComponent={MovingServiceDescription}
         />
