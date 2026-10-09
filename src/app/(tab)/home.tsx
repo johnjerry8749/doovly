@@ -28,7 +28,6 @@ import {
   getDistanceKm,
   type PromotedService,
 } from "@/services/professionals";
-import PromotedServiceCard from "@/components/PromotedServiceCard";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
 
@@ -215,9 +214,11 @@ export default function Home() {
       const cat = selectedCategory.toLowerCase();
       list = list.filter((p) => {
         const prof = p.profession.toLowerCase();
+        const promoted = promotedServices.find((item) => item.professionalId === p.id);
         return (
           prof === cat ||
           prof.includes(cat) ||
+          Boolean(promoted?.serviceName.toLowerCase().includes(cat)) ||
           (cat === "spa" && prof.includes("massage"))
         );
       });
@@ -225,16 +226,20 @@ export default function Home() {
 
     const q = search.trim().toLowerCase();
     if (q) {
-      list = list.filter(
-        (p) =>
+      list = list.filter((p) => {
+        const promoted = promotedServices.find((item) => item.professionalId === p.id);
+        return (
           p.name.toLowerCase().includes(q) ||
           p.profession.toLowerCase().includes(q) ||
-          p.city.toLowerCase().includes(q),
-      );
+          p.city.toLowerCase().includes(q) ||
+          Boolean(promoted?.serviceName.toLowerCase().includes(q)) ||
+          Boolean(promoted?.serviceDescription.toLowerCase().includes(q))
+        );
+      });
     }
 
     return list;
-  }, [locationName, showAllNigeria, professionals, selectedCategory, search]);
+  }, [locationName, showAllNigeria, professionals, promotedServices, selectedCategory, search]);
 
   const filteredPromotedServices = useMemo(() => {
     const city = locationName.split(",")[0].trim().toLowerCase();
@@ -267,6 +272,13 @@ export default function Home() {
       return matchesCity && matchesCategory && matchesSearch;
     });
   }, [promotedServices, locationName, showAllNigeria, selectedCategory, search]);
+
+  const displayedProfessionals = useMemo(() => {
+    const promotedIds = new Set(filteredPromotedServices.map((item) => item.professionalId));
+    return [...nearbyProfessionals].sort(
+      (a, b) => Number(promotedIds.has(b.id)) - Number(promotedIds.has(a.id)),
+    );
+  }, [nearbyProfessionals, filteredPromotedServices]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -365,30 +377,13 @@ export default function Home() {
         </ScrollView>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            {showAllNigeria || locationName === "All Nigeria"
-              ? "Popular in Nigeria"
-              : "Popular near you"}
-          </Text>
+          <Text style={styles.sectionTitle}>Professions</Text>
           <TouchableOpacity onPress={() => router.push("/(tab)/services")} activeOpacity={0.7}>
             <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         </View>
 
-        {filteredPromotedServices.length > 0 && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Promoted services</Text>
-            </View>
-            <View style={styles.professionalsGrid}>
-              {filteredPromotedServices.map((item) => (
-                <PromotedServiceCard key={item.promotionId} item={item} />
-              ))}
-            </View>
-          </>
-        )}
-
-        {nearbyProfessionals.length === 0 ? (
+        {displayedProfessionals.length === 0 ? (
           <View style={styles.emptyProsContainer}>
             <Ionicons name="search-outline" size={48} color="#ccc" />
             <Text style={styles.emptyProsTitle}>No Avaliable professionals near you</Text>
@@ -405,7 +400,9 @@ export default function Home() {
           </View>
         ) : (
           <View style={styles.professionalsGrid}>
-            {nearbyProfessionals.map((person) => (
+            {displayedProfessionals.map((person) => {
+              const promoted = filteredPromotedServices.find((item) => item.professionalId === person.id);
+              return (
               <TouchableOpacity
                 key={`${person.id}-${favTick}`}
                 style={styles.professionalCard}
@@ -417,6 +414,11 @@ export default function Home() {
                   })
                 }
               >
+                {promoted && (
+                  <View style={styles.promotedBadge}>
+                    <Text style={styles.promotedBadgeText}>PROMOTED</Text>
+                  </View>
+                )}
                 <TouchableOpacity
                   style={styles.heartButton}
                   activeOpacity={0.7}
@@ -454,13 +456,48 @@ export default function Home() {
                   <Ionicons name="location" size={10} color="#159447" />{" "}
                   {person.city}
                 </Text>
-                <Text style={styles.price}>
-                  {distanceByProfessionalId[person.id] !== undefined
-                    ? `${distanceByProfessionalId[person.id] < 10 ? distanceByProfessionalId[person.id].toFixed(1) : Math.round(distanceByProfessionalId[person.id])} km away`
-                    : ""}
-                </Text>
+                {promoted ? (
+                  <>
+                    <Text style={styles.promotedServiceName} numberOfLines={1}>
+                      {promoted.serviceName}
+                    </Text>
+                    {!!promoted.serviceDescription.trim() && (
+                      <Text style={styles.promotedDescription} numberOfLines={2}>
+                        {promoted.serviceDescription}
+                      </Text>
+                    )}
+                    <Text style={styles.price} numberOfLines={1}>
+                      {promoted.price || (promoted.priceValue > 0 ? `₦${promoted.priceValue.toLocaleString("en-NG")}` : "Contact for price")}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.bookNowButton}
+                      activeOpacity={0.8}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/(tab)/bookme/[id]",
+                          params: {
+                            id: promoted.professionalId,
+                            proId: promoted.professionalId,
+                            serviceId: promoted.serviceId,
+                            serviceName: promoted.serviceName,
+                            price: promoted.price || String(promoted.priceValue || ""),
+                          },
+                        })
+                      }
+                    >
+                      <Text style={styles.bookNowButtonText}>Book Now</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <Text style={styles.price}>
+                    {distanceByProfessionalId[person.id] !== undefined
+                      ? `${distanceByProfessionalId[person.id] < 10 ? distanceByProfessionalId[person.id].toFixed(1) : Math.round(distanceByProfessionalId[person.id])} km away`
+                      : ""}
+                  </Text>
+                )}
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -660,6 +697,21 @@ const styles = StyleSheet.create({
     padding: 10,
     position: "relative",
   },
+  promotedBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    zIndex: 4,
+    backgroundColor: "#159447",
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  promotedBadgeText: { color: "#FFFFFF", fontSize: 8, fontWeight: "700" },
+  promotedServiceName: { fontSize: 11, fontWeight: "700", color: "#159447", marginTop: 3, marginBottom: 2 },
+  promotedDescription: { fontSize: 10, color: "#666", marginBottom: 4 },
+  bookNowButton: { marginTop: 6, backgroundColor: "#159447", borderRadius: 7, paddingVertical: 6, alignItems: "center" },
+  bookNowButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   heartButton: { position: "absolute", right: 8, top: 8, zIndex: 5 },
   profileImageContainer: {
     width: 70,
