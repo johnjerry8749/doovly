@@ -30,6 +30,10 @@ import {
   type ProReview,
   type Professional,
 } from "@/services/professionals";
+import {
+  getProfessionalPromotionLockAsync,
+  type ServicePromotion,
+} from "@/services/servicePromotions";
 
 import {
   isSaved,
@@ -63,11 +67,15 @@ export default function ProfessionalProfile() {
   const [submitting, setSubmitting] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [saved, setSaved] = useState(() => isSaved(id ?? ""));
+  const [promotionLock, setPromotionLock] = useState<ServicePromotion | null>(null);
+  const [promotionLockLoading, setPromotionLockLoading] = useState(true);
 
   useEffect(() => {
     setPro(initialPro);
     setProfileLoadError(false);
     setLoadingProfile(!initialPro);
+    setPromotionLock(null);
+    setPromotionLockLoading(true);
   }, [id, initialPro]);
 
   useFocusEffect(
@@ -88,6 +96,24 @@ export default function ProfessionalProfile() {
           setPro(nextPro);
           setProfileLoadError(false);
           setLoadingProfile(false);
+
+          if (!nextPro) {
+            setPromotionLock(null);
+            setPromotionLockLoading(false);
+          } else {
+            setPromotionLockLoading(true);
+            void getProfessionalPromotionLockAsync(nextPro.id)
+              .then((lock) => {
+                if (active) setPromotionLock(lock);
+              })
+              .catch((error) => {
+                console.warn("[Promotion] status could not be loaded:", error);
+                if (active) setPromotionLock(null);
+              })
+              .finally(() => {
+                if (active) setPromotionLockLoading(false);
+              });
+          }
         } catch (error) {
           console.warn("Professional profile refresh failed:", error);
           if (active) {
@@ -507,6 +533,33 @@ export default function ProfessionalProfile() {
                 </View>
               ) : null}
             </View>
+          )}
+
+          {isOwnProfile && (
+            <TouchableOpacity
+              style={[
+                styles.promoteServiceButton,
+                (promotionLockLoading || promotionLock) && styles.promoteServiceButtonDisabled,
+              ]}
+              activeOpacity={promotionLockLoading || promotionLock ? 1 : 0.8}
+              disabled={promotionLockLoading || Boolean(promotionLock)}
+              onPress={() => router.push("/profile/promote-service")}
+            >
+              <Ionicons
+                name={promotionLock?.status === "active" ? "checkmark-circle" : promotionLock ? "time-outline" : "megaphone-outline"}
+                size={18}
+                color="#FFFFFF"
+              />
+              <Text style={styles.promoteServiceButtonText}>
+                {promotionLockLoading
+                  ? "Checking promotion…"
+                  : promotionLock?.status === "active"
+                    ? "Promotion Active"
+                    : promotionLock
+                      ? "Promotion Processing"
+                      : "Promote a Service"}
+              </Text>
+            </TouchableOpacity>
           )}
 
           <View style={styles.tabs}>
@@ -1009,6 +1062,27 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontWeight: "500",
   },
+  promoteServiceButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    alignSelf: "stretch",
+    marginTop: 12,
+    marginBottom: 4,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: GREEN,
+  },
+  promoteServiceButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  promoteServiceButtonDisabled: {
+    opacity: 0.55,
+  },
+
   tabs: {
     flexDirection: "row",
     width: "100%",
