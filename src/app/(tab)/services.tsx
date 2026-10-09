@@ -14,13 +14,14 @@ import {
   View,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   listProfessionals,
   listProfessionalsAsync,
+  invalidateProfessionalsCache,
   listActivePromotedServicesAsync,
   listServiceCategories,
   listServiceCategoriesAsync,
@@ -105,29 +106,35 @@ export default function Services() {
   const [cities, setCities] = useState<string[]>(listCities());
   const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    let active = true;
-    Promise.all([
-      listServiceCategoriesAsync(),
-      listProfessionalsAsync(),
-      listCitiesAsync(),
-      listActivePromotedServicesAsync(),
-    ])
-      .then(([nextCategories, nextProfessionals, nextCities, nextPromotedServices]) => {
-        if (!active) return;
-        setCategories(nextCategories);
-        setProfessionals(nextProfessionals);
-        setCities(nextCities);
-        setPromotedServices(nextPromotedServices);
-      })
-      .catch((error) => {
-        console.warn("Services data load failed:", error);
-      });
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
 
-    return () => {
-      active = false;
-    };
-  }, []);
+      // Reload on returning to Services so edits made in Add/Edit Service
+      // are reflected immediately instead of relying on the previous cache.
+      invalidateProfessionalsCache();
+      Promise.all([
+        listServiceCategoriesAsync(),
+        listProfessionalsAsync(),
+        listCitiesAsync(),
+        listActivePromotedServicesAsync(),
+      ])
+        .then(([nextCategories, nextProfessionals, nextCities, nextPromotedServices]) => {
+          if (!active) return;
+          setCategories(nextCategories);
+          setProfessionals(nextProfessionals);
+          setCities(nextCities);
+          setPromotedServices(nextPromotedServices);
+        })
+        .catch((error) => {
+          console.warn("Services data load failed:", error);
+        });
+
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   const {
     locationName,
