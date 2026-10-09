@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Alert,
   FlatList,
   Image,
@@ -33,6 +34,64 @@ import { isSaved, toggleSave } from "@/services/savedProviders";
 
 import { listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
+
+function MovingServiceDescription({ text, color = "#666" }: { text: string; color?: string }) {
+  const translateX = React.useRef(new Animated.Value(0)).current;
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [textWidth, setTextWidth] = useState(0);
+
+  useEffect(() => {
+    translateX.stopAnimation();
+    translateX.setValue(0);
+    if (!text || containerWidth <= 0 || textWidth <= containerWidth) return;
+
+    const distance = textWidth - containerWidth;
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.delay(650),
+        Animated.timing(translateX, {
+          toValue: -distance,
+          duration: Math.max(2200, distance * 38),
+          useNativeDriver: true,
+        }),
+        Animated.delay(650),
+        Animated.timing(translateX, {
+          toValue: 0,
+          duration: Math.max(2200, distance * 38),
+          useNativeDriver: true,
+        }),
+        Animated.delay(900),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [text, containerWidth, textWidth, translateX]);
+
+  if (!text.trim()) return null;
+
+  return (
+    <View
+      style={{ width: "100%", overflow: "hidden", marginTop: 2, marginBottom: 2 }}
+      onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}
+    >
+      <Animated.Text
+        numberOfLines={1}
+        onLayout={(event) => {
+          const measuredWidth = event.nativeEvent.layout.width;
+          if (measuredWidth !== textWidth) setTextWidth(measuredWidth);
+        }}
+        style={{
+          alignSelf: "flex-start",
+          color,
+          fontSize: 10,
+          transform: [{ translateX }],
+        }}
+      >
+        {text}
+      </Animated.Text>
+    </View>
+  );
+}
 
 export default function Home() {
   const {
@@ -417,7 +476,7 @@ export default function Home() {
                   </View>
                   <Text style={styles.professionalName} numberOfLines={1}>{item.serviceName}</Text>
                   {!!item.serviceDescription.trim() && (
-                    <Text style={styles.profession} numberOfLines={1}>{item.serviceDescription}</Text>
+                    <MovingServiceDescription text={item.serviceDescription} color={"#666"} />
                   )}
                   <Text style={styles.price} numberOfLines={1}>
                     {item.price || (item.priceValue > 0 ? `₦${item.priceValue.toLocaleString("en-NG")}` : "Contact for price")}
