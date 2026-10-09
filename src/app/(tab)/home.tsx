@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   Alert,
   FlatList,
   Image,
@@ -110,6 +111,8 @@ export default function Home() {
     viewAllInNigeria,
     closeCityPicker,
   } = useLocation();
+
+  const homeCardWidth = Dimensions.get("window").width * 0.45;
 
   const [services, setServices] = useState(listServiceCategories());
   const [professionals, setProfessionals] = useState(listProfessionals());
@@ -336,6 +339,11 @@ export default function Home() {
 
   const promotedProfessionalIds = new Set(filteredPromotedServices.map((item) => item.professionalId));
   const displayedProfessionals = nearbyProfessionals.filter((person) => !promotedProfessionalIds.has(person.id));
+  const visiblePromotedServices = filteredPromotedServices.slice(0, 10);
+  const visibleProfessionals = displayedProfessionals.slice(
+    0,
+    Math.max(0, 10 - visiblePromotedServices.length),
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -456,8 +464,12 @@ export default function Home() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.professionalsGrid}>
-            {filteredPromotedServices.map((item) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.professionalsGrid}
+          >
+            {visiblePromotedServices.map((item) => (
               <PromotedServiceCard
                 key={item.promotionId}
                 professionalId={item.professionalId}
@@ -468,14 +480,15 @@ export default function Home() {
                 price={item.price}
                 priceValue={item.priceValue}
                 avatarUrl={item.avatarUrl}
-                cardStyle={styles.professionalCard}
+                cardStyle={[styles.professionalCard, { width: homeCardWidth }]}
+                cardWidth={homeCardWidth}
                 DescriptionComponent={MovingServiceDescription}
               />
             ))}
-            {displayedProfessionals.map((person) => (
+            {visibleProfessionals.map((person) => (
               <TouchableOpacity
                 key={person.id}
-                style={styles.professionalCard}
+                style={[styles.professionalCard, { width: homeCardWidth }]}
                 activeOpacity={0.8}
                 onPress={() =>
                   router.push({
@@ -533,7 +546,7 @@ export default function Home() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         )}
 
         <View style={styles.verifiedContainer}>
@@ -718,9 +731,8 @@ const styles = StyleSheet.create({
   serviceName: { fontSize: 12, fontWeight: "600", color: "#333", textAlign: "center" },
   professionalsGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 10,
+    flexWrap: "nowrap",
+    gap: 10,
     paddingBottom: 25,
   },
   professionalCard: {
