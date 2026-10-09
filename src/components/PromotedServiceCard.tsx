@@ -49,7 +49,7 @@ export function PromotedServiceCard({
   return (
     <View style={[cardStyle, styles.card]}>
       <View style={styles.badgeWrap}>
-        <Text style={styles.badgeText}>PROMOTED</Text>
+        <Text style={styles.badgeText}>ADS</Text>
       </View>
 
       <TouchableOpacity
@@ -118,22 +118,24 @@ export function PromotedServiceCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: GREEN,
+    backgroundColor: "#ffffff",
     borderRadius: 12,
     borderWidth: 0,
     padding: 6,
     overflow: "hidden",
+    borderColor: "rgba(19, 18, 18, 0.2)",
+    borderWidth: 2,
   },
   badgeWrap: {
     alignSelf: "flex-end",
-    backgroundColor: "#D4AF37",
+    backgroundColor: GREEN,
     borderRadius: 12,
     paddingHorizontal: 6,
     paddingVertical: 2,
     marginBottom: 3,
   },
   badgeText: {
-    color: "#000000",
+    color: "#f5f5f5",
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 0.3,
@@ -146,7 +148,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 4,
     borderWidth: 2,
-    borderColor: "#FFFFFF",
+    borderColor: GREEN,
     overflow: "hidden",
     backgroundColor: "rgba(255,255,255,0.2)",
   },
@@ -163,14 +165,14 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#0b0a0a",
     textAlign: "center",
     marginBottom: 3,
   },
   nameUnderline: {
     width: "48%",
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: "rgba(11, 10, 10, 0.85)",
     alignSelf: "center",
     marginBottom: 5,
   },
@@ -178,7 +180,7 @@ const styles = StyleSheet.create({
     height: 44,
     fontSize: 10,
     lineHeight: 11,
-    color: "rgba(255,255,255,0.85)",
+    color: "rgba(12, 12, 12, 0.85)",
     textAlign: "left",
     alignSelf: "stretch",
     marginBottom: 2,
@@ -202,13 +204,13 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 13,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: GREEN,
     textAlign: "left",
     marginTop: 2,
   },
   bookButton: {
     marginTop: 9,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: GREEN,
     borderRadius: 20,
     paddingVertical: 7,
     paddingHorizontal: 8,
@@ -219,7 +221,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   bookText: {
-    color: GREEN,
+    color: "#ffffff",
     fontSize: 11,
     fontWeight: "700",
   },
