@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
   },
   professionalsContainer: { flexDirection: "row", gap: 12, paddingBottom: 8 },
   professionalCard: {
-    width: "31.5%",
+    width: "48%",
     minHeight: 205,
     backgroundColor: "#fff",
     borderRadius: 12,
