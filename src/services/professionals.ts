@@ -134,6 +134,112 @@ export async function listPromotedProfessionalIdsAsync(): Promise<string[]> {
   return [...new Set((data ?? []).map((row: { professional_id: string }) => row.professional_id))];
 }
 
+
+export type PromotedService = {
+  promotionId: string;
+  serviceId: string;
+  professionalId: string;
+  serviceName: string;
+  serviceDescription: string;
+  price: string;
+  priceValue: number;
+  professionalName: string;
+  profession: string;
+  city: string;
+  avatarUrl: string | null;
+  verified: boolean;
+};
+
+/**
+ * Returns individual services with a currently active promotion.
+ * The promoted item is tied to its actual service, not just the professional.
+ */
+export async function listActivePromotedServicesAsync(): Promise<PromotedService[]> {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("service_promotions")
+    .select(`
+      id,
+      service_id,
+      professional_id,
+      starts_at,
+      ends_at,
+      services!service_promotions_service_id_fkey (
+        id,
+        professional_id,
+        name,
+        description,
+        price,
+        price_value
+      ),
+      professionals!service_promotions_professional_id_fkey (
+        id,
+        profession,
+        city,
+        avatar_url,
+        profiles!professionals_user_id_fkey (
+          full_name,
+          avatar_url,
+          email
+        )
+      )
+    `)
+    .eq("status", "active")
+    .lte("starts_at", now)
+    .gt("ends_at", now)
+    .order("ends_at", { ascending: false });
+
+  if (error) {
+    console.warn("Active promoted services could not be loaded:", error.message);
+    return [];
+  }
+
+  const seenServices = new Set<string>();
+  const promotions: PromotedService[] = [];
+
+  for (const row of data ?? []) {
+    const service = Array.isArray(row.services) ? row.services[0] : row.services;
+    const professional = Array.isArray(row.professionals)
+      ? row.professionals[0]
+      : row.professionals;
+    const profile = Array.isArray(professional?.profiles)
+      ? professional.profiles[0]
+      : professional?.profiles;
+
+    if (
+      !service ||
+      !professional ||
+      !row.service_id ||
+      !row.professional_id ||
+      service.id !== row.service_id ||
+      service.professional_id !== row.professional_id ||
+      professional.id !== row.professional_id ||
+      profile?.email?.toLowerCase() === "system@doovly.app" ||
+      seenServices.has(String(service.id))
+    ) {
+      continue;
+    }
+
+    seenServices.add(String(service.id));
+    promotions.push({
+      promotionId: String(row.id),
+      serviceId: String(service.id),
+      professionalId: String(professional.id),
+      serviceName: String(service.name ?? "Promoted service"),
+      serviceDescription: String(service.description ?? ""),
+      price: String(service.price ?? ""),
+      priceValue: Number(service.price_value ?? 0),
+      professionalName: String(profile?.full_name ?? "Professional"),
+      profession: String(professional.profession ?? ""),
+      city: String(professional.city ?? ""),
+      avatarUrl: professional.avatar_url ?? profile?.avatar_url ?? null,
+      verified: Boolean(professional.is_verified),
+    });
+  }
+
+  return promotions;
+}
+
 export function listProfessionalsByCity(city: string): Professional[] {
   const all = listProfessionals();
   const key = city.trim().toLowerCase();
