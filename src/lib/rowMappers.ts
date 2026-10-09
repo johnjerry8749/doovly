@@ -46,6 +46,7 @@ export function mapServiceRow(row: {
   price: string;
   price_value?: number | null;
   icon?: string | null;
+  service_promotions?: Array<{ status?: string | null; starts_at?: string | null; ends_at?: string | null }> | null;
 }): ProService {
   return {
     id: row.id,
@@ -54,6 +55,14 @@ export function mapServiceRow(row: {
     price: row.price,
     priceValue: Number(row.price_value ?? 0),
     icon: row.icon ?? "briefcase-outline",
+    promotionActive: (row.service_promotions ?? []).some(
+      (promotion) => promotion.status === "active" &&
+        (!promotion.starts_at || new Date(promotion.starts_at).getTime() <= Date.now()) &&
+        (!promotion.ends_at || new Date(promotion.ends_at).getTime() > Date.now()),
+    ),
+    promotionEndsAt: (row.service_promotions ?? []).find(
+      (promotion) => promotion.status === "active",
+    )?.ends_at ?? undefined,
   };
 }
 
@@ -156,7 +165,12 @@ export const PROFESSIONAL_SELECT = `
     description,
     price,
     price_value,
-    icon
+    icon,
+    service_promotions (
+      status,
+      starts_at,
+      ends_at
+    )
   ),
   reviews (
     id,
