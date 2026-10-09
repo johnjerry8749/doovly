@@ -281,21 +281,15 @@ export default function Services() {
     });
   }, [promotedServices, search, selectedFilter, matchesCategory, matchesLocationCity]);
 
-  const displayedProfessionals = useMemo(() => {
-    const promotedIds = new Set(filteredPromotedServices.map((item) => item.professionalId));
-    return [...filteredProfessionals].sort(
-      (a, b) => Number(promotedIds.has(b.id)) - Number(promotedIds.has(a.id)),
-    );
-  }, [filteredProfessionals, filteredPromotedServices]);
+  const displayedProfessionals = filteredProfessionals;
 
   const renderProfessional = ({ item }: { item: Professional }) => {
     const saved = isSaved(item.id);
     const stars = starsFromReviewCount(item.reviews?.length || 0);
-    const promoted = filteredPromotedServices.find((service) => service.professionalId === item.id);
 
     return (
       <TouchableOpacity
-        style={[styles.professionalCard, promoted && styles.promotedProfessionalCard]}
+        style={styles.professionalCard}
         activeOpacity={0.85}
         onPress={() =>
           router.push({
@@ -304,11 +298,6 @@ export default function Services() {
           })
         }
       >
-        {promoted && (
-          <View style={styles.promotedBadge}>
-            <Text style={styles.promotedBadgeText}>PROMOTED</Text>
-          </View>
-        )}
         <TouchableOpacity
           style={styles.favoriteButton}
           onPress={() => onToggleFavorite(item.id)}
@@ -359,50 +348,15 @@ export default function Services() {
             {item.city}
           </Text>
 
-          {promoted ? (
-            <>
-              <Text style={styles.promotedServiceName} numberOfLines={1}>
-                {promoted.serviceName}
-              </Text>
-              {!!promoted.serviceDescription.trim() && (
-                <Text style={styles.promotedDescription} numberOfLines={1}>
-                  {promoted.serviceDescription}
-                </Text>
-              )}
-              <Text style={styles.price} numberOfLines={1}>
-                {promoted.price || (promoted.priceValue > 0 ? `₦${promoted.priceValue.toLocaleString("en-NG")}` : "Contact for price")}
-              </Text>
-              <TouchableOpacity
-                style={styles.bookNowButton}
-                activeOpacity={0.8}
-                onPress={() =>
-                  router.push({
-                    pathname: "/(tab)/bookme/[id]",
-                    params: {
-                      id: promoted.professionalId,
-                      proId: promoted.professionalId,
-                      serviceId: promoted.serviceId,
-                      serviceName: promoted.serviceName,
-                      price: promoted.price || String(promoted.priceValue || ""),
-                    },
-                  })
-                }
-              >
-                <Text style={styles.bookNowButtonText}>Book Now</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <Text style={styles.price}>
-              {distanceByProfessionalId[item.id] !== undefined
-                ? `${distanceByProfessionalId[item.id] < 10 ? distanceByProfessionalId[item.id].toFixed(1) : Math.round(distanceByProfessionalId[item.id])} km away`
-                : ""}
-            </Text>
-          )}
+          <Text style={styles.price}>
+            {distanceByProfessionalId[item.id] !== undefined
+              ? `${distanceByProfessionalId[item.id] < 10 ? distanceByProfessionalId[item.id].toFixed(1) : Math.round(distanceByProfessionalId[item.id])} km away`
+              : ""}
+          </Text>
         </View>
       </TouchableOpacity>
     );
   };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.stickyHeader}>
@@ -496,6 +450,75 @@ export default function Services() {
           }}
         />
       </View>
+
+      {filteredPromotedServices.length > 0 && (
+        <View style={styles.promotionSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Promotion</Text>
+          </View>
+          <FlatList
+            horizontal
+            data={filteredPromotedServices}
+            keyExtractor={(item) => item.promotionId}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.promotedServiceGrid}
+            renderItem={({ item }) => {
+              const professional = professionals.find((person) => person.id === item.professionalId);
+              return (
+                <View style={styles.promotedServiceCard}>
+                  <View style={styles.promotedCardHeader}>
+                    <View style={styles.promotedAvatar}>
+                      {item.avatarUrl ? (
+                        <Image source={{ uri: item.avatarUrl }} style={styles.promotedAvatarImage} />
+                      ) : professional ? (
+                        <Image source={professional.image} style={styles.promotedAvatarImage} />
+                      ) : (
+                        <Ionicons name="person" size={24} color={GREEN} />
+                      )}
+                    </View>
+                    <View style={styles.promotedProfessionalInfo}>
+                      <Text style={styles.promotedProfessionalName} numberOfLines={1}>
+                        {item.professionalName}
+                      </Text>
+                      <Text style={styles.promotedProfessionalProfession} numberOfLines={1}>
+                        {item.profession} · {item.city}
+                      </Text>
+                    </View>
+                    <View style={styles.promotedBadge}>
+                      <Text style={styles.promotedBadgeText}>PROMOTED</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.promotedServiceName} numberOfLines={1}>{item.serviceName}</Text>
+                  {!!item.serviceDescription.trim() && (
+                    <Text style={styles.promotedDescription} numberOfLines={2}>{item.serviceDescription}</Text>
+                  )}
+                  <Text style={styles.promotedPrice} numberOfLines={1}>
+                    {item.price || (item.priceValue > 0 ? `₦${item.priceValue.toLocaleString("en-NG")}` : "Contact for price")}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.bookNowButton}
+                    activeOpacity={0.8}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(tab)/bookme/[id]",
+                        params: {
+                          id: item.professionalId,
+                          proId: item.professionalId,
+                          serviceId: item.serviceId,
+                          serviceName: item.serviceName,
+                          price: item.price || String(item.priceValue || ""),
+                        },
+                      })
+                    }
+                  >
+                    <Text style={styles.bookNowButtonText}>Book Now</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }}
+          />
+        </View>
+      )}
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Professionals</Text>
@@ -762,13 +785,46 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 10,
   },
+  promotionSection: { paddingBottom: 2 },
   promotedServiceGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+    gap: 10,
     paddingHorizontal: 12,
-    paddingTop: 4,
+    paddingBottom: 8,
   },
+  promotedServiceCard: {
+    width: 250,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+    padding: 12,
+  },
+  promotedCardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+  promotedAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    overflow: "hidden",
+    backgroundColor: "#E8F5E9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promotedAvatarImage: { width: "100%", height: "100%", borderRadius: 21 },
+  promotedProfessionalInfo: { flex: 1, minWidth: 0, marginLeft: 8, marginRight: 4 },
+  promotedProfessionalName: { fontSize: 12, fontWeight: "700", color: "#111" },
+  promotedProfessionalProfession: { fontSize: 10, color: "#666", marginTop: 2 },
+  promotedBadge: {
+    backgroundColor: GREEN,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  promotedBadgeText: { color: "#FFFFFF", fontSize: 8, fontWeight: "700" },
+  promotedServiceName: { fontSize: 13, fontWeight: "700", color: GREEN, marginBottom: 3 },
+  promotedDescription: { fontSize: 11, color: "#666", marginBottom: 5 },
+  promotedPrice: { fontSize: 13, fontWeight: "800", color: GREEN },
+  bookNowButton: { marginTop: 8, backgroundColor: GREEN, borderRadius: 7, paddingVertical: 8, alignItems: "center" },
+  bookNowButtonText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
   professionalCard: {
     flex: 1,
     maxWidth: "32%",
@@ -777,22 +833,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E1E1E1",
   },
-  promotedProfessionalCard: { maxWidth: "48%", width: "48%" },
-  promotedBadge: {
-    position: "absolute",
-    top: 6,
-    left: 6,
-    zIndex: 4,
-    backgroundColor: GREEN,
-    paddingHorizontal: 5,
-    paddingVertical: 3,
-    borderRadius: 5,
-  },
-  promotedBadgeText: { color: "#FFFFFF", fontSize: 8, fontWeight: "700" },
-  promotedServiceName: { fontSize: 11, fontWeight: "700", color: GREEN, marginTop: 3, marginBottom: 2 },
-  promotedDescription: { fontSize: 10, color: "#666", marginBottom: 2 },
-  bookNowButton: { marginTop: 3, backgroundColor: GREEN, borderRadius: 7, paddingVertical: 4, alignItems: "center" },
-  bookNowButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   favoriteButton: {
     position: "absolute",
     right: 8,
