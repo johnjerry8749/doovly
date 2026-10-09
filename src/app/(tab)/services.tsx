@@ -28,7 +28,6 @@ import {
   type Professional,
   type PromotedService,
 } from "@/services/professionals";
-import PromotedServiceCard from "@/components/PromotedServiceCard";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
 import { listCities, listCitiesAsync } from "@/services/cities";
@@ -232,20 +231,28 @@ export default function Services() {
   const filteredProfessionals = useMemo(() => {
     const q = search.trim().toLowerCase();
     const matches = professionals.filter((person) => {
+      const promoted = promotedServices.find((service) => service.professionalId === person.id);
       const matchesSearch =
         !q ||
         person.name.toLowerCase().includes(q) ||
         person.profession.toLowerCase().includes(q) ||
-        person.city.toLowerCase().includes(q);
+        person.city.toLowerCase().includes(q) ||
+        Boolean(promoted?.serviceName.toLowerCase().includes(q)) ||
+        Boolean(promoted?.serviceDescription.toLowerCase().includes(q));
       return (
         matchesSearch &&
-        matchesCategory(person.profession, selectedFilter) &&
+        (
+          matchesCategory(person.profession, selectedFilter) ||
+          selectedFilter === "All" ||
+          Boolean(promoted?.serviceName.toLowerCase().includes(selectedFilter.toLowerCase()))
+        ) &&
         matchesLocationCity(person.city)
       );
     });
     return matches;
   }, [
     professionals,
+    promotedServices,
     search,
     selectedFilter,
     matchesCategory,
@@ -273,9 +280,17 @@ export default function Services() {
     });
   }, [promotedServices, search, selectedFilter, matchesCategory, matchesLocationCity]);
 
+  const displayedProfessionals = useMemo(() => {
+    const promotedIds = new Set(filteredPromotedServices.map((item) => item.professionalId));
+    return [...filteredProfessionals].sort(
+      (a, b) => Number(promotedIds.has(b.id)) - Number(promotedIds.has(a.id)),
+    );
+  }, [filteredProfessionals, filteredPromotedServices]);
+
   const renderProfessional = ({ item }: { item: Professional }) => {
     const saved = isSaved(item.id);
     const stars = starsFromReviewCount(item.reviews?.length || 0);
+    const promoted = filteredPromotedServices.find((service) => service.professionalId === item.id);
 
     return (
       <TouchableOpacity
@@ -288,6 +303,11 @@ export default function Services() {
           })
         }
       >
+        {promoted && (
+          <View style={styles.promotedBadge}>
+            <Text style={styles.promotedBadgeText}>PROMOTED</Text>
+          </View>
+        )}
         <TouchableOpacity
           style={styles.favoriteButton}
           onPress={() => onToggleFavorite(item.id)}
@@ -338,11 +358,45 @@ export default function Services() {
             {item.city}
           </Text>
 
-          <Text style={styles.price}>
-            {distanceByProfessionalId[item.id] !== undefined
-              ? `${distanceByProfessionalId[item.id] < 10 ? distanceByProfessionalId[item.id].toFixed(1) : Math.round(distanceByProfessionalId[item.id])} km away`
-              : ""}
-          </Text>
+          {promoted ? (
+            <>
+              <Text style={styles.promotedServiceName} numberOfLines={1}>
+                {promoted.serviceName}
+              </Text>
+              {!!promoted.serviceDescription.trim() && (
+                <Text style={styles.promotedDescription} numberOfLines={2}>
+                  {promoted.serviceDescription}
+                </Text>
+              )}
+              <Text style={styles.price} numberOfLines={1}>
+                {promoted.price || (promoted.priceValue > 0 ? `₦${promoted.priceValue.toLocaleString("en-NG")}` : "Contact for price")}
+              </Text>
+              <TouchableOpacity
+                style={styles.bookNowButton}
+                activeOpacity={0.8}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tab)/bookme/[id]",
+                    params: {
+                      id: promoted.professionalId,
+                      proId: promoted.professionalId,
+                      serviceId: promoted.serviceId,
+                      serviceName: promoted.serviceName,
+                      price: promoted.price || String(promoted.priceValue || ""),
+                    },
+                  })
+                }
+              >
+                <Text style={styles.bookNowButtonText}>Book Now</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={styles.price}>
+              {distanceByProfessionalId[item.id] !== undefined
+                ? `${distanceByProfessionalId[item.id] < 10 ? distanceByProfessionalId[item.id].toFixed(1) : Math.round(distanceByProfessionalId[item.id])} km away`
+                : ""}
+            </Text>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -442,29 +496,15 @@ export default function Services() {
         />
       </View>
 
-      {filteredPromotedServices.length > 0 && (
-        <>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Promoted services</Text>
-            <Text style={styles.resultCount}>{filteredPromotedServices.length} found</Text>
-          </View>
-          <View style={styles.promotedServiceGrid}>
-            {filteredPromotedServices.map((item) => (
-              <PromotedServiceCard key={item.promotionId} item={item} />
-            ))}
-          </View>
-        </>
-      )}
-
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Professionals</Text>
         <Text style={styles.resultCount}>
-          {filteredProfessionals.length} found
+          {displayedProfessionals.length} found
         </Text>
       </View>
 
       <FlatList
-        data={filteredProfessionals}
+        data={displayedProfessionals}
         extraData={`${favTick}-${selectedFilter}-${filteredPromotedServices.length}`}
         keyExtractor={(item) => item.id}
         numColumns={3}
@@ -736,6 +776,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E1E1E1",
   },
+  promotedBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    zIndex: 4,
+    backgroundColor: GREEN,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  promotedBadgeText: { color: "#FFFFFF", fontSize: 8, fontWeight: "700" },
+  promotedServiceName: { fontSize: 11, fontWeight: "700", color: GREEN, marginTop: 3, marginBottom: 2 },
+  promotedDescription: { fontSize: 10, color: "#666", marginBottom: 4 },
+  bookNowButton: { marginTop: 6, backgroundColor: GREEN, borderRadius: 7, paddingVertical: 6, alignItems: "center" },
+  bookNowButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   favoriteButton: {
     position: "absolute",
     right: 8,
