@@ -193,17 +193,18 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
   city: {
-    color: "#000000",
-    fontSize: 9,
+    color: "#3f3636",
+    fontSize: 10,
     textAlign: "left",
+    fontWeight: "600",
     flexShrink: 1,
   },
   price: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "900",
     color: "#FFFFFF",
     textAlign: "left",
-    marginTop: 4,
+    marginTop: 2,
   },
   bookButton: {
     marginTop: 9,
