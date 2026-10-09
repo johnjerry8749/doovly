@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
   professionalCard: {
     flex: 1,
     maxWidth: "31%",
-    minHeight: 234,
+    minHeight: 205,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
