@@ -660,7 +660,11 @@ export default function ChatConversation() {
           <Ionicons name="arrow-back" size={22} color={PRIMARY} />
         </TouchableOpacity>
 
-        <Image source={p.image} style={styles.headerAvatar} />
+        <Image
+          source={p.image}
+          style={[styles.headerAvatar, p.isSystem && styles.systemHeaderAvatar]}
+          resizeMode="cover"
+        />
 
         <View style={styles.headerInfo}>
           <Text style={styles.headerName} numberOfLines={1}>
@@ -1002,6 +1006,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#E5E7EB",
     marginRight: 10,
+  },
+  systemHeaderAvatar: {
+    backgroundColor: "transparent",
+    transform: [{ scale: 1.2 }],
   },
   headerInfo: {
     flex: 1,
