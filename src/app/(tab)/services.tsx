@@ -20,13 +20,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listProfessionals,
   listProfessionalsAsync,
-  listPromotedProfessionalIdsAsync,
+  listActivePromotedServicesAsync,
   listServiceCategories,
   listServiceCategoriesAsync,
   getDistanceKm,
   starsFromReviewCount,
   type Professional,
+  type PromotedService,
 } from "@/services/professionals";
+import PromotedServiceCard from "@/components/PromotedServiceCard";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
 import { listCities, listCitiesAsync } from "@/services/cities";
@@ -40,26 +42,24 @@ export default function Services() {
   const [favTick, setFavTick] = useState(0);
   const [categories, setCategories] = useState(listServiceCategories());
   const [professionals, setProfessionals] = useState(listProfessionals());
-  const [promotedProfessionalIds, setPromotedProfessionalIds] = useState<string[]>([]);
+  const [promotedServices, setPromotedServices] = useState<PromotedService[]>([]);
   const [cities, setCities] = useState<string[]>(listCities());
   const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
-    listPromotedProfessionalIdsAsync().then((ids) => {
-      if (active) setPromotedProfessionalIds(ids);
-    });
-
     Promise.all([
       listServiceCategoriesAsync(),
       listProfessionalsAsync(),
       listCitiesAsync(),
+      listActivePromotedServicesAsync(),
     ])
-      .then(([nextCategories, nextProfessionals, nextCities]) => {
+      .then(([nextCategories, nextProfessionals, nextCities, nextPromotedServices]) => {
         if (!active) return;
         setCategories(nextCategories);
         setProfessionals(nextProfessionals);
         setCities(nextCities);
+        setPromotedServices(nextPromotedServices);
       })
       .catch((error) => {
         console.warn("Services data load failed:", error);
@@ -243,19 +243,31 @@ export default function Services() {
         matchesLocationCity(person.city)
       );
     });
-    return [...matches].sort(
-      (a, b) =>
-        Number(promotedProfessionalIds.includes(b.id)) -
-        Number(promotedProfessionalIds.includes(a.id)),
-    );
+    return matches;
   }, [
     professionals,
     search,
     selectedFilter,
     matchesCategory,
     matchesLocationCity,
-    promotedProfessionalIds,
   ]);
+
+  const filteredPromotedServices = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return promotedServices.filter((item) => {
+      const matchesSearch =
+        !q ||
+        item.serviceName.toLowerCase().includes(q) ||
+        item.professionalName.toLowerCase().includes(q) ||
+        item.profession.toLowerCase().includes(q) ||
+        item.city.toLowerCase().includes(q);
+      return (
+        matchesSearch &&
+        matchesCategory(item.profession, selectedFilter) &&
+        matchesLocationCity(item.city)
+      );
+    });
+  }, [promotedServices, search, selectedFilter, matchesCategory, matchesLocationCity]);
 
   const renderProfessional = ({ item }: { item: Professional }) => {
     const saved = isSaved(item.id);
@@ -272,11 +284,6 @@ export default function Services() {
           })
         }
       >
-        {promotedProfessionalIds.includes(item.id) && (
-          <View style={styles.promotedBadge}>
-            <Text style={styles.promotedBadgeText}>Promoted</Text>
-          </View>
-        )}
         <TouchableOpacity
           style={styles.favoriteButton}
           onPress={() => onToggleFavorite(item.id)}
@@ -431,6 +438,20 @@ export default function Services() {
         />
       </View>
 
+      {filteredPromotedServices.length > 0 && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Promoted services</Text>
+            <Text style={styles.resultCount}>{filteredPromotedServices.length} found</Text>
+          </View>
+          <View style={styles.promotedServiceGrid}>
+            {filteredPromotedServices.map((item) => (
+              <PromotedServiceCard key={item.promotionId} item={item} />
+            ))}
+          </View>
+        </>
+      )}
+
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Professionals</Text>
         <Text style={styles.resultCount}>
@@ -440,7 +461,7 @@ export default function Services() {
 
       <FlatList
         data={filteredProfessionals}
-        extraData={`${favTick}-${selectedFilter}-${promotedProfessionalIds.length}`}
+        extraData={`${favTick}-${selectedFilter}-${filteredPromotedServices.length}`}
         keyExtractor={(item) => item.id}
         numColumns={3}
         columnWrapperStyle={styles.columnWrapper}
@@ -696,20 +717,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 10,
   },
-  promotedBadge: {
-    position: "absolute",
-    top: 7,
-    left: 7,
-    zIndex: 4,
-    backgroundColor: GREEN,
-    paddingHorizontal: 5,
-    paddingVertical: 3,
-    borderRadius: 5,
-  },
-  promotedBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "700",
+  promotedServiceGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 4,
   },
   professionalCard: {
     flex: 1,
