@@ -16,6 +16,7 @@ type PromotedServiceCardProps = {
   serviceId: string;
   serviceName: string;
   serviceDescription?: string;
+  city?: string;
   price?: string;
   priceValue?: number;
   avatarUrl?: string | null;
@@ -32,6 +33,7 @@ export function PromotedServiceCard({
   serviceId,
   serviceName,
   serviceDescription = "",
+  city = "",
   price,
   priceValue = 0,
   avatarUrl,
@@ -73,11 +75,6 @@ export function PromotedServiceCard({
           )}
         </View>
 
-        <Text style={styles.name} numberOfLines={1}>
-          {serviceName}
-        </Text>
-        <View style={styles.nameUnderline} />
-
         {!!serviceDescription.trim() &&
           (DescriptionComponent ? (
             <DescriptionComponent
@@ -89,6 +86,12 @@ export function PromotedServiceCard({
               {serviceDescription}
             </Text>
           ))}
+        <View style={styles.nameUnderline} />
+        {!!city.trim() && (
+          <Text style={styles.city} numberOfLines={1}>
+            {city}
+          </Text>
+        )}
 
         <Text style={styles.price} numberOfLines={1}>
           {priceLabel}
@@ -180,6 +183,13 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.85)",
     textAlign: "center",
     marginBottom: 2,
+  },
+  city: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 9,
+    textAlign: "center",
+    marginTop: 3,
+    marginBottom: 1,
   },
   price: {
     fontSize: 16,
