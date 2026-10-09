@@ -81,9 +81,12 @@ export function PromotedServiceCard({
           </Text>
         )}
         {!!city.trim() && (
-          <Text style={styles.city} numberOfLines={1}>
-            {city}
-          </Text>
+          <View style={styles.cityRow}>
+            <Ionicons name="location" size={10} color="#FFFFFF" />
+            <Text style={styles.city} numberOfLines={1}>
+              {city}
+            </Text>
+          </View>
         )}
 
         <Text style={styles.price} numberOfLines={1}>
@@ -172,21 +175,28 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   description: {
-    height: 48,
-    fontSize: 11,
-    lineHeight: 12,
+    height: 44,
+    fontSize: 10,
+    lineHeight: 11,
     color: "rgba(255,255,255,0.85)",
     textAlign: "left",
     alignSelf: "stretch",
     marginBottom: 2,
     overflow: "hidden",
   },
+  cityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    marginTop: 3,
+    marginBottom: 1,
+  },
   city: {
     color: "rgba(255,255,255,0.9)",
     fontSize: 9,
     textAlign: "center",
-    marginTop: 3,
-    marginBottom: 1,
+    flexShrink: 1,
   },
   price: {
     fontSize: 16,
