@@ -455,11 +455,7 @@ export default function Services() {
             {item.city}
           </Text>
 
-          <Text style={styles.price}>
-            {distanceByProfessionalId[item.id] !== undefined
-              ? `${distanceByProfessionalId[item.id] < 10 ? distanceByProfessionalId[item.id].toFixed(1) : Math.round(distanceByProfessionalId[item.id])} km away`
-              : ""}
-          </Text>
+
         </View>
       </TouchableOpacity>
     );
