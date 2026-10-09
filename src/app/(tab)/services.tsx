@@ -559,7 +559,7 @@ export default function Services() {
         data={combinedCards}
         extraData={`${favTick}-${selectedFilter}-${filteredPromotedServices.length}`}
         keyExtractor={(item) => item.cardType === "promoted" ? `promotion-${item.promotionId}` : `professional-${item.id}`}
-        numColumns={3}
+        numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.professionalList}
         renderItem={renderGridCard}
@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
   bookNowButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   professionalCard: {
     flex: 1,
-    maxWidth: "32.5%",
+    maxWidth: "49%",
     minHeight: 205,
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
   },
   professionalName: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
     color: "#111",
   },
@@ -903,29 +903,29 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   reviewCount: {
-    fontSize: 10,
+    fontSize: 11,
     color: "#777",
-    marginLeft: 2,
+    marginLeft: 3,
   },
   profession: {
-    fontSize: 11,
+    fontSize: 13,
     color: "#555",
-    marginBottom: 2,
+    marginBottom: 3,
   },
   professionalBio: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 12,
+    lineHeight: 16,
     color: "#666",
-    marginTop: 2,
-    marginBottom: 4,
+    marginTop: 3,
+    marginBottom: 5,
   },
   city: {
-    fontSize: 10,
+    fontSize: 11,
     color: "#777",
-    marginBottom: 4,
+    marginBottom: 5,
   },
   price: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: GREEN,
   },
