@@ -45,7 +45,7 @@ export function PromotedServiceCard({
       : "Contact for price");
 
   return (
-    <View style={[styles.card, cardStyle]}>
+    <View style={[cardStyle, styles.card]}>
       <View style={styles.badgeWrap}>
         <Text style={styles.badgeText}>PROMOTED</Text>
       </View>
@@ -76,6 +76,7 @@ export function PromotedServiceCard({
         <Text style={styles.name} numberOfLines={1}>
           {serviceName}
         </Text>
+        <View style={styles.nameUnderline} />
 
         {!!serviceDescription.trim() &&
           (DescriptionComponent ? (
@@ -161,11 +162,18 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
   },
   name: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: "#FFFFFF",
     textAlign: "center",
-    marginBottom: 2,
+    marginBottom: 3,
+  },
+  nameUnderline: {
+    width: "48%",
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    alignSelf: "center",
+    marginBottom: 5,
   },
   description: {
     fontSize: 10,
@@ -174,7 +182,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   price: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "800",
     color: "#FFFFFF",
     textAlign: "center",
