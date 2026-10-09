@@ -176,6 +176,7 @@ export async function listActivePromotedServicesAsync(): Promise<PromotedService
         id,
         profession,
         city,
+        is_verified,
         avatar_url,
         profiles!professionals_user_id_fkey (
           full_name,
