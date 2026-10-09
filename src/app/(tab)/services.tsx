@@ -839,7 +839,7 @@ const styles = StyleSheet.create({
   bookNowButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   professionalCard: {
     flex: 1,
-    maxWidth: "32%",
+    maxWidth: "31%",
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
