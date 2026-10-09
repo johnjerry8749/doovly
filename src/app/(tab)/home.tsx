@@ -275,9 +275,15 @@ export default function Home() {
       list = list.filter((p) => {
         const prof = p.profession.toLowerCase();
         const promoted = promotedServices.find((item) => item.professionalId === p.id);
+        const serviceMatch = p.services.some(
+          (service) =>
+            service.name.toLowerCase().includes(cat) ||
+            service.description.toLowerCase().includes(cat),
+        );
         return (
           prof === cat ||
           prof.includes(cat) ||
+          serviceMatch ||
           Boolean(promoted?.serviceName.toLowerCase().includes(cat)) ||
           (cat === "spa" && prof.includes("massage"))
         );
@@ -292,6 +298,11 @@ export default function Home() {
           p.name.toLowerCase().includes(q) ||
           p.profession.toLowerCase().includes(q) ||
           p.city.toLowerCase().includes(q) ||
+          p.services.some(
+            (service) =>
+              service.name.toLowerCase().includes(q) ||
+              service.description.toLowerCase().includes(q),
+          ) ||
           Boolean(promoted?.serviceName.toLowerCase().includes(q)) ||
           Boolean(promoted?.serviceDescription.toLowerCase().includes(q))
         );
