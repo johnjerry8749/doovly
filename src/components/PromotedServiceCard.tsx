@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     height: 44,
     fontSize: 10,
     lineHeight: 11,
-    color: "rgba(12, 12, 12, 0.85)",
+    color: "rgba(0, 0, 0, 0.85)",
     textAlign: "left",
     alignSelf: "stretch",
     marginBottom: 2,
