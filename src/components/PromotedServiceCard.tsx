@@ -21,19 +21,17 @@ type PromotedServiceCardProps = {
   priceValue?: number;
   avatarUrl?: string | null;
   cardStyle?: object;
+  category?: string;
+  rating?: number;
+  reviewCount?: number;
   DescriptionComponent?: React.ComponentType<{ text: string; color?: string }>;
 };
 
-/**
- * Green promoted service card — same grid size as normal professional cards.
- * Matches the full-green promo design (white PROMOTED badge + white Book Now).
- */
 export function PromotedServiceCard({
   professionalId,
   serviceId,
   serviceName,
   serviceDescription = "",
-  city = "",
   price,
   priceValue = 0,
   avatarUrl,
@@ -49,15 +47,16 @@ export function PromotedServiceCard({
   return (
     <View style={[cardStyle, styles.card]}>
       <View style={styles.badgeWrap}>
-        <Text style={styles.badgeText}>ADS</Text>
+        <Text style={styles.badgeText}>PROMOTED</Text>
       </View>
 
       <TouchableOpacity
+        style={styles.profileTapArea}
         activeOpacity={0.85}
         onPress={() =>
           router.push({
             pathname: "/professional/[id]",
-            params: { id: professionalId },
+            params: { id: professionalId, from: "home" },
           })
         }
       >
@@ -70,24 +69,27 @@ export function PromotedServiceCard({
             />
           ) : (
             <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
-              <Ionicons name="person" size={22} color="#fff" />
+              <Ionicons name="person" size={22} color={GREEN} />
             </View>
           )}
         </View>
 
-        {!!serviceDescription.trim() && (
-          <Text style={styles.description} numberOfLines={4}>
-            {serviceDescription.trim()}
-          </Text>
-        )}
-        {!!city.trim() && (
-          <View style={styles.cityRow}>
-            <Ionicons name="location" size={10} color="#000000" />
-            <Text style={styles.city} numberOfLines={1}>
-              {city}
+        <Text style={styles.name} numberOfLines={2}>
+          {serviceName}
+        </Text>
+        <View style={styles.nameUnderline} />
+
+        {!!serviceDescription.trim() &&
+          (DescriptionComponent ? (
+            <DescriptionComponent
+              text={serviceDescription.trim()}
+              color="rgba(255,255,255,0.82)"
+            />
+          ) : (
+            <Text style={styles.description} numberOfLines={3}>
+              {serviceDescription.trim()}
             </Text>
-          </View>
-        )}
+          ))}
 
         <Text style={styles.price} numberOfLines={1}>
           {priceLabel}
@@ -110,7 +112,7 @@ export function PromotedServiceCard({
         }
       >
         <Text style={styles.bookText}>Book Now</Text>
-        <Ionicons name="arrow-forward" size={12} color={GREEN} />
+        <Ionicons name="arrow-forward" size={13} color={GREEN} />
       </TouchableOpacity>
     </View>
   );
@@ -118,39 +120,41 @@ export function PromotedServiceCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: GREEN,
     borderRadius: 12,
     borderWidth: 0,
-    padding: 6,
+    padding: 8,
     overflow: "hidden",
-    borderColor: "rgba(19, 18, 18, 0.2)",
-    borderWidth: 2,
   },
   badgeWrap: {
     alignSelf: "flex-end",
-    backgroundColor: GREEN,
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginBottom: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    marginBottom: 2,
   },
   badgeText: {
-    color: "#f5f5f5",
+    color: GREEN,
     fontSize: 8,
     fontWeight: "800",
-    letterSpacing: 0.3,
+    letterSpacing: 0.35,
+  },
+  profileTapArea: {
+    flex: 1,
+    alignItems: "stretch",
   },
   avatar: {
     width: 64,
     height: 64,
     borderRadius: 32,
     alignSelf: "center",
-    marginTop: 2,
-    marginBottom: 4,
+    marginTop: 1,
+    marginBottom: 5,
     borderWidth: 2,
-    borderColor: GREEN,
+    borderColor: "#FFFFFF",
     overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.18)",
   },
   avatarImage: {
     width: "100%",
@@ -160,57 +164,41 @@ const styles = StyleSheet.create({
   avatarPlaceholder: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.92)",
   },
   name: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#0b0a0a",
+    color: "#FFFFFF",
     textAlign: "center",
-    marginBottom: 3,
+    marginBottom: 4,
   },
   nameUnderline: {
     width: "48%",
     height: 1,
-    backgroundColor: "rgba(11, 10, 10, 0.85)",
+    backgroundColor: "rgba(255,255,255,0.9)",
     alignSelf: "center",
     marginBottom: 5,
   },
   description: {
-    height: 44,
+    minHeight: 33,
     fontSize: 10,
-    lineHeight: 11,
-    color: "rgba(0, 0, 0, 0.85)",
-    textAlign: "left",
-    alignSelf: "stretch",
-    marginBottom: 2,
+    lineHeight: 12,
+    color: "rgba(255,255,255,0.82)",
+    textAlign: "center",
+    marginBottom: 3,
     overflow: "hidden",
   },
-  cityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    gap: 3,
-    marginTop: 3,
-    marginBottom: 1,
-  },
-  city: {
-    color: "#3f3636",
-    fontSize: 10,
-    textAlign: "left",
-    fontWeight: "600",
-    flexShrink: 1,
-  },
   price: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "900",
-    color: GREEN,
-    textAlign: "left",
-    marginTop: 2,
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginTop: 4,
   },
   bookButton: {
-    marginTop: 9,
-    backgroundColor: GREEN,
+    marginTop: 8,
+    backgroundColor: "#FFFFFF",
     borderRadius: 20,
     paddingVertical: 7,
     paddingHorizontal: 8,
@@ -218,11 +206,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    gap: 4,
+    gap: 5,
   },
   bookText: {
-    color: "#ffffff",
+    color: GREEN,
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "800",
   },
 });
