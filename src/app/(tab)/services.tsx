@@ -362,6 +362,7 @@ export default function Services() {
           serviceId={item.serviceId}
           serviceName={item.serviceName}
           serviceDescription={item.serviceDescription}
+          city={item.city}
           price={item.price}
           priceValue={item.priceValue}
           avatarUrl={item.avatarUrl}
