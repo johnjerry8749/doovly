@@ -855,8 +855,8 @@ const styles = StyleSheet.create({
   bookNowButton: { marginTop: 7, backgroundColor: GREEN, borderRadius: 7, paddingVertical: 6, alignItems: "center" },
   bookNowButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   professionalCard: {
-    width: "31.5%",
-    minHeight: 205,
+    width: "31%",
+    height: 205,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
