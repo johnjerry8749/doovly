@@ -295,7 +295,7 @@ export default function Services() {
 
     return (
       <TouchableOpacity
-        style={styles.professionalCard}
+        style={[styles.professionalCard, promoted && styles.promotedProfessionalCard]}
         activeOpacity={0.85}
         onPress={() =>
           router.push({
@@ -365,7 +365,7 @@ export default function Services() {
                 {promoted.serviceName}
               </Text>
               {!!promoted.serviceDescription.trim() && (
-                <Text style={styles.promotedDescription} numberOfLines={2}>
+                <Text style={styles.promotedDescription} numberOfLines={1}>
                   {promoted.serviceDescription}
                 </Text>
               )}
@@ -777,6 +777,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E1E1E1",
   },
+  promotedProfessionalCard: { maxWidth: "48%", width: "48%" },
   promotedBadge: {
     position: "absolute",
     top: 6,
@@ -789,8 +790,8 @@ const styles = StyleSheet.create({
   },
   promotedBadgeText: { color: "#FFFFFF", fontSize: 8, fontWeight: "700" },
   promotedServiceName: { fontSize: 11, fontWeight: "700", color: GREEN, marginTop: 3, marginBottom: 2 },
-  promotedDescription: { fontSize: 10, color: "#666", marginBottom: 4 },
-  bookNowButton: { marginTop: 6, backgroundColor: GREEN, borderRadius: 7, paddingVertical: 6, alignItems: "center" },
+  promotedDescription: { fontSize: 10, color: "#666", marginBottom: 2 },
+  bookNowButton: { marginTop: 3, backgroundColor: GREEN, borderRadius: 7, paddingVertical: 4, alignItems: "center" },
   bookNowButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   favoriteButton: {
     position: "absolute",
