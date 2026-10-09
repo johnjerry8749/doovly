@@ -229,7 +229,10 @@ export default function ChatList() {
             <View style={styles.avatarWrap}>
               <Image
                 source={item.participant.image}
-                style={styles.avatar}
+                style={[
+                  styles.avatar,
+                  item.participant.isSystem && styles.systemAvatar,
+                ]}
                 resizeMode="cover"
               />
             </View>
@@ -367,6 +370,11 @@ const styles = StyleSheet.create({
     height: 54,
     borderRadius: 27,
     backgroundColor: "#E5E7EB",
+  },
+
+  systemAvatar: {
+    backgroundColor: "transparent",
+    transform: [{ scale: 1.2 }],
   },
 
   // Large verification badge
