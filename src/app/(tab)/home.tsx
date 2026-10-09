@@ -41,54 +41,61 @@ function MovingServiceDescription({ text, color = "#666" }: { text: string; colo
   const [containerWidth, setContainerWidth] = useState(0);
   const [textWidth, setTextWidth] = useState(0);
 
+  // Keep the description to two lines while gently moving it horizontally.
+  const movingWidth = Math.max(
+    containerWidth,
+    Math.min(text.length * 5.2, containerWidth * 2.4),
+  );
+
   useEffect(() => {
     translateX.stopAnimation();
     translateX.setValue(0);
-    if (!text || containerWidth <= 0 || textWidth <= containerWidth) return;
+    if (!text.trim() || containerWidth <= 0 || movingWidth <= containerWidth) return;
 
-    const distance = textWidth - containerWidth;
+    const distance = movingWidth - containerWidth;
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.delay(650),
+        Animated.delay(500),
         Animated.timing(translateX, {
           toValue: -distance,
-          duration: Math.max(2200, distance * 38),
+          duration: Math.max(2800, distance * 42),
           useNativeDriver: true,
         }),
-        Animated.delay(650),
+        Animated.delay(500),
         Animated.timing(translateX, {
           toValue: 0,
-          duration: Math.max(2200, distance * 38),
+          duration: Math.max(2800, distance * 42),
           useNativeDriver: true,
         }),
-        Animated.delay(900),
+        Animated.delay(700),
       ]),
     );
     animation.start();
     return () => animation.stop();
-  }, [text, containerWidth, textWidth, translateX]);
+  }, [text, containerWidth, movingWidth, translateX]);
 
   if (!text.trim()) return null;
 
   return (
     <View
-      style={{ width: "100%", overflow: "hidden", marginTop: 2, marginBottom: 2 }}
+      style={{ width: "100%", height: 26, overflow: "hidden", marginTop: 2, marginBottom: 2 }}
       onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}
     >
       <Animated.Text
-        numberOfLines={1}
+        numberOfLines={2}
         onLayout={(event) => {
           const measuredWidth = event.nativeEvent.layout.width;
           if (measuredWidth !== textWidth) setTextWidth(measuredWidth);
         }}
         style={{
-          alignSelf: "flex-start",
+          width: movingWidth || undefined,
           color,
           fontSize: 10,
+          lineHeight: 12,
           transform: [{ translateX }],
         }}
       >
-        {text}
+        {text.trim()}
       </Animated.Text>
     </View>
   );
