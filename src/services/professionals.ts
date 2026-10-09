@@ -113,6 +113,27 @@ export async function listProfessionalsAsync(): Promise<Professional[]> {
   return ensureProfessionalsLoaded();
 }
 
+/**
+ * Returns professionals with at least one currently active, paid service promotion.
+ * Promotion dates and status are checked by the database query at request time.
+ */
+export async function listPromotedProfessionalIdsAsync(): Promise<string[]> {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("service_promotions")
+    .select("professional_id")
+    .eq("status", "active")
+    .lte("starts_at", now)
+    .gt("ends_at", now);
+
+  if (error) {
+    console.warn("Active service promotions could not be loaded:", error.message);
+    return [];
+  }
+
+  return [...new Set((data ?? []).map((row: { professional_id: string }) => row.professional_id))];
+}
+
 export function listProfessionalsByCity(city: string): Professional[] {
   const all = listProfessionals();
   const key = city.trim().toLowerCase();
