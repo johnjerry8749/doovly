@@ -172,9 +172,9 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   description: {
-    height: 44,
-    fontSize: 10,
-    lineHeight: 11,
+    height: 48,
+    fontSize: 11,
+    lineHeight: 12,
     color: "rgba(255,255,255,0.85)",
     textAlign: "left",
     alignSelf: "stretch",
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   bookButton: {
-    marginTop: 5,
+    marginTop: 9,
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     paddingVertical: 7,
