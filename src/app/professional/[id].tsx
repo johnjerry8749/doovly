@@ -531,19 +531,6 @@ export default function ProfessionalProfile() {
             </View>
           )}
 
-          {isOwnProfile && (
-            <TouchableOpacity
-              style={[styles.promoteServiceButton, (promotionLockLoading || promotionLock) && styles.promoteServiceButtonDisabled]}
-              activeOpacity={promotionLockLoading || promotionLock ? 1 : 0.8}
-              disabled={promotionLockLoading || Boolean(promotionLock)}
-              onPress={() => router.push("/profile/promote-service")}
-            >
-              <Ionicons name={promotionLock?.status === "active" ? "checkmark-circle" : promotionLock ? "time-outline" : "megaphone-outline"} size={18} color="#FFFFFF" />
-              <Text style={styles.promoteServiceButtonText}>
-                {promotionLockLoading ? "Checking promotion…" : promotionLock?.status === "active" ? "Promotion Active" : promotionLock ? "Promotion Processing" : "Promote a Service"}
-              </Text>
-            </TouchableOpacity>
-          )}
           <View style={styles.tabs}>
             {(
               [
@@ -721,19 +708,16 @@ export default function ProfessionalProfile() {
                 <TouchableOpacity
                   style={[
                     styles.writeReviewButton,
-                    isOwnProfile &&
-                      styles.disabledButton,
+                    isOwnProfile && (promotionLockLoading || promotionLock) && styles.disabledButton,
                   ]}
-                  activeOpacity={
-                    isOwnProfile ? 1 : 0.8
-                  }
-                  disabled={isOwnProfile}
+                  activeOpacity={isOwnProfile && (promotionLockLoading || promotionLock) ? 1 : 0.8}
+                  disabled={isOwnProfile && (promotionLockLoading || Boolean(promotionLock))}
                   onPress={() => {
-                    if (isOwnProfile) return;
-
-                    setReviewModalVisible(
-                      true,
-                    );
+                    if (isOwnProfile) {
+                      router.push("/profile/promote-service");
+                      return;
+                    }
+                    setReviewModalVisible(true);
                   }}
                 >
                   <View
@@ -742,7 +726,7 @@ export default function ProfessionalProfile() {
                     }
                   >
                     <Ionicons
-                      name="create-outline"
+                      name={isOwnProfile ? (promotionLock?.status === "active" ? "checkmark-circle-outline" : promotionLock ? "time-outline" : "megaphone-outline") : "create-outline"}
                       size={22}
                       color={GREEN}
                     />
@@ -759,7 +743,13 @@ export default function ProfessionalProfile() {
                       }
                     >
                       {isOwnProfile
-                        ? "Your profile"
+                        ? promotionLockLoading
+                          ? "Checking promotion…"
+                          : promotionLock?.status === "active"
+                            ? "Promotion Active"
+                            : promotionLock
+                              ? "Promotion Processing"
+                              : "Promote a Service"
                         : "Write a review"}
                     </Text>
 
@@ -769,7 +759,11 @@ export default function ProfessionalProfile() {
                       }
                     >
                       {isOwnProfile
-                        ? "You cannot review your own profile"
+                        ? promotionLock?.status === "active"
+                          ? "Your service is currently being promoted"
+                          : promotionLock
+                            ? "Your promotion is being processed"
+                            : "Boost one of your services to reach more clients"
                         : "Share your experience with this professional"}
                     </Text>
                   </View>
@@ -1044,9 +1038,6 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontWeight: "500",
   },
-  promoteServiceButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: GREEN, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, marginHorizontal: 16, marginBottom: 14 },
-  promoteServiceButtonDisabled: { opacity: 0.55 },
-  promoteServiceButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
   tabs: {
     flexDirection: "row",
     width: "100%",
