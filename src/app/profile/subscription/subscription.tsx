@@ -11,6 +11,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 
+import { Alert } from "react-native";
+
+import {
+  getProPackages,
+  hasProEntitlement,
+  purchasePackage,
+} from "@/lib/revenuecat";
+
 import {
   getSubscriptionPlans,
   getSubscriptionPlansAsync,
@@ -24,13 +32,6 @@ const LIGHT_GREEN = "#E8F5E9";
 const TEXT_DARK = "#111827";
 const TEXT_MUTED = "#6B7280";
 const BORDER = "#E5E7EB";
-
-function formatNaira(n: number) {
-  return `₦${n.toLocaleString("en-NG", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
-}
 
 const EMPTY_PLAN: SubscriptionPlanConfig = { id: "basic", name: "", tagline: "", monthlyPrice: 0, yearlyPrice: 0, popular: false, features: [] };
 
@@ -74,9 +75,73 @@ export default function Subscription() {
   const pro = plansState.plans.find((p) => p.id === "pro") ?? { ...EMPTY_PLAN, id: "pro" as const };
   const basic = plansState.plans.find((p) => p.id === "basic") ?? EMPTY_PLAN;
 
-  const price =
-    period === "monthly" ? pro.monthlyPrice : pro.yearlyPrice;
+  const [proPriceStrings, setProPriceStrings] = useState({
+    monthly: "",
+    yearly: "",
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    getProPackages()
+      .then(({ monthly, yearly }) => {
+        if (!active) return;
+        setProPriceStrings({
+          monthly: monthly?.product.priceString ?? "",
+          yearly: yearly?.product.priceString ?? "",
+        });
+      })
+      .catch((error) => {
+        console.warn("[Subscription] RevenueCat offerings load failed:", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const priceString =
+    period === "monthly"
+      ? proPriceStrings.monthly
+      : proPriceStrings.yearly;
   const periodWord = period === "monthly" ? "monthly" : "yearly";
+
+  async function handleUpgrade() {
+    try {
+      const { monthly, yearly } = await getProPackages();
+      const pkg = period === "monthly" ? monthly : yearly;
+
+      if (!pkg) {
+        Alert.alert(
+          "Subscription unavailable",
+          "This Pro plan is not available in the current RevenueCat offering yet.",
+        );
+        return;
+      }
+
+      const customerInfo = await purchasePackage(pkg);
+
+      if (hasProEntitlement(customerInfo)) {
+        Alert.alert("Doovly Pro", "Your Pro subscription is now active.");
+        router.back();
+        return;
+      }
+
+      Alert.alert(
+        "Purchase completed",
+        "The purchase completed, but Pro access has not been activated yet.",
+      );
+    } catch (error: any) {
+      if (error?.userCancelled) return;
+
+      console.warn("[Subscription] purchase failed:", error);
+      Alert.alert(
+        "Purchase failed",
+        error?.message ??
+          "We could not complete your Pro purchase. Please try again.",
+      );
+    }
+  }
 
   /** Merge Basic + Pro features into comparison rows */
   const rows: CompareRow[] = useMemo(() => {
@@ -218,12 +283,10 @@ export default function Subscription() {
         <TouchableOpacity
           style={styles.upgradeBtn}
           activeOpacity={0.85}
-          onPress={() => {
-            // TODO: payment — amount = price, period from mock/API
-          }}
+          onPress={() => void handleUpgrade()}
         >
           <Text style={styles.upgradeBtnText}>
-            Upgrade for {formatNaira(price)}
+            Upgrade for {priceString || "..."}
           </Text>
         </TouchableOpacity>
         <Text style={styles.footerNote}>
