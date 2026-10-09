@@ -75,18 +75,11 @@ export function PromotedServiceCard({
           )}
         </View>
 
-        {!!serviceDescription.trim() &&
-          (DescriptionComponent ? (
-            <DescriptionComponent
-              text={serviceDescription}
-              color="rgba(255,255,255,0.85)"
-            />
-          ) : (
-            <Text style={styles.description} numberOfLines={1}>
-              {serviceDescription}
-            </Text>
-          ))}
-        <View style={styles.nameUnderline} />
+        {!!serviceDescription.trim() && (
+          <Text style={styles.description} numberOfLines={4}>
+            {serviceDescription.trim()}
+          </Text>
+        )}
         {!!city.trim() && (
           <Text style={styles.city} numberOfLines={1}>
             {city}
@@ -179,10 +172,13 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   description: {
+    height: 44,
     fontSize: 10,
+    lineHeight: 11,
     color: "rgba(255,255,255,0.85)",
     textAlign: "center",
     marginBottom: 2,
+    overflow: "hidden",
   },
   city: {
     color: "rgba(255,255,255,0.9)",
