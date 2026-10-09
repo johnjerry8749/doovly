@@ -20,8 +20,10 @@ type PromotedServiceCardProps = {
   price?: string;
   priceValue?: number;
   avatarUrl?: string | null;
+  category?: string;
+  rating?: number;
+  reviewCount?: number;
   cardStyle?: object;
-  cardWidth?: number;
   DescriptionComponent?: React.ComponentType<{ text: string; color?: string }>;
 };
 
@@ -38,8 +40,10 @@ export function PromotedServiceCard({
   price,
   priceValue = 0,
   avatarUrl,
+  category = "",
+  rating = 0,
+  reviewCount = 0,
   cardStyle,
-  cardWidth,
   DescriptionComponent,
 }: PromotedServiceCardProps) {
   const priceLabel =
@@ -49,7 +53,7 @@ export function PromotedServiceCard({
       : "Contact for price");
 
   return (
-    <View style={[cardStyle, styles.card, cardWidth ? { width: cardWidth } : null]}>
+    <View style={[cardStyle, styles.card]}>
       <View style={styles.badgeWrap}>
         <Text style={styles.badgeText}>PROMOTED</Text>
       </View>
@@ -77,8 +81,33 @@ export function PromotedServiceCard({
           )}
         </View>
 
+        <Text style={styles.name} numberOfLines={2}>
+          {serviceName}
+        </Text>
+        <View style={styles.nameUnderline} />
+
+        {!!category.trim() && (
+          <Text style={styles.category} numberOfLines={1}>
+            {category}
+          </Text>
+        )}
+
+        <View style={styles.ratingRow}>
+          {Array.from({ length: 5 }, (_, index) => (
+            <Ionicons
+              key={"rating-" + professionalId + "-" + index}
+              name={index < Math.round(Math.max(0, Math.min(5, rating))) ? "star" : "star-outline"}
+              size={10}
+              color="#FDE68A"
+            />
+          ))}
+          <Text style={styles.reviewCount} numberOfLines={1}>
+            {rating > 0 ? rating.toFixed(1) : "New"}{reviewCount > 0 ? " (" + reviewCount + ")" : ""}
+          </Text>
+        </View>
+
         {!!serviceDescription.trim() && (
-          <Text style={styles.description} numberOfLines={4}>
+          <Text style={styles.description} numberOfLines={3}>
             {serviceDescription.trim()}
           </Text>
         )}
@@ -120,7 +149,6 @@ export function PromotedServiceCard({
 
 const styles = StyleSheet.create({
   card: {
-    width: "40%",
     backgroundColor: GREEN,
     borderRadius: 12,
     borderWidth: 0,
@@ -177,8 +205,28 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 5,
   },
+  category: {
+    color: "rgba(255,255,255,0.95)",
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 1,
+    marginBottom: 3,
+  },
+  reviewCount: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 9,
+    marginLeft: 3,
+    flexShrink: 1,
+  },
   description: {
-    height: 44,
+    height: 35,
     fontSize: 10,
     lineHeight: 11,
     color: "rgba(255,255,255,0.85)",
