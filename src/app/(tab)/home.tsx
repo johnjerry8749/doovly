@@ -21,6 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listProfessionals,
   listProfessionalsAsync,
+  listPromotedProfessionalIdsAsync,
   listServiceCategories,
   listServiceCategoriesAsync,
   starsFromReviewCount,
@@ -51,11 +52,15 @@ export default function Home() {
 
   const [services, setServices] = useState(listServiceCategories());
   const [professionals, setProfessionals] = useState(listProfessionals());
+  const [promotedProfessionalIds, setPromotedProfessionalIds] = useState<string[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
+    listPromotedProfessionalIdsAsync().then((ids) => {
+      if (active) setPromotedProfessionalIds(ids);
+    });
     Promise.all([listServiceCategoriesAsync(), listProfessionalsAsync(), listCitiesAsync()])
       .then(([nextServices, nextProfessionals, nextCities]) => {
         if (!active) return;
@@ -223,8 +228,8 @@ export default function Home() {
       );
     }
 
-    return list;
-  }, [locationName, showAllNigeria, professionals, selectedCategory, search]);
+    return [...list].sort((a, b) => Number(promotedProfessionalIds.includes(b.id)) - Number(promotedProfessionalIds.includes(a.id)));
+  }, [locationName, showAllNigeria, professionals, selectedCategory, search, promotedProfessionalIds]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -362,6 +367,11 @@ export default function Home() {
                   })
                 }
               >
+                {promotedProfessionalIds.includes(person.id) && (
+                  <View style={styles.promotedBadge}>
+                    <Text style={styles.promotedBadgeText}>Promoted</Text>
+                  </View>
+                )}
                 <TouchableOpacity
                   style={styles.heartButton}
                   activeOpacity={0.7}
@@ -596,6 +606,21 @@ const styles = StyleSheet.create({
     paddingBottom: 25,
   },
   professionalsContainer: { flexDirection: "row", gap: 12, paddingBottom: 8 },
+  promotedBadge: {
+    position: "absolute",
+    top: 7,
+    left: 7,
+    zIndex: 4,
+    backgroundColor: "#159447",
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  promotedBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 8,
+    fontWeight: "700",
+  },
   professionalCard: {
     width: "31.5%",
     backgroundColor: "#fff",
