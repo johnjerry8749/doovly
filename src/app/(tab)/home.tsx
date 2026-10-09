@@ -535,11 +535,7 @@ export default function Home() {
                   <Ionicons name="location" size={10} color="#159447" />{" "}
                   {person.city}
                 </Text>
-                <Text style={styles.price}>
-                  {distanceByProfessionalId[person.id] !== undefined
-                    ? `${distanceByProfessionalId[person.id] < 10 ? distanceByProfessionalId[person.id].toFixed(1) : Math.round(distanceByProfessionalId[person.id])} km away`
-                    : ""}
-                </Text>
+
               </TouchableOpacity>
             ))}
           </View>
