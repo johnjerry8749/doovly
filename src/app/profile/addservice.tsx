@@ -395,6 +395,19 @@ export default function AddService() {
                 </Pressable>
 
                 <Pressable
+                  style={styles.promoteBtn}
+                  onPress={() =>
+                    Alert.alert(
+                      "Promote Service",
+                      `Promotion checkout for "${service.name}" will be connected next.`
+                    )
+                  }
+                >
+                  <Ionicons name="trending-up" size={14} color="#FFFFFF" />
+                  <Text style={styles.promoteBtnText}>Promote</Text>
+                </Pressable>
+
+                <Pressable
                   style={styles.deleteBtn}
                   onPress={() => handleDelete(service.id)}
                 >
@@ -840,6 +853,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: PRIMARY,
+  },
+  promoteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: PRIMARY,
+    borderWidth: 1,
+    borderColor: PRIMARY,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  promoteBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   deleteBtn: {
     flexDirection: "row",
