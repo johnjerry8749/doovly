@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
     paddingBottom: 25,
   },
   professionalCard: {
-    width: "48%",
+    width: "40%",
     minHeight: 205,
     backgroundColor: "#fff",
     borderRadius: 12,

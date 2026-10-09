@@ -118,6 +118,7 @@ export function PromotedServiceCard({
 
 const styles = StyleSheet.create({
   card: {
+    width: "40%",
     backgroundColor: GREEN,
     borderRadius: 12,
     borderWidth: 0,
