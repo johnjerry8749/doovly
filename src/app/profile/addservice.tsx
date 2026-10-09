@@ -408,6 +408,19 @@ export default function AddService() {
                 </Pressable>
 
                 <Pressable
+                  style={styles.editBtn}
+                  onPress={() =>
+                    Alert.alert(
+                      "Promote Service",
+                      "Service promotion payments are not connected on this branch yet.",
+                    )
+                  }
+                >
+                  <Ionicons name="megaphone-outline" size={14} color={PRIMARY} />
+                  <Text style={styles.editBtnText}>Promote</Text>
+                </Pressable>
+
+                <Pressable
                   style={styles.deleteBtn}
                   onPress={() => handleDelete(service.id)}
                 >
