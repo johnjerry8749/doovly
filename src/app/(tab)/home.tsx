@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -95,6 +96,9 @@ function MovingServiceDescription({ text, color = "#666" }: { text: string; colo
 }
 
 export default function Home() {
+  const { width: screenWidth } = useWindowDimensions();
+  const homeCardWidth = screenWidth * 0.4;
+
   const {
     locationName,
     loadingLocation,
@@ -475,7 +479,7 @@ export default function Home() {
                 price={item.price}
                 priceValue={item.priceValue}
                 avatarUrl={item.avatarUrl}
-                cardStyle={styles.professionalCard}
+                cardStyle={[styles.professionalCard, { width: homeCardWidth }]}
                 DescriptionComponent={MovingServiceDescription}
               />
             ))}
@@ -484,7 +488,7 @@ export default function Home() {
               .map((person) => (
               <TouchableOpacity
                 key={`${person.id}-${favTick}`}
-                style={styles.professionalCard}
+                style={[styles.professionalCard, { width: homeCardWidth }]}
                 activeOpacity={0.8}
                 onPress={() =>
                   router.push({
@@ -731,9 +735,8 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: 25,
   },
-  professionalsContainer: { flexDirection: "row", gap: 12, paddingBottom: 8 },
+  professionalsContainer: { flexDirection: "row", gap: 8, paddingBottom: 8, paddingRight: 8 },
   professionalCard: {
-    width: "40%",
     minHeight: 205,
     backgroundColor: "#fff",
     borderRadius: 12,
