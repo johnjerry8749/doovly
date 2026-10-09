@@ -706,19 +706,9 @@ export default function ProfessionalProfile() {
                 style={styles.reviewsContainer}
               >
                 <TouchableOpacity
-                  style={[
-                    styles.writeReviewButton,
-                    isOwnProfile && (promotionLockLoading || promotionLock) && styles.disabledButton,
-                  ]}
-                  activeOpacity={isOwnProfile && (promotionLockLoading || promotionLock) ? 1 : 0.8}
-                  disabled={isOwnProfile && (promotionLockLoading || Boolean(promotionLock))}
-                  onPress={() => {
-                    if (isOwnProfile) {
-                      router.push("/profile/promote-service");
-                      return;
-                    }
-                    setReviewModalVisible(true);
-                  }}
+                  style={styles.writeReviewButton}
+                  activeOpacity={0.8}
+                  onPress={() => setReviewModalVisible(true)}
                 >
                   <View
                     style={
@@ -726,7 +716,7 @@ export default function ProfessionalProfile() {
                     }
                   >
                     <Ionicons
-                      name={isOwnProfile ? (promotionLock?.status === "active" ? "checkmark-circle-outline" : promotionLock ? "time-outline" : "megaphone-outline") : "create-outline"}
+                      name="create-outline"
                       size={22}
                       color={GREEN}
                     />
@@ -742,15 +732,7 @@ export default function ProfessionalProfile() {
                         styles.writeReviewTitle
                       }
                     >
-                      {isOwnProfile
-                        ? promotionLockLoading
-                          ? "Checking promotion…"
-                          : promotionLock?.status === "active"
-                            ? "Promotion Active"
-                            : promotionLock
-                              ? "Promotion Processing"
-                              : "Promote a Service"
-                        : "Write a review"}
+                      Write a review
                     </Text>
 
                     <Text
@@ -758,13 +740,7 @@ export default function ProfessionalProfile() {
                         styles.writeReviewHint
                       }
                     >
-                      {isOwnProfile
-                        ? promotionLock?.status === "active"
-                          ? "Your service is currently being promoted"
-                          : promotionLock
-                            ? "Your promotion is being processed"
-                            : "Boost one of your services to reach more clients"
-                        : "Share your experience with this professional"}
+                      Share your experience with this professional
                     </Text>
                   </View>
 
@@ -824,12 +800,17 @@ export default function ProfessionalProfile() {
           <TouchableOpacity
             style={[
               styles.bookButton,
-              isOwnProfile && styles.disabledButton,
+              isOwnProfile && (promotionLockLoading || promotionLock) && styles.disabledButton,
             ]}
-            activeOpacity={isOwnProfile ? 1 : 0.8}
-            disabled={isOwnProfile}
+            activeOpacity={isOwnProfile && (promotionLockLoading || promotionLock) ? 1 : 0.8}
+            disabled={isOwnProfile && (promotionLockLoading || Boolean(promotionLock))}
             onPress={() => {
-              if (isOwnProfile) return;
+              if (isOwnProfile) {
+                if (!promotionLockLoading && !promotionLock) {
+                  router.push("/profile/promote-service");
+                }
+                return;
+              }
               router.push({
                 pathname: "/bookme/[id]",
                 params: {
@@ -842,12 +823,20 @@ export default function ProfessionalProfile() {
             }}
           >
             <Ionicons
-              name="calendar-outline"
+              name={isOwnProfile ? "megaphone-outline" : "calendar-outline"}
               size={20}
               color="#FFFFFF"
             />
             <Text style={styles.bookButtonText}>
-              {isOwnProfile ? "Your profile" : "Book Now"}
+              {isOwnProfile
+                ? promotionLockLoading
+                  ? "Checking promotion…"
+                  : promotionLock?.status === "active"
+                    ? "Promotion Active"
+                    : promotionLock
+                      ? "Promotion Processing"
+                      : "Promote a Service"
+                : "Book Now"}
             </Text>
           </TouchableOpacity>
         </View>
