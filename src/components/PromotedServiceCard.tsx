@@ -140,9 +140,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignSelf: "center",
     marginTop: 4,
     marginBottom: 8,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   avatarImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 28,
+    borderRadius: 32,
   },
   avatarPlaceholder: {
     alignItems: "center",
@@ -182,8 +182,8 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   price: {
-    fontSize: 14,
-    fontWeight: "800",
+    fontSize: 16,
+    fontWeight: "900",
     color: "#FFFFFF",
     textAlign: "center",
     marginTop: 4,
@@ -192,8 +192,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
-    paddingVertical: 8,
+    paddingVertical: 9,
     paddingHorizontal: 10,
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
