@@ -456,8 +456,8 @@ export default function Home() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.professionalsGrid}>
-            {filteredPromotedServices.map((item) => (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.professionalsContainer}>
+            {filteredPromotedServices.slice(0, 10).map((item) => (
               <PromotedServiceCard
                 key={item.promotionId}
                 professionalId={item.professionalId}
@@ -472,7 +472,7 @@ export default function Home() {
                 DescriptionComponent={MovingServiceDescription}
               />
             ))}
-            {displayedProfessionals.map((person) => (
+            {displayedProfessionals.slice(0, Math.max(0, 10 - filteredPromotedServices.slice(0, 10).length)).map((person) => (
               <TouchableOpacity
                 key={`${person.id}-${favTick}`}
                 style={styles.professionalCard}
@@ -533,7 +533,7 @@ export default function Home() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         )}
 
         <View style={styles.verifiedContainer}>
@@ -722,9 +722,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: 25,
   },
-  professionalsContainer: { flexDirection: "row", gap: 12, paddingBottom: 8 },
+  professionalsContainer: { flexDirection: "row", gap: 12, paddingHorizontal: 2, paddingBottom: 12 },
   professionalCard: {
-    width: "32.5%",
+    width: 220,
     minHeight: 205,
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -746,20 +746,20 @@ const styles = StyleSheet.create({
   },
   profileImage: { width: "100%", height: "100%", borderRadius: 35 },
   nameContainer: { marginBottom: 2 },
-  professionalName: { fontSize: 12, fontWeight: "700", color: "#111" },
+  professionalName: { fontSize: 14, fontWeight: "700", color: "#111" },
   ratingContainer: { flexDirection: "row", alignItems: "center", marginBottom: 2 },
-  rating: { fontSize: 11, fontWeight: "600", marginLeft: 3, color: "#333" },
-  reviews: { fontSize: 10, color: "#777", marginLeft: 2 },
-  profession: { fontSize: 11, color: "#555", marginBottom: 2 },
+  rating: { fontSize: 12, fontWeight: "600", marginLeft: 3, color: "#333" },
+  reviews: { fontSize: 11, color: "#777", marginLeft: 2 },
+  profession: { fontSize: 13, color: "#555", marginBottom: 3 },
   professionalBio: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 12,
+    lineHeight: 16,
     color: "#666",
-    marginTop: 2,
-    marginBottom: 4,
+    marginTop: 3,
+    marginBottom: 5,
   },
-  cityText: { fontSize: 10, color: "#777", marginBottom: 4 },
-  price: { fontSize: 12, fontWeight: "700", color: "#159447" },
+  cityText: { fontSize: 12, color: "#777", marginBottom: 5 },
+  price: { fontSize: 13, fontWeight: "700", color: "#159447" },
   emptyProsContainer: { alignItems: "center", paddingVertical: 30, paddingHorizontal: 20 },
   emptyProsTitle: { fontSize: 15, fontWeight: "700", color: "#333", marginTop: 12, textAlign: "center" },
   emptyProsSubtitle: { fontSize: 13, color: "#888", marginTop: 6, textAlign: "center" },
