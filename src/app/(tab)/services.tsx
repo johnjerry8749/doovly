@@ -559,7 +559,7 @@ export default function Services() {
         data={combinedCards}
         extraData={`${favTick}-${selectedFilter}-${filteredPromotedServices.length}`}
         keyExtractor={(item) => item.cardType === "promoted" ? `promotion-${item.promotionId}` : `professional-${item.id}`}
-        numColumns={2}
+        numColumns={3}
         columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.professionalList}
         renderItem={renderGridCard}
@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
   bookNowButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   professionalCard: {
     flex: 1,
-    maxWidth: "48%",
+    maxWidth: "32.5%",
     minHeight: 205,
     backgroundColor: "#fff",
     borderRadius: 12,
