@@ -464,6 +464,9 @@ export default function Home() {
                 serviceId={item.serviceId}
                 serviceName={item.serviceName}
                 serviceDescription={item.serviceDescription}
+                category={item.profession}
+                rating={item.rating}
+                reviewCount={item.reviewCount}
                 city={item.city}
                 price={item.price}
                 priceValue={item.priceValue}
