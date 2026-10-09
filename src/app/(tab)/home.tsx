@@ -380,7 +380,7 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-        {displayedProfessionals.length === 0 ? (
+        {displayedProfessionals.length === 0 && filteredPromotedServices.length === 0 ? (
           <View style={styles.emptyProsContainer}>
             <Ionicons name="search-outline" size={48} color="#ccc" />
             <Text style={styles.emptyProsTitle}>No Avaliable professionals near you</Text>
