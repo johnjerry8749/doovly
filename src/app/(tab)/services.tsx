@@ -281,7 +281,8 @@ export default function Services() {
     });
   }, [promotedServices, search, selectedFilter, matchesCategory, matchesLocationCity]);
 
-  const displayedProfessionals = filteredProfessionals;
+  const promotedProfessionalIds = new Set(filteredPromotedServices.map((item) => item.professionalId));
+  const displayedProfessionals = filteredProfessionals.filter((person) => !promotedProfessionalIds.has(person.id));
 
   const renderProfessional = ({ item }: { item: Professional }) => {
     const saved = isSaved(item.id);
@@ -451,70 +452,6 @@ export default function Services() {
         />
       </View>
 
-      {filteredPromotedServices.length > 0 && (
-        <View style={styles.promotionSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Promotion</Text>
-          </View>
-          <FlatList
-            horizontal
-            data={filteredPromotedServices}
-            keyExtractor={(item) => item.promotionId}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.promotedServiceGrid}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.promotedServiceCard}
-                activeOpacity={0.85}
-                onPress={() =>
-                  router.push({
-                    pathname: "/professional/[id]",
-                    params: { id: item.professionalId },
-                  })
-                }
-              >
-                <View style={styles.promotedCardTopRow}>
-                  <View style={styles.promotedBadge}>
-                    <Text style={styles.promotedBadgeText}>PROMOTED</Text>
-                  </View>
-                  {item.avatarUrl ? (
-                    <Image source={{ uri: item.avatarUrl }} style={styles.promotedProfessionalImage} />
-                  ) : (
-                    <View style={styles.promotedProfessionalImageFallback}>
-                      <Ionicons name="person" size={17} color={GREEN} />
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.promotedServiceName} numberOfLines={1}>{item.serviceName}</Text>
-                {!!item.serviceDescription.trim() && (
-                  <Text style={styles.promotedDescription} numberOfLines={2}>{item.serviceDescription}</Text>
-                )}
-                <Text style={styles.promotedPrice} numberOfLines={1}>
-                  {item.price || (item.priceValue > 0 ? `₦${item.priceValue.toLocaleString("en-NG")}` : "Contact for price")}
-                </Text>
-                <TouchableOpacity
-                  style={styles.bookNowButton}
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/bookme/[id]",
-                      params: {
-                        id: item.professionalId,
-                        serviceId: item.serviceId,
-                        serviceName: item.serviceName,
-                        price: item.price || String(item.priceValue || ""),
-                      },
-                    })
-                  }
-                >
-                  <Text style={styles.bookNowButtonText}>Book Now</Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
-            )}
-          />
-        </View>
-      )}
-
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Professionals</Text>
         <Text style={styles.resultCount}>
@@ -531,7 +468,54 @@ export default function Services() {
         contentContainerStyle={styles.professionalList}
         renderItem={renderProfessional}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          filteredPromotedServices.length > 0 ? (
+            <View style={styles.promotedInlineGrid}>
+              {filteredPromotedServices.map((item) => (
+                <View key={item.promotionId} style={styles.professionalCard}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => router.push({ pathname: "/professional/[id]", params: { id: item.professionalId } })}
+                  >
+                    <View style={styles.profileImageContainer}>
+                      {item.avatarUrl ? (
+                        <Image source={{ uri: item.avatarUrl }} style={styles.profileImage} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.profileImage, { alignItems: "center", justifyContent: "center", backgroundColor: "#ECFDF5" }]}>
+                          <Ionicons name="person" size={26} color={GREEN} />
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.professionalName} numberOfLines={1}>{item.serviceName}</Text>
+                    {!!item.serviceDescription.trim() && (
+                      <Text style={styles.profession} numberOfLines={2}>{item.serviceDescription}</Text>
+                    )}
+                    <Text style={styles.price} numberOfLines={1}>
+                      {item.price || (item.priceValue > 0 ? `₦${item.priceValue.toLocaleString("en-NG")}` : "Contact for price")}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.bookNowButton}
+                    activeOpacity={0.8}
+                    onPress={() => router.push({
+                      pathname: "/bookme/[id]",
+                      params: {
+                        id: item.professionalId,
+                        serviceId: item.serviceId,
+                        serviceName: item.serviceName,
+                        price: item.price || String(item.priceValue || ""),
+                      },
+                    })}
+                  >
+                    <Text style={styles.bookNowButtonText}>Book Now</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
+          displayedProfessionals.length === 0 && filteredPromotedServices.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={42} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No professionals found</Text>
@@ -539,6 +523,7 @@ export default function Services() {
               Try another filter or search term.
             </Text>
           </View>
+          ) : null
         }
         ListFooterComponent={<View style={styles.listBottomSpace} />}
       />
@@ -820,6 +805,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E1E1E1",
   },
+  promotedInlineGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 },
   favoriteButton: {
     position: "absolute",
     right: 8,
