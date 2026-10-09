@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "#000000",
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
@@ -176,8 +176,8 @@ const styles = StyleSheet.create({
   },
   description: {
     height: 44,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 10,
+    lineHeight: 11,
     color: "rgba(255,255,255,0.85)",
     textAlign: "left",
     alignSelf: "stretch",
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   city: {
     color: "#000000",
-    fontSize: 11,
+    fontSize: 9,
     textAlign: "left",
     flexShrink: 1,
   },
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   bookText: {
     color: GREEN,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
   },
 });
