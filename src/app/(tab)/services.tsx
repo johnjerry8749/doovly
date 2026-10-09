@@ -429,9 +429,15 @@ export default function Services() {
             </Text>
           </View>
 
-          <Text style={styles.profession} numberOfLines={1}>
+          <Text style={styles.profession} numberOfLines={2}>
             {item.profession}
           </Text>
+
+          {!!item.bio?.trim() && (
+            <Text style={styles.professionalBio} numberOfLines={2}>
+              {item.bio.trim()}
+            </Text>
+          )}
 
           <Text style={styles.city} numberOfLines={1}>
             <Ionicons name="location" size={10} color={GREEN} />{" "}
@@ -840,6 +846,7 @@ const styles = StyleSheet.create({
   professionalCard: {
     flex: 1,
     maxWidth: "31%",
+    minHeight: 234,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
@@ -903,6 +910,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#555",
     marginBottom: 2,
+  },
+  professionalBio: {
+    fontSize: 10,
+    lineHeight: 13,
+    color: "#666",
+    marginTop: 2,
+    marginBottom: 4,
   },
   city: {
     fontSize: 10,
