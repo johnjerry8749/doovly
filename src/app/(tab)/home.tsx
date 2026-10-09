@@ -383,9 +383,28 @@ export default function Home() {
               contentContainerStyle={styles.promotedServiceGrid}
             >
               {filteredPromotedServices.map((item) => (
-                <View key={item.promotionId} style={styles.promotedServiceCard}>
-                  <View style={styles.promotedBadge}>
-                    <Text style={styles.promotedBadgeText}>PROMOTED</Text>
+                <TouchableOpacity
+                  key={item.promotionId}
+                  style={styles.promotedServiceCard}
+                  activeOpacity={0.85}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/professional/[id]",
+                      params: { id: item.professionalId },
+                    })
+                  }
+                >
+                  <View style={styles.promotedCardTopRow}>
+                    <View style={styles.promotedBadge}>
+                      <Text style={styles.promotedBadgeText}>PROMOTED</Text>
+                    </View>
+                    {item.avatarUrl ? (
+                      <Image source={{ uri: item.avatarUrl }} style={styles.promotedProfessionalImage} />
+                    ) : (
+                      <View style={styles.promotedProfessionalImageFallback}>
+                        <Ionicons name="person" size={17} color="#159447" />
+                      </View>
+                    )}
                   </View>
                   <Text style={styles.promotedServiceName} numberOfLines={1}>{item.serviceName}</Text>
                   {!!item.serviceDescription.trim() && (
@@ -399,10 +418,9 @@ export default function Home() {
                     activeOpacity={0.8}
                     onPress={() =>
                       router.push({
-                        pathname: "/(tab)/bookme/[id]",
+                        pathname: "/bookme/[id]",
                         params: {
                           id: item.professionalId,
-                          proId: item.professionalId,
                           serviceId: item.serviceId,
                           serviceName: item.serviceName,
                           price: item.price || String(item.priceValue || ""),
@@ -412,7 +430,7 @@ export default function Home() {
                   >
                     <Text style={styles.bookNowButtonText}>Book Now</Text>
                   </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           </>
@@ -711,6 +729,9 @@ const styles = StyleSheet.create({
     borderColor: "#D1FAE5",
     padding: 10,
   },
+  promotedCardTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 7 },
+  promotedProfessionalImage: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#E5E7EB" },
+  promotedProfessionalImageFallback: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#ECFDF5", alignItems: "center", justifyContent: "center" },
   promotedBadge: {
     alignSelf: "flex-start",
     backgroundColor: "#159447",
