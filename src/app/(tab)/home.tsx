@@ -21,12 +21,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listProfessionals,
   listProfessionalsAsync,
-  listPromotedProfessionalIdsAsync,
+  listActivePromotedServicesAsync,
   listServiceCategories,
   listServiceCategoriesAsync,
   starsFromReviewCount,
   getDistanceKm,
+  type PromotedService,
 } from "@/services/professionals";
+import PromotedServiceCard from "@/components/PromotedServiceCard";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
 
@@ -52,21 +54,24 @@ export default function Home() {
 
   const [services, setServices] = useState(listServiceCategories());
   const [professionals, setProfessionals] = useState(listProfessionals());
-  const [promotedProfessionalIds, setPromotedProfessionalIds] = useState<string[]>([]);
+  const [promotedServices, setPromotedServices] = useState<PromotedService[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
-    listPromotedProfessionalIdsAsync().then((ids) => {
-      if (active) setPromotedProfessionalIds(ids);
-    });
-    Promise.all([listServiceCategoriesAsync(), listProfessionalsAsync(), listCitiesAsync()])
-      .then(([nextServices, nextProfessionals, nextCities]) => {
+    Promise.all([
+      listServiceCategoriesAsync(),
+      listProfessionalsAsync(),
+      listCitiesAsync(),
+      listActivePromotedServicesAsync(),
+    ])
+      .then(([nextServices, nextProfessionals, nextCities, nextPromotedServices]) => {
         if (!active) return;
         setServices(nextServices);
         setProfessionals(nextProfessionals);
         setCities(nextCities);
+        setPromotedServices(nextPromotedServices);
       })
       .catch((error) => console.warn("Home data load failed:", error));
     return () => {
@@ -228,8 +233,40 @@ export default function Home() {
       );
     }
 
-    return [...list].sort((a, b) => Number(promotedProfessionalIds.includes(b.id)) - Number(promotedProfessionalIds.includes(a.id)));
-  }, [locationName, showAllNigeria, professionals, selectedCategory, search, promotedProfessionalIds]);
+    return list;
+  }, [locationName, showAllNigeria, professionals, selectedCategory, search]);
+
+  const filteredPromotedServices = useMemo(() => {
+    const city = locationName.split(",")[0].trim().toLowerCase();
+    const q = search.trim().toLowerCase();
+    return promotedServices.filter((item) => {
+      const matchesCity =
+        showAllNigeria ||
+        !city ||
+        city === "nigeria" ||
+        locationName === "All Nigeria" ||
+        locationName === "Location unavailable" ||
+        locationName.toLowerCase().includes("click here") ||
+        locationName.toLowerCase().includes("getting") ||
+        item.city.toLowerCase().includes(city) ||
+        city.includes(item.city.toLowerCase());
+      const category = selectedCategory.toLowerCase();
+      const profession = item.profession.toLowerCase();
+      const matchesCategory =
+        selectedCategory === "All" ||
+        profession === category ||
+        profession.includes(category) ||
+        item.serviceName.toLowerCase().includes(category) ||
+        (category === "spa" && profession.includes("massage"));
+      const matchesSearch =
+        !q ||
+        item.serviceName.toLowerCase().includes(q) ||
+        item.professionalName.toLowerCase().includes(q) ||
+        item.profession.toLowerCase().includes(q) ||
+        item.city.toLowerCase().includes(q);
+      return matchesCity && matchesCategory && matchesSearch;
+    });
+  }, [promotedServices, locationName, showAllNigeria, selectedCategory, search]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -338,6 +375,19 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
+        {filteredPromotedServices.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Promoted services</Text>
+            </View>
+            <View style={styles.professionalsGrid}>
+              {filteredPromotedServices.map((item) => (
+                <PromotedServiceCard key={item.promotionId} item={item} />
+              ))}
+            </View>
+          </>
+        )}
+
         {nearbyProfessionals.length === 0 ? (
           <View style={styles.emptyProsContainer}>
             <Ionicons name="search-outline" size={48} color="#ccc" />
@@ -367,11 +417,6 @@ export default function Home() {
                   })
                 }
               >
-                {promotedProfessionalIds.includes(person.id) && (
-                  <View style={styles.promotedBadge}>
-                    <Text style={styles.promotedBadgeText}>Promoted</Text>
-                  </View>
-                )}
                 <TouchableOpacity
                   style={styles.heartButton}
                   activeOpacity={0.7}
@@ -606,21 +651,6 @@ const styles = StyleSheet.create({
     paddingBottom: 25,
   },
   professionalsContainer: { flexDirection: "row", gap: 12, paddingBottom: 8 },
-  promotedBadge: {
-    position: "absolute",
-    top: 7,
-    left: 7,
-    zIndex: 4,
-    backgroundColor: "#159447",
-    paddingHorizontal: 5,
-    paddingVertical: 3,
-    borderRadius: 5,
-  },
-  promotedBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "700",
-  },
   professionalCard: {
     width: "31.5%",
     backgroundColor: "#fff",
