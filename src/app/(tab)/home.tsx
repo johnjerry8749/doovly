@@ -456,8 +456,12 @@ export default function Home() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.professionalsGrid}>
-            {filteredPromotedServices.map((item) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.professionalsContainer}
+          >
+            {filteredPromotedServices.slice(0, 10).map((item) => (
               <PromotedServiceCard
                 key={item.promotionId}
                 professionalId={item.professionalId}
@@ -475,7 +479,9 @@ export default function Home() {
                 DescriptionComponent={MovingServiceDescription}
               />
             ))}
-            {displayedProfessionals.map((person) => (
+            {displayedProfessionals
+              .slice(0, Math.max(0, 10 - filteredPromotedServices.slice(0, 10).length))
+              .map((person) => (
               <TouchableOpacity
                 key={`${person.id}-${favTick}`}
                 style={styles.professionalCard}
@@ -536,7 +542,7 @@ export default function Home() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         )}
 
         <View style={styles.verifiedContainer}>
@@ -727,7 +733,7 @@ const styles = StyleSheet.create({
   },
   professionalsContainer: { flexDirection: "row", gap: 12, paddingBottom: 8 },
   professionalCard: {
-    width: "31.5%",
+    width: "40%",
     minHeight: 205,
     backgroundColor: "#fff",
     borderRadius: 12,
