@@ -97,7 +97,7 @@ function MovingServiceDescription({ text, color = "#666" }: { text: string; colo
 
 export default function Home() {
   const { width: screenWidth } = useWindowDimensions();
-  const homeCardWidth = screenWidth * 0.45;
+  const homeCardWidth = screenWidth * 0.4;
 
   const {
     locationName,
