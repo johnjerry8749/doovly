@@ -382,60 +382,38 @@ export default function Home() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.promotedServiceGrid}
             >
-              {filteredPromotedServices.map((item) => {
-                const professional = professionals.find((person) => person.id === item.professionalId);
-                return (
-                  <View key={item.promotionId} style={styles.promotedServiceCard}>
-                    <View style={styles.promotedCardHeader}>
-                      <View style={styles.promotedAvatar}>
-                        {item.avatarUrl ? (
-                          <Image source={{ uri: item.avatarUrl }} style={styles.promotedAvatarImage} />
-                        ) : professional ? (
-                          <Image source={professional.image} style={styles.promotedAvatarImage} />
-                        ) : (
-                          <Ionicons name="person" size={24} color="#159447" />
-                        )}
-                      </View>
-                      <View style={styles.promotedProfessionalInfo}>
-                        <Text style={styles.promotedProfessionalName} numberOfLines={1}>
-                          {item.professionalName}
-                        </Text>
-                        <Text style={styles.promotedProfessionalProfession} numberOfLines={1}>
-                          {item.profession} · {item.city}
-                        </Text>
-                      </View>
-                      <View style={styles.promotedBadge}>
-                        <Text style={styles.promotedBadgeText}>PROMOTED</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.promotedServiceName} numberOfLines={1}>{item.serviceName}</Text>
-                    {!!item.serviceDescription.trim() && (
-                      <Text style={styles.promotedDescription} numberOfLines={2}>{item.serviceDescription}</Text>
-                    )}
-                    <Text style={styles.promotedPrice} numberOfLines={1}>
-                      {item.price || (item.priceValue > 0 ? `₦${item.priceValue.toLocaleString("en-NG")}` : "Contact for price")}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.bookNowButton}
-                      activeOpacity={0.8}
-                      onPress={() =>
-                        router.push({
-                          pathname: "/(tab)/bookme/[id]",
-                          params: {
-                            id: item.professionalId,
-                            proId: item.professionalId,
-                            serviceId: item.serviceId,
-                            serviceName: item.serviceName,
-                            price: item.price || String(item.priceValue || ""),
-                          },
-                        })
-                      }
-                    >
-                      <Text style={styles.bookNowButtonText}>Book Now</Text>
-                    </TouchableOpacity>
+              {filteredPromotedServices.map((item) => (
+                <View key={item.promotionId} style={styles.promotedServiceCard}>
+                  <View style={styles.promotedBadge}>
+                    <Text style={styles.promotedBadgeText}>PROMOTED</Text>
                   </View>
-                );
-              })}
+                  <Text style={styles.promotedServiceName} numberOfLines={1}>{item.serviceName}</Text>
+                  {!!item.serviceDescription.trim() && (
+                    <Text style={styles.promotedDescription} numberOfLines={2}>{item.serviceDescription}</Text>
+                  )}
+                  <Text style={styles.promotedPrice} numberOfLines={1}>
+                    {item.price || (item.priceValue > 0 ? `₦${item.priceValue.toLocaleString("en-NG")}` : "Contact for price")}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.bookNowButton}
+                    activeOpacity={0.8}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(tab)/bookme/[id]",
+                        params: {
+                          id: item.professionalId,
+                          proId: item.professionalId,
+                          serviceId: item.serviceId,
+                          serviceName: item.serviceName,
+                          price: item.price || String(item.priceValue || ""),
+                        },
+                      })
+                    }
+                  >
+                    <Text style={styles.bookNowButtonText}>Book Now</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
             </ScrollView>
           </>
         )}
@@ -725,39 +703,28 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   promotedServiceCard: {
-    width: 250,
+    width: 165,
+    minHeight: 142,
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#D1FAE5",
-    padding: 12,
+    padding: 10,
   },
-  promotedCardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  promotedAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    overflow: "hidden",
-    backgroundColor: "#E8F5E9",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  promotedAvatarImage: { width: "100%", height: "100%", borderRadius: 21 },
-  promotedProfessionalInfo: { flex: 1, minWidth: 0, marginLeft: 8, marginRight: 4 },
-  promotedProfessionalName: { fontSize: 12, fontWeight: "700", color: "#111" },
-  promotedProfessionalProfession: { fontSize: 10, color: "#666", marginTop: 2 },
   promotedBadge: {
+    alignSelf: "flex-start",
     backgroundColor: "#159447",
     paddingHorizontal: 5,
     paddingVertical: 3,
     borderRadius: 5,
+    marginBottom: 7,
   },
   promotedBadgeText: { color: "#FFFFFF", fontSize: 8, fontWeight: "700" },
-  promotedServiceName: { fontSize: 13, fontWeight: "700", color: "#159447", marginBottom: 3 },
-  promotedDescription: { fontSize: 11, color: "#666", marginBottom: 5 },
-  promotedPrice: { fontSize: 13, fontWeight: "800", color: "#159447" },
-  bookNowButton: { marginTop: 8, backgroundColor: "#159447", borderRadius: 7, paddingVertical: 8, alignItems: "center" },
-  bookNowButtonText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
+  promotedServiceName: { fontSize: 12, fontWeight: "700", color: "#159447", marginBottom: 3 },
+  promotedDescription: { fontSize: 10, lineHeight: 13, color: "#666", marginBottom: 5 },
+  promotedPrice: { fontSize: 12, fontWeight: "800", color: "#159447" },
+  bookNowButton: { marginTop: 7, backgroundColor: "#159447", borderRadius: 7, paddingVertical: 6, alignItems: "center" },
+  bookNowButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   heartButton: { position: "absolute", right: 8, top: 8, zIndex: 5 },
   profileImageContainer: {
     width: 70,
