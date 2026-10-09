@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Alert,
   FlatList,
   Image,
@@ -20,19 +21,79 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listProfessionals,
   listProfessionalsAsync,
-  listPromotedProfessionalIdsAsync,
+  listActivePromotedServicesAsync,
   listServiceCategories,
   listServiceCategoriesAsync,
   getDistanceKm,
   starsFromReviewCount,
   type Professional,
+  type PromotedService,
 } from "@/services/professionals";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
 import { listCities, listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
+import { PromotedServiceCard } from "@/components/PromotedServiceCard";
 
 const GREEN = "#159447";
+
+function MovingServiceDescription({ text, color = "#666" }: { text: string; color?: string }) {
+  const translateX = React.useRef(new Animated.Value(0)).current;
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [textWidth, setTextWidth] = useState(0);
+
+  useEffect(() => {
+    translateX.stopAnimation();
+    translateX.setValue(0);
+    if (!text || containerWidth <= 0 || textWidth <= containerWidth) return;
+
+    const distance = textWidth - containerWidth;
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.delay(650),
+        Animated.timing(translateX, {
+          toValue: -distance,
+          duration: Math.max(2200, distance * 38),
+          useNativeDriver: true,
+        }),
+        Animated.delay(650),
+        Animated.timing(translateX, {
+          toValue: 0,
+          duration: Math.max(2200, distance * 38),
+          useNativeDriver: true,
+        }),
+        Animated.delay(900),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [text, containerWidth, textWidth, translateX]);
+
+  if (!text.trim()) return null;
+
+  return (
+    <View
+      style={{ width: "100%", overflow: "hidden", marginTop: 2, marginBottom: 2 }}
+      onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}
+    >
+      <Animated.Text
+        numberOfLines={1}
+        onLayout={(event) => {
+          const measuredWidth = event.nativeEvent.layout.width;
+          if (measuredWidth !== textWidth) setTextWidth(measuredWidth);
+        }}
+        style={{
+          alignSelf: "flex-start",
+          color,
+          fontSize: 10,
+          transform: [{ translateX }],
+        }}
+      >
+        {text}
+      </Animated.Text>
+    </View>
+  );
+}
 
 export default function Services() {
   const [search, setSearch] = useState("");
@@ -40,26 +101,24 @@ export default function Services() {
   const [favTick, setFavTick] = useState(0);
   const [categories, setCategories] = useState(listServiceCategories());
   const [professionals, setProfessionals] = useState(listProfessionals());
-  const [promotedProfessionalIds, setPromotedProfessionalIds] = useState<string[]>([]);
+  const [promotedServices, setPromotedServices] = useState<PromotedService[]>([]);
   const [cities, setCities] = useState<string[]>(listCities());
   const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
-    listPromotedProfessionalIdsAsync().then((ids) => {
-      if (active) setPromotedProfessionalIds(ids);
-    });
-
     Promise.all([
       listServiceCategoriesAsync(),
       listProfessionalsAsync(),
       listCitiesAsync(),
+      listActivePromotedServicesAsync(),
     ])
-      .then(([nextCategories, nextProfessionals, nextCities]) => {
+      .then(([nextCategories, nextProfessionals, nextCities, nextPromotedServices]) => {
         if (!active) return;
         setCategories(nextCategories);
         setProfessionals(nextProfessionals);
         setCities(nextCities);
+        setPromotedServices(nextPromotedServices);
       })
       .catch((error) => {
         console.warn("Services data load failed:", error);
@@ -232,30 +291,88 @@ export default function Services() {
   const filteredProfessionals = useMemo(() => {
     const q = search.trim().toLowerCase();
     const matches = professionals.filter((person) => {
+      const promoted = promotedServices.find((service) => service.professionalId === person.id);
       const matchesSearch =
         !q ||
         person.name.toLowerCase().includes(q) ||
         person.profession.toLowerCase().includes(q) ||
-        person.city.toLowerCase().includes(q);
+        person.city.toLowerCase().includes(q) ||
+        Boolean(promoted?.serviceName.toLowerCase().includes(q)) ||
+        Boolean(promoted?.serviceDescription.toLowerCase().includes(q));
       return (
         matchesSearch &&
-        matchesCategory(person.profession, selectedFilter) &&
+        (
+          matchesCategory(person.profession, selectedFilter) ||
+          selectedFilter === "All" ||
+          Boolean(promoted?.serviceName.toLowerCase().includes(selectedFilter.toLowerCase()))
+        ) &&
         matchesLocationCity(person.city)
       );
     });
-    return [...matches].sort(
-      (a, b) =>
-        Number(promotedProfessionalIds.includes(b.id)) -
-        Number(promotedProfessionalIds.includes(a.id)),
-    );
+    return matches;
   }, [
     professionals,
+    promotedServices,
     search,
     selectedFilter,
     matchesCategory,
     matchesLocationCity,
-    promotedProfessionalIds,
   ]);
+
+  const filteredPromotedServices = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return promotedServices.filter((item) => {
+      const matchesSearch =
+        !q ||
+        item.serviceName.toLowerCase().includes(q) ||
+        item.professionalName.toLowerCase().includes(q) ||
+        item.profession.toLowerCase().includes(q) ||
+        item.serviceDescription.toLowerCase().includes(q) ||
+        item.city.toLowerCase().includes(q);
+      return (
+        matchesSearch &&
+        (
+          matchesCategory(item.profession, selectedFilter) ||
+          selectedFilter === "All" ||
+          item.serviceName.toLowerCase().includes(selectedFilter.toLowerCase())
+        ) &&
+        matchesLocationCity(item.city)
+      );
+    });
+  }, [promotedServices, search, selectedFilter, matchesCategory, matchesLocationCity]);
+
+  const promotedProfessionalIds = new Set(filteredPromotedServices.map((item) => item.professionalId));
+  const displayedProfessionals = filteredProfessionals.filter((person) => !promotedProfessionalIds.has(person.id));
+
+  // Promoted service cards and regular professionals share one grid.
+  // A promoted professional is represented by the promoted service card only.
+  const combinedCards = useMemo(
+    () => [
+      ...filteredPromotedServices.map((item) => ({ ...item, cardType: "promoted" as const })),
+      ...displayedProfessionals.map((item) => ({ ...item, cardType: "professional" as const })),
+    ],
+    [filteredPromotedServices, displayedProfessionals],
+  );
+
+  const renderGridCard = ({ item }: { item: (typeof combinedCards)[number] }) => {
+    if (item.cardType === "promoted") {
+      return (
+        <PromotedServiceCard
+          professionalId={item.professionalId}
+          serviceId={item.serviceId}
+          serviceName={item.serviceName}
+          serviceDescription={item.serviceDescription}
+          city={item.city}
+          price={item.price}
+          priceValue={item.priceValue}
+          avatarUrl={item.avatarUrl}
+          cardStyle={styles.professionalCard}
+          DescriptionComponent={MovingServiceDescription}
+        />
+      );
+    }
+    return renderProfessional({ item });
+  };
 
   const renderProfessional = ({ item }: { item: Professional }) => {
     const saved = isSaved(item.id);
@@ -272,11 +389,6 @@ export default function Services() {
           })
         }
       >
-        {promotedProfessionalIds.includes(item.id) && (
-          <View style={styles.promotedBadge}>
-            <Text style={styles.promotedBadgeText}>Promoted</Text>
-          </View>
-        )}
         <TouchableOpacity
           style={styles.favoriteButton}
           onPress={() => onToggleFavorite(item.id)}
@@ -318,9 +430,15 @@ export default function Services() {
             </Text>
           </View>
 
-          <Text style={styles.profession} numberOfLines={1}>
+          <Text style={styles.profession} numberOfLines={2}>
             {item.profession}
           </Text>
+
+          {!!item.bio?.trim() && (
+            <Text style={styles.professionalBio} numberOfLines={2}>
+              {item.bio.trim()}
+            </Text>
+          )}
 
           <Text style={styles.city} numberOfLines={1}>
             <Ionicons name="location" size={10} color={GREEN} />{" "}
@@ -336,7 +454,6 @@ export default function Services() {
       </TouchableOpacity>
     );
   };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.stickyHeader}>
@@ -434,29 +551,28 @@ export default function Services() {
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Professionals</Text>
         <Text style={styles.resultCount}>
-          {filteredProfessionals.length} found
+          {displayedProfessionals.length} found
         </Text>
       </View>
 
       <FlatList
-        data={filteredProfessionals}
-        extraData={`${favTick}-${selectedFilter}-${promotedProfessionalIds.length}`}
-        keyExtractor={(item) => item.id}
+        data={combinedCards}
+        extraData={`${favTick}-${selectedFilter}-${filteredPromotedServices.length}`}
+        keyExtractor={(item) => item.cardType === "promoted" ? `promotion-${item.promotionId}` : `professional-${item.id}`}
         numColumns={3}
         columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.professionalList}
-        renderItem={renderProfessional}
+        renderItem={renderGridCard}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={42} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No professionals found</Text>
-            <Text style={styles.emptyText}>
-              Try another filter or search term.
-            </Text>
+            <Text style={styles.emptyText}>Try another filter or search term.</Text>
           </View>
         }
         ListFooterComponent={<View style={styles.listBottomSpace} />}
+
       />
 
       <Modal
@@ -696,29 +812,48 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 10,
   },
+  promotionSection: { paddingBottom: 2 },
+  promotedServiceGrid: {
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  promotedServiceCard: {
+    width: 165,
+    minHeight: 142,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+    padding: 10,
+  },
+  promotedCardTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 7 },
+  promotedProfessionalImage: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#E5E7EB" },
+  promotedProfessionalImageFallback: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#ECFDF5", alignItems: "center", justifyContent: "center" },
   promotedBadge: {
-    position: "absolute",
-    top: 7,
-    left: 7,
-    zIndex: 4,
+    alignSelf: "flex-start",
     backgroundColor: GREEN,
     paddingHorizontal: 5,
     paddingVertical: 3,
     borderRadius: 5,
+    marginBottom: 7,
   },
-  promotedBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "700",
-  },
+  promotedBadgeText: { color: "#FFFFFF", fontSize: 8, fontWeight: "700" },
+  promotedServiceName: { fontSize: 12, fontWeight: "700", color: GREEN, marginBottom: 3 },
+  promotedDescription: { fontSize: 10, lineHeight: 13, color: "#666", marginBottom: 5 },
+  promotedPrice: { fontSize: 12, fontWeight: "800", color: GREEN },
+  bookNowButton: { marginTop: 7, backgroundColor: GREEN, borderRadius: 7, paddingVertical: 6, alignItems: "center" },
+  bookNowButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   professionalCard: {
     flex: 1,
-    maxWidth: "32%",
+    maxWidth: "31%",
+    minHeight: 205,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E1E1E1",
   },
+  promotedInlineGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 },
   favoriteButton: {
     position: "absolute",
     right: 8,
@@ -776,6 +911,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#555",
     marginBottom: 2,
+  },
+  professionalBio: {
+    fontSize: 10,
+    lineHeight: 13,
+    color: "#666",
+    marginTop: 2,
+    marginBottom: 4,
   },
   city: {
     fontSize: 10,

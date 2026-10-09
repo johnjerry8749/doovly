@@ -14,13 +14,35 @@ import {
 import { bootstrapAppData, retryBootstrap } from "@/lib/bootstrapData";
 import { loadSessionUser } from "@/lib/session";
 import SystemNotificationBanner from "@/components/SystemNotificationBanner";
-import { initRevenueCat } from "@/lib/revenuecat";
+import {
+  addCustomerInfoListener,
+  getCustomerInfo,
+  initRevenueCat,
+} from "@/lib/revenuecat";
 
 function RevenueCatBootstrap() {
   const { user } = useAuth();
 
   useEffect(() => {
-    void initRevenueCat(user?.id ?? null);
+    let removeListener: (() => void) | null = null;
+    let cancelled = false;
+
+    void (async () => {
+      await initRevenueCat(user?.id ?? null);
+      if (cancelled || !user?.id) return;
+
+      await getCustomerInfo();
+      if (cancelled) return;
+
+      removeListener = addCustomerInfoListener(() => {
+        // RevenueCat helper keeps the entitlement cache synchronized.
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      removeListener?.();
+    };
   }, [user?.id]);
 
   return null;

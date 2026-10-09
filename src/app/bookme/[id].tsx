@@ -30,11 +30,13 @@ export default function BookMeScreen() {
 
   const pro = useMemo(() => getProfessionalById(id ?? ""), [id]);
 
-  const initialService =
-    pro?.services.find((service) => service.id === serviceId) ??
-    pro?.services.find((service) => service.name === serviceName) ??
-    pro?.services[0] ??
-    null;
+  // If the user selected a promoted service, only preselect that exact service ID.
+  // Do not silently book a different service if the ID is missing from the professional's services.
+  const initialService = serviceId
+    ? pro?.services.find((service) => String(service.id) === String(serviceId)) ?? null
+    : pro?.services.find((service) => service.name === serviceName) ??
+      pro?.services[0] ??
+      null;
 
   const [selectedService, setSelectedService] = useState(initialService);
   const [showServicePicker, setShowServicePicker] = useState(false);
