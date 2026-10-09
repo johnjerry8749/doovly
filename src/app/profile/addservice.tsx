@@ -993,7 +993,8 @@ const styles = StyleSheet.create({
   categoryList: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: BORDER,    borderRadius: 14,
+    borderColor: BORDER,
+    borderRadius: 14,
     overflow: "hidden",
     backgroundColor: "#FFFFFF",
   },
