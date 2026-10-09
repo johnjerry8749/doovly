@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   ActivityIndicator,
-  Animated,
   Alert,
   FlatList,
   Image,
@@ -22,76 +21,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listProfessionals,
   listProfessionalsAsync,
-  listActivePromotedServicesAsync,
+  listPromotedProfessionalIdsAsync,
   listServiceCategories,
   listServiceCategoriesAsync,
   starsFromReviewCount,
   getDistanceKm,
-  type PromotedService,
 } from "@/services/professionals";
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { isSaved, toggleSave } from "@/services/savedProviders";
 
 import { listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
-
-function MovingServiceDescription({ text, color = "#666" }: { text: string; color?: string }) {
-  const translateX = React.useRef(new Animated.Value(0)).current;
-  const [containerWidth, setContainerWidth] = useState(0);
-  const [textWidth, setTextWidth] = useState(0);
-
-  useEffect(() => {
-    translateX.stopAnimation();
-    translateX.setValue(0);
-    if (!text || containerWidth <= 0 || textWidth <= containerWidth) return;
-
-    const distance = textWidth - containerWidth;
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.delay(650),
-        Animated.timing(translateX, {
-          toValue: -distance,
-          duration: Math.max(2200, distance * 38),
-          useNativeDriver: true,
-        }),
-        Animated.delay(650),
-        Animated.timing(translateX, {
-          toValue: 0,
-          duration: Math.max(2200, distance * 38),
-          useNativeDriver: true,
-        }),
-        Animated.delay(900),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [text, containerWidth, textWidth, translateX]);
-
-  if (!text.trim()) return null;
-
-  return (
-    <View
-      style={{ width: "100%", overflow: "hidden", marginTop: 2, marginBottom: 2 }}
-      onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}
-    >
-      <Animated.Text
-        numberOfLines={1}
-        onLayout={(event) => {
-          const measuredWidth = event.nativeEvent.layout.width;
-          if (measuredWidth !== textWidth) setTextWidth(measuredWidth);
-        }}
-        style={{
-          alignSelf: "flex-start",
-          color,
-          fontSize: 10,
-          transform: [{ translateX }],
-        }}
-      >
-        {text}
-      </Animated.Text>
-    </View>
-  );
-}
 
 export default function Home() {
   const {
@@ -112,24 +52,21 @@ export default function Home() {
 
   const [services, setServices] = useState(listServiceCategories());
   const [professionals, setProfessionals] = useState(listProfessionals());
-  const [promotedServices, setPromotedServices] = useState<PromotedService[]>([]);
+  const [promotedProfessionalIds, setPromotedProfessionalIds] = useState<string[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      listServiceCategoriesAsync(),
-      listProfessionalsAsync(),
-      listCitiesAsync(),
-      listActivePromotedServicesAsync(),
-    ])
-      .then(([nextServices, nextProfessionals, nextCities, nextPromotedServices]) => {
+    listPromotedProfessionalIdsAsync().then((ids) => {
+      if (active) setPromotedProfessionalIds(ids);
+    });
+    Promise.all([listServiceCategoriesAsync(), listProfessionalsAsync(), listCitiesAsync()])
+      .then(([nextServices, nextProfessionals, nextCities]) => {
         if (!active) return;
         setServices(nextServices);
         setProfessionals(nextProfessionals);
         setCities(nextCities);
-        setPromotedServices(nextPromotedServices);
       })
       .catch((error) => console.warn("Home data load failed:", error));
     return () => {
@@ -273,11 +210,9 @@ export default function Home() {
       const cat = selectedCategory.toLowerCase();
       list = list.filter((p) => {
         const prof = p.profession.toLowerCase();
-        const promoted = promotedServices.find((item) => item.professionalId === p.id);
         return (
           prof === cat ||
           prof.includes(cat) ||
-          Boolean(promoted?.serviceName.toLowerCase().includes(cat)) ||
           (cat === "spa" && prof.includes("massage"))
         );
       });
@@ -285,56 +220,16 @@ export default function Home() {
 
     const q = search.trim().toLowerCase();
     if (q) {
-      list = list.filter((p) => {
-        const promoted = promotedServices.find((item) => item.professionalId === p.id);
-        return (
+      list = list.filter(
+        (p) =>
           p.name.toLowerCase().includes(q) ||
           p.profession.toLowerCase().includes(q) ||
-          p.city.toLowerCase().includes(q) ||
-          Boolean(promoted?.serviceName.toLowerCase().includes(q)) ||
-          Boolean(promoted?.serviceDescription.toLowerCase().includes(q))
-        );
-      });
+          p.city.toLowerCase().includes(q),
+      );
     }
 
-    return list;
-  }, [locationName, showAllNigeria, professionals, promotedServices, selectedCategory, search]);
-
-  const filteredPromotedServices = useMemo(() => {
-    const city = locationName.split(",")[0].trim().toLowerCase();
-    const q = search.trim().toLowerCase();
-    return promotedServices.filter((item) => {
-      const matchesCity =
-        showAllNigeria ||
-        !city ||
-        city === "nigeria" ||
-        locationName === "All Nigeria" ||
-        locationName === "Location unavailable" ||
-        locationName.toLowerCase().includes("click here") ||
-        locationName.toLowerCase().includes("getting") ||
-        item.city.toLowerCase().includes(city) ||
-        city.includes(item.city.toLowerCase());
-      const category = selectedCategory.toLowerCase();
-      const profession = item.profession.toLowerCase();
-      const matchesCategory =
-        selectedCategory === "All" ||
-        profession === category ||
-        profession.includes(category) ||
-        item.serviceName.toLowerCase().includes(category) ||
-        (category === "spa" && profession.includes("massage"));
-      const matchesSearch =
-        !q ||
-        item.serviceName.toLowerCase().includes(q) ||
-        item.professionalName.toLowerCase().includes(q) ||
-        item.profession.toLowerCase().includes(q) ||
-        item.serviceDescription.toLowerCase().includes(q) ||
-        item.city.toLowerCase().includes(q);
-      return matchesCity && matchesCategory && matchesSearch;
-    });
-  }, [promotedServices, locationName, showAllNigeria, selectedCategory, search]);
-
-  const promotedProfessionalIds = new Set(filteredPromotedServices.map((item) => item.professionalId));
-  const displayedProfessionals = nearbyProfessionals.filter((person) => !promotedProfessionalIds.has(person.id));
+    return [...list].sort((a, b) => Number(promotedProfessionalIds.includes(b.id)) - Number(promotedProfessionalIds.includes(a.id)));
+  }, [locationName, showAllNigeria, professionals, selectedCategory, search, promotedProfessionalIds]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -433,13 +328,17 @@ export default function Home() {
         </ScrollView>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Professions</Text>
+          <Text style={styles.sectionTitle}>
+            {showAllNigeria || locationName === "All Nigeria"
+              ? "Popular in Nigeria"
+              : "Popular near you"}
+          </Text>
           <TouchableOpacity onPress={() => router.push("/(tab)/services")} activeOpacity={0.7}>
             <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         </View>
 
-        {displayedProfessionals.length === 0 && filteredPromotedServices.length === 0 ? (
+        {nearbyProfessionals.length === 0 ? (
           <View style={styles.emptyProsContainer}>
             <Ionicons name="search-outline" size={48} color="#ccc" />
             <Text style={styles.emptyProsTitle}>No Avaliable professionals near you</Text>
@@ -456,50 +355,7 @@ export default function Home() {
           </View>
         ) : (
           <View style={styles.professionalsGrid}>
-            {filteredPromotedServices.map((item) => (
-              <View key={item.promotionId} style={styles.professionalCard}>
-                <View style={{ alignItems: "flex-end", marginBottom: 3 }}>
-                  <Text style={{ color: "#159447", backgroundColor: "#DCFCE7", overflow: "hidden", borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, fontSize: 8, fontWeight: "800" }}>PROMOTED</Text>
-                </View>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => router.push({ pathname: "/professional/[id]", params: { id: item.professionalId } })}
-                >
-                  <View style={[styles.profileImageContainer, { width: 48, height: 48, borderRadius: 24, marginTop: 2, marginBottom: 5 }]}>
-                    {item.avatarUrl ? (
-                      <Image source={{ uri: item.avatarUrl }} style={[styles.profileImage, { borderRadius: 24 }]} resizeMode="cover" />
-                    ) : (
-                      <View style={[styles.profileImage, { borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: "#ECFDF5" }]}>
-                        <Ionicons name="person" size={20} color="#159447" />
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.professionalName} numberOfLines={1}>{item.serviceName}</Text>
-                  {!!item.serviceDescription.trim() && (
-                    <MovingServiceDescription text={item.serviceDescription} color={"#666"} />
-                  )}
-                  <Text style={styles.price} numberOfLines={1}>
-                    {item.price || (item.priceValue > 0 ? `₦${item.priceValue.toLocaleString("en-NG")}` : "Contact for price")}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.bookNowButton}
-                  activeOpacity={0.8}
-                  onPress={() => router.push({
-                    pathname: "/bookme/[id]",
-                    params: {
-                      id: item.professionalId,
-                      serviceId: item.serviceId,
-                      serviceName: item.serviceName,
-                      price: item.price || String(item.priceValue || ""),
-                    },
-                  })}
-                >
-                  <Text style={styles.bookNowButtonText}>Book Now</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-            {displayedProfessionals.map((person) => (
+            {nearbyProfessionals.map((person) => (
               <TouchableOpacity
                 key={`${person.id}-${favTick}`}
                 style={styles.professionalCard}
@@ -511,6 +367,11 @@ export default function Home() {
                   })
                 }
               >
+                {promotedProfessionalIds.includes(person.id) && (
+                  <View style={styles.promotedBadge}>
+                    <Text style={styles.promotedBadgeText}>Promoted</Text>
+                  </View>
+                )}
                 <TouchableOpacity
                   style={styles.heartButton}
                   activeOpacity={0.7}
@@ -745,6 +606,21 @@ const styles = StyleSheet.create({
     paddingBottom: 25,
   },
   professionalsContainer: { flexDirection: "row", gap: 12, paddingBottom: 8 },
+  promotedBadge: {
+    position: "absolute",
+    top: 7,
+    left: 7,
+    zIndex: 4,
+    backgroundColor: "#159447",
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  promotedBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 8,
+    fontWeight: "700",
+  },
   professionalCard: {
     width: "31.5%",
     backgroundColor: "#fff",
