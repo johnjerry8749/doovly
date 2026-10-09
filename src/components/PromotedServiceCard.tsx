@@ -220,10 +220,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   bookButton: {
-    marginTop: 3,
+    marginTop: 2,
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
-    paddingVertical: 5,
+    paddingVertical: 7,
     paddingHorizontal: 8,
     width: "100%",
     alignItems: "center",
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   },
   bookText: {
     color: GREEN,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
   },
 });
