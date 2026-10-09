@@ -660,20 +660,12 @@ export default function ChatConversation() {
           <Ionicons name="arrow-back" size={22} color={PRIMARY} />
         </TouchableOpacity>
 
-        <Image
-          source={p.image}
-          style={p.isSystem ? styles.headerBrandIcon : styles.headerAvatar}
-          resizeMode="contain"
-        />
+        <Image source={p.image} style={styles.headerAvatar} />
 
         <View style={styles.headerInfo}>
-          {p.isSystem ? (
-            <Text style={styles.brandWordmark} numberOfLines={1}>Doovly</Text>
-          ) : (
-            <Text style={styles.headerName} numberOfLines={1}>
-              {p.name}
-            </Text>
-          )}
+          <Text style={styles.headerName} numberOfLines={1}>
+            {p.name}
+          </Text>
           <Text style={styles.headerStatus}>
             {p.isSystem ? "Official Doovly" : conversation.participant.profession || "Professional"}
           </Text>
@@ -845,14 +837,11 @@ export default function ChatConversation() {
               >
                 <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
                   {p.isSystem && item.senderId === p.id && (
-                    <View style={styles.messageBrandLockup}>
-                      <Image
-                        source={require("@/assets/images/icon.png")}
-                        style={styles.messageBrandIcon}
-                        resizeMode="contain"
-                      />
-                      <Text style={styles.messageBrandWordmark}>Doovly</Text>
-                    </View>
+                    <Image
+                      source={require("@/assets/images/icon.png")}
+                      style={{ width: 24, height: 24, borderRadius: 12, marginBottom: 2 }}
+                      resizeMode="contain"
+                    />
                   )}
                   <View
                     style={[
@@ -1013,31 +1002,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#E5E7EB",
     marginRight: 10,
-  },
-  headerBrandIcon: {
-    width: 34,
-    height: 34,
-    marginRight: 10,
-  },
-  brandWordmark: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: PRIMARY,
-  },
-  messageBrandLockup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 2,
-  },
-  messageBrandIcon: {
-    width: 22,
-    height: 22,
-  },
-  messageBrandWordmark: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: PRIMARY,
   },
   headerInfo: {
     flex: 1,
