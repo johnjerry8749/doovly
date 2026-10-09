@@ -569,7 +569,7 @@ export default function Services() {
 
       <FlatList
         data={combinedCards}
-        extraData={`${favTick}-${selectedFilter}-${filteredPromotedServices.length}`}
+        extraData={`${favTick}-${selectedFilter}-${filteredPromotedServices.map((service) => `${service.serviceId}:${service.serviceName}:${service.serviceDescription}:${service.price}:${service.priceValue}`).join("|")}`}
         keyExtractor={(item) => item.cardType === "promoted" ? `promotion-${item.promotionId}` : `professional-${item.id}`}
         numColumns={3}
         columnWrapperStyle={styles.columnWrapper}
