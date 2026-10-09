@@ -115,21 +115,36 @@ export async function getServicePromotionAsync(
 export async function getProfessionalPromotionLockAsync(
   professionalId: string,
 ): Promise<ServicePromotion | null> {
-  const now = new Date().toISOString();
-  const { data, error } = await supabase
+  const { data: pending, error: pendingError } = await supabase
     .from("service_promotions")
     .select(
       "id,service_id,professional_id,user_id,package_id,product_id,status,amount,currency,starts_at,ends_at",
     )
     .eq("professional_id", professionalId)
-    .in("status", ["pending", "active"])
-    .or(`status.eq.pending,and(status.eq.active,starts_at.lte.${now},ends_at.gt.${now})`)
+    .eq("status", "pending")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (error) throw error;
-  return data ? mapPromotion(data) : null;
+  if (pendingError) throw pendingError;
+  if (pending) return mapPromotion(pending);
+
+  const now = new Date().toISOString();
+  const { data: active, error: activeError } = await supabase
+    .from("service_promotions")
+    .select(
+      "id,service_id,professional_id,user_id,package_id,product_id,status,amount,currency,starts_at,ends_at",
+    )
+    .eq("professional_id", professionalId)
+    .eq("status", "active")
+    .lte("starts_at", now)
+    .gt("ends_at", now)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeError) throw activeError;
+  return active ? mapPromotion(active) : null;
 }
 
 export function isPromotionActive(
