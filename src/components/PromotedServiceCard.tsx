@@ -157,14 +157,14 @@ const styles = StyleSheet.create({
   },
   badgeWrap: {
     alignSelf: "flex-end",
-    backgroundColor: "#D4AF37",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     paddingHorizontal: 6,
     paddingVertical: 2,
     marginBottom: 3,
   },
   badgeText: {
-    color: "#000000",
+    color: GREEN,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 0.3,
