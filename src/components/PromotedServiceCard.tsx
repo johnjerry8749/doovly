@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   cityRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     gap: 3,
     marginTop: 3,
     marginBottom: 1,
@@ -195,14 +195,14 @@ const styles = StyleSheet.create({
   city: {
     color: "rgba(255,255,255,0.9)",
     fontSize: 9,
-    textAlign: "center",
+    textAlign: "left",
     flexShrink: 1,
   },
   price: {
     fontSize: 16,
     fontWeight: "900",
     color: "#FFFFFF",
-    textAlign: "center",
+    textAlign: "left",
     marginTop: 4,
   },
   bookButton: {
