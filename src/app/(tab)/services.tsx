@@ -848,13 +848,14 @@ const styles = StyleSheet.create({
   bookNowButton: { marginTop: 7, backgroundColor: GREEN, borderRadius: 7, paddingVertical: 6, alignItems: "center" },
   bookNowButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
   professionalCard: {
-    flex: 1,
-    maxWidth: "31%",
+    width: "31.5%",
     minHeight: 205,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E1E1E1",
+    padding: 10,
+    position: "relative",
   },
   promotedInlineGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 },
   favoriteButton: {
