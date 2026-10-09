@@ -375,8 +375,30 @@ export function listMyServices(professionalId: string): ProService[] {
 export async function listMyServicesAsync(
   professionalId: string,
 ): Promise<ProService[]> {
-  await ensureProfessionalsLoaded();
-  return listMyServices(professionalId);
+  // Fetch directly so the promotion screen always receives the latest service
+  // description from Supabase instead of depending on a possibly stale
+  // professional-list cache or nested relation payload.
+  const professionalUuid = await resolveProfessionalUuid(professionalId);
+  const { data, error } = await supabase
+    .from("services")
+    .select(`
+      id,
+      name,
+      description,
+      price,
+      price_value,
+      icon,
+      service_promotions (
+        status,
+        starts_at,
+        ends_at
+      )
+    `)
+    .eq("professional_id", professionalUuid)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map(mapServiceRow);
 }
 
 async function resolveProfessionalUuid(professionalId: string): Promise<string> {
