@@ -272,11 +272,17 @@ export default function Services() {
     [locationName, showAllNigeria],
   );
 
-  const matchesCategory = useCallback((profession: string, filter: string) => {
+  const matchesCategory = useCallback(
+    (profession: string, filter: string, services: Professional["services"] = []) => {
     if (filter === "All") return true;
     const category = filter.toLowerCase();
     const professional = profession.toLowerCase();
-    if (professional === category || professional.includes(category))
+    const serviceMatch = services.some(
+      (service) =>
+        service.name.toLowerCase().includes(category) ||
+        service.description.toLowerCase().includes(category),
+    );
+    if (professional === category || professional.includes(category) || serviceMatch)
       return true;
     if (
       category === "spa" &&
@@ -297,12 +303,17 @@ export default function Services() {
         person.name.toLowerCase().includes(q) ||
         person.profession.toLowerCase().includes(q) ||
         person.city.toLowerCase().includes(q) ||
+        person.services.some(
+          (service) =>
+            service.name.toLowerCase().includes(q) ||
+            service.description.toLowerCase().includes(q),
+        ) ||
         Boolean(promoted?.serviceName.toLowerCase().includes(q)) ||
         Boolean(promoted?.serviceDescription.toLowerCase().includes(q));
       return (
         matchesSearch &&
         (
-          matchesCategory(person.profession, selectedFilter) ||
+          matchesCategory(person.profession, selectedFilter, person.services) ||
           selectedFilter === "All" ||
           Boolean(promoted?.serviceName.toLowerCase().includes(selectedFilter.toLowerCase()))
         ) &&
