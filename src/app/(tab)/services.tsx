@@ -20,6 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listProfessionals,
   listProfessionalsAsync,
+  listPromotedProfessionalIdsAsync,
   listServiceCategories,
   listServiceCategoriesAsync,
   getDistanceKm,
@@ -39,11 +40,15 @@ export default function Services() {
   const [favTick, setFavTick] = useState(0);
   const [categories, setCategories] = useState(listServiceCategories());
   const [professionals, setProfessionals] = useState(listProfessionals());
+  const [promotedProfessionalIds, setPromotedProfessionalIds] = useState<string[]>([]);
   const [cities, setCities] = useState<string[]>(listCities());
   const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
+    listPromotedProfessionalIdsAsync().then((ids) => {
+      if (active) setPromotedProfessionalIds(ids);
+    });
 
     Promise.all([
       listServiceCategoriesAsync(),
@@ -226,7 +231,7 @@ export default function Services() {
 
   const filteredProfessionals = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return professionals.filter((person) => {
+    const matches = professionals.filter((person) => {
       const matchesSearch =
         !q ||
         person.name.toLowerCase().includes(q) ||
@@ -238,12 +243,18 @@ export default function Services() {
         matchesLocationCity(person.city)
       );
     });
+    return [...matches].sort(
+      (a, b) =>
+        Number(promotedProfessionalIds.includes(b.id)) -
+        Number(promotedProfessionalIds.includes(a.id)),
+    );
   }, [
     professionals,
     search,
     selectedFilter,
     matchesCategory,
     matchesLocationCity,
+    promotedProfessionalIds,
   ]);
 
   const renderProfessional = ({ item }: { item: Professional }) => {
@@ -261,6 +272,11 @@ export default function Services() {
           })
         }
       >
+        {promotedProfessionalIds.includes(item.id) && (
+          <View style={styles.promotedBadge}>
+            <Text style={styles.promotedBadgeText}>Promoted</Text>
+          </View>
+        )}
         <TouchableOpacity
           style={styles.favoriteButton}
           onPress={() => onToggleFavorite(item.id)}
@@ -424,7 +440,7 @@ export default function Services() {
 
       <FlatList
         data={filteredProfessionals}
-        extraData={`${favTick}-${selectedFilter}`}
+        extraData={`${favTick}-${selectedFilter}-${promotedProfessionalIds.length}`}
         keyExtractor={(item) => item.id}
         numColumns={3}
         columnWrapperStyle={styles.columnWrapper}
@@ -679,6 +695,21 @@ const styles = StyleSheet.create({
   columnWrapper: {
     gap: 8,
     marginBottom: 10,
+  },
+  promotedBadge: {
+    position: "absolute",
+    top: 7,
+    left: 7,
+    zIndex: 4,
+    backgroundColor: GREEN,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  promotedBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 8,
+    fontWeight: "700",
   },
   professionalCard: {
     flex: 1,
