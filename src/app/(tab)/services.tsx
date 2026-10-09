@@ -267,6 +267,7 @@ export default function Services() {
         item.serviceName.toLowerCase().includes(q) ||
         item.professionalName.toLowerCase().includes(q) ||
         item.profession.toLowerCase().includes(q) ||
+        item.serviceDescription.toLowerCase().includes(q) ||
         item.city.toLowerCase().includes(q);
       return (
         matchesSearch &&
