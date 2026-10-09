@@ -183,25 +183,43 @@ export default function PromoteServiceScreen() {
               return (
                 <Pressable
                   key={service.id}
-                  style={[styles.serviceOption, selected && styles.serviceOptionSelected, disabled && styles.optionDisabled]}
+                  style={[
+                    styles.serviceOption,
+                    selected && styles.serviceOptionSelected,
+                    disabled && styles.optionDisabled,
+                  ]}
                   onPress={() => setSelectedServiceId(service.id)}
                   disabled={disabled || purchasing}
                 >
-                  <View style={styles.serviceIcon}>
-                    <MaterialCommunityIcons name={(service.icon || "briefcase-outline") as any} size={22} color={PRIMARY} />
-                  </View>
-                  <View style={styles.serviceCopy}>
-                    <Text style={styles.serviceName}>{service.name}</Text>
-                    <Text style={styles.serviceDescription} numberOfLines={2}>{service.description}</Text>
-                    <Text style={styles.servicePrice}>{service.price}</Text>
-                  </View>
-                  {isPromoted ? (
-                    <View style={styles.promotedBadge}><Text style={styles.promotedBadgeText}>Promoted</Text></View>
-                  ) : (
-                    <View style={[styles.radio, selected && styles.radioSelected]}>
-                      {selected ? <View style={styles.radioDot} /> : null}
+                  <View style={styles.serviceCardTop}>
+                    <View style={[styles.serviceIcon, selected && styles.serviceIconSelected]}>
+                      <MaterialCommunityIcons name={(service.icon || "briefcase-outline") as any} size={23} color={PRIMARY} />
                     </View>
-                  )}
+                    {isPromoted ? (
+                      <View style={styles.promotedBadge}>
+                        <Ionicons name="trending-up" size={12} color={PRIMARY} />
+                        <Text style={styles.promotedBadgeText}>Promoted</Text>
+                      </View>
+                    ) : (
+                      <View style={[styles.radio, selected && styles.radioSelected]}>
+                        {selected ? <View style={styles.radioDot} /> : null}
+                      </View>
+                    )}
+                  </View>
+
+                  <Text style={styles.serviceName}>{service.name}</Text>
+                  <Text style={styles.serviceDescription}>
+                    {service.description?.trim() || "No description added for this service yet."}
+                  </Text>
+
+                  <View style={styles.serviceCardFooter}>
+                    <View style={styles.pricePill}>
+                      <Text style={styles.servicePrice}>{service.price}</Text>
+                    </View>
+                    <Text style={[styles.selectionLabel, selected && styles.selectionLabelSelected]}>
+                      {isPromoted ? "Currently promoted" : selected ? "Selected for promotion" : "Tap to select"}
+                    </Text>
+                  </View>
                 </Pressable>
               );
             })
@@ -277,15 +295,78 @@ const styles = StyleSheet.create({
   lockTitle: { fontSize: 14, fontWeight: "700", color: TEXT },
   lockText: { fontSize: 12, color: SECONDARY, lineHeight: 17, marginTop: 3 },
   sectionTitle: { fontSize: 14, fontWeight: "700", color: TEXT, marginBottom: 10, marginTop: 8 },
-  serviceOption: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: 12, marginBottom: 10 },
-  serviceOptionSelected: { borderColor: PRIMARY, backgroundColor: LIGHT_GREEN },
-  optionDisabled: { opacity: 0.55 },
-  serviceIcon: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: LIGHT_GREEN },
-  serviceCopy: { flex: 1 },
-  serviceName: { fontSize: 14, fontWeight: "700", color: TEXT },
-  serviceDescription: { fontSize: 12, color: SECONDARY, lineHeight: 17, marginTop: 3 },
-  servicePrice: { fontSize: 13, fontWeight: "700", color: PRIMARY, marginTop: 5 },
-  promotedBadge: { backgroundColor: "#DCFCE7", borderRadius: 16, paddingHorizontal: 8, paddingVertical: 4 },
+  serviceOption: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 18,
+    padding: 15,
+    marginBottom: 12,
+    shadowColor: "#111827",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.045,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  serviceOptionSelected: {
+    borderColor: PRIMARY,
+    backgroundColor: "#F4FCF7",
+    shadowColor: PRIMARY,
+    shadowOpacity: 0.1,
+    elevation: 3,
+  },
+  optionDisabled: { opacity: 0.65 },
+  serviceCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  serviceIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: LIGHT_GREEN,
+  },
+  serviceIconSelected: { backgroundColor: "#D1FAE5" },
+  serviceName: { fontSize: 15, fontWeight: "800", color: TEXT, lineHeight: 21 },
+  serviceDescription: {
+    fontSize: 13,
+    color: SECONDARY,
+    lineHeight: 19,
+    marginTop: 6,
+  },
+  serviceCardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  pricePill: {
+    backgroundColor: LIGHT_GREEN,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  servicePrice: { fontSize: 13, fontWeight: "800", color: PRIMARY },
+  selectionLabel: { fontSize: 11, fontWeight: "600", color: SECONDARY },
+  selectionLabelSelected: { color: PRIMARY },
+  promotedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#DCFCE7",
+    borderRadius: 16,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
   promotedBadgeText: { fontSize: 11, fontWeight: "700", color: PRIMARY },
   radio: { width: 20, height: 20, borderWidth: 1.5, borderColor: "#9CA3AF", borderRadius: 10, alignItems: "center", justifyContent: "center" },
   radioSelected: { borderColor: PRIMARY },
