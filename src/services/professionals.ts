@@ -156,6 +156,8 @@ export type PromotedService = {
   city: string;
   avatarUrl: string | null;
   verified: boolean;
+  rating: number;
+  reviewCount: number;
 };
 
 /**
@@ -185,6 +187,8 @@ export async function listActivePromotedServicesAsync(): Promise<PromotedService
         profession,
         city,
         is_verified,
+        rating,
+        review_count,
         avatar_url,
         profiles!professionals_user_id_fkey (
           full_name,
@@ -243,6 +247,8 @@ export async function listActivePromotedServicesAsync(): Promise<PromotedService
       city: String(professional.city ?? ""),
       avatarUrl: professional.avatar_url ?? profile?.avatar_url ?? null,
       verified: Boolean(professional.is_verified),
+      rating: Number(professional.rating ?? 0),
+      reviewCount: Number(professional.review_count ?? 0),
     });
   }
 
