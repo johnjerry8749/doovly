@@ -263,7 +263,11 @@ export default function Services() {
         item.city.toLowerCase().includes(q);
       return (
         matchesSearch &&
-        matchesCategory(item.profession, selectedFilter) &&
+        (
+          matchesCategory(item.profession, selectedFilter) ||
+          selectedFilter === "All" ||
+          item.serviceName.toLowerCase().includes(selectedFilter.toLowerCase())
+        ) &&
         matchesLocationCity(item.city)
       );
     });
