@@ -21,6 +21,7 @@ type PromotedServiceCardProps = {
   priceValue?: number;
   avatarUrl?: string | null;
   cardStyle?: object;
+  cardWidth?: number;
   DescriptionComponent?: React.ComponentType<{ text: string; color?: string }>;
 };
 
@@ -38,6 +39,7 @@ export function PromotedServiceCard({
   priceValue = 0,
   avatarUrl,
   cardStyle,
+  cardWidth,
   DescriptionComponent,
 }: PromotedServiceCardProps) {
   const priceLabel =
@@ -47,7 +49,7 @@ export function PromotedServiceCard({
       : "Contact for price");
 
   return (
-    <View style={[cardStyle, styles.card]}>
+    <View style={[cardStyle, styles.card, cardWidth ? { width: cardWidth } : null]}>
       <View style={styles.badgeWrap}>
         <Text style={styles.badgeText}>PROMOTED</Text>
       </View>
