@@ -82,7 +82,7 @@ export function PromotedServiceCard({
         )}
         {!!city.trim() && (
           <View style={styles.cityRow}>
-            <Ionicons name="location" size={10} color="#FFFFFF" />
+            <Ionicons name="location" size={10} color="#000000" />
             <Text style={styles.city} numberOfLines={1}>
               {city}
             </Text>
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
   city: {
-    color: "rgba(255,255,255,0.9)",
+    color: "#000000",
     fontSize: 9,
     textAlign: "left",
     flexShrink: 1,
