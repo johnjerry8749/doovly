@@ -32,6 +32,7 @@ export function PromotedServiceCard({
   serviceId,
   serviceName,
   serviceDescription = "",
+  city = "",
   price,
   priceValue = 0,
   avatarUrl,
@@ -90,6 +91,15 @@ export function PromotedServiceCard({
               {serviceDescription.trim()}
             </Text>
           ))}
+
+        {!!city.trim() && (
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.9)" />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {city.trim()}
+            </Text>
+          </View>
+        )}
 
         <Text style={styles.price} numberOfLines={1}>
           {priceLabel}
@@ -189,12 +199,25 @@ const styles = StyleSheet.create({
     marginBottom: 3,
     overflow: "hidden",
   },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    marginTop: 3,
+  },
+  locationText: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 10,
+    fontWeight: "600",
+    flexShrink: 1,
+  },
   price: {
     fontSize: 15,
     fontWeight: "900",
     color: "#FFFFFF",
     textAlign: "center",
-    marginTop: 4,
+    marginTop: 8,
   },
   bookButton: {
     marginTop: 8,
