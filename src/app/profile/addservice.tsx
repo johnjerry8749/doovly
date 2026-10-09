@@ -22,12 +22,17 @@ import {
   updateMyService,
   deleteMyService,
   listServiceCategoriesAsync,
+  invalidateProfessionalsCache,
   type ProService,
 } from "@/services/professionals";
 import {
   getLoggedInProfessionalId,
   isCurrentUserPro,
 } from "@/services/savedProviders";
+import {
+  listPromotionPackagesAsync,
+  promoteServiceAsync,
+} from "@/services/servicePromotions";
 
 const PRIMARY = "#16A34A";
 const LIGHT_GREEN = "#EAF8F0";
@@ -60,6 +65,11 @@ export default function AddService() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [promotionModalVisible, setPromotionModalVisible] = useState(false);
+  const [promotionPackages, setPromotionPackages] = useState<Awaited<ReturnType<typeof listPromotionPackagesAsync>>>([]);
+  const [promotionService, setPromotionService] = useState<ProService | null>(null);
+  const [promotionLoading, setPromotionLoading] = useState(false);
+  const [selectedPromotionPackageId, setSelectedPromotionPackageId] = useState<string | null>(null);
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categoryOpen, setCategoryOpen] = useState(false);
@@ -218,6 +228,78 @@ export default function AddService() {
     }
   };
 
+  const handlePromote = async (service: ProService) => {
+    if (!proId) {
+      Alert.alert("Promotion unavailable", "Your professional profile could not be loaded.");
+      return;
+    }
+
+    if (service.promotionActive) {
+      Alert.alert("Already promoted", "This service is currently being promoted.");
+      return;
+    }
+
+    try {
+      const packages = await listPromotionPackagesAsync();
+      if (!packages.length) {
+        Alert.alert(
+          "Promotion unavailable",
+          "Promotion packages are not available yet. Please try again later.",
+        );
+        return;
+      }
+
+      setPromotionService(service);
+      setPromotionPackages(packages);
+      setSelectedPromotionPackageId(packages[0]?.id ?? null);
+      setPromotionModalVisible(true);
+    } catch {
+      Alert.alert(
+        "Promotion unavailable",
+        "Please check your connection and try again.",
+      );
+    }
+  };
+
+  const closePromotionModal = () => {
+    if (promotionLoading) return;
+    setPromotionModalVisible(false);
+    setPromotionService(null);
+    setPromotionPackages([]);
+    setSelectedPromotionPackageId(null);
+  };
+
+  const handlePromotionPurchase = async () => {
+    if (!promotionService || !proId || !selectedPromotionPackageId) return;
+
+    setPromotionLoading(true);
+    try {
+      const result = await promoteServiceAsync(
+        promotionService,
+        proId,
+        selectedPromotionPackageId,
+      );
+
+      if (result.activated) {
+        invalidateProfessionalsCache();
+        const refreshed = await listMyServicesAsync(proId);
+        setServices(refreshed);
+      }
+
+      closePromotionModal();
+    } catch (error: any) {
+      if (error?.message !== "PURCHASE_CANCELLED") {
+        Alert.alert(
+          "Promotion",
+          error?.message ||
+            "We could not complete the promotion. Please try again.",
+        );
+      }
+    } finally {
+      setPromotionLoading(false);
+    }
+  };
+
   const handleDelete = (id: string) => {
     Alert.alert(
       "Delete Service",
@@ -315,8 +397,7 @@ export default function AddService() {
             </Text>
           </View>
           <Text style={styles.addNewSubtitle}>
-            {atFreeLimit
-              ? `Free accounts can add up to ${FREE_SERVICE_LIMIT} services. Go Pro for unlimited.`
+            {atFreeLimit              ? `Free accounts can add up to ${FREE_SERVICE_LIMIT} services. Go Pro for unlimited.`
               : isPro
                 ? "Pro plan — add unlimited services."
                 : `Offer more services and attract more customers. (${activeCount}/${FREE_SERVICE_LIMIT} used)`}
@@ -381,6 +462,11 @@ export default function AddService() {
                     <View style={styles.activeBadge}>
                       <Text style={styles.activeBadgeText}>Active</Text>
                     </View>
+                    {service.promotionActive && (
+                      <View style={styles.activeBadge}>
+                        <Text style={styles.activeBadgeText}>Promoted</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               </View>
@@ -395,29 +481,18 @@ export default function AddService() {
                 </Pressable>
 
                 <Pressable
-                  style={styles.promoteBtn}
-                  onPress={() =>
-                    Alert.alert(
-                      "Promote Service",
-                      `Promotion checkout for "${service.name}" will be connected next.`
-                    )
-                  }
-                >
-                  <Ionicons name="trending-up" size={14} color="#FFFFFF" />
-                  <Text style={styles.promoteBtnText}>Promote</Text>
-                </Pressable>
-
-                <Pressable
                   style={styles.editBtn}
-                  onPress={() =>
-                    Alert.alert(
-                      "Promote Service",
-                      "Service promotion payments are not connected on this branch yet.",
-                    )
-                  }
+                  onPress={() => void handlePromote(service)}
+                  disabled={service.promotionActive}
                 >
-                  <Ionicons name="megaphone-outline" size={14} color={PRIMARY} />
-                  <Text style={styles.editBtnText}>Promote</Text>
+                  <Ionicons
+                    name={service.promotionActive ? "checkmark-circle" : "megaphone-outline"}
+                    size={14}
+                    color={PRIMARY}
+                  />
+                  <Text style={styles.editBtnText}>
+                    {service.promotionActive ? "Promoted" : "Promote"}
+                  </Text>
                 </Pressable>
 
                 <Pressable
@@ -645,6 +720,148 @@ export default function AddService() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Modal
+        visible={promotionModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closePromotionModal}
+      >
+        <View style={styles.promotionOverlay}>
+          <Pressable
+            style={styles.promotionBackdrop}
+            onPress={closePromotionModal}
+          />
+
+          <View style={styles.promotionCard}>
+            <View style={styles.promotionTopBar}>
+              <View style={styles.promotionTopIcon}>
+                <Ionicons name="megaphone" size={20} color="#FFFFFF" />
+              </View>
+
+              <Pressable
+                style={styles.promotionClose}
+                onPress={closePromotionModal}
+                disabled={promotionLoading}
+                hitSlop={10}
+              >
+                <Ionicons name="close" size={20} color={TEXT} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.promotionTitle}>Boost your service</Text>
+            <Text style={styles.promotionSubtitle} numberOfLines={2}>
+              {promotionService?.name || "Choose a promotion package"}
+            </Text>
+
+            <View style={styles.promotionBenefits}>
+              <View style={styles.promotionBenefit}>
+                <View style={styles.promotionBenefitIcon}>
+                  <Ionicons name="trending-up" size={16} color={PRIMARY} />
+                </View>
+                <View style={styles.promotionBenefitText}>
+                  <Text style={styles.promotionBenefitTitle}>More visibility</Text>
+                  <Text style={styles.promotionBenefitDescription}>
+                    Appear higher in relevant searches.
+                  </Text>
+                </View>
+              </View>
+
+              <View style={[styles.promotionBenefit, { marginTop: 10 }]}>
+                <View style={styles.promotionBenefitIcon}>
+                  <Ionicons name="people-outline" size={16} color={PRIMARY} />
+                </View>
+                <View style={styles.promotionBenefitText}>
+                  <Text style={styles.promotionBenefitTitle}>Reach more customers</Text>
+                  <Text style={styles.promotionBenefitDescription}>
+                    Put your service in front of more people.
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.promotionSectionRow}>
+              <Text style={styles.promotionSectionTitle}>Choose a package</Text>
+              <Text style={styles.promotionSectionHint}>One-time payment</Text>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.promotionOptions}
+            >
+              {promotionPackages.map((pkg) => {
+                const selected = selectedPromotionPackageId === pkg.id;
+                const recommended = pkg.durationDays === 30;
+
+                return (
+                  <Pressable
+                    key={pkg.id}
+                    style={[
+                      styles.promotionOption,
+                      selected && styles.promotionOptionSelected,
+                    ]}
+                    onPress={() => setSelectedPromotionPackageId(pkg.id)}
+                    disabled={promotionLoading}
+                  >
+                    <View
+                      style={[
+                        styles.promotionRadio,
+                        selected && styles.promotionRadioSelected,
+                      ]}
+                    >
+                      {selected && <View style={styles.promotionRadioDot} />}
+                    </View>
+
+                    <View style={styles.promotionOptionMain}>
+                      <View style={styles.promotionOptionTitleRow}>
+                        <Text style={styles.promotionOptionName}>{pkg.name}</Text>
+                        {recommended && (
+                          <View style={styles.promotionRecommended}>
+                            <Text style={styles.promotionRecommendedText}>
+                              BEST VALUE
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <Text style={styles.promotionOptionDuration}>
+                        {pkg.durationDays} {pkg.durationDays === 1 ? "day" : "days"} of priority visibility
+                      </Text>
+                    </View>
+
+                    <Text style={styles.promotionOptionPrice}>
+                      {pkg.priceString || "Price unavailable"}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.promotionFooter}>
+              <Text style={styles.promotionPriceNote}>
+                Price is supplied by the App Store or Google Play.
+              </Text>
+
+              <Pressable
+                style={[
+                  styles.promotionContinue,
+                  (!selectedPromotionPackageId || promotionLoading) &&
+                    styles.promotionContinueDisabled,
+                ]}
+                onPress={() => void handlePromotionPurchase()}
+                disabled={!selectedPromotionPackageId || promotionLoading}
+              >
+                <Text style={styles.promotionContinueText}>
+                  {promotionLoading ? "Processing…" : "Continue to payment"}
+                </Text>
+                {!promotionLoading && (
+                  <Ionicons name="arrow-forward" size={19} color="#FFFFFF" />
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -867,22 +1084,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: PRIMARY,
   },
-  promoteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: PRIMARY,
-    borderWidth: 1,
-    borderColor: PRIMARY,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  promoteBtnText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
   deleteBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1029,8 +1230,7 @@ const styles = StyleSheet.create({
   categoryList: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 14,
+    borderColor: BORDER,    borderRadius: 14,
     overflow: "hidden",
     backgroundColor: "#FFFFFF",
   },
@@ -1129,5 +1329,221 @@ const styles = StyleSheet.create({
     color: SECONDARY,
     fontSize: 15,
     fontWeight: "600",
+  },
+
+  promotionOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+  },
+  promotionBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(17,24,39,0.58)",
+  },
+  promotionCard: {
+    width: "100%",
+    maxWidth: 460,
+    maxHeight: "88%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: Platform.OS === "ios" ? 18 : 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 12,
+  },
+  promotionTopBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  promotionTopIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: PRIMARY,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promotionClose: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promotionTitle: {
+    fontSize: 21,
+    fontWeight: "800",
+    color: TEXT,
+    marginTop: 14,
+  },
+  promotionSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: SECONDARY,
+    marginTop: 4,
+  },
+  promotionBenefits: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#EEF2F7",
+    borderRadius: 16,
+    padding: 12,
+    marginTop: 16,
+  },
+  promotionBenefit: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  promotionBenefitIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: LIGHT_GREEN,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  promotionBenefitText: {
+    flex: 1,
+  },
+  promotionBenefitTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: TEXT,
+  },
+  promotionBenefitDescription: {
+    fontSize: 11,
+    color: SECONDARY,
+    marginTop: 2,
+  },
+  promotionSectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 18,
+    marginBottom: 10,
+  },
+  promotionSectionTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: TEXT,
+  },
+  promotionSectionHint: {
+    fontSize: 11,
+    color: SECONDARY,
+    fontWeight: "600",
+  },
+  promotionOptions: {
+    paddingBottom: 4,
+  },
+  promotionOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 13,
+    marginBottom: 9,
+    backgroundColor: "#FFFFFF",
+  },
+  promotionOptionSelected: {
+    borderColor: PRIMARY,
+    backgroundColor: "#F0FDF4",
+  },
+  promotionRadio: {
+    width: 21,
+    height: 21,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: "#9CA3AF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 11,
+  },
+  promotionRadioSelected: {
+    borderColor: PRIMARY,
+  },
+  promotionRadioDot: {
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    backgroundColor: PRIMARY,
+  },
+  promotionOptionMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  promotionOptionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  promotionOptionName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: TEXT,
+    flexShrink: 1,
+  },
+  promotionRecommended: {
+    backgroundColor: "#DCFCE7",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  promotionRecommendedText: {
+    fontSize: 8,
+    fontWeight: "800",
+    color: PRIMARY,
+    letterSpacing: 0.3,
+  },
+  promotionOptionDuration: {
+    fontSize: 11,
+    color: SECONDARY,
+    marginTop: 4,
+  },
+  promotionOptionPrice: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: PRIMARY,
+    marginLeft: 8,
+  },
+  promotionFooter: {
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    marginTop: 8,
+    paddingTop: 12,
+  },
+  promotionContinue: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: PRIMARY,
+    borderRadius: 15,
+    minHeight: 50,
+    paddingHorizontal: 16,
+    gap: 9,
+  },
+  promotionContinueDisabled: {
+    opacity: 0.55,
+  },
+  promotionContinueText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  promotionPriceNote: {
+    fontSize: 10,
+    color: SECONDARY,
+    textAlign: "center",
+    marginBottom: 10,
+    lineHeight: 14,
   },
 });
