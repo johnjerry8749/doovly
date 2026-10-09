@@ -509,6 +509,17 @@ export default function ProfessionalProfile() {
             </View>
           )}
 
+          {isOwnProfile && (
+            <TouchableOpacity
+              style={styles.promoteServiceButton}
+              activeOpacity={0.8}
+              onPress={() => router.push("/profile/promote-service")}
+            >
+              <Ionicons name="megaphone-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.promoteServiceButtonText}>Promote a Service</Text>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.tabs}>
             {(
               [
@@ -1009,6 +1020,24 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontWeight: "500",
   },
+  promoteServiceButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    alignSelf: "stretch",
+    marginTop: 12,
+    marginBottom: 4,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: GREEN,
+  },
+  promoteServiceButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
   tabs: {
     flexDirection: "row",
     width: "100%",
