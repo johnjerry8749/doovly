@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
     borderRadius: 35,
   },
   cardContent: {
-    padding: 8,
+    padding: 0,
   },
   nameRow: {
     flexDirection: "row",
