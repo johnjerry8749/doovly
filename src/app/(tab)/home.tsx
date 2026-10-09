@@ -513,9 +513,14 @@ export default function Home() {
                   ))}
                   <Text style={styles.reviews}>({person.reviews.length})</Text>
                 </View>
-                <Text style={styles.profession} numberOfLines={1}>
+                <Text style={styles.profession} numberOfLines={2}>
                   {person.profession}
                 </Text>
+                {!!person.bio?.trim() && (
+                  <Text style={styles.professionalBio} numberOfLines={2}>
+                    {person.bio.trim()}
+                  </Text>
+                )}
                 <Text style={styles.cityText} numberOfLines={1}>
                   <Ionicons name="location" size={10} color="#159447" />{" "}
                   {person.city}
@@ -719,6 +724,7 @@ const styles = StyleSheet.create({
   professionalsContainer: { flexDirection: "row", gap: 12, paddingBottom: 8 },
   professionalCard: {
     width: "31.5%",
+    minHeight: 205,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
@@ -744,6 +750,13 @@ const styles = StyleSheet.create({
   rating: { fontSize: 11, fontWeight: "600", marginLeft: 3, color: "#333" },
   reviews: { fontSize: 10, color: "#777", marginLeft: 2 },
   profession: { fontSize: 11, color: "#555", marginBottom: 2 },
+  professionalBio: {
+    fontSize: 10,
+    lineHeight: 13,
+    color: "#666",
+    marginTop: 2,
+    marginBottom: 4,
+  },
   cityText: { fontSize: 10, color: "#777", marginBottom: 4 },
   price: { fontSize: 12, fontWeight: "700", color: "#159447" },
   emptyProsContainer: { alignItems: "center", paddingVertical: 30, paddingHorizontal: 20 },
