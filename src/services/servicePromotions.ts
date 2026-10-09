@@ -112,6 +112,26 @@ export async function getServicePromotionAsync(
   return data ? mapPromotion(data) : null;
 }
 
+export async function getProfessionalPromotionLockAsync(
+  professionalId: string,
+): Promise<ServicePromotion | null> {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("service_promotions")
+    .select(
+      "id,service_id,professional_id,user_id,package_id,product_id,status,amount,currency,starts_at,ends_at",
+    )
+    .eq("professional_id", professionalId)
+    .in("status", ["pending", "active"])
+    .or(`status.eq.pending,and(status.eq.active,starts_at.lte.${now},ends_at.gt.${now})`)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapPromotion(data) : null;
+}
+
 export function isPromotionActive(
   promotion: ServicePromotion | null | undefined,
 ): boolean {
@@ -142,18 +162,13 @@ export async function promoteServiceAsync(
   if (packageError) throw packageError;
   if (!pkg) throw new Error("Promotion package is no longer available.");
 
-  // A user may buy another boost while one is active, but we do not allow
-  // multiple unresolved purchases for the same service at the same time.
-  const { data: pendingPromotion } = await supabase
-    .from("service_promotions")
-    .select("id")
-    .eq("service_id", service.id)
-    .eq("user_id", session.uuid)
-    .eq("status", "pending")
-    .maybeSingle();
-
-  if (pendingPromotion?.id) {
-    throw new Error("A promotion purchase is already processing for this service.");
+  // Only one service promotion may be active or processing for a professional at a time.
+  const activePromotion = await getProfessionalPromotionLockAsync(professionalId);
+  if (activePromotion) {
+    if (activePromotion.status === "active") {
+      throw new Error("You already have an active promotion. You can promote another service after it expires.");
+    }
+    throw new Error("A promotion purchase is already processing. Please wait for it to finish before trying again.");
   }
 
   const { data: pending, error: pendingError } = await supabase
