@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -78,10 +78,6 @@ export default function PromoteServiceScreen() {
       setLoading(false);
     }
   }, [professionalId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -182,7 +178,8 @@ export default function PromoteServiceScreen() {
           ) : (
             services.map((service) => {
               const selected = selectedServiceId === service.id;
-              const disabled = Boolean(activePromotion) || Boolean(service.promotionActive);
+              const isPromoted = Boolean(service.promotionActive || activePromotion?.serviceId === service.id);
+              const disabled = Boolean(activePromotion) || isPromoted;
               return (
                 <Pressable
                   key={service.id}
@@ -198,7 +195,7 @@ export default function PromoteServiceScreen() {
                     <Text style={styles.serviceDescription} numberOfLines={2}>{service.description}</Text>
                     <Text style={styles.servicePrice}>{service.price}</Text>
                   </View>
-                  {service.promotionActive ? (
+                  {isPromoted ? (
                     <View style={styles.promotedBadge}><Text style={styles.promotedBadgeText}>Promoted</Text></View>
                   ) : (
                     <View style={[styles.radio, selected && styles.radioSelected]}>
