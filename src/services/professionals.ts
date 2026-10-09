@@ -9,6 +9,8 @@ export type ProService = {
   price: string;
   priceValue: number;
   icon: string;
+  promotionActive?: boolean;
+  promotionEndsAt?: string;
 };
 
 export type ProReview = {
@@ -86,6 +88,12 @@ async function fetchAll(): Promise<Professional[]> {
   const list = (data ?? [])
     .filter((row: any) => row.profiles?.email?.toLowerCase() !== "system@doovly.app")
     .map(mapProfessionalRow);
+  list.sort((a, b) => {
+    const aPromoted = a.services.some((service) => service.promotionActive);
+    const bPromoted = b.services.some((service) => service.promotionActive);
+    if (aPromoted !== bPromoted) return aPromoted ? -1 : 1;
+    return 0;
+  });
   cache = list;
   return list;
 }
