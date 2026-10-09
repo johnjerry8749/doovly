@@ -34,6 +34,7 @@ import { isSaved, toggleSave } from "@/services/savedProviders";
 
 import { listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
+import { PromotedServiceCard } from "@/components/PromotedServiceCard";
 
 function MovingServiceDescription({ text, color = "#666" }: { text: string; color?: string }) {
   const translateX = React.useRef(new Animated.Value(0)).current;
@@ -457,47 +458,18 @@ export default function Home() {
         ) : (
           <View style={styles.professionalsGrid}>
             {filteredPromotedServices.map((item) => (
-              <View key={item.promotionId} style={styles.professionalCard}>
-                <View style={{ alignItems: "flex-end", marginBottom: 3 }}>
-                  <Text style={{ color: "#159447", backgroundColor: "#DCFCE7", overflow: "hidden", borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2, fontSize: 8, fontWeight: "800" }}>PROMOTED</Text>
-                </View>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => router.push({ pathname: "/professional/[id]", params: { id: item.professionalId } })}
-                >
-                  <View style={[styles.profileImageContainer, { width: 48, height: 48, borderRadius: 24, marginTop: 2, marginBottom: 5 }]}>
-                    {item.avatarUrl ? (
-                      <Image source={{ uri: item.avatarUrl }} style={[styles.profileImage, { borderRadius: 24 }]} resizeMode="cover" />
-                    ) : (
-                      <View style={[styles.profileImage, { borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: "#ECFDF5" }]}>
-                        <Ionicons name="person" size={20} color="#159447" />
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.professionalName} numberOfLines={1}>{item.serviceName}</Text>
-                  {!!item.serviceDescription.trim() && (
-                    <MovingServiceDescription text={item.serviceDescription} color={"#666"} />
-                  )}
-                  <Text style={styles.price} numberOfLines={1}>
-                    {item.price || (item.priceValue > 0 ? `₦${item.priceValue.toLocaleString("en-NG")}` : "Contact for price")}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.bookNowButton}
-                  activeOpacity={0.8}
-                  onPress={() => router.push({
-                    pathname: "/bookme/[id]",
-                    params: {
-                      id: item.professionalId,
-                      serviceId: item.serviceId,
-                      serviceName: item.serviceName,
-                      price: item.price || String(item.priceValue || ""),
-                    },
-                  })}
-                >
-                  <Text style={styles.bookNowButtonText}>Book Now</Text>
-                </TouchableOpacity>
-              </View>
+              <PromotedServiceCard
+                key={item.promotionId}
+                professionalId={item.professionalId}
+                serviceId={item.serviceId}
+                serviceName={item.serviceName}
+                serviceDescription={item.serviceDescription}
+                price={item.price}
+                priceValue={item.priceValue}
+                avatarUrl={item.avatarUrl}
+                cardStyle={styles.professionalCard}
+                DescriptionComponent={MovingServiceDescription}
+              />
             ))}
             {displayedProfessionals.map((person) => (
               <TouchableOpacity
