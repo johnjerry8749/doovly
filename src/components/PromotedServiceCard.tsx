@@ -151,7 +151,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.35,
   },
   profileTapArea: {
-    flex: 1,
     alignItems: "stretch",
   },
   avatar: {
@@ -218,10 +217,10 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#FFFFFF",
     textAlign: "center",
-    marginTop: 3,
+    marginTop: 2,
   },
   bookButton: {
-    marginTop: 5,
+    marginTop: 3,
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     paddingVertical: 5,
