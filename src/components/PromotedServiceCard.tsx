@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import {
   Image,
   StyleSheet,
@@ -26,6 +26,8 @@ type PromotedServiceCardProps = {
   rating?: number;
   reviewCount?: number;
   DescriptionComponent?: React.ComponentType<{ text: string; color?: string }>;
+  cardRef?: (node: View | null) => void;
+  onCardLayout?: () => void;
 };
 
 export function PromotedServiceCard({
@@ -39,11 +41,9 @@ export function PromotedServiceCard({
   avatarUrl,
   cardStyle,
   DescriptionComponent,
+  cardRef,
+  onCardLayout,
 }: PromotedServiceCardProps) {
-  useEffect(() => {
-    void trackPromotionEvent(serviceId, "impressions");
-  }, [serviceId]);
-
   const priceLabel =
     price ||
     (priceValue > 0
@@ -51,7 +51,7 @@ export function PromotedServiceCard({
       : "Contact for price");
 
   return (
-    <View style={[cardStyle, styles.card]}>
+    <View ref={cardRef} onLayout={onCardLayout} style={[cardStyle, styles.card]}>
       <View style={styles.badgeWrap}>
         <Text style={styles.badgeText}>PROMOTED</Text>
       </View>
