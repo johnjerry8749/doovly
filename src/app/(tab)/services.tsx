@@ -147,8 +147,18 @@ export default function Services() {
           console.warn("Services data load failed:", error);
         });
 
+      // Keep promotion styling in sync even when Services stays open at expiry.
+      const promotionRefresh = setInterval(() => {
+        listActivePromotedServicesAsync()
+          .then((nextPromotedServices) => {
+            if (active) setPromotedServices(nextPromotedServices);
+          })
+          .catch((error) => console.warn("Promotion refresh failed:", error));
+      }, 30000);
+
       return () => {
         active = false;
+        clearInterval(promotionRefresh);
       };
     }, []),
   );
