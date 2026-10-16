@@ -173,9 +173,9 @@ export async function listAdminPromotions(): Promise<AdminPromotion[]> {
   const lookupError = services.error ?? profiles.error ?? packages.error;
   if (lookupError) throw lookupError;
 
-  const serviceById = new Map((services.data ?? []).map((item: any) => [item.id, item]));
-  const profileById = new Map((profiles.data ?? []).map((item: any) => [item.id, item]));
-  const packageById = new Map((packages.data ?? []).map((item: any) => [item.id, item]));
+  const serviceById = new Map<string, any>((services.data ?? []).map((item: any) => [String(item.id), item] as [string, any]));
+  const profileById = new Map<string, any>((profiles.data ?? []).map((item: any) => [String(item.id), item] as [string, any]));
+  const packageById = new Map<string, any>((packages.data ?? []).map((item: any) => [String(item.id), item] as [string, any]));
 
   return rows.map((row: any) => {
     const service: any = serviceById.get(row.service_id);
