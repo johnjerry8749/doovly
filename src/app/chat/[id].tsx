@@ -23,6 +23,9 @@ import {
   getConversationAsync,
   getConversation,
   getMessagesAsync,
+  getCachedMessagesAsync,
+  cacheMessagesAsync,
+  getCachedConversationsAsync,
   sendMessage,
   markConversationReadAsync,
   isSharingLocationAsync,
@@ -235,6 +238,43 @@ export default function ChatConversation() {
     };
   }, [conversationId]);
 
+  // Hydrate the DM from device storage first. This must never wait for Supabase.
+  useEffect(() => {
+    let active = true;
+
+    void Promise.all([
+      getCachedConversationsAsync(),
+      getCachedMessagesAsync(conversationId),
+    ]).then(([cachedConversations, cachedMessages]) => {
+      if (!active) return;
+
+      const storedConversation = cachedConversations?.find(
+        (item) => item.id === conversationId,
+      );
+
+      if (storedConversation) {
+        setConversation((current) => current ?? storedConversation);
+        setLoadingConversation(false);
+      }
+
+      if (cachedMessages?.length) {
+        setMessages((current) => {
+          const byId = new Map<string, ChatMessage>();
+          [...cachedMessages, ...current].forEach((message) => byId.set(message.id, message));
+          return [...byId.values()].sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+          );
+        });
+      }
+    }).catch((error) => {
+      console.warn("Could not restore cached chat:", error);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [conversationId]);
+
   useEffect(() => {
     let active = true;
 
@@ -270,7 +310,16 @@ export default function ChatConversation() {
           ]);
 
           if (active && msgsResult.status === "fulfilled") {
-            setMessages(msgsResult.value);
+            const freshMessages = msgsResult.value;
+            setMessages((current) => {
+              const byId = new Map<string, ChatMessage>();
+              [...current, ...freshMessages].forEach((message) => byId.set(message.id, message));
+              const merged = [...byId.values()].sort(
+                (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+              );
+              void cacheMessagesAsync(conv.id, merged);
+              return merged;
+            });
           } else if (msgsResult.status === "rejected") {
             console.warn("Could not refresh chat messages:", msgsResult.reason);
           }
@@ -304,9 +353,6 @@ export default function ChatConversation() {
               if (active) setChatCoins(value);
             }),
           ]);
-        } else {
-          setConversation(undefined);
-          setMessages([]);
         }
 
 
@@ -337,6 +383,13 @@ export default function ChatConversation() {
       cleanup?.();
     };
   }, [conversationId]);
+
+  // Persist each displayed message update so reopening the DM works offline.
+  useEffect(() => {
+    if (conversationId && messages.length > 0) {
+      void cacheMessagesAsync(conversationId, messages);
+    }
+  }, [conversationId, messages]);
 
   // Open at the newest message after the real message list has finished
   // arriving. Do not rely on the first render because cached/realtime loading

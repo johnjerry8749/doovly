@@ -1,11 +1,13 @@
 import { useEffect } from "react";
 import { AppState } from "react-native";
 import { Stack, useRouter } from "expo-router";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { focusManager } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 
 import { LocationProvider } from "@/context/LocationContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { queryClient } from "@/lib/queryClient";
+import { queryPersister, shouldPersistQuery } from "@/lib/queryPersister";
 import {
   addNotificationResponseListener,
   bindPushAuthListener,
@@ -19,6 +21,8 @@ import {
   getCustomerInfo,
   initRevenueCat,
 } from "@/lib/revenuecat";
+
+const QUERY_CACHE_MAX_AGE = 1000 * 60 * 60 * 24;
 
 function RevenueCatBootstrap() {
   const { user } = useAuth();
@@ -52,6 +56,19 @@ export default function RootLayout() {
   const router = useRouter();
 
   useEffect(() => {
+    focusManager.setFocused(AppState.currentState === "active");
+
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      const isActive = state === "active";
+      focusManager.setFocused(isActive);
+
+      if (isActive) {
+        // Refresh bootstrap data when the app returns to the foreground.
+        void retryBootstrap();
+        void registerForNotifications();
+      }
+    });
+
     void registerForNotifications();
     const unbindPushAuth = bindPushAuthListener();
 
@@ -75,22 +92,27 @@ export default function RootLayout() {
 
     void bootstrapAppData();
 
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        void retryBootstrap();
-        void registerForNotifications();
-      }
-    });
-
     return () => {
-      subscription.remove();
+      appStateSubscription.remove();
       unbindPushAuth();
       removeNotificationResponse();
     };
   }, [router]);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: queryPersister,
+        maxAge: QUERY_CACHE_MAX_AGE,
+        buster: "doovly-query-cache-v1",
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) =>
+            query.state.status === "success" &&
+            shouldPersistQuery(query.queryKey),
+        },
+      }}
+    >
       <SystemNotificationBanner />
       <AuthProvider>
         <RevenueCatBootstrap />
@@ -102,6 +124,6 @@ export default function RootLayout() {
           />
         </LocationProvider>
       </AuthProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
