@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   getDashboardStats,
   type DashboardStats,
+  type DashboardRange,
 } from "@/services/admin/dashboard";
 
 const GREEN = "#159447";
@@ -67,7 +68,20 @@ function formatNaira(n: number) {
 export default function Dashboard() {
   const insets = useSafeAreaInsets();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  useEffect(() => { getDashboardStats().then(setStats).catch((e) => console.warn("[Admin Dashboard]", e)); }, []);
+  const [range, setRange] = useState<DashboardRange>("all");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    getDashboardStats(range)
+      .then((data) => { if (active) setStats(data); })
+      .catch((e) => console.warn("[Admin Dashboard]", e))
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [range]);
+
+  const chooseRange = (next: DashboardRange) => setRange(next);
   const maxBar = useMemo(
     () => Math.max(...(stats?.overviewSeries ?? []).map((s) => s.value), 1),
     [stats?.overviewSeries],
@@ -88,7 +102,7 @@ export default function Dashboard() {
             <Text style={styles.title}>Dashboard</Text>
             <Text style={styles.subtitle}>Platform overview and key statistics</Text>
           </View>
-          <TouchableOpacity style={styles.dateChip} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.dateChip} activeOpacity={0.8} onPress={() => chooseRange(range === "all" ? "30days" : "all")}>
             <Ionicons name="calendar-outline" size={14} color={GRAY} />
             <Text style={styles.dateChipText} numberOfLines={1}>
               {stats.dateRangeLabel}
@@ -188,11 +202,23 @@ export default function Dashboard() {
 
         <View style={styles.chartCard}>
           <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Overview</Text>
-            <TouchableOpacity style={styles.chartRange} activeOpacity={0.8}>
-              <Text style={styles.chartRangeText}>Last 30 Days</Text>
-              <Ionicons name="chevron-down" size={14} color={GRAY} />
-            </TouchableOpacity>
+            <View>
+              <Text style={styles.chartTitle}>Overview</Text>
+              <Text style={styles.overviewHint}>{loading ? "Updating report…" : stats.dateRangeLabel}</Text>
+            </View>
+            <View style={styles.rangeFilters}>
+              {([{ key: "all", label: "All time" }, { key: "30days", label: "Last 30 days" }] as const).map((option) => (
+                <TouchableOpacity
+                  key={option.key}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: range === option.key }}
+                  onPress={() => chooseRange(option.key)}
+                  style={[styles.rangeOption, range === option.key && styles.rangeOptionActive]}
+                >
+                  <Text style={[styles.rangeOptionText, range === option.key && styles.rangeOptionTextActive]}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           <View style={styles.chartArea}>
@@ -215,10 +241,9 @@ export default function Dashboard() {
           </View>
 
           <View style={styles.xAxis}>
-            <Text style={styles.xLabel}>Sep 1</Text>
-            <Text style={styles.xLabel}>Sep 10</Text>
-            <Text style={styles.xLabel}>Sep 20</Text>
-            <Text style={styles.xLabel}>Sep 30</Text>
+            {stats.overviewSeries.map((point) => (
+              <Text key={point.label} style={styles.xLabel} numberOfLines={1}>{point.label}</Text>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -318,18 +343,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   chartTitle: { fontSize: 16, fontWeight: "700", color: "#111827" },
-  chartRange: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  chartRangeText: { fontSize: 12, fontWeight: "600", color: GRAY },
+  overviewHint: { fontSize: 11, color: GRAY, marginTop: 3 },
+  rangeFilters: { flexDirection: "row", gap: 4, backgroundColor: "#F3F4F6", borderRadius: 9, padding: 3 },
+  rangeOption: { paddingHorizontal: 8, paddingVertical: 7, borderRadius: 7 },
+  rangeOptionActive: { backgroundColor: "#D1FAE5" },
+  rangeOptionText: { fontSize: 10, fontWeight: "600", color: GRAY },
+  rangeOptionTextActive: { color: GREEN },
   chartArea: { flexDirection: "row", height: 140 },
   yAxis: { width: 28, justifyContent: "space-between", paddingBottom: 4 },
   yLabel: { fontSize: 10, color: "#9CA3AF" },
