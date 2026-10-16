@@ -223,9 +223,9 @@ export default function Dashboard() {
 
           <View style={styles.chartArea}>
             <View style={styles.yAxis}>
-              <Text style={styles.yLabel}>150</Text>
-              <Text style={styles.yLabel}>100</Text>
-              <Text style={styles.yLabel}>50</Text>
+              <Text style={styles.yLabel}>{Math.ceil(maxBar).toLocaleString()}</Text>
+              <Text style={styles.yLabel}>{Math.ceil(maxBar * 2 / 3).toLocaleString()}</Text>
+              <Text style={styles.yLabel}>{Math.ceil(maxBar / 3).toLocaleString()}</Text>
               <Text style={styles.yLabel}>0</Text>
             </View>
             <View style={styles.barsWrap}>
