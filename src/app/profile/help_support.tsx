@@ -150,37 +150,55 @@ const FAQS = [
     id: "1",
     question: "How do I book a service?",
     answer:
-      "Browse services or professionals, open a profile, choose a service and tap Book Now. Enter the requested details and submit your booking request. Track its status in My Bookings and confirm the price and payment arrangements with the professional before the service begins.",
+      "Browse Home or Services, open a professional's profile, choose the service you need and tap Book Now. Enter the requested booking details and submit your request. Check My Bookings for its status, and agree on the final price and payment arrangements with the professional before work begins.",
   },
   {
     id: "2",
-    question: "How do I make a payment?",
+    question: "How do I pay for a service?",
     answer:
-      "Confirm the total price, payment method and payment timing with the professional before the service begins. If Pay on Site is offered, you can pay when the service is provided. Keep proof of payment and never share your bank PIN, password or OTP.",
+      "Agree directly with the professional on the total price, payment method and when payment is due before work begins. Use Pay on Site if it is offered for your booking. Keep your receipt or transfer confirmation, and never share your bank PIN, password or OTP.",
   },
   {
     id: "3",
-    question: "How do I get a refund?",
+    question: "Can I cancel or reschedule a booking?",
     answer:
-      "Contact the professional to discuss the payment and explain the issue. You can also contact Doovly Support for help with the booking and guidance on next steps. Keep your booking details and proof of payment available.",
+      "Open My Bookings and review the booking details and available actions. Whether a booking can be changed or cancelled may depend on its current status and the professional's policy. If you cannot resolve the issue, contact the professional or Doovly Support for guidance.",
   },
   {
     id: "4",
-    question: "How do I become a service provider?",
+    question: "How do I get help with a payment or refund?",
     answer:
-      "Sign up, complete your profile, add services and submit verification. Once approved you can start receiving bookings.",
+      "Contact the professional first to explain the issue and discuss the payment. If you still need help, contact Doovly Support using the options on this page. Keep your booking details and proof of payment. Any refund or payment resolution depends on the circumstances and the agreed arrangement.",
   },
   {
     id: "5",
-    question: "How do I verify my account?",
+    question: "How do I become a service provider?",
     answer:
-      "Open Profile → Verification and upload the required documents. We usually review within 24–48 hours.",
+      "Create an account, complete your profile, add the services you offer and submit the required verification documents from Profile → Verification. Keep your service descriptions, prices and availability accurate so customers know what to expect.",
   },
   {
     id: "6",
-    question: "What if a provider doesn't show up?",
+    question: "What documents do I need for verification?",
     answer:
-      "Open your booking details and contact the professional if appropriate. If you need further help, reach out to Doovly Support using the contact options below so we can help you review the booking and consider next steps.",
+      "Open Profile → Verification and follow the instructions shown in the app to submit the required government-issued ID and professional certificate. Make sure your documents are clear and the details are readable. Check the app for your verification status or contact support if you need help.",
+  },
+  {
+    id: "7",
+    question: "How can I promote my service?",
+    answer:
+      "If service promotion is available on your account, open the promote-service option, select the service you want to feature and follow the in-app steps to choose the available promotion option and complete setup. An active promotion may prevent you from starting another promotion until it ends.",
+  },
+  {
+    id: "8",
+    question: "What should I do if a professional doesn't show up?",
+    answer:
+      "Open the booking in My Bookings and contact the professional if appropriate. If you cannot resolve the situation, contact Doovly Support with your booking details so the team can guide you on the next steps.",
+  },
+  {
+    id: "9",
+    question: "How do I keep my account secure?",
+    answer:
+      "Keep your profile contact details up to date, use a strong password and never share your password, bank PIN or OTP. If you notice suspicious activity, change your password and contact Doovly Support.",
   },
 ];
 
