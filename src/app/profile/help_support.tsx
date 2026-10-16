@@ -85,6 +85,13 @@ const POPULAR_TOPICS = [
     icon: "settings-outline" as const,
     guideKey: "technical" as const,
   },
+  {
+    id: "8",
+    title: "Chat & Conversations",
+    subtitle: "Message professionals about service details",
+    icon: "chatbubbles-outline" as const,
+    guideKey: "chat" as const,
+  },
 ];
 
 const GUIDE_CONTENT = {
@@ -158,6 +165,16 @@ Never share your bank PIN, password or OTP with anyone.`,
 4. Clear app cache (Android) or reinstall if problems continue.
 
 Still stuck? Use Live Chat, Email, or Call Us below and describe the error you see.`,
+  },
+  chat: {
+    title: "Chat & Conversations",
+    body: `1. Use the chat feature when it is available to you to communicate with a professional about a service or booking.
+2. Keep messages polite and focused on the service details, timing, and any agreed arrangements.
+3. Confirm the final price and payment method before work begins.
+4. Keep important booking information and messages so you can refer back to them if needed.
+5. Never send your password, bank PIN, OTP, or other sensitive account information in chat.
+
+If you cannot access a conversation or it does not load, check your internet connection, reopen the app, and contact Doovly Support if the problem continues.`,
   },
 };
 
