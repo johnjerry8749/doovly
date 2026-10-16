@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   Alert,
   FlatList,
   Image,
@@ -35,6 +36,7 @@ import { isSaved, toggleSave } from "@/services/savedProviders";
 import { listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 import { PromotedServiceCard } from "@/components/PromotedServiceCard";
+import { trackPromotionEvent } from "@/services/promotionAnalytics";
 
 function MovingServiceDescription({ text, color = "#666" }: { text: string; color?: string }) {
   const translateX = React.useRef(new Animated.Value(0)).current;
@@ -123,6 +125,21 @@ export default function Home() {
   const [promotedServices, setPromotedServices] = useState<PromotedService[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
+  const promotedCardRefs = useRef<Record<string, View | null>>({});
+  const visibilityCheckAt = useRef(0);
+  const checkVisiblePromotedCards = useCallback(() => {
+    const now = Date.now();
+    if (now - visibilityCheckAt.current < 250) return;
+    visibilityCheckAt.current = now;
+    const screenHeight = Dimensions.get("window").height;
+    Object.entries(promotedCardRefs.current).forEach(([serviceId, node]) => {
+      node?.measureInWindow((_x, y, _width, height) => {
+        if (y < screenHeight && y + height > 0) {
+          void trackPromotionEvent(serviceId, "impressions");
+        }
+      });
+    });
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -348,6 +365,8 @@ export default function Home() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.container}
+        onScroll={checkVisiblePromotedCards}
+        scrollEventThrottle={250}
       >
         <View style={styles.header}>
           <TouchableOpacity
@@ -479,6 +498,11 @@ export default function Home() {
                 reviewCount={item.reviewCount}
                 cardStyle={styles.professionalCard}
                 DescriptionComponent={MovingServiceDescription}
+                cardRef={(node) => {
+                  if (node) promotedCardRefs.current[item.serviceId] = node;
+                  else delete promotedCardRefs.current[item.serviceId];
+                }}
+                onCardLayout={checkVisiblePromotedCards}
               />
             ))}
             {displayedProfessionals.map((person) => (
