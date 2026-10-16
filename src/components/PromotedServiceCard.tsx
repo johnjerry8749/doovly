@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Image,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { trackPromotionEvent } from "@/services/promotionAnalytics";
 
 const GREEN = "#159447";
 
@@ -39,6 +40,10 @@ export function PromotedServiceCard({
   cardStyle,
   DescriptionComponent,
 }: PromotedServiceCardProps) {
+  useEffect(() => {
+    void trackPromotionEvent(serviceId, "impressions");
+  }, [serviceId]);
+
   const priceLabel =
     price ||
     (priceValue > 0
@@ -54,11 +59,12 @@ export function PromotedServiceCard({
       <TouchableOpacity
         style={styles.profileTapArea}
         activeOpacity={0.85}
-        onPress={() =>
+        onPress={() => {
+          void trackPromotionEvent(serviceId, "service_views");
           router.push({
             pathname: "/professional/[id]",
             params: { id: professionalId, from: "home" },
-          })
+          });
         }
       >
         <View style={styles.avatar}>
