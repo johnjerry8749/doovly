@@ -39,42 +39,49 @@ const POPULAR_TOPICS = [
   {
     id: "1",
     title: "Bookings",
-    subtitle: "Manage, reschedule or cancel bookings",
+    subtitle: "Book, track or manage a service",
     icon: "calendar-outline" as const,
     guideKey: "bookings" as const,
   },
   {
     id: "2",
     title: "Payments",
-    subtitle: "Payments, refunds and wallet issues",
+    subtitle: "Prices, payment methods and issues",
     icon: "card-outline" as const,
     guideKey: "payments" as const,
   },
   {
     id: "3",
-    title: "Accounts",
-    subtitle: "Profile, verification and security",
+    title: "Account & Verification",
+    subtitle: "Edit your profile and verify your account",
     icon: "person-outline" as const,
     guideKey: "accounts" as const,
   },
   {
     id: "4",
-    title: "Services",
-    subtitle: "Listing services, leads and promotions",
+    title: "My Services",
+    subtitle: "Add services and keep listings updated",
     icon: "briefcase-outline" as const,
     guideKey: "services" as const,
   },
   {
     id: "5",
+    title: "Promote a Service",
+    subtitle: "Feature a service and manage promotions",
+    icon: "megaphone-outline" as const,
+    guideKey: "promotions" as const,
+  },
+  {
+    id: "6",
     title: "Safety",
-    subtitle: "Staying safe on Doovly",
+    subtitle: "Protect yourself while using Doovly",
     icon: "shield-checkmark-outline" as const,
     guideKey: "safety" as const,
   },
   {
-    id: "6",
+    id: "7",
     title: "Technical Issues",
-    subtitle: "App issues, errors and bugs",
+    subtitle: "Troubleshoot app errors and problems",
     icon: "settings-outline" as const,
     guideKey: "technical" as const,
   },
@@ -114,13 +121,24 @@ If you have a concern about a booking or payment, contact Doovly Support for gui
 If you notice strange activity, change your password and contact support immediately.`,
   },
   services: {
-    title: "Services Guidelines",
-    body: `1. Providers list services from Profile → Add Service.
-2. Each service should have a clear name, description and price.
-3. Customers book a specific service from your profile.
-4. Keep availability updated so you only get jobs you can take.
+    title: "My Services",
+    body: `1. Open Profile → Add Service to create a service listing.
+2. Give each service a clear name, description and accurate price.
+3. Keep your service details and availability up to date.
+4. Customers can review your profile and choose a service to book.
+5. Use clear Portfolio photos to help customers understand your work.
 
-Tips: clear photos in Portfolio and accurate pricing improve bookings.`,
+Review your listings regularly so customers see current information.`,
+  },
+  promotions: {
+    title: "Promote a Service",
+    body: `1. Open your profile and choose the promote-service option.
+2. Select the service you want to feature and follow the in-app setup.
+3. Review the available promotion option, price and duration before confirming.
+4. Check the promotion status in the app.
+5. If a promotion is active, you may need to wait until it ends before starting another one.
+
+Only confirm a promotion after reviewing the details shown in the app.`,
   },
   safety: {
     title: "Staying Safe on Doovly",
