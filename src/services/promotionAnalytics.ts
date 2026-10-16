@@ -22,7 +22,7 @@ export async function trackPromotionEvent(
       console.warn("Promotion event tracking failed:", error.message);
     }
   } catch (error) {
-    if (metric === "impressions") countedImpressions.delete(serviceId);
+    if (metric === "impressions") lastImpressionAt.delete(serviceId);
     console.warn("Promotion event tracking failed:", error);
   }
 }
