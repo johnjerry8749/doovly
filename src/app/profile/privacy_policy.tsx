@@ -29,7 +29,7 @@ const PRIVACY_SECTIONS = [
   {
     id: 2,
     title: "Information We Collect",
-    icon: "database-outline" as const,
+    icon: "server-outline" as const,
     body: "Depending on how you use Doovly, information may include your name, phone number, email address, profile photo, city, account role and authentication details; professional profile, service listings, prices, portfolio photos and verification information you submit; bookings, offers, reviews, ratings and support requests; and messages or attachments exchanged through chat. We may also receive technical information such as app version, device and diagnostic data needed to operate, protect and troubleshoot the service. We do not ask you to send passwords, bank PINs or one-time passcodes to support.",
   },
   {
@@ -174,7 +174,7 @@ export default function PrivacyPolicy() {
                     <Text style={styles.numberText}>{section.id}</Text>
                   </View>
                   <View style={styles.sectionIcon}>
-                    <MaterialCommunityIcons name={section.icon} size={20} color={PRIMARY} />
+                    <Ionicons name={section.icon} size={20} color={PRIMARY} />
                   </View>
                   <Text style={styles.sectionTitle}>{section.title}</Text>
                   <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={18} color={PRIMARY} />
