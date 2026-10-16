@@ -105,7 +105,7 @@ export default function PromoteServiceScreen() {
       // lock clears and another purchase becomes available without reopening.
       const promotionRefresh = setInterval(() => {
         void refreshPromotionState();
-      }, 30000);
+      }, 15000);
       return () => clearInterval(promotionRefresh);
     }, [load, refreshPromotionState]),
   );
