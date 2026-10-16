@@ -363,18 +363,22 @@ const styles = StyleSheet.create({
 
   periodToggle: {
     flexDirection: "row",
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 360,
     backgroundColor: "#F3F4F6",
     borderRadius: 28,
     padding: 4,
     marginBottom: 20,
-    alignSelf: "center",
-    minWidth: 220,
   },
   periodSegment: {
     flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 8,
     paddingVertical: 10,
     borderRadius: 24,
     alignItems: "center",
+    justifyContent: "center",
   },
   periodSegmentActive: {
     backgroundColor: PRIMARY,
@@ -383,6 +387,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: TEXT_MUTED,
+    textAlign: "center",
+    includeFontPadding: false,
   },
   periodSegmentTextActive: {
     color: "#FFFFFF",
