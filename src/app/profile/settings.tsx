@@ -177,8 +177,10 @@ export default function Settings() {
           />
           <Row
             icon="document-text-outline"
-            title="Terms"
-            onPress={() => router.push("/(auth)/terms_condition")}
+            title="Terms & Conditions"
+            rightText="Agreed"
+            disabled
+            last
           />
           <Row
             icon="shield-checkmark-outline"
@@ -292,25 +294,36 @@ function Row({
   rightText,
   onPress,
   last,
+  disabled,
 }: {
   icon: React.ComponentProps<typeof Ionicons>["name"];
   title: string;
   rightText?: string;
   onPress?: () => void;
   last?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <TouchableOpacity
       style={[styles.row, last && styles.rowLast]}
       onPress={onPress}
-      activeOpacity={0.7}
+      disabled={disabled}
+      activeOpacity={disabled ? 1 : 0.7}
     >
       <View style={styles.iconBg}>
         <Ionicons name={icon} size={18} color={PRIMARY} />
       </View>
       <Text style={styles.rowTitle}>{title}</Text>
-      {rightText ? <Text style={styles.rightText}>{rightText}</Text> : null}
-      <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+      {rightText ? (
+        <Text style={[styles.rightText, disabled && styles.disabledRightText]}>
+          {rightText}
+        </Text>
+      ) : null}
+      <Ionicons
+        name={disabled ? "checkmark-circle" : "chevron-forward"}
+        size={18}
+        color={disabled ? PRIMARY : "#9CA3AF"}
+      />
     </TouchableOpacity>
   );
 }
@@ -423,6 +436,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: TEXT_MUTED,
     marginRight: 4,
+  },
+  disabledRightText: {
+    color: PRIMARY,
+    fontWeight: "600",
   },
   modalOverlay: {
     flex: 1,
