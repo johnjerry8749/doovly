@@ -97,7 +97,10 @@ as $$
 declare
   v_promotion_id uuid;
 begin
-  v_promotion_id := coalesce(new.promotion_id, old.promotion_id);
+  v_promotion_id := new.promotion_id;
+  if tg_op = 'UPDATE' and v_promotion_id is null then
+    v_promotion_id := old.promotion_id;
+  end if;
 
   if v_promotion_id is null then
     return new;
