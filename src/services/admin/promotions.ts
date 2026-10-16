@@ -115,10 +115,12 @@ export function formatPromotionRevenue(revenue: Record<string, number>) {
     .join(" · ");
 }
 
-export async function getAdminPromotionSummary(): Promise<PromotionSummary> {
-  const { data, error } = await supabase
+export async function getAdminPromotionSummary(since: string | null = null): Promise<PromotionSummary> {
+  let query: any = supabase
     .from("service_promotions")
-    .select("id,status,amount,currency,starts_at,ends_at");
+    .select("id,status,amount,currency,starts_at,ends_at,created_at");
+  if (since) query = query.gte("created_at", since);
+  const { data, error } = await query;
 
   if (error) throw error;
 
