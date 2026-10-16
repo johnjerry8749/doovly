@@ -367,8 +367,8 @@ const styles = StyleSheet.create({
   },
 
   contentContainer: {
-    paddingHorizontal: 30,
-    paddingBottom: 25,
+    paddingHorizontal: 22,
+    paddingBottom: 30,
   },
 
   // =========================
@@ -376,12 +376,14 @@ const styles = StyleSheet.create({
   // =========================
 
   header: {
-    height: 62,
+    height: 60,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 25,
+    paddingHorizontal: 22,
     backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F1",
   },
 
   backButton: {
@@ -392,7 +394,7 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     color: TEXT,
   },
@@ -406,15 +408,16 @@ const styles = StyleSheet.create({
   // =========================
 
   hero: {
-    minHeight: 215,
+    minHeight: 190,
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 3,
+    marginTop: 8,
+    marginBottom: 8,
   },
 
   heroImage: {
-    width: "46%",
-    height: 200,
+    width: "44%",
+    height: 176,
   },
 
   heroText: {
@@ -423,16 +426,16 @@ const styles = StyleSheet.create({
   },
 
   logoText: {
-    fontSize: 46,
-    lineHeight: 50,
+    fontSize: 38,
+    lineHeight: 43,
     fontWeight: "800",
     color: PRIMARY,
     letterSpacing: -1.5,
   },
 
   heroTitle: {
-    fontSize: 28,
-    lineHeight: 31,
+    fontSize: 25,
+    lineHeight: 29,
     fontWeight: "800",
     color: TEXT,
     marginTop: 3,
@@ -456,12 +459,12 @@ const styles = StyleSheet.create({
   // =========================
 
   introCard: {
-    minHeight: 85,
+    minHeight: 82,
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    borderColor: "#E2E9E5",
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 13,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
@@ -469,9 +472,9 @@ const styles = StyleSheet.create({
   },
 
   introIcon: {
-    width: 55,
-    height: 55,
-    borderRadius: 17,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: PRIMARY,
     alignItems: "center",
     justifyContent: "center",
@@ -480,8 +483,8 @@ const styles = StyleSheet.create({
 
   introText: {
     flex: 1,
-    fontSize: 13.5,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 19,
     color: "#30363B",
     fontWeight: "500",
   },
@@ -496,9 +499,9 @@ const styles = StyleSheet.create({
 
   sectionWrapper: {
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 13,
-    marginBottom: 3,
+    borderColor: "#E5EAE7",
+    borderRadius: 12,
+    marginBottom: 7,
     overflow: "hidden",
     backgroundColor: "#FFFFFF",
   },
@@ -508,10 +511,10 @@ const styles = StyleSheet.create({
   },
 
   sectionHeader: {
-    minHeight: 43,
+    minHeight: 50,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
 
   numberBox: {
@@ -545,14 +548,14 @@ const styles = StyleSheet.create({
   },
 
   sectionContent: {
-    paddingLeft: 81,
-    paddingRight: 15,
-    paddingBottom: 15,
+    paddingLeft: 84,
+    paddingRight: 16,
+    paddingBottom: 16,
   },
 
   sectionText: {
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 21,
     color: SECONDARY,
   },
 
@@ -561,12 +564,12 @@ const styles = StyleSheet.create({
   // =========================
 
   agreementCard: {
-    backgroundColor: "#F3FAF6",
+    backgroundColor: "#F5FAF7",
     borderWidth: 1,
-    borderColor: "#DDEDE4",
-    borderRadius: 15,
-    padding: 12,
-    marginTop: 7,
+    borderColor: "#DCE9E1",
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 12,
   },
 
   agreementTop: {
@@ -593,7 +596,7 @@ const styles = StyleSheet.create({
   },
 
   agreeButton: {
-    height: 51,
+    height: 49,
     borderRadius: 12,
     backgroundColor: PRIMARY,
     alignItems: "center",
