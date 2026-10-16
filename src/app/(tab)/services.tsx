@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -12,6 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  type ViewToken,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -35,6 +36,7 @@ import { isSaved, toggleSave } from "@/services/savedProviders";
 import { listCities, listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 import { PromotedServiceCard } from "@/components/PromotedServiceCard";
+import { trackPromotionEvent } from "@/services/promotionAnalytics";
 
 const GREEN = "#159447";
 
@@ -111,6 +113,15 @@ export default function Services() {
   const [promotedServices, setPromotedServices] = useState<PromotedService[]>([]);
   const [cities, setCities] = useState<string[]>(listCities());
   const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    viewableItems.forEach(({ item }) => {
+      const card = item as { cardType?: string; serviceId?: string };
+      if (card.cardType === "promoted" && card.serviceId) {
+        void trackPromotionEvent(card.serviceId, "impressions");
+      }
+    });
+  }).current;
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
 
   useFocusEffect(
     useCallback(() => {
@@ -575,6 +586,8 @@ export default function Services() {
         columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.professionalList}
         renderItem={renderGridCard}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
