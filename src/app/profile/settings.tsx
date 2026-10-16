@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,41 +9,111 @@ import {
   StatusBar,
   Alert,
   Linking,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/lib/supabase";
+import { getErrorMessage } from "@/utils/error";
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#DCFCE7";
 const TEXT_DARK = "#111827";
 const TEXT_MUTED = "#6B7280";
 
-/**
- * Settings preferences (mock local state).
- * LATER: load/save via GET/PATCH /me/settings
- */
-type SettingsState = {
-  pushNotifications: boolean;
-  bookingUpdates: boolean;
-  marketing: boolean;
-  darkMode: boolean;
-};
+const PUSH_NOTIFICATIONS_KEY = "doovly_push_notifications_enabled";
 
 export default function Settings() {
-  const [prefs, setPrefs] = useState<SettingsState>({
-    pushNotifications: true,
-    bookingUpdates: true,
-    marketing: false,
-    darkMode: false,
-  });
+  const [pushNotifications, setPushNotifications] = useState(true);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
 
-  const toggle = (key: keyof SettingsState) => {
-    setPrefs((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      // TODO backend: apiRequest("/me/settings", { method: "PATCH", body: JSON.stringify(next) })
-      return next;
-    });
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(PUSH_NOTIFICATIONS_KEY)
+      .then((saved) => {
+        if (active && saved !== null) setPushNotifications(saved === "true");
+      })
+      .catch((error) => console.warn("Could not load notification preference:", error));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const togglePushNotifications = async (enabled: boolean) => {
+    setPushNotifications(enabled);
+    try {
+      await AsyncStorage.setItem(PUSH_NOTIFICATIONS_KEY, String(enabled));
+    } catch (error) {
+      setPushNotifications(!enabled);
+      Alert.alert("Settings", "Your notification preference could not be saved. Please try again.");
+    }
+  };
+
+  const openPasswordChange = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordModalVisible(true);
+  };
+
+  const changePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert("Missing Information", "Complete all password fields to continue.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      Alert.alert("Weak Password", "Your new password must be at least 8 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Passwords Don't Match", "Confirm your new password correctly.");
+      return;
+    }
+    if (currentPassword === newPassword) {
+      Alert.alert("Choose a New Password", "Your new password must be different from your current password.");
+      return;
+    }
+
+    try {
+      setSavingPassword(true);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user || (!user.email && !user.phone)) {
+        throw new Error("Your signed-in account could not be verified. Please sign in again.");
+      }
+
+      const credentials = user.email
+        ? { email: user.email, password: currentPassword }
+        : { phone: user.phone!, password: currentPassword };
+      const { error: signInError } = await supabase.auth.signInWithPassword(credentials);
+      if (signInError) {
+        Alert.alert("Current Password Incorrect", "Check your current password and try again.");
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+
+      setPasswordModalVisible(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      Alert.alert("Password Updated", "Your Doovly password has been changed successfully.");
+    } catch (error) {
+      Alert.alert("Update Failed", getErrorMessage(error));
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   return (
@@ -70,16 +140,7 @@ export default function Settings() {
           <Row
             icon="lock-closed-outline"
             title="Change Password"
-            onPress={() =>
-              Alert.alert("Coming soon", "Password change will be available after auth is wired.")
-            }
-          />
-          <Row
-            icon="mail-outline"
-            title="Email Preferences"
-            onPress={() =>
-              Alert.alert("Coming soon", "Email preference controls will be available soon.")
-            }
+            onPress={openPasswordChange}
             last
           />
         </Section>
@@ -88,8 +149,8 @@ export default function Settings() {
           <ToggleRow
             icon="notifications-outline"
             title="Push Notifications"
-            value={prefs.pushNotifications}
-            onValueChange={() => toggle("pushNotifications")}
+            value={pushNotifications}
+            onValueChange={togglePushNotifications}
           />
           <ToggleRow
             icon="calendar-outline"
@@ -106,43 +167,12 @@ export default function Settings() {
           />
         </Section>
 
-        <Section title="PRIVACY">
-          <Row
-            icon="location-outline"
-            title="Location"
-            onPress={() =>
-              Alert.alert("Location", "Location is managed from the Home screen.")
-            }
-          />
-          <Row
-            icon="shield-outline"
-            title="Profile Visibility"
-            onPress={() =>
-              Alert.alert("Coming soon", "Visibility controls will be available soon.")
-            }
-            last
-          />
-        </Section>
-
-        <Section title="APP">
-          <Row
-            icon="globe-outline"
-            title="Language"
-            rightText="English"
-            onPress={() =>
-              Alert.alert("Language", "Only English is available right now.")
-            }
-          />
-          <ToggleRow
-            icon="moon-outline"
-            title="Dark Mode"
-            value={prefs.darkMode}
-            onValueChange={() => toggle("darkMode")}
-            last
-          />
-        </Section>
-
         <Section title="SUPPORT">
+          <Row
+            icon="help-circle-outline"
+            title="Help & Support"
+            onPress={() => router.push("/profile/help_support")}
+          />
           <Row
             icon="star-outline"
             title="Rate App"
@@ -174,6 +204,84 @@ export default function Settings() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      <Modal
+        visible={passwordModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => !savingPassword && setPasswordModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={styles.passwordModal}>
+            <View style={styles.passwordModalHeader}>
+              <Text style={styles.passwordModalTitle}>Change Password</Text>
+              <TouchableOpacity
+                onPress={() => setPasswordModalVisible(false)}
+                disabled={savingPassword}
+                hitSlop={10}
+              >
+                <Ionicons name="close" size={22} color={TEXT_DARK} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.passwordHint}>Confirm your current password, then choose a new one.</Text>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Current password"
+              placeholderTextColor="#9CA3AF"
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              editable={!savingPassword}
+              textContentType="password"
+              returnKeyType="next"
+            />
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="New password (8+ characters)"
+              placeholderTextColor="#9CA3AF"
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              editable={!savingPassword}
+              textContentType="newPassword"
+              returnKeyType="next"
+            />
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Confirm new password"
+              placeholderTextColor="#9CA3AF"
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              editable={!savingPassword}
+              textContentType="newPassword"
+              returnKeyType="done"
+              onSubmitEditing={changePassword}
+            />
+            <TouchableOpacity
+              style={[styles.passwordSubmit, savingPassword && styles.passwordSubmitDisabled]}
+              onPress={changePassword}
+              disabled={savingPassword}
+              activeOpacity={0.85}
+            >
+              {savingPassword ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.passwordSubmitText}>Update Password</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -330,6 +438,60 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: TEXT_MUTED,
     marginRight: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    backgroundColor: "rgba(17, 24, 39, 0.45)",
+  },
+  passwordModal: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 20,
+  },
+  passwordModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  passwordModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: TEXT_DARK,
+  },
+  passwordHint: {
+    fontSize: 13,
+    color: TEXT_MUTED,
+    lineHeight: 19,
+    marginBottom: 14,
+  },
+  passwordInput: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: TEXT_DARK,
+    marginTop: 10,
+  },
+  passwordSubmit: {
+    height: 50,
+    borderRadius: 10,
+    backgroundColor: PRIMARY,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 18,
+  },
+  passwordSubmitDisabled: {
+    opacity: 0.7,
+  },
+  passwordSubmitText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   footer: {
     alignItems: "center",
