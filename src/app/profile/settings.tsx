@@ -176,19 +176,9 @@ export default function Settings() {
           <Row
             icon="shield-checkmark-outline"
             title="Privacy Policy"
-            onPress={() =>
-              Linking.openURL("https://doovly.com/privacy").catch(() =>
-                Alert.alert("Privacy Policy", "Could not open link."),
-              )
-            }
-            last
+            onPress={() => router.push("/(auth)/terms_condition")}
           />
         </Section>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerBrand}>Doovly</Text>
-          <Text style={styles.footerTag}>Buy. Book. Belong.</Text>
-        </View>
 
         <View style={{ height: 32 }} />
       </ScrollView>
