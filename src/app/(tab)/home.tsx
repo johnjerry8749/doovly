@@ -143,22 +143,37 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      listServiceCategoriesAsync(),
-      listProfessionalsAsync(),
-      listCitiesAsync(),
-      listActivePromotedServicesAsync(),
-    ])
-      .then(([nextServices, nextProfessionals, nextCities, nextPromotedServices]) => {
-        if (!active) return;
-        setServices(nextServices);
-        setProfessionals(nextProfessionals);
-        setCities(nextCities);
-        setPromotedServices(nextPromotedServices);
-      })
-      .catch((error) => console.warn("Home data load failed:", error));
+    const loadHomeData = () => {
+      Promise.all([
+        listServiceCategoriesAsync(),
+        listProfessionalsAsync(),
+        listCitiesAsync(),
+        listActivePromotedServicesAsync(),
+      ])
+        .then(([nextServices, nextProfessionals, nextCities, nextPromotedServices]) => {
+          if (!active) return;
+          setServices(nextServices);
+          setProfessionals(nextProfessionals);
+          setCities(nextCities);
+          setPromotedServices(nextPromotedServices);
+        })
+        .catch((error) => console.warn("Home data load failed:", error));
+    };
+
+    loadHomeData();
+    // Re-check promotion end times while Home remains mounted, so expired
+    // services leave the green promoted-card layout without needing a restart.
+    const promotionRefresh = setInterval(() => {
+      listActivePromotedServicesAsync()
+        .then((nextPromotedServices) => {
+          if (active) setPromotedServices(nextPromotedServices);
+        })
+        .catch((error) => console.warn("Promotion refresh failed:", error));
+    }, 30000);
+
     return () => {
       active = false;
+      clearInterval(promotionRefresh);
     };
   }, []);
 
