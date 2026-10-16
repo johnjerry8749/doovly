@@ -185,7 +185,7 @@ export default function Settings() {
           <Row
             icon="shield-checkmark-outline"
             title="Privacy Policy"
-            onPress={() => router.push("/(auth)/terms_condition")}
+            onPress={() => router.push("/profile/privacy_policy")}
           />
         </Section>
 
