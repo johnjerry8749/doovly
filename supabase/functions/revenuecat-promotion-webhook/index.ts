@@ -161,7 +161,7 @@ async function sendPromotionChat(
   await admin
     .from("conversations")
     .update({
-      last_message: analysisText,
+      last_message: "Promotion analysis tracking has started.",
       last_message_at: now,
     })
     .eq("id", conversation.id);
