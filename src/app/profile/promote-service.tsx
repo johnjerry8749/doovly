@@ -79,10 +79,35 @@ export default function PromoteServiceScreen() {
     }
   }, [professionalId]);
 
+  const refreshPromotionState = useCallback(async () => {
+    if (!professionalId) return;
+    try {
+      const [latestServices, latestLock] = await Promise.all([
+        listMyServicesAsync(professionalId),
+        getProfessionalPromotionLockAsync(professionalId),
+      ]);
+      setServices(latestServices);
+      setActivePromotion(latestLock);
+      setSelectedServiceId((current) =>
+        current && latestServices.some((service) => service.id === current && !service.promotionActive)
+          ? current
+          : latestServices.find((service) => !service.promotionActive)?.id ?? null,
+      );
+    } catch (error) {
+      console.warn("[Promotion] expiry refresh failed:", error);
+    }
+  }, [professionalId]);
+
   useFocusEffect(
     React.useCallback(() => {
       void load();
-    }, [load]),
+      // Re-check while this screen stays open. Once the promotion ends, the
+      // lock clears and another purchase becomes available without reopening.
+      const promotionRefresh = setInterval(() => {
+        void refreshPromotionState();
+      }, 15000);
+      return () => clearInterval(promotionRefresh);
+    }, [load, refreshPromotionState]),
   );
 
   const selectedService = services.find((service) => service.id === selectedServiceId) ?? null;

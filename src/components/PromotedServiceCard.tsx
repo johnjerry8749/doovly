@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { trackPromotionEvent } from "@/services/promotionAnalytics";
 
 const GREEN = "#159447";
 
@@ -25,6 +26,8 @@ type PromotedServiceCardProps = {
   rating?: number;
   reviewCount?: number;
   DescriptionComponent?: React.ComponentType<{ text: string; color?: string }>;
+  cardRef?: (node: View | null) => void;
+  onCardLayout?: () => void;
 };
 
 export function PromotedServiceCard({
@@ -38,6 +41,8 @@ export function PromotedServiceCard({
   avatarUrl,
   cardStyle,
   DescriptionComponent,
+  cardRef,
+  onCardLayout,
 }: PromotedServiceCardProps) {
   const priceLabel =
     price ||
@@ -46,7 +51,7 @@ export function PromotedServiceCard({
       : "Contact for price");
 
   return (
-    <View style={[cardStyle, styles.card]}>
+    <View ref={cardRef} onLayout={onCardLayout} style={[cardStyle, styles.card]}>
       <View style={styles.badgeWrap}>
         <Text style={styles.badgeText}>PROMOTED</Text>
       </View>
@@ -54,12 +59,13 @@ export function PromotedServiceCard({
       <TouchableOpacity
         style={styles.profileTapArea}
         activeOpacity={0.85}
-        onPress={() =>
+        onPress={() => {
+          void trackPromotionEvent(serviceId, "service_views");
           router.push({
             pathname: "/professional/[id]",
             params: { id: professionalId, from: "home" },
-          })
-        }
+          });
+        }}
       >
         <View style={styles.avatar}>
           {avatarUrl ? (
