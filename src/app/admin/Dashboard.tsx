@@ -159,6 +159,33 @@ export default function Dashboard() {
           />
         </View>
 
+        <View style={styles.statsGrid}>
+          <StatCard
+            icon="megaphone"
+            iconBg="#D1FAE5"
+            iconColor={GREEN}
+            label="Total Promotions"
+            value={stats.totalPromotions.toLocaleString()}
+            sparkColor={GREEN}
+          />
+          <StatCard
+            icon="flash"
+            iconBg="#DBEAFE"
+            iconColor="#2563EB"
+            label="Active Promotions"
+            value={stats.activePromotions.toLocaleString()}
+            sparkColor="#3B82F6"
+          />
+          <StatCard
+            icon="cash"
+            iconBg="#FEF3C7"
+            iconColor="#B45309"
+            label="Promotion Revenue"
+            value={stats.promotionRevenueLabel}
+            sparkColor="#D97706"
+          />
+        </View>
+
         <View style={styles.chartCard}>
           <View style={styles.chartHeader}>
             <Text style={styles.chartTitle}>Overview</Text>
