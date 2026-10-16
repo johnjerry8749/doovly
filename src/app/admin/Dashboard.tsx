@@ -54,7 +54,7 @@ function StatCard({ icon, iconBg, iconColor, label, value, sparkColor }: StatCar
       <Text style={styles.statLabel} numberOfLines={2}>
         {label}
       </Text>
-      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statValue} numberOfLines={2} adjustsFontSizeToFit>{value}</Text>
       <MiniSpark color={sparkColor} />
     </View>
   );
