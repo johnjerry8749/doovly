@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import { getAdminPromotionSummary, formatPromotionRevenue } from "@/services/admin/promotions";
 
+export type DashboardRange = "all" | "30days";
+
 export type DashboardStats = {
   totalUsers: number;
   totalVerifiedUsers: number;
@@ -18,41 +20,60 @@ export type DashboardStats = {
 
 let cache: DashboardStats | null = null;
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(range: DashboardRange = "all"): Promise<DashboardStats> {
+  const since = range === "30days"
+    ? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    : null;
+
+  let usersQuery: any = supabase.from("profiles").select("id", { count: "exact", head: true });
+  let verifiedQuery: any = supabase.from("professionals").select("id", { count: "exact", head: true }).eq("is_verified", true);
+  let subsQuery: any = supabase.from("professional_subscriptions").select("id,plan_id,plan_code,status").eq("status", "active");
+  let postsQuery: any = supabase.from("service_requests").select("id", { count: "exact", head: true });
+  let bookingsQuery: any = supabase.from("bookings").select("id", { count: "exact", head: true });
+
+  if (since) {
+    usersQuery = usersQuery.gte("created_at", since);
+    verifiedQuery = verifiedQuery.gte("created_at", since);
+    subsQuery = subsQuery.gte("created_at", since);
+    postsQuery = postsQuery.gte("created_at", since);
+    bookingsQuery = bookingsQuery.gte("created_at", since);
+  }
+
   const [users, verified, subs, posts, bookings, proPlan, promotionSummary] = await Promise.all([
-    supabase.from("profiles").select("id", { count: "exact", head: true }),
-    supabase.from("professionals").select("id", { count: "exact", head: true }).eq("is_verified", true),
-    supabase.from("professional_subscriptions").select("id,plan_id,plan_code,status").eq("status", "active"),
-    supabase.from("service_requests").select("id", { count: "exact", head: true }),
-    supabase.from("bookings").select("id", { count: "exact", head: true }),
+    usersQuery,
+    verifiedQuery,
+    subsQuery,
+    postsQuery,
+    bookingsQuery,
     supabase.from("subscription_plans").select("id,monthly_price").eq("code", "pro").maybeSingle(),
-    getAdminPromotionSummary(),
+    getAdminPromotionSummary(since),
   ]);
 
   const err = [users, verified, subs, posts, bookings, proPlan].find((r) => r.error)?.error;
   if (err) throw err;
 
   const proSubs = (subs.data ?? []).filter((r: any) => r.plan_code === "pro" || r.plan_id === proPlan.data?.id);
-  const openRequests = posts.count ?? 0;
+  const requestCount = posts.count ?? 0;
+  const bookingCount = bookings.count ?? 0;
 
   const stats: DashboardStats = {
     totalUsers: users.count ?? 0,
     totalVerifiedUsers: verified.count ?? 0,
     totalProSubUsers: proSubs.length,
-    openRequests,
+    openRequests: requestCount,
     totalRevenueFromPro: proSubs.length * Number(proPlan.data?.monthly_price ?? 0),
     totalPromotions: promotionSummary.total,
     activePromotions: promotionSummary.active,
     promotionRevenueLabel: formatPromotionRevenue(promotionSummary.revenueByCurrency),
-    totalPostRequests: posts.count ?? 0,
-    totalBookings: bookings.count ?? 0,
-    dateRangeLabel: "All time",
+    totalPostRequests: requestCount,
+    totalBookings: bookingCount,
+    dateRangeLabel: range === "30days" ? "Last 30 days" : "All time",
     overviewSeries: [
       { label: "Users", value: users.count ?? 0 },
       { label: "Verified", value: verified.count ?? 0 },
       { label: "Pro", value: proSubs.length },
-      { label: "Requests", value: posts.count ?? 0 },
-      { label: "Bookings", value: bookings.count ?? 0 },
+      { label: "Requests", value: requestCount },
+      { label: "Bookings", value: bookingCount },
     ],
   };
 
