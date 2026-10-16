@@ -49,13 +49,15 @@ export default {
       const hasGovernmentId = (docs ?? []).some(
         (d) => d.uploaded && String(d.title).toLowerCase().includes("government"),
       );
-      const hasSelfie = (docs ?? []).some(
-        (d) => d.uploaded && String(d.title).toLowerCase().includes("selfie"),
+      const hasCertificate = (docs ?? []).some(
+        (d) => d.uploaded && String(d.title).toLowerCase().includes("certificate"),
       );
 
-      if (!hasGovernmentId || !hasSelfie) {
+      if (!hasGovernmentId || !hasCertificate) {
         return Response.json(
-          { error: "Government ID and Selfie are required before submitting." },
+          {
+            error: "Government ID and Professional Certificate are required before submitting.",
+          },
           { status: 400 },
         );
       }

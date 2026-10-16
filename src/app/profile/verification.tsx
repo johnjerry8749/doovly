@@ -63,44 +63,25 @@ export default function Verification() {
     load();
   }, [load]);
 
-  const onUpload = async (step: "governmentId" | "selfie" | "certificate") => {
+  const onUpload = async (step: "governmentId" | "certificate") => {
     setBusyStep(step);
 
     try {
-      let result: ImagePicker.ImagePickerResult;
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-      if (step === "selfie") {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
-
-        if (!permission.granted) {
-          Alert.alert(
-            "Camera permission required",
-            "Please allow camera access to take your selfie.",
-          );
-          return;
-        }
-
-        result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ["images"],
-          quality: 0.85,
-        });
-      } else {
-        const permission =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-        if (!permission.granted) {
-          Alert.alert(
-            "Photo permission required",
-            "Please allow photo access to upload your document.",
-          );
-          return;
-        }
-
-        result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["images"],
-          quality: 0.85,
-        });
+      if (!permission.granted) {
+        Alert.alert(
+          "Photo permission required",
+          "Please allow photo access to upload your document.",
+        );
+        return;
       }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.85,
+      });
 
       if (result.canceled || !result.assets?.[0]?.uri) return;
 
@@ -120,10 +101,13 @@ export default function Verification() {
 
   const onSubmit = async () => {
     if (!state) return;
-    if (state.governmentId === "pending" || state.selfie === "pending") {
+    if (
+      !["uploaded", "approved"].includes(state.governmentId) ||
+      !["uploaded", "approved"].includes(state.certificate)
+    ) {
       Alert.alert(
         "Incomplete",
-        "Please upload Government ID and Selfie before submitting.",
+        "Please upload your Government ID card and Professional Certificate before submitting.",
       );
       return;
     }
@@ -242,19 +226,6 @@ export default function Verification() {
 
         <StepCard
           number={2}
-          icon="scan-outline"
-          title="Selfie / Face Verification"
-          description="Take a selfie for face verification."
-          status={state.selfie}
-          busy={busyStep === "selfie"}
-          onAction={() => onUpload("selfie")}
-          actionLabel="Take Selfie"
-          actionIcon="camera-outline"
-          disabled={isVerified}
-        />
-
-        <StepCard
-          number={3}
           icon="ribbon-outline"
           title="Professional Certificate"
           description="Upload your professional certificate or qualification."
@@ -263,7 +234,6 @@ export default function Verification() {
           onAction={() => onUpload("certificate")}
           actionLabel="Upload Certificate"
           actionIcon="cloud-upload-outline"
-          optional
           disabled={isVerified}
         />
 

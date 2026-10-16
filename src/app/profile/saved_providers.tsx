@@ -104,7 +104,6 @@ export default function SavedProviders() {
               <Text style={styles.meta} numberOfLines={1}>
                 {item.profession} · {item.city}
               </Text>
-              <Text style={styles.price}>{item.priceFrom}</Text>
             </View>
             <TouchableOpacity
               hitSlop={12}

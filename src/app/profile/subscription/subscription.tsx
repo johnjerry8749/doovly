@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,19 +19,20 @@ import {
   type SubscriptionPlansState,
   type SubscriptionPlanConfig,
 } from "@/services/subscriptionPlans";
+import {
+  addCustomerInfoListener,
+  getCustomerInfo,
+  getProPackages,
+  isPro,
+  purchasePackage,
+  restorePurchases,
+} from "@/lib/revenuecat";
+import type { PurchasesPackage } from "react-native-purchases";
 
 const PRIMARY = "#159447";
-const LIGHT_GREEN = "#E8F5E9";
 const TEXT_DARK = "#111827";
 const TEXT_MUTED = "#6B7280";
 const BORDER = "#E5E7EB";
-
-function formatNaira(n: number) {
-  return `₦${n.toLocaleString("en-NG", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
-}
 
 const EMPTY_PLAN: SubscriptionPlanConfig = { id: "basic", name: "", tagline: "", monthlyPrice: 0, yearlyPrice: 0, popular: false, features: [] };
 
@@ -46,6 +48,90 @@ export default function Subscription() {
     getSubscriptionPlans(),
   );
   const [period, setPeriod] = useState<BillingPeriod>("monthly");
+  const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
+  const [yearlyPackage, setYearlyPackage] = useState<PurchasesPackage | null>(null);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [proActive, setProActive] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const removeListener = addCustomerInfoListener((info) => {
+      if (active) setProActive(isPro(info));
+    });
+
+    void (async () => {
+      try {
+        const [packages, customerInfo] = await Promise.all([
+          getProPackages(),
+          getCustomerInfo(),
+        ]);
+        if (!active) return;
+        setMonthlyPackage(packages.monthly);
+        setYearlyPackage(packages.yearly);
+        setProActive(isPro(customerInfo));
+        if (!packages.monthly || !packages.yearly) {
+          Alert.alert("Subscriptions unavailable", "Subscription packages are not available right now. Please try again later.");
+        }
+      } catch (error) {
+        if (active) {
+          Alert.alert("Subscriptions unavailable", error instanceof Error ? error.message : "Could not load subscription products.");
+        }
+      } finally {
+        if (active) setProductsLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+      removeListener();
+    };
+  }, []);
+
+  const selectedPackage = period === "monthly" ? monthlyPackage : yearlyPackage;
+  const selectedPrice = selectedPackage?.product.priceString ?? "";
+  const periodWord = period === "monthly" ? "monthly" : "yearly";
+
+  async function handlePurchase() {
+    if (!selectedPackage || purchasing) return;
+    setPurchasing(true);
+    try {
+      const info = await purchasePackage(selectedPackage);
+      if (isPro(info)) {
+        setProActive(true);
+      } else {
+        Alert.alert("Pro not confirmed", "Purchase completed, but Pro access has not been confirmed yet. Please use Restore Purchases.");
+      }
+    } catch (error) {
+      const purchaseError = error as { userCancelled?: boolean; code?: string; message?: string };
+      if (purchaseError.userCancelled || purchaseError.code === "PURCHASE_CANCELLED_ERROR") {
+        return;
+      }
+      Alert.alert("Purchase failed", purchaseError.message || "Your purchase could not be completed. Please try again.");
+    } finally {
+      setPurchasing(false);
+    }
+  }
+
+  async function handleRestore() {
+    if (restoring) return;
+    setRestoring(true);
+    try {
+      const info = await restorePurchases();
+      const active = isPro(info);
+      setProActive(active);
+      if (active) {
+        Alert.alert("Purchases restored", "Doovly Pro is active on this account.");
+      } else {
+        Alert.alert("No active subscription", "No active Doovly Pro subscription was found for this account.");
+      }
+    } catch (error) {
+      Alert.alert("Restore failed", error instanceof Error ? error.message : "Could not restore purchases. Please try again.");
+    } finally {
+      setRestoring(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -73,10 +159,6 @@ export default function Subscription() {
 
   const pro = plansState.plans.find((p) => p.id === "pro") ?? { ...EMPTY_PLAN, id: "pro" as const };
   const basic = plansState.plans.find((p) => p.id === "basic") ?? EMPTY_PLAN;
-
-  const price =
-    period === "monthly" ? pro.monthlyPrice : pro.yearlyPrice;
-  const periodWord = period === "monthly" ? "monthly" : "yearly";
 
   /** Merge Basic + Pro features into comparison rows */
   const rows: CompareRow[] = useMemo(() => {
@@ -213,21 +295,23 @@ export default function Subscription() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Sticky upgrade CTA — price updates with period */}
+      {/* Existing paywall, now connected to the current RevenueCat offering. */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.upgradeBtn}
+          style={[styles.upgradeBtn, (productsLoading || purchasing || !selectedPackage || proActive) && styles.upgradeBtnDisabled]}
           activeOpacity={0.85}
-          onPress={() => {
-            // TODO: payment — amount = price, period from mock/API
-          }}
+          disabled={productsLoading || purchasing || !selectedPackage || proActive}
+          onPress={handlePurchase}
         >
           <Text style={styles.upgradeBtnText}>
-            Upgrade for {formatNaira(price)}
+            {productsLoading ? "Loading subscription…" : purchasing ? "Processing…" : proActive ? "Pro is active" : selectedPrice ? `Upgrade for ${selectedPrice}` : "Subscription unavailable"}
           </Text>
         </TouchableOpacity>
         <Text style={styles.footerNote}>
-          Auto-renews {periodWord}. Cancel anytime.
+          Auto-renews {periodWord}. Cancel anytime.{" "}
+          <Text onPress={handleRestore} style={styles.restoreInlineText}>
+            {restoring ? "Restoring…" : "Restore Purchases"}
+          </Text>
         </Text>
       </View>
     </SafeAreaView>
@@ -279,18 +363,22 @@ const styles = StyleSheet.create({
 
   periodToggle: {
     flexDirection: "row",
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 360,
     backgroundColor: "#F3F4F6",
     borderRadius: 28,
     padding: 4,
     marginBottom: 20,
-    alignSelf: "center",
-    minWidth: 220,
   },
   periodSegment: {
     flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 8,
     paddingVertical: 10,
     borderRadius: 24,
     alignItems: "center",
+    justifyContent: "center",
   },
   periodSegmentActive: {
     backgroundColor: PRIMARY,
@@ -299,6 +387,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: TEXT_MUTED,
+    textAlign: "center",
+    includeFontPadding: false,
   },
   periodSegmentTextActive: {
     color: "#FFFFFF",
@@ -385,6 +475,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  upgradeBtnDisabled: {
+    opacity: 0.55,
+  },
+  restoreInlineText: {
+    color: PRIMARY,
+    fontWeight: "700",
   },
   footerNote: {
     fontSize: 12,

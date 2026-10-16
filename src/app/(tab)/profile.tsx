@@ -147,7 +147,7 @@ export default function Profile() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Professional profile not found.</Text>
+          <Text style={styles.emptyText}>Loading....</Text>
         </View>
       </SafeAreaView>
     );

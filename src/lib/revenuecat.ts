@@ -56,6 +56,8 @@ async function configureRevenueCat(appUserId?: string | null): Promise<void> {
     if (appUserId && appUserId !== configuredAppUserId) {
       await Purchases.logIn(appUserId);
       configuredAppUserId = appUserId;
+      // Do not leak the previous account's cached Pro access while refreshing the new customer.
+      cachedProEntitlement = false;
     } else if (!appUserId && configuredAppUserId) {
       await Purchases.logOut();
       configuredAppUserId = null;
@@ -156,6 +158,7 @@ export async function purchasePackage(
 ): Promise<CustomerInfo> {
   await ensureRevenueCatConfigured();
   const { customerInfo } = await Purchases.purchasePackage(pkg);
+  cachedProEntitlement = isPro(customerInfo);
   return customerInfo;
 }
 
@@ -169,7 +172,9 @@ export async function purchaseBoostPackage(
 
 export async function restorePurchases(): Promise<CustomerInfo> {
   await ensureRevenueCatConfigured();
-  return Purchases.restorePurchases();
+  const customerInfo = await Purchases.restorePurchases();
+  cachedProEntitlement = isPro(customerInfo);
+  return customerInfo;
 }
 
 export async function getCustomerInfo(): Promise<CustomerInfo | null> {
@@ -184,11 +189,18 @@ export async function getCustomerInfo(): Promise<CustomerInfo | null> {
   }
 }
 
-export function hasProEntitlement(
+/**
+ * The single source of truth for paid Pro access.
+ * Never infer Pro access from a product identifier.
+ */
+export function isPro(
   info: CustomerInfo | null | undefined,
 ): boolean {
   return Boolean(info?.entitlements.active[PRO_ENTITLEMENT]);
 }
+
+/** Backwards-compatible alias used by existing promotion/subscription code. */
+export const hasProEntitlement = isPro;
 
 export async function isProFromRevenueCat(): Promise<boolean> {
   return hasProEntitlement(await getCustomerInfo());

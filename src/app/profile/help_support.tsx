@@ -39,66 +39,84 @@ const POPULAR_TOPICS = [
   {
     id: "1",
     title: "Bookings",
-    subtitle: "Manage, reschedule or cancel bookings",
+    subtitle: "Book, track or manage a service",
     icon: "calendar-outline" as const,
     guideKey: "bookings" as const,
   },
   {
     id: "2",
     title: "Payments",
-    subtitle: "Payments, refunds and wallet issues",
+    subtitle: "Prices, payment methods and issues",
     icon: "card-outline" as const,
     guideKey: "payments" as const,
   },
   {
     id: "3",
-    title: "Accounts",
-    subtitle: "Profile, verification and security",
+    title: "Account & Verification",
+    subtitle: "Edit your profile and verify your account",
     icon: "person-outline" as const,
     guideKey: "accounts" as const,
   },
   {
     id: "4",
-    title: "Services",
-    subtitle: "Listing services, leads and promotions",
+    title: "My Services",
+    subtitle: "Add services and keep listings updated",
     icon: "briefcase-outline" as const,
     guideKey: "services" as const,
   },
   {
     id: "5",
+    title: "Promote a Service",
+    subtitle: "Feature a service and manage promotions",
+    icon: "megaphone-outline" as const,
+    guideKey: "promotions" as const,
+  },
+  {
+    id: "6",
     title: "Safety",
-    subtitle: "Staying safe on Doovly",
+    subtitle: "Protect yourself while using Doovly",
     icon: "shield-checkmark-outline" as const,
     guideKey: "safety" as const,
   },
   {
-    id: "6",
+    id: "7",
     title: "Technical Issues",
-    subtitle: "App issues, errors and bugs",
+    subtitle: "Troubleshoot app errors and problems",
     icon: "settings-outline" as const,
     guideKey: "technical" as const,
+  },
+  {
+    id: "8",
+    title: "Chat & Conversations",
+    subtitle: "Message professionals about service details",
+    icon: "chatbubbles-outline" as const,
+    guideKey: "chat" as const,
   },
 ];
 
 const GUIDE_CONTENT = {
   bookings: {
     title: "Booking Guidelines",
-    body: `1. Find a professional from Home or Services.
-2. Open their profile and review services & portfolio.
-3. Tap Book Now and choose service, date, time and address.
-4. Confirm details and proceed to payment.
-5. You will receive a booking confirmation in My Bookings.
+    body: `1. Browse Home or Services and choose a professional.
+2. Review their profile, services, portfolio and reviews.
+3. Tap Book Now and enter the requested booking details.
+4. Review your information and submit the booking request.
+5. Track your booking status in My Bookings.
+6. Confirm the price and payment arrangements with the professional before the service begins.
 
-You can reschedule or cancel from My Bookings before the job starts (subject to the provider’s policy).`,
+You can manage your booking from My Bookings. Rescheduling or cancellation may depend on the booking status and the professional’s policy.`,
   },
   payments: {
     title: "Payment Instructions",
-    body: `1. After booking details, you will see the payment screen.
-2. Pay with card or Doovly wallet.
-3. Wait for the success confirmation before leaving the screen.
-4. A receipt is saved under the booking details.
+    body: `Before the service begins, make sure you and the professional agree on the total price, payment method and when payment is due.
 
-Refunds: open the booking → Request refund if eligible. Refunds are reviewed within a few business days.`,
+1. Review the listed service price and booking details.
+2. Confirm any additional charges with the professional in advance.
+3. Follow the payment arrangement you both agreed to, including Pay on Site when offered.
+4. Keep your payment receipt or proof of transfer.
+5. Never share your bank PIN, password or OTP.
+
+If you have a concern about a booking or payment, contact Doovly Support for guidance.`,
   },
   accounts: {
     title: "Account & Security",
@@ -110,22 +128,34 @@ Refunds: open the booking → Request refund if eligible. Refunds are reviewed w
 If you notice strange activity, change your password and contact support immediately.`,
   },
   services: {
-    title: "Services Guidelines",
-    body: `1. Providers list services from Profile → Add Service.
-2. Each service should have a clear name, description and price.
-3. Customers book a specific service from your profile.
-4. Keep availability updated so you only get jobs you can take.
+    title: "My Services",
+    body: `1. Open Profile → Add Service to create a service listing.
+2. Give each service a clear name, description and accurate price.
+3. Keep your service details and availability up to date.
+4. Customers can review your profile and choose a service to book.
+5. Use clear Portfolio photos to help customers understand your work.
 
-Tips: clear photos in Portfolio and accurate pricing improve bookings.`,
+Review your listings regularly so customers see current information.`,
+  },
+  promotions: {
+    title: "Promote a Service",
+    body: `1. Open your profile and choose the promote-service option.
+2. Select the service you want to feature and follow the in-app setup.
+3. Review the available promotion option, price and duration before confirming.
+4. Check the promotion status in the app.
+5. If a promotion is active, you may need to wait until it ends before starting another one.
+
+Only confirm a promotion after reviewing the details shown in the app.`,
   },
   safety: {
     title: "Staying Safe on Doovly",
-    body: `1. Only communicate and pay through the Doovly app when possible.
-2. Meet in safe, public or agreed locations for the service.
-3. Check provider verification and reviews before booking.
-4. Report suspicious behaviour from the booking or profile.
+    body: `1. Keep your booking details and conversations in Doovly where possible.
+2. Agree on the service price and payment arrangements before work begins.
+3. Meet in a safe location agreed upon for the service.
+4. Check the professional’s verification status and reviews before booking.
+5. Report suspicious behaviour through the available support options.
 
-Doovly never asks for your bank PIN or OTP. If something feels wrong, cancel and contact support.`,
+Never share your bank PIN, password or OTP with anyone.`,
   },
   technical: {
     title: "Technical Issues",
@@ -136,6 +166,16 @@ Doovly never asks for your bank PIN or OTP. If something feels wrong, cancel and
 
 Still stuck? Use Live Chat, Email, or Call Us below and describe the error you see.`,
   },
+  chat: {
+    title: "Chat & Conversations",
+    body: `1. Use the chat feature when it is available to you to communicate with a professional about a service or booking.
+2. Keep messages polite and focused on the service details, timing, and any agreed arrangements.
+3. Confirm the final price and payment method before work begins.
+4. Keep important booking information and messages so you can refer back to them if needed.
+5. Never send your password, bank PIN, OTP, or other sensitive account information in chat.
+
+If you cannot access a conversation or it does not load, check your internet connection, reopen the app, and contact Doovly Support if the problem continues.`,
+  },
 };
 
 type GuideKey = keyof typeof GUIDE_CONTENT;
@@ -145,37 +185,55 @@ const FAQS = [
     id: "1",
     question: "How do I book a service?",
     answer:
-      "Browse services or professionals, open a profile, choose a service and tap Book Now. Pick date, time and address, then confirm payment.",
+      "Browse Home or Services, open a professional's profile, choose the service you need and tap Book Now. Enter the requested booking details and submit your request. Check My Bookings for its status, and agree on the final price and payment arrangements with the professional before work begins.",
   },
   {
     id: "2",
-    question: "How do I make a payment?",
+    question: "How do I pay for a service?",
     answer:
-      "You can pay with card or wallet at checkout. All payments are secured. You will get a confirmation after a successful payment.",
+      "Agree directly with the professional on the total price, payment method and when payment is due before work begins. Use Pay on Site if it is offered for your booking. Keep your receipt or transfer confirmation, and never share your bank PIN, password or OTP.",
   },
   {
     id: "3",
-    question: "How do I get a refund?",
+    question: "Can I cancel or reschedule a booking?",
     answer:
-      "Go to My Bookings, open the booking and request a refund if eligible. Refunds are reviewed within a few business days.",
+      "Open My Bookings and review the booking details and available actions. Whether a booking can be changed or cancelled may depend on its current status and the professional's policy. If you cannot resolve the issue, contact the professional or Doovly Support for guidance.",
   },
   {
     id: "4",
-    question: "How do I become a service provider?",
+    question: "How do I get help with a payment or refund?",
     answer:
-      "Sign up, complete your profile, add services and submit verification. Once approved you can start receiving bookings.",
+      "Contact the professional first to explain the issue and discuss the payment. If you still need help, contact Doovly Support using the options on this page. Keep your booking details and proof of payment. Any refund or payment resolution depends on the circumstances and the agreed arrangement.",
   },
   {
     id: "5",
-    question: "How do I verify my account?",
+    question: "How do I become a service provider?",
     answer:
-      "Open Profile → Verification and upload the required documents. We usually review within 24–48 hours.",
+      "Create an account, complete your profile, add the services you offer and submit the required verification documents from Profile → Verification. Keep your service descriptions, prices and availability accurate so customers know what to expect.",
   },
   {
     id: "6",
-    question: "What if a provider doesn't show up?",
+    question: "What documents do I need for verification?",
     answer:
-      "Contact support from the booking details or use Live Chat. We can help reschedule, cancel or process a refund where needed.",
+      "Open Profile → Verification and follow the instructions shown in the app to submit the required government-issued ID and professional certificate. Make sure your documents are clear and the details are readable. Check the app for your verification status or contact support if you need help.",
+  },
+  {
+    id: "7",
+    question: "How can I promote my service?",
+    answer:
+      "If service promotion is available on your account, open the promote-service option, select the service you want to feature and follow the in-app steps to choose the available promotion option and complete setup. An active promotion may prevent you from starting another promotion until it ends.",
+  },
+  {
+    id: "8",
+    question: "What should I do if a professional doesn't show up?",
+    answer:
+      "Open the booking in My Bookings and contact the professional if appropriate. If you cannot resolve the situation, contact Doovly Support with your booking details so the team can guide you on the next steps.",
+  },
+  {
+    id: "9",
+    question: "How do I keep my account secure?",
+    answer:
+      "Keep your profile contact details up to date, use a strong password and never share your password, bank PIN or OTP. If you notice suspicious activity, change your password and contact Doovly Support.",
   },
 ];
 
