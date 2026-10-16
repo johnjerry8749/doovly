@@ -158,13 +158,6 @@ export default function PrivacyPolicy() {
           </Text>
         </View>
 
-        <View style={styles.notice}>
-          <Ionicons name="information-circle-outline" size={21} color={PRIMARY} />
-          <Text style={styles.noticeText}>
-            The details below are intended to describe Doovly's app features and service providers. The published policy should be checked against the live app, backend configuration and applicable legal requirements before release.
-          </Text>
-        </View>
-
         <View style={styles.sectionList}>
           {PRIVACY_SECTIONS.map((section) => {
             const isExpanded = expanded === section.id;
@@ -210,9 +203,6 @@ export default function PrivacyPolicy() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footer}>
-          This policy is a product-facing draft and is not a substitute for legal review. It should be updated if Doovly's actual data practices or providers change.
-        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -251,11 +241,6 @@ const styles = StyleSheet.create({
   heroTitle: { color: TEXT_DARK, fontSize: 24, fontWeight: "800", marginTop: 3, textAlign: "center" },
   updated: { color: TEXT_MUTED, fontSize: 12, marginTop: 7 },
   intro: { color: "#374151", fontSize: 13, lineHeight: 20, textAlign: "center", marginTop: 13 },
-  notice: {
-    flexDirection: "row", alignItems: "flex-start", gap: 9, padding: 12,
-    borderRadius: 12, borderWidth: 1, borderColor: "#CDEBD7", backgroundColor: "#F0FDF4", marginBottom: 13,
-  },
-  noticeText: { flex: 1, color: "#365344", fontSize: 11.5, lineHeight: 17 },
   sectionList: { gap: 8 },
   section: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: BORDER, borderRadius: 13, overflow: "hidden" },
   sectionOpen: { borderColor: "#B9DFC6", backgroundColor: "#FCFFFD" },
@@ -277,5 +262,4 @@ const styles = StyleSheet.create({
   email: { color: PRIMARY, fontSize: 11.5, fontWeight: "700", marginTop: 4 },
   contactButton: { backgroundColor: PRIMARY, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 9, marginLeft: 8 },
   contactButtonText: { color: "#FFFFFF", fontSize: 11.5, fontWeight: "700" },
-  footer: { color: "#9CA3AF", fontSize: 10.5, lineHeight: 16, textAlign: "center", marginTop: 16, paddingHorizontal: 8 },
 });
