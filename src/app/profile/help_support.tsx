@@ -406,11 +406,7 @@ export default function HelpSupport() {
         </Text>
 
         <View style={styles.contactRow}>
-          <TouchableOpacity
-            style={styles.contactCard}
-            activeOpacity={0.8}
-            onPress={() => router.push("/(tab)/Chat")}
-          >
+          <TouchableOpacity style={styles.contactCard} activeOpacity={0.8}>
             <View style={styles.contactIcon}>
               <Ionicons name="chatbubble-outline" size={16} color={PRIMARY} />
             </View>
