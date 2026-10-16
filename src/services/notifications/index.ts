@@ -6,6 +6,7 @@
  */
 
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { getCachedSessionUser, loadSessionUser } from "@/lib/session";
@@ -14,6 +15,8 @@ import type { NotificationPayload, NotificationService } from "./types";
 function isExpoGo(): boolean {
   return Constants.appOwnership === "expo";
 }
+
+const PUSH_NOTIFICATIONS_KEY = "doovly_push_notifications_enabled";
 
 let cachedService: NotificationService | null = null;
 
@@ -71,12 +74,32 @@ async function clearPushToken() {
 export async function registerForNotifications(): Promise<string | null> {
   if (Platform.OS === "web") return null;
 
+  try {
+    const enabled = await AsyncStorage.getItem(PUSH_NOTIFICATIONS_KEY);
+    if (enabled === "false") {
+      await clearPushToken();
+      return null;
+    }
+  } catch (error) {
+    console.warn("[Notifications] Could not read notification preference:", error);
+  }
+
   const token = await getNotificationService().register();
   if (token) await savePushToken(token);
   return token;
 }
 
+export async function unregisterForNotifications(): Promise<void> {
+  await clearPushToken();
+}
+
 export async function sendNotification(payload: NotificationPayload): Promise<void> {
+  try {
+    const enabled = await AsyncStorage.getItem(PUSH_NOTIFICATIONS_KEY);
+    if (enabled === "false") return;
+  } catch (error) {
+    console.warn("[Notifications] Could not read notification preference:", error);
+  }
   return getNotificationService().send(payload);
 }
 
