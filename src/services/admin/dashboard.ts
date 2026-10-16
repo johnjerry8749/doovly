@@ -7,7 +7,7 @@ export type DashboardStats = {
   totalUsers: number;
   totalVerifiedUsers: number;
   totalProSubUsers: number;
-  openRequests: number;
+  totalRequests: number;
   totalRevenueFromPro: number;
   totalPromotions: number;
   activePromotions: number;
@@ -27,14 +27,14 @@ export async function getDashboardStats(range: DashboardRange = "all"): Promise<
 
   let usersQuery: any = supabase.from("profiles").select("id", { count: "exact", head: true });
   let verifiedQuery: any = supabase.from("professionals").select("id", { count: "exact", head: true }).eq("is_verified", true);
-  let subsQuery: any = supabase.from("professional_subscriptions").select("id,plan_id,plan_code,status").eq("status", "active");
+  // Current-state metric: active subscriptions are counted across all time, not by creation range.
+  const subsQuery: any = supabase.from("professional_subscriptions").select("id,plan_id,plan_code,status").eq("status", "active");
   let postsQuery: any = supabase.from("service_requests").select("id", { count: "exact", head: true });
   let bookingsQuery: any = supabase.from("bookings").select("id", { count: "exact", head: true });
 
   if (since) {
     usersQuery = usersQuery.gte("created_at", since);
     verifiedQuery = verifiedQuery.gte("created_at", since);
-    subsQuery = subsQuery.gte("created_at", since);
     postsQuery = postsQuery.gte("created_at", since);
     bookingsQuery = bookingsQuery.gte("created_at", since);
   }
@@ -60,7 +60,7 @@ export async function getDashboardStats(range: DashboardRange = "all"): Promise<
     totalUsers: users.count ?? 0,
     totalVerifiedUsers: verified.count ?? 0,
     totalProSubUsers: proSubs.length,
-    openRequests: requestCount,
+    totalRequests: requestCount,
     totalRevenueFromPro: proSubs.length * Number(proPlan.data?.monthly_price ?? 0),
     totalPromotions: promotionSummary.total,
     activePromotions: promotionSummary.active,
