@@ -137,8 +137,13 @@ end;
 $$;
 
 drop trigger if exists bookings_record_promotion_metrics on public.bookings;
-create trigger bookings_record_promotion_metrics
-after insert or update of status on public.bookings
+drop trigger if exists bookings_record_promotion_insert_metrics on public.bookings;
+drop trigger if exists bookings_record_promotion_update_metrics on public.bookings;
+create trigger bookings_record_promotion_insert_metrics
+after insert on public.bookings
+for each row execute function public.record_promotion_booking_metrics();
+create trigger bookings_record_promotion_update_metrics
+after update of status on public.bookings
 for each row execute function public.record_promotion_booking_metrics();
 
 grant select on public.service_promotions to authenticated;
