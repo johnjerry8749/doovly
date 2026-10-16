@@ -104,6 +104,11 @@ export default function SavedProviders() {
               <Text style={styles.meta} numberOfLines={1}>
                 {item.profession} · {item.city}
               </Text>
+              {!!item.bio?.trim() && (
+                <Text style={styles.description} numberOfLines={2}>
+                  {item.bio.trim()}
+                </Text>
+              )}
             </View>
             <TouchableOpacity
               hitSlop={12}
@@ -190,6 +195,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6B7280",
     marginTop: 2,
+  },
+  description: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 4,
+    lineHeight: 16,
   },
   price: {
     fontSize: 13,
