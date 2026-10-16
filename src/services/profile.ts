@@ -92,7 +92,6 @@ export type VerificationStepStatus =
 export type VerificationState = {
   overall: "not_verified" | "under_review" | "verified" | "rejected";
   governmentId: VerificationStepStatus;
-  selfie: VerificationStepStatus;
   certificate: VerificationStepStatus;
 };
 
@@ -267,7 +266,6 @@ export async function fetchVerificationStatus(): Promise<VerificationState> {
     verificationCache = {
       overall: "not_verified",
       governmentId: "pending",
-      selfie: "pending",
       certificate: "pending",
     };
     return verificationCache;
@@ -277,7 +275,6 @@ export async function fetchVerificationStatus(): Promise<VerificationState> {
     verificationCache = {
       overall: "verified",
       governmentId: "approved",
-      selfie: "approved",
       certificate: "approved",
     };
     return verificationCache;
@@ -295,7 +292,6 @@ export async function fetchVerificationStatus(): Promise<VerificationState> {
     verificationCache = {
       overall: "not_verified",
       governmentId: "pending",
-      selfie: "pending",
       certificate: "pending",
     };
     return verificationCache;
@@ -318,14 +314,6 @@ export async function fetchVerificationStatus(): Promise<VerificationState> {
               docStep(list, "id") === "uploaded"
             ? "uploaded"
             : "pending",
-    selfie:
-      app.status === "verified"
-        ? "approved"
-        : app.status === "rejected"
-          ? "rejected"
-          : docStep(list, "selfie") === "uploaded"
-            ? "uploaded"
-            : "pending",
     certificate:
       app.status === "verified"
         ? "approved"
@@ -346,26 +334,23 @@ export function getVerificationStatus(): VerificationState {
     return {
       overall: "verified",
       governmentId: "approved",
-      selfie: "approved",
       certificate: "approved",
     };
   }
   return {
     overall: "not_verified",
     governmentId: "pending",
-    selfie: "pending",
     certificate: "pending",
   };
 }
 
-const STEP_TITLE: Record<"governmentId" | "selfie" | "certificate", string> = {
+const STEP_TITLE: Record<"governmentId" | "certificate", string> = {
   governmentId: "Government ID",
-  selfie: "Selfie",
-  certificate: "Certificate",
+  certificate: "Professional Certificate",
 };
 
 export async function uploadVerificationStep(
-  step: "governmentId" | "selfie" | "certificate",
+  step: "governmentId" | "certificate",
   localUri: string,
 ): Promise<VerificationState> {
   const s = await loadSessionUser(true);
@@ -481,12 +466,14 @@ export async function submitVerification(): Promise<VerificationState> {
   const hasGovernmentId = list.some(
     (d) => d.uploaded && String(d.title).toLowerCase().includes("government"),
   );
-  const hasSelfie = list.some(
-    (d) => d.uploaded && String(d.title).toLowerCase().includes("selfie"),
+  const hasCertificate = list.some(
+    (d) => d.uploaded && String(d.title).toLowerCase().includes("certificate"),
   );
 
-  if (!hasGovernmentId || !hasSelfie) {
-    throw new Error("Government ID and Selfie are required before submitting.");
+  if (!hasGovernmentId || !hasCertificate) {
+    throw new Error(
+      "Government ID and Professional Certificate are required before submitting.",
+    );
   }
 
   const submittedAt = new Date().toISOString();
