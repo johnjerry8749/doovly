@@ -82,6 +82,7 @@ async function sendPromotionChat(
   serviceName: string,
   packageName: string,
   endsAt: string,
+  promotionId: string,
 ) {
   const systemUserId = await getOrCreateSystemUser();
 
@@ -135,7 +136,8 @@ async function sendPromotionChat(
     ".";
 
   const analysisText =
-    "Promotion analysis tracking has started. Doovly will use impressions, service views, booking requests, and bookings to measure how the promotion performs.";
+    "[[DOOVLY_PROMOTION_ANALYTICS:" + promotionId + "]]\n" +
+    "Promotion analysis tracking has started. Doovly will use impressions, service views, booking requests, and confirmed bookings to measure how the promotion performs.";
 
   const { error: messageError } = await admin.from("messages").insert([
     {
@@ -370,6 +372,7 @@ Deno.serve(async (req) => {
         service?.name ?? "Your service",
         pkg.name,
         endsAt.toISOString(),
+        promotion.id,
       );
     } catch (error) {
       console.error("[revenuecat-promotion-webhook] chat delivery failed", error);
