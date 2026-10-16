@@ -151,18 +151,6 @@ export default function Settings() {
             title="Push Notifications"
             value={pushNotifications}
             onValueChange={togglePushNotifications}
-          />
-          <ToggleRow
-            icon="calendar-outline"
-            title="Booking Updates"
-            value={prefs.bookingUpdates}
-            onValueChange={() => toggle("bookingUpdates")}
-          />
-          <ToggleRow
-            icon="megaphone-outline"
-            title="Marketing"
-            value={prefs.marketing}
-            onValueChange={() => toggle("marketing")}
             last
           />
         </Section>
