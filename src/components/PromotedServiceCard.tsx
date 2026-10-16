@@ -65,7 +65,7 @@ export function PromotedServiceCard({
             pathname: "/professional/[id]",
             params: { id: professionalId, from: "home" },
           });
-        }
+        }}
       >
         <View style={styles.avatar}>
           {avatarUrl ? (
