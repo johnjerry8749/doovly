@@ -239,6 +239,7 @@ export default function BookMeScreen() {
       const booking = await createBookingRequest({
         professionalId: pro.id,
         professionalName: pro.name,
+        serviceId: String(selectedService.id),
         title: selectedService.name,
         amount: Number(String(selectedService.price).replace(/[^\d]/g, "")) || 0,
         location: address.trim(),
