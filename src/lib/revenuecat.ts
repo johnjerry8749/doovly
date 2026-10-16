@@ -156,6 +156,7 @@ export async function purchasePackage(
 ): Promise<CustomerInfo> {
   await ensureRevenueCatConfigured();
   const { customerInfo } = await Purchases.purchasePackage(pkg);
+  cachedProEntitlement = isPro(customerInfo);
   return customerInfo;
 }
 
@@ -169,7 +170,9 @@ export async function purchaseBoostPackage(
 
 export async function restorePurchases(): Promise<CustomerInfo> {
   await ensureRevenueCatConfigured();
-  return Purchases.restorePurchases();
+  const customerInfo = await Purchases.restorePurchases();
+  cachedProEntitlement = isPro(customerInfo);
+  return customerInfo;
 }
 
 export async function getCustomerInfo(): Promise<CustomerInfo | null> {
