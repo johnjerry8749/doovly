@@ -49,6 +49,7 @@ import {
   isConversationBlockedAsync,
 } from "@/services/chat";
 import { loadSessionUser } from "@/lib/session";
+import { PromotionAnalyticsCard } from "@/components/PromotionAnalyticsCard";
 
 
 
@@ -797,6 +798,11 @@ export default function ChatConversation() {
             }
           }}
           renderItem={({ item }) => {
+            const analyticsMatch = item.text.match(/^\[\[DOOVLY_PROMOTION_ANALYTICS:([0-9a-f-]+)\]\]/i);
+            if (analyticsMatch && p.isSystem && item.senderId === p.id) {
+              return <PromotionAnalyticsCard promotionId={analyticsMatch[1]} />;
+            }
+
             if (item.kind === "request_card" && item.card) {
               return (
                 <View style={styles.cardWrap}>
