@@ -18,19 +18,21 @@ import {
   type SubscriptionPlansState,
   type SubscriptionPlanConfig,
 } from "@/services/subscriptionPlans";
+import {
+  addCustomerInfoListener,
+  getCustomerInfo,
+  getProPackages,
+  isPro,
+  purchasePackage,
+  restorePurchases,
+} from "@/lib/revenuecat";
+import type { PurchasesPackage } from "react-native-purchases";
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#E8F5E9";
 const TEXT_DARK = "#111827";
 const TEXT_MUTED = "#6B7280";
 const BORDER = "#E5E7EB";
-
-function formatNaira(n: number) {
-  return `₦${n.toLocaleString("en-NG", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
-}
 
 const EMPTY_PLAN: SubscriptionPlanConfig = { id: "basic", name: "", tagline: "", monthlyPrice: 0, yearlyPrice: 0, popular: false, features: [] };
 
@@ -46,6 +48,93 @@ export default function Subscription() {
     getSubscriptionPlans(),
   );
   const [period, setPeriod] = useState<BillingPeriod>("monthly");
+  const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
+  const [yearlyPackage, setYearlyPackage] = useState<PurchasesPackage | null>(null);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [proActive, setProActive] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const removeListener = addCustomerInfoListener((info) => {
+      if (active) setProActive(isPro(info));
+    });
+
+    void (async () => {
+      try {
+        const [packages, customerInfo] = await Promise.all([
+          getProPackages(),
+          getCustomerInfo(),
+        ]);
+        if (!active) return;
+        setMonthlyPackage(packages.monthly);
+        setYearlyPackage(packages.yearly);
+        setProActive(isPro(customerInfo));
+        if (!packages.monthly || !packages.yearly) {
+          setPurchaseError("Subscription packages are not available right now. Please try again later.");
+        }
+      } catch (error) {
+        if (active) {
+          setPurchaseError(error instanceof Error ? error.message : "Could not load subscription products.");
+        }
+      } finally {
+        if (active) setProductsLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+      removeListener();
+    };
+  }, []);
+
+  const selectedPackage = period === "monthly" ? monthlyPackage : yearlyPackage;
+  const selectedPrice = selectedPackage?.product.priceString ?? "";
+  const periodWord = period === "monthly" ? "monthly" : "yearly";
+
+  async function handlePurchase() {
+    if (!selectedPackage || purchasing) return;
+    setPurchasing(true);
+    setPurchaseError(null);
+    try {
+      const info = await purchasePackage(selectedPackage);
+      if (isPro(info)) {
+        setProActive(true);
+      } else {
+        setPurchaseError("Purchase completed, but Pro access has not been confirmed yet. Please try Restore Purchases.");
+      }
+    } catch (error) {
+      const purchaseError = error as { userCancelled?: boolean; code?: string; message?: string };
+      if (purchaseError.userCancelled || purchaseError.code === "PURCHASE_CANCELLED_ERROR") {
+        return;
+      }
+      setPurchaseError(purchaseError.message || "Your purchase could not be completed. Please try again.");
+    } finally {
+      setPurchasing(false);
+    }
+  }
+
+  async function handleRestore() {
+    if (restoring) return;
+    setRestoring(true);
+    setPurchaseError(null);
+    try {
+      const info = await restorePurchases();
+      const active = isPro(info);
+      setProActive(active);
+      if (active) {
+        setPurchaseError(null);
+      } else {
+        setPurchaseError("No active Doovly Pro subscription was found for this account.");
+      }
+    } catch (error) {
+      setPurchaseError(error instanceof Error ? error.message : "Could not restore purchases. Please try again.");
+    } finally {
+      setRestoring(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -73,10 +162,6 @@ export default function Subscription() {
 
   const pro = plansState.plans.find((p) => p.id === "pro") ?? { ...EMPTY_PLAN, id: "pro" as const };
   const basic = plansState.plans.find((p) => p.id === "basic") ?? EMPTY_PLAN;
-
-  const price =
-    period === "monthly" ? pro.monthlyPrice : pro.yearlyPrice;
-  const periodWord = period === "monthly" ? "monthly" : "yearly";
 
   /** Merge Basic + Pro features into comparison rows */
   const rows: CompareRow[] = useMemo(() => {
@@ -137,6 +222,13 @@ export default function Subscription() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
+        {proActive ? (
+          <View style={styles.activeNotice}>
+            <Ionicons name="checkmark-circle" size={20} color={PRIMARY} />
+            <Text style={styles.activeNoticeText}>Doovly Pro is active on this account.</Text>
+          </View>
+        ) : null}
+
         {/* Monthly / Yearly toggle (like Go / Plus) */}
         <View style={styles.periodToggle}>
           <TouchableOpacity
@@ -170,7 +262,7 @@ export default function Subscription() {
                 period === "yearly" && styles.periodSegmentTextActive,
               ]}
             >
-              Yearly
+              Yearly · Best value
             </Text>
           </TouchableOpacity>
         </View>
@@ -213,21 +305,31 @@ export default function Subscription() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Sticky upgrade CTA — price updates with period */}
+      {/* Existing paywall, now connected to the current RevenueCat offering. */}
       <View style={styles.footer}>
+        {purchaseError ? (
+          <Text accessibilityRole="alert" style={styles.errorText}>{purchaseError}</Text>
+        ) : null}
         <TouchableOpacity
-          style={styles.upgradeBtn}
+          style={[styles.upgradeBtn, (productsLoading || purchasing || !selectedPackage || proActive) && styles.upgradeBtnDisabled]}
           activeOpacity={0.85}
-          onPress={() => {
-            // TODO: payment — amount = price, period from mock/API
-          }}
+          disabled={productsLoading || purchasing || !selectedPackage || proActive}
+          onPress={handlePurchase}
         >
           <Text style={styles.upgradeBtnText}>
-            Upgrade for {formatNaira(price)}
+            {productsLoading ? "Loading subscription…" : purchasing ? "Processing…" : proActive ? "Pro is active" : selectedPrice ? `Upgrade for ${selectedPrice}` : "Subscription unavailable"}
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.restoreBtn}
+          onPress={handleRestore}
+          disabled={restoring}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.restoreBtnText}>{restoring ? "Restoring purchases…" : "Restore Purchases"}</Text>
+        </TouchableOpacity>
         <Text style={styles.footerNote}>
-          Auto-renews {periodWord}. Cancel anytime.
+          Auto-renews {periodWord}. Cancel anytime in your store subscription settings.
         </Text>
       </View>
     </SafeAreaView>
@@ -385,6 +487,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  upgradeBtnDisabled: {
+    opacity: 0.55,
+  },
+  restoreBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+  },
+  restoreBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: PRIMARY,
+  },
+  errorText: {
+    color: "#B91C1C",
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  activeNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: LIGHT_GREEN,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  activeNoticeText: {
+    color: PRIMARY,
+    fontSize: 13,
+    fontWeight: "700",
   },
   footerNote: {
     fontSize: 12,
