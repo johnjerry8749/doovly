@@ -24,6 +24,13 @@ export type VerificationApplication = {
 
 let cache: VerificationApplication[] = [];
 
+function formatSubmittedOn(value: unknown) {
+  if (!value) return "";
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
+}
+
 function map(
   row: any,
   profile?: any,
@@ -37,8 +44,12 @@ function map(
     location: profile?.city ?? professional?.city ?? "",
     email: row.email ?? profile?.email ?? "",
     phone: row.phone ?? profile?.phone ?? "",
-    status: (row.status ?? "Pending") as VerificationStatus,
-    submittedOn: row.submitted_on ?? row.created_at ?? "",
+    status: String(row.status ?? "pending").toLowerCase() === "verified"
+      ? "Verified"
+      : String(row.status ?? "pending").toLowerCase() === "rejected"
+        ? "Rejected"
+        : "Pending",
+    submittedOn: formatSubmittedOn(row.submitted_on ?? row.created_at),
     avatar: profile?.avatar_url ? { uri: profile.avatar_url } : undefined,
     documents: documents.map((d: any) => ({
       id: d.id,
