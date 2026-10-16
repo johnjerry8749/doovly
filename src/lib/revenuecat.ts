@@ -184,11 +184,18 @@ export async function getCustomerInfo(): Promise<CustomerInfo | null> {
   }
 }
 
-export function hasProEntitlement(
+/**
+ * The single source of truth for paid Pro access.
+ * Never infer Pro access from a product identifier.
+ */
+export function isPro(
   info: CustomerInfo | null | undefined,
 ): boolean {
   return Boolean(info?.entitlements.active[PRO_ENTITLEMENT]);
 }
+
+/** Backwards-compatible alias used by existing promotion/subscription code. */
+export const hasProEntitlement = isPro;
 
 export async function isProFromRevenueCat(): Promise<boolean> {
   return hasProEntitlement(await getCustomerInfo());
