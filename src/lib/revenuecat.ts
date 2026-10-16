@@ -56,6 +56,8 @@ async function configureRevenueCat(appUserId?: string | null): Promise<void> {
     if (appUserId && appUserId !== configuredAppUserId) {
       await Purchases.logIn(appUserId);
       configuredAppUserId = appUserId;
+      // Do not leak the previous account's cached Pro access while refreshing the new customer.
+      cachedProEntitlement = false;
     } else if (!appUserId && configuredAppUserId) {
       await Purchases.logOut();
       configuredAppUserId = null;
