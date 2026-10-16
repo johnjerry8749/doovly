@@ -33,7 +33,7 @@ begin
   -- If the Doovly system profile is not available yet, do not mark messages
   -- as delivered; a later scheduled run can retry the chat delivery.
   for p in
-    select sp.id, sp.user_id, sp.service_id, sp.ends_at, s.name as service_name
+    select sp.id, sp.user_id, sp.service_id, sp.ends_at, sp.status, s.name as service_name
     from public.service_promotions sp
     left join public.services s on s.id = sp.service_id
     where sp.ends_at <= now()
