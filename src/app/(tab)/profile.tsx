@@ -245,7 +245,7 @@ export default function Profile() {
           <MenuItem
             icon={<MenuIcon name="list-outline" />}
             title="My Service Requests"
-            badge={requestCount || undefined}
+            // badge={requestCount || undefined}
             onPress={() => router.push("/profile/my_service_requests")}
           />
           <MenuItem
