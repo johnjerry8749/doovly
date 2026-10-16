@@ -11,6 +11,8 @@ import {
   Pressable,
   Platform,
   Dimensions,
+  Alert,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -277,7 +279,13 @@ export default function VerificationApplications() {
                   {isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
                 </View>
               </TouchableOpacity>
-              <Image source={item.avatar as any} style={styles.avatar} />
+              {item.avatar ? (
+                <Image source={item.avatar as any} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, styles.avatarFallback]}>
+                  <Ionicons name="person" size={20} color="#9CA3AF" />
+                </View>
+              )}
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>{item.name}</Text>
                 <Text style={styles.userProfession}>{item.profession}</Text>
@@ -340,7 +348,13 @@ export default function VerificationApplications() {
             {detailApp && (
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.modalUserRow}>
-                  <Image source={detailApp.avatar as any} style={styles.modalAvatar} />
+                  {detailApp.avatar ? (
+                    <Image source={detailApp.avatar as any} style={styles.modalAvatar} />
+                  ) : (
+                    <View style={[styles.modalAvatar, styles.avatarFallback]}>
+                      <Ionicons name="person" size={26} color="#9CA3AF" />
+                    </View>
+                  )}
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalUserName}>{detailApp.name}</Text>
                     <Text style={styles.modalUserProfession}>{detailApp.profession}</Text>
@@ -364,7 +378,12 @@ export default function VerificationApplications() {
                 <Text style={styles.docsTitle}>
                   Documents ({detailApp.documents.length})
                 </Text>
-                {detailApp.documents.map((doc) => (
+                {detailApp.documents.length === 0 ? (
+                  <View style={styles.noDocuments}>
+                    <Ionicons name="document-text-outline" size={22} color="#9CA3AF" />
+                    <Text style={styles.previewPlaceholder}>No documents were attached to this application.</Text>
+                  </View>
+                ) : detailApp.documents.map((doc) => (
                   <View key={doc.id} style={styles.docRow}>
                     <MaterialCommunityIcons
                       name={doc.type === "image" ? "file-image" : "file-pdf-box"}
@@ -375,8 +394,20 @@ export default function VerificationApplications() {
                       <Text style={styles.docTitle}>{doc.title}</Text>
                       <Text style={styles.docFile}>{doc.fileName}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => setPreviewDoc(doc)}>
-                      <Text style={styles.viewDoc}>View</Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (doc.type === "pdf" && doc.fileUrl) {
+                          Linking.openURL(doc.fileUrl).catch(() =>
+                            Alert.alert("Unable to open document", "Please check the document link and try again."),
+                          );
+                        } else if (doc.fileUrl) {
+                          setPreviewDoc(doc);
+                        } else {
+                          Alert.alert("Document unavailable", "No file link was saved for this document.");
+                        }
+                      }}
+                    >
+                      <Text style={styles.viewDoc}>{doc.type === "pdf" ? "Open PDF" : "Preview"}</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -491,6 +522,7 @@ const styles = StyleSheet.create({
   checkboxDisabled: { opacity: 0.35 },
   userCard: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 14,
@@ -501,11 +533,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#E5E7EB" },
+  avatarFallback: { alignItems: "center", justifyContent: "center" },
+  noDocuments: { alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 24, backgroundColor: "#F9FAFB", borderRadius: 12 },
   userInfo: { flex: 1, minWidth: 0 },
   userName: { fontSize: 15, fontWeight: "700", color: "#111827" },
   userProfession: { fontSize: 12, color: GRAY },
   locationText: { fontSize: 12, color: GRAY },
-  userRight: { alignItems: "flex-end", gap: 4 },
+  userRight: { alignItems: "flex-end", gap: 4, marginLeft: "auto" },
   badge: {
     flexDirection: "row",
     alignItems: "center",
