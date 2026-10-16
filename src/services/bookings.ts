@@ -97,7 +97,7 @@ export async function createBookingRequest(input:{
   const {data,error}=await supabase.from("bookings").insert({
     customer_id:s.uuid,
     professional_id:professionalUuid,
-    service_id: input.serviceId ?? null,
+    service_id: input.serviceId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.serviceId) ? input.serviceId : null,
     title,
     professional_name:input.professionalName,
     customer_name:s.fullName ?? "Customer",
