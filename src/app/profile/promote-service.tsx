@@ -233,7 +233,7 @@ export default function PromoteServiceScreen() {
                   </View>
 
                   <Text style={styles.serviceName}>{service.name}</Text>
-                  <Text style={styles.serviceDescription}>
+                  <Text style={styles.serviceDescription} numberOfLines={2} ellipsizeMode="tail">
                     {service.description?.trim() || "No description added for this service yet."}
                   </Text>
 
@@ -324,9 +324,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: BORDER,
-    borderRadius: 18,
-    padding: 15,
-    marginBottom: 12,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 10,
     shadowColor: "#111827",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.045,
@@ -345,43 +345,43 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   serviceIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: LIGHT_GREEN,
   },
   serviceIconSelected: { backgroundColor: "#D1FAE5" },
-  serviceName: { fontSize: 15, fontWeight: "800", color: TEXT, lineHeight: 21 },
+  serviceName: { fontSize: 14, fontWeight: "800", color: TEXT, lineHeight: 19 },
   serviceDescription: {
-    fontSize: 13,
+    fontSize: 12,
     color: SECONDARY,
-    lineHeight: 19,
-    marginTop: 6,
+    lineHeight: 16,
+    marginTop: 4,
   },
   serviceCardFooter: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     flexWrap: "wrap",
-    gap: 8,
-    marginTop: 14,
-    paddingTop: 12,
+    gap: 6,
+    marginTop: 9,
+    paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: "#F3F4F6",
   },
   pricePill: {
     backgroundColor: LIGHT_GREEN,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
-  servicePrice: { fontSize: 13, fontWeight: "800", color: PRIMARY },
-  selectionLabel: { fontSize: 11, fontWeight: "600", color: SECONDARY },
+  servicePrice: { fontSize: 12, fontWeight: "800", color: PRIMARY },
+  selectionLabel: { fontSize: 10, fontWeight: "600", color: SECONDARY },
   selectionLabelSelected: { color: PRIMARY },
   promotedBadge: {
     flexDirection: "row",
