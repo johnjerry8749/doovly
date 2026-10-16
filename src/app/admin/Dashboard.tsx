@@ -100,7 +100,7 @@ export default function Dashboard() {
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Dashboard</Text>
-            <Text style={styles.subtitle}>Platform overview and key statistics</Text>
+            <Text style={styles.subtitle}>Platform metrics for the selected range and current account status</Text>
           </View>
           <TouchableOpacity style={styles.dateChip} activeOpacity={0.8} onPress={() => chooseRange(range === "all" ? "30days" : "all")}>
             <Ionicons name="calendar-outline" size={14} color={GRAY} />
@@ -116,7 +116,7 @@ export default function Dashboard() {
             icon="people"
             iconBg="#D1FAE5"
             iconColor={GREEN}
-            label="Total Users"
+            label="Users Created"
             value={stats.totalUsers.toLocaleString()}
             sparkColor={GREEN}
           />
@@ -124,7 +124,7 @@ export default function Dashboard() {
             icon="shield-checkmark"
             iconBg="#DBEAFE"
             iconColor="#2563EB"
-            label="Total Verified Users"
+            label="Verified Profiles Created"
             value={stats.totalVerifiedUsers.toLocaleString()}
             sparkColor="#3B82F6"
           />
@@ -132,7 +132,7 @@ export default function Dashboard() {
             icon="ribbon"
             iconBg="#EDE9FE"
             iconColor="#7C3AED"
-            label="Total Pro Sub Users"
+            label="Active Pro Subscriptions"
             value={stats.totalProSubUsers.toLocaleString()}
             sparkColor="#8B5CF6"
           />
@@ -140,8 +140,8 @@ export default function Dashboard() {
             icon="clipboard"
             iconBg="#FFEDD5"
             iconColor="#EA580C"
-            label="Open Requests"
-            value={stats.openRequests.toLocaleString()}
+            label="Total Requests"
+            value={stats.totalRequests.toLocaleString()}
             sparkColor="#F97316"
           />
         </View>
@@ -151,7 +151,7 @@ export default function Dashboard() {
             icon="cash"
             iconBg="#D1FAE5"
             iconColor={GREEN}
-            label="Total Revenue From Pro Users"
+            label="Estimated Monthly Pro Revenue"
             value={formatNaira(stats.totalRevenueFromPro)}
             sparkColor={GREEN}
           />
@@ -159,7 +159,7 @@ export default function Dashboard() {
             icon="document-text"
             iconBg="#FEE2E2"
             iconColor="#DC2626"
-            label="Total Post Request From Users"
+            label="Requests Created"
             value={stats.totalPostRequests.toLocaleString()}
             sparkColor="#EF4444"
           />
@@ -167,7 +167,7 @@ export default function Dashboard() {
             icon="calendar"
             iconBg="#DBEAFE"
             iconColor="#2563EB"
-            label="Total Bookings From All Users"
+            label="Bookings Created"
             value={stats.totalBookings.toLocaleString()}
             sparkColor="#3B82F6"
           />
@@ -178,7 +178,7 @@ export default function Dashboard() {
             icon="megaphone"
             iconBg="#D1FAE5"
             iconColor={GREEN}
-            label="Total Promotions"
+            label="Promotions Created"
             value={stats.totalPromotions.toLocaleString()}
             sparkColor={GREEN}
           />
@@ -186,7 +186,7 @@ export default function Dashboard() {
             icon="flash"
             iconBg="#DBEAFE"
             iconColor="#2563EB"
-            label="Active Promotions"
+            label="Active Promotions Now"
             value={stats.activePromotions.toLocaleString()}
             sparkColor="#3B82F6"
           />
@@ -194,16 +194,20 @@ export default function Dashboard() {
             icon="cash"
             iconBg="#FEF3C7"
             iconColor="#B45309"
-            label="Promotion Revenue"
+            label="Recorded Promotion Amounts"
             value={stats.promotionRevenueLabel}
             sparkColor="#D97706"
           />
         </View>
 
+        <Text style={styles.overviewHint}>
+          Date range applies to records created during that period. Active Pro subscriptions and active promotions are current counts. Pro revenue is an estimate, not verified collected revenue.
+        </Text>
+
         <View style={styles.chartCard}>
           <View style={styles.chartHeader}>
             <View>
-              <Text style={styles.chartTitle}>Overview</Text>
+              <Text style={styles.chartTitle}>Overview by metric</Text>
               <Text style={styles.overviewHint}>{loading ? "Updating report…" : stats.dateRangeLabel}</Text>
             </View>
             <View style={styles.rangeFilters}>
