@@ -120,22 +120,28 @@ export async function getAdminPromotionSummary(since: string | null = null): Pro
     .from("service_promotions")
     .select("id,status,amount,currency,starts_at,ends_at,created_at");
   if (since) query = query.gte("created_at", since);
-  const { data, error } = await query;
 
-  if (error) throw error;
+  // "Active now" is a current-state metric and must not be restricted by
+  // the selected creation-date range.
+  const nowIso = new Date().toISOString();
+  const [filteredResult, activeResult] = await Promise.all([
+    query,
+    supabase
+      .from("service_promotions")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active")
+      .lte("starts_at", nowIso)
+      .gt("ends_at", nowIso),
+  ]);
 
-  const now = Date.now();
-  const rows = data ?? [];
-  const isActive = (row: any) =>
-    row.status === "active" &&
-    !!row.starts_at &&
-    !!row.ends_at &&
-    new Date(row.starts_at).getTime() <= now &&
-    new Date(row.ends_at).getTime() > now;
+  if (filteredResult.error) throw filteredResult.error;
+  if (activeResult.error) throw activeResult.error;
 
+  const rows = filteredResult.data ?? [];
   const revenueByCurrency: Record<string, number> = {};
   for (const row of rows) {
-    // Count recorded purchases only; never estimate revenue from package prices.
+    // This is the amount recorded on the promotion row, not a reconciled
+    // RevenueCat transaction ledger. Never estimate from package prices.
     if (row.amount == null || row.status === "pending" || row.status === "refunded") continue;
     const currency = String(row.currency || "NGN").toUpperCase();
     revenueByCurrency[currency] = (revenueByCurrency[currency] ?? 0) + Number(row.amount);
@@ -143,8 +149,14 @@ export async function getAdminPromotionSummary(since: string | null = null): Pro
 
   return {
     total: rows.length,
-    active: rows.filter(isActive).length,
-    inactive: rows.filter((row: any) => !isActive(row)).length,
+    active: activeResult.count ?? 0,
+    inactive: Math.max(0, rows.length - rows.filter((row: any) =>
+      row.status === "active" &&
+      !!row.starts_at &&
+      !!row.ends_at &&
+      new Date(row.starts_at).getTime() <= Date.now() &&
+      new Date(row.ends_at).getTime() > Date.now()
+    ).length),
     pending: rows.filter((row: any) => row.status === "pending").length,
     expired: rows.filter((row: any) => row.status === "expired").length,
     refunded: rows.filter((row: any) => row.status === "refunded").length,
