@@ -30,7 +30,6 @@ import {
 import type { PurchasesPackage } from "react-native-purchases";
 
 const PRIMARY = "#159447";
-const LIGHT_GREEN = "#E8F5E9";
 const TEXT_DARK = "#111827";
 const TEXT_MUTED = "#6B7280";
 const BORDER = "#E5E7EB";
@@ -310,7 +309,7 @@ export default function Subscription() {
         </TouchableOpacity>
         <Text style={styles.footerNote}>
           Auto-renews {periodWord}. Cancel anytime.{" "}
-          <Text onPress={handleRestore} disabled={restoring} style={styles.restoreInlineText}>
+          <Text onPress={handleRestore} style={styles.restoreInlineText}>
             {restoring ? "Restoring…" : "Restore Purchases"}
           </Text>
         </Text>
