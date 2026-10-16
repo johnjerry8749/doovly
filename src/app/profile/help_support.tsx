@@ -83,25 +83,26 @@ const POPULAR_TOPICS = [
 const GUIDE_CONTENT = {
   bookings: {
     title: "Booking Guidelines",
-    body: `1. Find a professional from Home or Services.
-2. Open their profile and review services & portfolio.
-3. Tap Book Now and choose service, date, time and address.
-4. Review the booking details and submit your booking request.
-5. Check My Bookings for your booking status and confirmation.
-6. Agree on the service payment method and amount with the professional before work begins. Doovly does not currently process service-booking payments through Paystack.
+    body: `1. Browse Home or Services and choose a professional.
+2. Review their profile, services, portfolio and reviews.
+3. Tap Book Now and enter the requested booking details.
+4. Review your information and submit the booking request.
+5. Track your booking status in My Bookings.
+6. Confirm the price and payment arrangements with the professional before the service begins.
 
-You can reschedule or cancel from My Bookings before the job starts, subject to the provider’s policy.`,
+You can manage your booking from My Bookings. Rescheduling or cancellation may depend on the booking status and the professional’s policy.`,
   },
   payments: {
     title: "Payment Instructions",
-    body: `Doovly does not currently accept Paystack payments for service bookings.
+    body: `Before the service begins, make sure you and the professional agree on the total price, payment method and when payment is due.
 
-1. Check the service price and booking details before confirming.
-2. Contact the professional to agree on the payment method and when payment is due.
-3. If the professional offers Pay on Site, pay directly when the service is provided.
-4. Keep a record of any payment you make and never share your bank PIN or OTP.
+1. Review the listed service price and booking details.
+2. Confirm any additional charges with the professional in advance.
+3. Follow the payment arrangement you both agreed to, including Pay on Site when offered.
+4. Keep your payment receipt or proof of transfer.
+5. Never share your bank PIN, password or OTP.
 
-If you have a payment disagreement or need help with a booking, contact Doovly Support. Payments made directly to a professional may need to be resolved with the professional.`,
+If you have a concern about a booking or payment, contact Doovly Support for guidance.`,
   },
   accounts: {
     title: "Account & Security",
@@ -123,13 +124,13 @@ Tips: clear photos in Portfolio and accurate pricing improve bookings.`,
   },
   safety: {
     title: "Staying Safe on Doovly",
-    body: `1. Keep booking conversations and details in Doovly where possible.
-2. Agree on the payment method and amount with the professional before work begins.
-3. Meet in safe, public or agreed locations for the service.
-4. Check provider verification and reviews before booking.
-5. Report suspicious behaviour from the booking or profile.
+    body: `1. Keep your booking details and conversations in Doovly where possible.
+2. Agree on the service price and payment arrangements before work begins.
+3. Meet in a safe location agreed upon for the service.
+4. Check the professional’s verification status and reviews before booking.
+5. Report suspicious behaviour through the available support options.
 
-Doovly does not currently process service-booking payments through Paystack and never asks for your bank PIN or OTP.`,
+Never share your bank PIN, password or OTP with anyone.`,
   },
   technical: {
     title: "Technical Issues",
@@ -149,19 +150,19 @@ const FAQS = [
     id: "1",
     question: "How do I book a service?",
     answer:
-      "Browse services or professionals, open a profile, choose a service and tap Book Now. Select the booking details and submit your request. Check My Bookings for its status, then agree on payment arrangements with the professional.",
+      "Browse services or professionals, open a profile, choose a service and tap Book Now. Enter the requested details and submit your booking request. Track its status in My Bookings and confirm the price and payment arrangements with the professional before the service begins.",
   },
   {
     id: "2",
     question: "How do I make a payment?",
     answer:
-      "Doovly does not currently process service-booking payments through Paystack. Confirm the price and payment method directly with the professional before the service begins. If Pay on Site is offered, pay when the service is provided. Never share your bank PIN or OTP.",
+      "Confirm the total price, payment method and payment timing with the professional before the service begins. If Pay on Site is offered, you can pay when the service is provided. Keep proof of payment and never share your bank PIN, password or OTP.",
   },
   {
     id: "3",
     question: "How do I get a refund?",
     answer:
-      "If you paid a professional directly, contact them first to discuss the issue. You can also contact Doovly Support for help with the booking, but payments made directly to a professional may not be refundable through the app.",
+      "Contact the professional to discuss the payment and explain the issue. You can also contact Doovly Support for help with the booking and guidance on next steps. Keep your booking details and proof of payment available.",
   },
   {
     id: "4",
@@ -179,7 +180,7 @@ const FAQS = [
     id: "6",
     question: "What if a provider doesn't show up?",
     answer:
-      "Contact support from the booking details or use the support contact options below. We can help you review the booking and discuss next steps. Any payment made directly to the professional may need to be resolved with them.",
+      "Open your booking details and contact the professional if appropriate. If you need further help, reach out to Doovly Support using the contact options below so we can help you review the booking and consider next steps.",
   },
 ];
 
