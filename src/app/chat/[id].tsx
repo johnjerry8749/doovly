@@ -353,9 +353,6 @@ export default function ChatConversation() {
               if (active) setChatCoins(value);
             }),
           ]);
-        } else {
-          // A failed/empty network lookup must not erase a usable offline copy.
-          setConversation((current) => current);
         }
 
 
@@ -386,6 +383,13 @@ export default function ChatConversation() {
       cleanup?.();
     };
   }, [conversationId]);
+
+  // Persist each displayed message update so reopening the DM works offline.
+  useEffect(() => {
+    if (conversationId && messages.length > 0) {
+      void cacheMessagesAsync(conversationId, messages);
+    }
+  }, [conversationId, messages]);
 
   // Open at the newest message after the real message list has finished
   // arriving. Do not rely on the first render because cached/realtime loading
