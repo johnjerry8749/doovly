@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -54,7 +55,6 @@ export default function Subscription() {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [proActive, setProActive] = useState(false);
-  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -73,11 +73,11 @@ export default function Subscription() {
         setYearlyPackage(packages.yearly);
         setProActive(isPro(customerInfo));
         if (!packages.monthly || !packages.yearly) {
-          setPurchaseError("Subscription packages are not available right now. Please try again later.");
+          Alert.alert("Subscriptions unavailable", "Subscription packages are not available right now. Please try again later.");
         }
       } catch (error) {
         if (active) {
-          setPurchaseError(error instanceof Error ? error.message : "Could not load subscription products.");
+          Alert.alert("Subscriptions unavailable", error instanceof Error ? error.message : "Could not load subscription products.");
         }
       } finally {
         if (active) setProductsLoading(false);
@@ -97,20 +97,19 @@ export default function Subscription() {
   async function handlePurchase() {
     if (!selectedPackage || purchasing) return;
     setPurchasing(true);
-    setPurchaseError(null);
     try {
       const info = await purchasePackage(selectedPackage);
       if (isPro(info)) {
         setProActive(true);
       } else {
-        setPurchaseError("Purchase completed, but Pro access has not been confirmed yet. Please try Restore Purchases.");
+        Alert.alert("Pro not confirmed", "Purchase completed, but Pro access has not been confirmed yet. Please use Restore Purchases.");
       }
     } catch (error) {
       const purchaseError = error as { userCancelled?: boolean; code?: string; message?: string };
       if (purchaseError.userCancelled || purchaseError.code === "PURCHASE_CANCELLED_ERROR") {
         return;
       }
-      setPurchaseError(purchaseError.message || "Your purchase could not be completed. Please try again.");
+      Alert.alert("Purchase failed", purchaseError.message || "Your purchase could not be completed. Please try again.");
     } finally {
       setPurchasing(false);
     }
@@ -119,18 +118,17 @@ export default function Subscription() {
   async function handleRestore() {
     if (restoring) return;
     setRestoring(true);
-    setPurchaseError(null);
     try {
       const info = await restorePurchases();
       const active = isPro(info);
       setProActive(active);
       if (active) {
-        setPurchaseError(null);
+        Alert.alert("Purchases restored", "Doovly Pro is active on this account.");
       } else {
-        setPurchaseError("No active Doovly Pro subscription was found for this account.");
+        Alert.alert("No active subscription", "No active Doovly Pro subscription was found for this account.");
       }
     } catch (error) {
-      setPurchaseError(error instanceof Error ? error.message : "Could not restore purchases. Please try again.");
+      Alert.alert("Restore failed", error instanceof Error ? error.message : "Could not restore purchases. Please try again.");
     } finally {
       setRestoring(false);
     }
@@ -222,13 +220,6 @@ export default function Subscription() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        {proActive ? (
-          <View style={styles.activeNotice}>
-            <Ionicons name="checkmark-circle" size={20} color={PRIMARY} />
-            <Text style={styles.activeNoticeText}>Doovly Pro is active on this account.</Text>
-          </View>
-        ) : null}
-
         {/* Monthly / Yearly toggle (like Go / Plus) */}
         <View style={styles.periodToggle}>
           <TouchableOpacity
@@ -262,7 +253,7 @@ export default function Subscription() {
                 period === "yearly" && styles.periodSegmentTextActive,
               ]}
             >
-              Yearly · Best value
+              Yearly
             </Text>
           </TouchableOpacity>
         </View>
@@ -307,9 +298,6 @@ export default function Subscription() {
 
       {/* Existing paywall, now connected to the current RevenueCat offering. */}
       <View style={styles.footer}>
-        {purchaseError ? (
-          <Text accessibilityRole="alert" style={styles.errorText}>{purchaseError}</Text>
-        ) : null}
         <TouchableOpacity
           style={[styles.upgradeBtn, (productsLoading || purchasing || !selectedPackage || proActive) && styles.upgradeBtnDisabled]}
           activeOpacity={0.85}
@@ -320,16 +308,11 @@ export default function Subscription() {
             {productsLoading ? "Loading subscription…" : purchasing ? "Processing…" : proActive ? "Pro is active" : selectedPrice ? `Upgrade for ${selectedPrice}` : "Subscription unavailable"}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.restoreBtn}
-          onPress={handleRestore}
-          disabled={restoring}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.restoreBtnText}>{restoring ? "Restoring purchases…" : "Restore Purchases"}</Text>
-        </TouchableOpacity>
         <Text style={styles.footerNote}>
-          Auto-renews {periodWord}. Cancel anytime in your store subscription settings.
+          Auto-renews {periodWord}. Cancel anytime.{" "}
+          <Text onPress={handleRestore} disabled={restoring} style={styles.restoreInlineText}>
+            {restoring ? "Restoring…" : "Restore Purchases"}
+          </Text>
         </Text>
       </View>
     </SafeAreaView>
@@ -491,36 +474,8 @@ const styles = StyleSheet.create({
   upgradeBtnDisabled: {
     opacity: 0.55,
   },
-  restoreBtn: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-  },
-  restoreBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
+  restoreInlineText: {
     color: PRIMARY,
-  },
-  errorText: {
-    color: "#B91C1C",
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  activeNotice: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: LIGHT_GREEN,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-  },
-  activeNoticeText: {
-    color: PRIMARY,
-    fontSize: 13,
     fontWeight: "700",
   },
   footerNote: {
