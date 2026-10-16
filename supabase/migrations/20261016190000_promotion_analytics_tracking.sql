@@ -5,6 +5,20 @@ alter table public.bookings
 
 create index if not exists idx_bookings_promotion_id on public.bookings(promotion_id);
 
+create table if not exists public.service_promotion_events (
+  id uuid primary key default gen_random_uuid(),
+  promotion_id uuid not null references public.service_promotions(id) on delete cascade,
+  viewer_id uuid not null references public.profiles(id) on delete cascade,
+  metric_date date not null default current_date,
+  metric_type text not null check (metric_type in ('impressions', 'service_views')),
+  created_at timestamptz not null default now(),
+  unique (promotion_id, viewer_id, metric_date, metric_type)
+);
+
+alter table public.service_promotion_events enable row level security;
+revoke all on public.service_promotion_events from anon, authenticated;
+grant select, insert, update, delete on public.service_promotion_events to service_role;
+
 create or replace function public.track_service_promotion_event(
   p_service_id uuid,
   p_metric text
@@ -16,7 +30,7 @@ set search_path = public
 as $$
 declare
   v_promotion_id uuid;
-  v_column text;
+  v_event_id uuid;
 begin
   if auth.uid() is null then
     raise exception 'Authentication required';
@@ -29,6 +43,7 @@ begin
   select sp.id into v_promotion_id
   from public.service_promotions sp
   where sp.service_id = p_service_id
+    and sp.user_id <> auth.uid()
     and sp.status = 'active'
     and sp.starts_at <= now()
     and sp.ends_at > now()
@@ -39,14 +54,23 @@ begin
     return;
   end if;
 
+  insert into public.service_promotion_events (promotion_id, viewer_id, metric_date, metric_type)
+  values (v_promotion_id, auth.uid(), current_date, p_metric)
+  on conflict (promotion_id, viewer_id, metric_date, metric_type) do nothing
+  returning id into v_event_id;
+
+  -- Count at most one impression and one service view per user, per promotion, per day.
+  if v_event_id is null then
+    return;
+  end if;
+
   insert into public.service_promotion_analytics (promotion_id, metric_date)
   values (v_promotion_id, current_date)
   on conflict (promotion_id, metric_date) do nothing;
 
-  v_column := p_metric;
   execute format(
     'update public.service_promotion_analytics set %I = %I + 1, updated_at = now() where promotion_id = $1 and metric_date = current_date',
-    v_column, v_column
+    p_metric, p_metric
   ) using v_promotion_id;
 end;
 $$;
