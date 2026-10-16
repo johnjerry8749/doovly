@@ -194,7 +194,6 @@ export async function promoteServiceAsync(
       user_id: session.uuid,
       package_id: pkg.id,
       product_id: pkg.product_id,
-      status: "pending",
     })
     .select(
       "id,service_id,professional_id,user_id,package_id,product_id,status,amount,currency,starts_at,ends_at",
