@@ -154,7 +154,7 @@ export default function Services() {
             if (active) setPromotedServices(nextPromotedServices);
           })
           .catch((error) => console.warn("Promotion refresh failed:", error));
-      }, 30000);
+      }, 15000);
 
       return () => {
         active = false;
