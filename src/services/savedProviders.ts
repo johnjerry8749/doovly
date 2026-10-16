@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "@/lib/supabase";
+import { isProEntitlementCached } from "@/lib/revenuecat";
 
 import {
   loadSessionUser,
@@ -77,10 +78,17 @@ export function isOwnProfessionalProfile(professionalId: string): boolean {
 export function isCurrentUserPro(): boolean {
   const s = getCachedSessionUser();
   if (!s) return false;
-  if (s.subscribed) return true;
-  const proId = s.professionalId;
-  if (!proId) return false;
-  return getProfessionalById(proId)?.subscribed ?? false;
+
+  // Paid Pro access comes only from RevenueCat's active doovly_pro entitlement.
+  if (isProEntitlementCached()) return true;
+
+  // Preserve Doovly's existing first-30-days trial policy while it is valid.
+  // A stale Supabase "subscribed" flag must not keep an expired paid plan unlocked.
+  return Boolean(
+    !s.paidSubscribed &&
+      s.proTrialEndsAt &&
+      new Date(s.proTrialEndsAt).getTime() > Date.now(),
+  );
 }
 
 export function isCurrentUserVerified(): boolean {
