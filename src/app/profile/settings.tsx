@@ -21,6 +21,7 @@ import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import { getErrorMessage } from "@/utils/error";
+import { registerForNotifications, unregisterForNotifications } from "@/services/notifications";
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#DCFCE7";
@@ -53,8 +54,14 @@ export default function Settings() {
     setPushNotifications(enabled);
     try {
       await AsyncStorage.setItem(PUSH_NOTIFICATIONS_KEY, String(enabled));
+      if (enabled) {
+        await registerForNotifications();
+      } else {
+        await unregisterForNotifications();
+      }
     } catch (error) {
       setPushNotifications(!enabled);
+      await AsyncStorage.setItem(PUSH_NOTIFICATIONS_KEY, String(!enabled)).catch(() => {});
       Alert.alert("Settings", "Your notification preference could not be saved. Please try again.");
     }
   };
