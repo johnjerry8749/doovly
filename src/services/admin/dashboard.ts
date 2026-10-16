@@ -69,11 +69,11 @@ export async function getDashboardStats(range: DashboardRange = "all"): Promise<
     totalBookings: bookingCount,
     dateRangeLabel: range === "30days" ? "Last 30 days" : "All time",
     overviewSeries: [
-      { label: "Users", value: users.count ?? 0 },
-      { label: "Verified", value: verified.count ?? 0 },
-      { label: "Pro", value: proSubs.length },
-      { label: "Requests", value: requestCount },
-      { label: "Bookings", value: bookingCount },
+      { label: "Users created", value: users.count ?? 0 },
+      { label: "Verified profiles", value: verified.count ?? 0 },
+      { label: "Active Pro", value: proSubs.length },
+      { label: "Requests created", value: requestCount },
+      { label: "Bookings created", value: bookingCount },
     ],
   };
 
