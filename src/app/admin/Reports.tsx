@@ -62,7 +62,7 @@ export default function Reports() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Reports</Text>
-            <Text style={styles.subtitle}>Platform performance, activity and revenue summary.</Text>
+            <Text style={styles.subtitle}>Platform activity and revenue indicators, with current counts separated from date-filtered records.</Text>
           </View>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Refresh reports" style={styles.refresh} onPress={load}>
             <Ionicons name="refresh" size={19} color={GREEN} />
@@ -82,7 +82,7 @@ export default function Reports() {
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={styles.rangeCaption}>Showing: {range === "all" ? "All recorded activity" : "Activity created in the last 30 days"}</Text>
+        <Text style={styles.rangeCaption}>Showing: {range === "all" ? "All recorded activity" : "Records created in the last 30 days; current-state metrics remain current"}</Text>
 
         {loading && !stats ? (
           <View style={styles.state}><ActivityIndicator color={GREEN} /><Text style={styles.stateText}>Loading report…</Text></View>
@@ -99,12 +99,12 @@ export default function Reports() {
               {loading && <ActivityIndicator size="small" color={GREEN} />}
             </View>
             <View style={styles.grid}>
-              <ReportCard title="Users" value={stats.totalUsers.toLocaleString()} icon="people-outline" tint="#D1FAE5" color={GREEN} />
-              <ReportCard title="Verified professionals" value={stats.totalVerifiedUsers.toLocaleString()} icon="shield-checkmark-outline" tint="#DBEAFE" color="#2563EB" />
-              <ReportCard title="Pro subscriptions" value={stats.totalProSubUsers.toLocaleString()} icon="ribbon-outline" tint="#EDE9FE" color="#7C3AED" />
-              <ReportCard title="Service requests" value={stats.totalPostRequests.toLocaleString()} icon="document-text-outline" tint="#FFEDD5" color="#EA580C" />
-              <ReportCard title="Bookings" value={stats.totalBookings.toLocaleString()} icon="calendar-outline" tint="#DBEAFE" color="#2563EB" />
-              <ReportCard title="Promotions" value={stats.totalPromotions.toLocaleString()} icon="megaphone-outline" tint="#D1FAE5" color={GREEN} />
+              <ReportCard title="Users created" value={stats.totalUsers.toLocaleString()} icon="people-outline" tint="#D1FAE5" color={GREEN} />
+              <ReportCard title="Verified profiles created" value={stats.totalVerifiedUsers.toLocaleString()} icon="shield-checkmark-outline" tint="#DBEAFE" color="#2563EB" />
+              <ReportCard title="Active Pro subscriptions now" value={stats.totalProSubUsers.toLocaleString()} icon="ribbon-outline" tint="#EDE9FE" color="#7C3AED" />
+              <ReportCard title="Requests created" value={stats.totalPostRequests.toLocaleString()} icon="document-text-outline" tint="#FFEDD5" color="#EA580C" />
+              <ReportCard title="Bookings created" value={stats.totalBookings.toLocaleString()} icon="calendar-outline" tint="#DBEAFE" color="#2563EB" />
+              <ReportCard title="Promotions created" value={stats.totalPromotions.toLocaleString()} icon="megaphone-outline" tint="#D1FAE5" color={GREEN} />
               <ReportCard title="Active promotions now" value={stats.activePromotions.toLocaleString()} icon="flash-outline" tint="#FEF3C7" color="#B45309" />
             </View>
 
@@ -113,22 +113,22 @@ export default function Reports() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.revenueTitle}>Pro subscription revenue estimate</Text>
                 <Text style={styles.revenueValue}>{money(stats.totalRevenueFromPro)}</Text>
-                <Text style={styles.revenueNote}>Estimated from the matching Pro subscription count and configured monthly plan price; this is not a payment-ledger total.</Text>
+                <Text style={styles.revenueNote}>Estimated monthly run-rate from currently active Pro subscriptions multiplied by the configured monthly plan price. This is not verified collected revenue and does not change with the date filter.</Text>
               </View>
             </View>
 
             <View style={styles.revenueCard}>
               <View style={styles.revenueIcon}><Ionicons name="megaphone-outline" size={21} color="#FFFFFF" /></View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.revenueTitle}>Recorded promotion revenue</Text>
+                <Text style={styles.revenueTitle}>Recorded promotion amounts</Text>
                 <Text style={styles.revenueValue}>{stats.promotionRevenueLabel}</Text>
-                <Text style={styles.revenueNote}>Recorded promotion purchase amounts by currency. Pending and refunded purchases are excluded.</Text>
+                <Text style={styles.revenueNote}>Amounts stored on promotion records, grouped by currency; pending and refunded records are excluded. These figures have not been independently reconciled against RevenueCat transactions.</Text>
               </View>
             </View>
 
             <View style={styles.noteCard}>
               <Ionicons name="information-circle-outline" size={18} color={GRAY} />
-              <Text style={styles.noteText}>The selected range filters records by their creation date. “Active promotions now” is the number currently within its active time window.</Text>
+              <Text style={styles.noteText}>The date filter applies to creation dates for users, verified professional records, requests, bookings, promotions and recorded promotion amounts. “Active promotions now” and “Active Pro subscriptions now” are current counts across all time. Verified profiles created counts verified professional records created in the range, not applications verified during that range. The request table has no status field, so this is a total request count, not an open-request count.</Text>
             </View>
           </>
         ) : null}
