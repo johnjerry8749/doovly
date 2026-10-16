@@ -954,7 +954,7 @@ export default function ChatConversation() {
           </View>
         )}
 
-        <View style={styles.inputBar}>
+        {bookingStatusLoaded && <View style={styles.inputBar}>
           {chatBlocked ? (
             <View style={styles.lockedBar}>
               <Ionicons name="ban-outline" size={14} color={TEXT_MUTED} />
@@ -1013,7 +1013,7 @@ export default function ChatConversation() {
               </Text>
             </View>
           )}
-        </View>
+        </View>}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
