@@ -345,6 +345,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: PRIMARY,
+    marginBottom: 19,
   },
   footerNote: {
     fontSize: 12,
