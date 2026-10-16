@@ -121,8 +121,25 @@ export default function ProfessionalProfile() {
 
       void refreshProfile();
 
+      // Keep the profile's Promote action in sync with the expiry time even
+      // when the professional leaves this screen open.
+      const promotionRefresh = setInterval(() => {
+        if (!id) return;
+        getProfessionalPromotionLockAsync(id)
+          .then((lock) => {
+            if (active) {
+              setPromotionLock(lock);
+              setPromotionLockLoading(false);
+            }
+          })
+          .catch((error) => {
+            console.warn("[Promotion] expiry refresh failed:", error);
+          });
+      }, 15000);
+
       return () => {
         active = false;
+        clearInterval(promotionRefresh);
       };
     }, [id]),
   );
