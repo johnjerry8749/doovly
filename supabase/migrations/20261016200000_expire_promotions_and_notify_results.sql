@@ -6,7 +6,7 @@ alter table public.service_promotions
 
 create index if not exists idx_service_promotions_due_to_end
   on public.service_promotions(status, ends_at)
-  where status in ('active', 'ended');
+  where status in ('active', 'expired');
 
 create or replace function public.finish_expired_service_promotions()
 returns integer
@@ -39,14 +39,14 @@ begin
     where sp.ends_at <= now()
       and (
         sp.status = 'active'
-        or (sp.status = 'ended' and sp.end_notified_at is null)
+        or (sp.status = 'expired' and sp.end_notified_at is null)
       )
     order by sp.ends_at
     for update of sp skip locked
   loop
-    if p.status is distinct from 'ended' then
+    if p.status is distinct from 'expired' then
       update public.service_promotions
-      set status = 'ended', updated_at = now()
+      set status = 'expired', updated_at = now()
       where id = p.id and status = 'active';
     end if;
 
