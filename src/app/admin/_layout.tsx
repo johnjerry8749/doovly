@@ -41,7 +41,7 @@ const ADMIN_TABS: {
     icon: "notifications-outline",
   },
   { name: "Subscriptions", label: "Subscriptions", icon: "card-outline" },
-
+  { name: "Promotions", label: "Promotions", icon: "megaphone-outline" },
   { name: "Reports", label: "Reports", icon: "bar-chart-outline" },
   { name: "Settings", label: "Settings", icon: "settings-outline" },
 
@@ -276,6 +276,7 @@ export default function AdminLayout() {
       />
       <Tabs.Screen name="Notifications" options={{ title: "Notifications" }} />
       <Tabs.Screen name="Subscriptions" options={{ title: "Subscriptions" }} />
+      <Tabs.Screen name="Promotions" options={{ title: "Promotions" }} />
       <Tabs.Screen name="Reports" options={{ title: "Reports" }} />
       <Tabs.Screen name="Settings" options={{ title: "Settings" }} />
     </Tabs>
