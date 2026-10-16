@@ -56,97 +56,90 @@ const TERMS_SECTIONS: Section[] = [
   },
   {
     id: 5,
-    title: "Payments & Fees",
+    title: "Service Prices & Fees",
     icon: "cash-multiple",
     content:
-      "Payments and applicable fees must be made through the payment methods supported by Doovly. Prices displayed on the platform may be set by service providers. Doovly may charge applicable platform, subscription or transaction fees where clearly stated.",
+      "Service providers set their own prices for the services they offer on Doovly. Users should agree on the service price and payment arrangements directly with the provider before work begins. Doovly Pro subscriptions and any applicable platform fees will be communicated clearly before purchase.",
   },
   {
     id: 6,
-    title: "Cancellations & Refunds",
-    icon: "close-circle-outline",
-    content:
-      "Cancellation and refund eligibility may depend on the service, booking status and applicable cancellation policy. Where a refund is approved, processing times may depend on the payment provider or financial institution.",
-  },
-  {
-    id: 7,
     title: "Provider Verification",
     icon: "shield-check-outline",
     content:
       "Doovly may verify information submitted by service providers. Verification may include identity, contact or other relevant information. A verification badge indicates that Doovly has completed the applicable verification process and does not guarantee the quality, safety or outcome of a service.",
   },
   {
-    id: 8,
+    id: 7,
     title: "Reviews & Ratings",
     icon: "star-outline",
     content:
       "Users may leave honest and relevant reviews and ratings based on their actual experience. Reviews must not contain false information, threats, harassment, personal information or prohibited content. Doovly may remove content that violates these Terms.",
   },
   {
-    id: 9,
+    id: 8,
     title: "Chat & Communication",
     icon: "chat-outline",
     content:
-      "Doovly may provide communication tools that allow customers and service providers to discuss bookings and services. Users must communicate respectfully and must not use Doovly communication features for fraud, harassment, spam or other prohibited activities.",
+      "Doovly  provide communication tools that allow customers and service providers to discuss bookings and services. Users must communicate respectfully and must not use Doovly communication features for fraud, harassment, spam or other prohibited activities.",
   },
   {
-    id: 10,
+    id: 9,
     title: "User Responsibilities",
     icon: "clipboard-check-outline",
     content:
       "You agree to use Doovly lawfully and responsibly. You must provide accurate information, respect other users, honour confirmed bookings and comply with applicable laws and these Terms & Conditions.",
   },
   {
-    id: 11,
+    id: 10,
     title: "Pro / Subscription Features",
     icon: "crown-outline",
     content:
       "Doovly may offer paid subscription or Pro features to eligible users. Subscription benefits, pricing, billing periods and renewal terms will be displayed before purchase. Subscription features may change from time to time.",
   },
   {
-    id: 12,
+    id: 11,
     title: "Prohibited Activities",
     icon: "cancel",
     content:
       "Users must not use Doovly for fraudulent, unlawful, abusive or harmful activities. This includes impersonation, scams, harassment, misuse of payment systems, uploading malicious content, attempting to gain unauthorized access or using the platform to facilitate illegal activities.",
   },
   {
-    id: 13,
+    id: 12,
     title: "Disputes & Complaints",
     icon: "gavel",
     content:
       "If you have a complaint about a service, booking or another user, you should first contact the relevant party where appropriate. Doovly may assist with platform-related disputes and may request information necessary to review a complaint.",
   },
   {
-    id: 14,
+    id: 13,
     title: "Limitation of Liability",
     icon: "shield-outline",
     content:
       "Doovly provides a platform for connecting customers and service providers. To the extent permitted by applicable law, Doovly is not responsible for the acts, omissions, quality, safety, availability or outcome of services provided by independent service providers.",
   },
   {
-    id: 15,
+    id: 14,
     title: "Suspension & Termination",
     icon: "account-cancel-outline",
     content:
       "Doovly may suspend or terminate an account where we reasonably believe that a user has violated these Terms, engaged in fraudulent or harmful activity, or created a risk to other users or the platform.",
   },
   {
-    id: 16,
+    id: 15,
     title: "Privacy",
     icon: "lock-outline",
     content:
       "Your use of Doovly is also subject to our Privacy Policy. We collect and process information as described in that policy and applicable data protection laws.",
   },
   {
-    id: 17,
+    id: 16,
     title: "Changes to These Terms",
     icon: "refresh",
     content:
       "Doovly may update these Terms & Conditions from time to time. When material changes are made, we may provide appropriate notice. Your continued use of Doovly after an updated version becomes effective means that you acknowledge the updated Terms.",
   },
   {
-    id: 18,
+    id: 17,
     title: "Contact Doovly",
     icon: "email-outline",
     content:
