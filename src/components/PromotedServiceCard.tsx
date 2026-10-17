@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { trackPromotionEvent } from "@/services/promotionAnalytics";
 import { supabase } from "@/lib/supabase";
 import { listConversationsAsync } from "@/services/chat";
@@ -51,6 +51,12 @@ export function PromotedServiceCard({
 }: PromotedServiceCardProps) {
   const [isOwner, setIsOwner] = useState(false);
     const openingDestinationRef = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      openingDestinationRef.current = false;
+    }, []),
+  );
 
   useEffect(() => {
     let active = true;
