@@ -55,7 +55,7 @@ A read-only inspection was performed directly against the linked Supabase projec
 - Installed extensions: `pg_cron`, `pg_graphql`, `pg_net`, `pg_stat_statements`, `pgcrypto`, `plpgsql`, `supabase_vault`, and `uuid-ossp`.
 - Storage bucket observed: `profile-images` (public).
 
-These are live catalog observations, not a full `pg_dump` and not proof that a replacement baseline will replay successfully. The local CLI export failed before producing a verified dump. No schema-changing SQL was run, no migration history was altered, and no production rows were changed during this inspection.
+These are live catalog observations, not a full `pg_dump` and not proof that a replacement baseline will replay successfully. The CLI export initially failed, but a subsequent export succeeded and is now committed as `supabase/live-schema.sql`. This is a schema-only export (no table data statements were found during a text check). No schema-changing SQL was run, no migration history was altered, and no production rows were changed during this inspection.
 
 The missing live history entry `20261017000412 secure_professional_subscription_records` remains unresolved as a source-file recovery task. Current live policy inspection shows an `Admins can manage professional subscriptions` policy on `professional_subscriptions`, but that observation alone is not enough to reconstruct the original migration exactly.
 
@@ -114,3 +114,20 @@ A read-only comparison of `supabase/migrations/001_schema.sql` with the live `pu
 - `password_reset_rate_limits` has schema drift in both directions: live has `email_hash` and `attempts`, while the baseline instead defines `key_hash` and `request_count`.
 
 The comparison above is a column-presence check only. It does not establish matching types, defaults, generated expressions, constraints, indexes, RLS, grants, function bodies, triggers, views, extensions, or storage policies. It is evidence that `001_schema.sql` must not be used by itself as a current replacement schema. No production data or schema was changed.
+
+
+## Successful live-schema export reviewed on GitHub (2026-10-17)
+
+The schema export is now present on the `master` branch at [`supabase/live-schema.sql`](./live-schema.sql) (112,963 characters at review time). A text-level comparison against `supabase/migrations/001_schema.sql` confirms the original baseline is incomplete:
+
+- Export contains 30 public tables; `001_schema.sql` defines 25.
+- The five additional tables are `chat_credits`, `promotion_packages`, `service_promotions`, `service_promotion_analytics`, and `service_promotion_events`.
+- The export contains 23 public functions and the view `v_professionals_app`.
+- The baseline defines only 5 of the live function names. The later migration files account for some, but the repository must be replay-tested as a sequence before claiming it fully recreates the export.
+- The export includes RLS enablement, policies, indexes, constraints, grants, and trigger definitions. A text scan did not find `INSERT INTO` or `COPY` data-load statements, so this should be treated as schema export, not a data backup.
+
+This is a structural/text comparison, not a successful clean-database restore test. It does not prove that the export is independently replayable in every Supabase environment; managed schemas, roles, extensions, ownership, and Supabase-specific dependencies may need environment-aware handling.
+
+## Recommended consolidation decision
+
+Do not rewrite or delete the 53 existing migration files on `master` yet. Keep them as historical source until all 33 live migration-history entries have been reconciled. For a clean-install path, prepare a separate candidate baseline from the exported schema, review it for managed-role/extension assumptions and security settings, then test it on a separate empty Supabase project. Keep production migration history unchanged; do not mark migrations applied or reset production to make the repository appear consistent.
