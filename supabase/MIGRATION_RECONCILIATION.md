@@ -85,3 +85,13 @@ A read-only inspection of the live `public.professional_subscriptions` table con
 - The `professional_subscriptions_updated_at` trigger calls `set_updated_at()`.
 
 This records the current end state, not the original SQL or exact historical intent of the missing migration. Do not recreate a migration from this evidence alone or mark it as historically recovered.
+
+### Follow-up verification: missing subscription-security migration
+
+- Searched the repository's current files and GitHub commit history for the exact name `secure_professional_subscription_records`; no source file or historical commit with that filename was found.
+- The live migration history entry therefore remains unrecovered. The current live table's state is documented above, but that state does not establish the missing migration's original SQL.
+- Live table grants currently show `authenticated` has table-level `SELECT`, `INSERT`, and `UPDATE`; `service_role` has all table privileges except none are grantable onward; the `postgres` owner has the owner-level privileges. RLS is enabled and not forced.
+- The only current RLS policy found on `professional_subscriptions` is `Admins can manage professional subscriptions` for `authenticated`, with both `USING (is_admin())` and `WITH CHECK (is_admin())`. There is no current non-admin read policy on this table.
+- The live `is_admin()` function is marked SECURITY DEFINER with `search_path=public`; `set_updated_at()` is not SECURITY DEFINER and also has `search_path=public`.
+
+These are read-only observations of the live end state. No production grants, policies, tables, or migration history were changed during this check.
