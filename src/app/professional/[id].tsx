@@ -20,6 +20,8 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 
+import { supabase } from "@/lib/supabase";
+
 import {
   getProfessionalById,
   getProfessionalByIdAsync,
@@ -66,6 +68,7 @@ export default function ProfessionalProfile() {
   const [reviewText, setReviewText] = useState("");
   const [reviewerName, setReviewerName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [saved, setSaved] = useState(() => isSaved(id ?? ""));
   const [promotionLock, setPromotionLock] = useState<ServicePromotion | null>(null);
@@ -153,6 +156,21 @@ export default function ProfessionalProfile() {
   useEffect(() => {
     setSaved(isSaved(id ?? ""));
   }, [id]);
+
+  useEffect(() => {
+    let mounted = true;
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (!mounted) return;
+      if (error) {
+        setCurrentUserId(null);
+        return;
+      }
+      setCurrentUserId(data.user?.id ?? null);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -275,9 +293,23 @@ export default function ProfessionalProfile() {
   }
 
   const isOwnProfile = isOwnProfessionalProfile(pro.id);
+  const hasAlreadyReviewed = Boolean(
+    currentUserId && reviews.some((review) => review.userId === currentUserId),
+  );
 
   const submitReview = async () => {
     const comment = reviewText.trim();
+
+    if (isOwnProfile) {
+      Alert.alert("Not allowed", "You cannot review your own professional profile.");
+      return;
+    }
+
+    if (hasAlreadyReviewed) {
+      Alert.alert("Already reviewed", "You have already reviewed this professional.");
+      setReviewModalVisible(false);
+      return;
+    }
 
     if (!comment) {
       Alert.alert(
@@ -312,8 +344,10 @@ export default function ProfessionalProfile() {
       console.log("Review error:", error);
 
       Alert.alert(
-        "Error",
-        "Could not post your review. Please try again.",
+        "Could not post review",
+        error instanceof Error
+          ? error.message
+          : "Please check your connection and try again.",
       );
     } finally {
       setSubmitting(false);
@@ -723,8 +757,12 @@ export default function ProfessionalProfile() {
                 style={styles.reviewsContainer}
               >
                 <TouchableOpacity
-                  style={styles.writeReviewButton}
-                  activeOpacity={0.8}
+                  style={[
+                    styles.writeReviewButton,
+                    (isOwnProfile || hasAlreadyReviewed) && styles.disabledButton,
+                  ]}
+                  activeOpacity={isOwnProfile || hasAlreadyReviewed ? 1 : 0.8}
+                  disabled={isOwnProfile || hasAlreadyReviewed}
                   onPress={() => setReviewModalVisible(true)}
                 >
                   <View
@@ -757,7 +795,11 @@ export default function ProfessionalProfile() {
                         styles.writeReviewHint
                       }
                     >
-                      Share your experience with this professional
+                      {isOwnProfile
+                        ? "You cannot review your own profile"
+                        : hasAlreadyReviewed
+                          ? "You have already reviewed this professional"
+                          : "Share your experience with this professional"}
                     </Text>
                   </View>
 
