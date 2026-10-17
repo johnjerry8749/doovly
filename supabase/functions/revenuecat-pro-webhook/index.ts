@@ -29,6 +29,78 @@ function eventDate(value: unknown): string | null {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+
+async function sendProNotification(userId: string, title: string, body: string, type: string, subscriptionId?: string) {
+  const { error } = await admin.from("notifications").insert({
+    user_id: userId,
+    type: "general",
+    title,
+    body,
+    unread: true,
+    data: { type, screen: "subscription", ...(subscriptionId ? { subscription_id: subscriptionId } : {}) },
+  });
+  if (error) throw error;
+}
+
+async function sendDoovlyMessage(userId: string, body: string) {
+  const { data: system, error: systemError } = await admin.from("profiles")
+    .select("id").eq("email", "system@doovly.app").maybeSingle();
+  if (systemError) throw systemError;
+  if (!system?.id) throw new Error("Doovly system profile is missing");
+
+  const systemId = system.id as string;
+  const pairFilter = "and(participant_a.eq." + userId + ",participant_b.eq." + systemId +
+    "),and(participant_a.eq." + systemId + ",participant_b.eq." + userId + ")";
+  let { data: conversation, error } = await admin.from("conversations")
+    .select("id").or(pairFilter).limit(1).maybeSingle();
+  if (error) throw error;
+
+  if (!conversation?.id) {
+    const result = await admin.from("conversations").insert({
+      participant_a: userId, participant_b: systemId, last_message: body,
+      last_message_at: new Date().toISOString(),
+    }).select("id").single();
+    if (result.error) throw result.error;
+    conversation = result.data;
+  }
+
+  const inserted = await admin.from("messages").insert({
+    conversation_id: conversation.id, sender_id: systemId, text: body, kind: "system",
+  });
+  if (inserted.error) throw inserted.error;
+
+  const updated = await admin.from("conversations").update({
+    last_message: body, last_message_at: new Date().toISOString(),
+  }).eq("id", conversation.id);
+  if (updated.error) throw updated.error;
+
+  const read = await admin.from("conversation_reads").select("unread_count,last_read_at")
+    .eq("conversation_id", conversation.id).eq("user_id", userId).maybeSingle();
+  if (read.error) throw read.error;
+  const unread = await admin.from("conversation_reads").upsert({
+    conversation_id: conversation.id, user_id: userId,
+    unread_count: Number(read.data?.unread_count ?? 0) + 1,
+    last_read_at: read.data?.last_read_at ?? null,
+  }, { onConflict: "conversation_id,user_id" });
+  if (unread.error) throw unread.error;
+}
+
+async function receiptExists(eventId: string) {
+  if (!eventId) return false;
+  const { data, error } = await admin.from("revenuecat_pro_event_receipts")
+    .select("event_id").eq("event_id", eventId).maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+}
+
+async function saveReceipt(eventId: string, userId: string, eventType: string) {
+  if (!eventId) return;
+  const { error } = await admin.from("revenuecat_pro_event_receipts").insert({
+    event_id: eventId, user_id: userId, event_type: eventType,
+  });
+  if (error && error.code !== "23505") throw error;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (!WEBHOOK_AUTHORIZATION) {
@@ -45,6 +117,7 @@ Deno.serve(async (req) => {
     const userId = String(event.app_user_id ?? "");
     const productId = String(event.product_id ?? "");
     const eventAt = Number(event.event_timestamp_ms ?? 0);
+    const eventId = String(event.id ?? "");
 
     if (!userId || !eventType) {
       return json({ error: "Incomplete RevenueCat event" }, 400);
@@ -52,6 +125,7 @@ Deno.serve(async (req) => {
 
     const activeEvents = new Set([
       "INITIAL_PURCHASE",
+      "TRIAL_STARTED",
       "RENEWAL",
       "UNCANCELLATION",
       "PRODUCT_CHANGE",
@@ -62,6 +136,7 @@ Deno.serve(async (req) => {
     if (!activeEvents.has(eventType) && !expiredEvents.has(eventType)) {
       return json({ ok: true, ignored: eventType });
     }
+    if (await receiptExists(eventId)) return json({ ok: true, duplicate: true, event: eventType });
 
     const { data: profile, error: profileError } = await admin
       .from("profiles")
@@ -107,7 +182,7 @@ Deno.serve(async (req) => {
 
     const { data: current, error: currentError } = await admin
       .from("professional_subscriptions")
-      .select("id,plan_code,status,admin_override,updated_at")
+      .select("id,plan_code,status,admin_override,updated_at,expiry_notified_at")
       .eq("professional_id", professional.id)
       .order("updated_at", { ascending: false })
       .limit(1)
@@ -149,7 +224,11 @@ Deno.serve(async (req) => {
         revenuecat_app_user_id: userId,
         store_product_id: productId || null,
         admin_override: false,
-      };
+      } as Record<string, unknown>;
+      if (eventType === "INITIAL_PURCHASE" || eventType === "TRIAL_STARTED") {
+        values.expiry_reminder_sent_at = null;
+        values.expiry_notified_at = null;
+      }
 
       if (current?.id) {
         const { error } = await admin
@@ -170,27 +249,53 @@ Deno.serve(async (req) => {
         .eq("id", professional.id);
       if (proError) throw proError;
 
+      if ((eventType === "INITIAL_PURCHASE" || eventType === "TRIAL_STARTED") &&
+          !(current?.status === "active" && current?.plan_code === "pro")) {
+        const endDate = eventDate(event.expiration_at_ms);
+        const expiry = endDate
+          ? new Date(endDate + "T00:00:00Z").toLocaleDateString("en-NG", {
+              day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
+            })
+          : "the end of your current billing period";
+        const body = "Your Doovly Pro access is active, including unlimited chat coins. Your current period ends " + expiry + ".";
+        try {
+          await sendProNotification(userId, "Doovly Pro activated", body, "pro_activated", current?.id);
+          await sendDoovlyMessage(userId, body);
+        } catch (deliveryError) {
+          console.error("[revenuecat-pro-webhook] activation delivery failed", deliveryError);
+        }
+      }
+      await saveReceipt(eventId, userId, eventType);
       return json({ ok: true, status: "active", event: eventType });
     }
 
-    if (current?.id) {
+    if (current?.id && !current.expiry_notified_at) {
       const { error } = await admin
         .from("professional_subscriptions")
         .update({
           status: "expired",
           status_label: "Expired",
           admin_override: false,
+          expiry_notified_at: new Date().toISOString(),
         })
         .eq("id", current.id);
       if (error) throw error;
+
+      const { error: proError } = await admin
+        .from("professionals")
+        .update({ subscribed: false })
+        .eq("id", professional.id);
+      if (proError) throw proError;
+
+      const body = "Your Doovly Pro subscription has expired. Your account has returned to the Free plan. You can subscribe again at any time to restore Pro benefits.";
+      try {
+        await sendProNotification(userId, "Doovly Pro expired", body, "pro_expired", current.id);
+        await sendDoovlyMessage(userId, body);
+      } catch (deliveryError) {
+        console.error("[revenuecat-pro-webhook] expiry delivery failed", deliveryError);
+      }
     }
-
-    const { error: proError } = await admin
-      .from("professionals")
-      .update({ subscribed: false })
-      .eq("id", professional.id);
-    if (proError) throw proError;
-
+    await saveReceipt(eventId, userId, eventType);
     return json({ ok: true, status: "expired", event: eventType });
   } catch (error) {
     console.error("[revenuecat-pro-webhook]", error);
