@@ -240,7 +240,7 @@ export default function AdminLayout() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!active) return;
       if (!data.user) { router.replace("/(auth)/login"); return; }
-      const { data: profile } = await supabase.from("profiles").select("role,is_suspended").eq("id", data.user.id).maybeSingle();
+      const { data: profile } = await supabase.rpc("get_my_private_profile");
       if (!active) return;
       if (profile?.role !== "admin" || profile?.is_suspended) { router.replace("/(tab)/home"); return; }
       setChecked(true);
