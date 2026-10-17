@@ -79,7 +79,11 @@ export function isCurrentUserPro(): boolean {
   const s = getCachedSessionUser();
   if (!s) return false;
 
-  // Paid Pro access comes only from RevenueCat's active doovly_pro entitlement.
+  // An explicit admin decision takes precedence over the store entitlement.
+  // This lets support revoke access immediately without cancelling the store plan.
+  if (s.subscriptionOverride) return s.paidSubscribed;
+
+  // Paid Pro access otherwise comes from RevenueCat's active doovly_pro entitlement.
   if (isProEntitlementCached()) return true;
 
   // Preserve Doovly's existing first-30-days trial policy while it is valid.
