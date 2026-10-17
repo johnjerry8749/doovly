@@ -29,6 +29,7 @@ AS $$
     'email', p.email,
     'phone', p.phone,
     'role', p.role,
+    'is_suspended', p.is_suspended,
     'pro_trial_ends_at', p.pro_trial_ends_at,
     'pro_access_override', p.pro_access_override,
     'pro_access_override_updated_at', p.pro_access_override_updated_at
