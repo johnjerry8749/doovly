@@ -74,3 +74,14 @@ The 30 public tables are: `admin_notifications`, `bookings`, `chat_credits`, `ci
 
 This inventory was collected with read-only queries and did not modify production. It is useful for reconciliation, but **it is not a complete schema export**: exact table DDL, all constraints and indexes, function bodies, policies, triggers, grants, storage configuration, and other managed schemas still need to be captured and validated before calling any single file a reproducible baseline.
 
+### Additional evidence for the missing subscription-security migration
+
+A read-only inspection of the live `public.professional_subscriptions` table confirms these current security/schema facts:
+
+- RLS is enabled, with one policy: `Admins can manage professional subscriptions`, for `authenticated`, using `is_admin()` and checking `is_admin()`.
+- The table references `professionals(id)` with `ON DELETE CASCADE`, `profiles(id)` with `ON DELETE CASCADE`, and `subscription_plans(id)` with `ON DELETE SET NULL`.
+- Check constraints currently restrict `plan_code` to `free` or `pro`, and `status` to `active`, `expired`, or `cancelled`.
+- The table has indexes on `professional_id`, `plan_id`, and `user_id`, plus its primary-key and unique-`mock_id` indexes.
+- The `professional_subscriptions_updated_at` trigger calls `set_updated_at()`.
+
+This records the current end state, not the original SQL or exact historical intent of the missing migration. Do not recreate a migration from this evidence alone or mark it as historically recovered.
