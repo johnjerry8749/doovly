@@ -421,24 +421,31 @@ export async function getMessagesAsync(conversationId: string): Promise<ChatMess
 export function getMessages(_conversationId: string): ChatMessage[] {
   return [];
 }
+export async function isCurrentUserChatProAsync(): Promise<boolean> {
+  const session = await loadSessionUser(true);
+  if (!session) return false;
+
+  // Use the database's effective Pro decision for chat, matching the rule
+  // enforced by the message trigger and respecting admin overrides and trials.
+  const { data, error } = await supabase.rpc("is_chat_pro", {
+    p_user_id: session.uuid,
+  });
+
+  if (error) throw error;
+  return data === true;
+}
+
 export async function getChatCreditsAsync(): Promise<number | null> {
   const session = await loadSessionUser(true);
   if (!session) return 0;
 
-  // Use the same effective Pro decision as every other feature. This respects
-  // an admin's explicit grant/revocation even if RevenueCat is still active.
-  if (isCurrentUserPro()) return null;
+  // Only the server-authoritative chat Pro result may produce Unlimited.
+  if (await isCurrentUserChatProAsync()) return null;
 
   const { data, error } = await supabase.rpc("get_my_chat_credits");
 
   if (error) throw error;
   return Number(data ?? 15);
-}
-
-export async function isCurrentUserChatProAsync(): Promise<boolean> {
-  const session = await loadSessionUser(true);
-  if (!session) return false;
-  return isCurrentUserPro();
 }
 
 export async function sendImageMessage(conversationId: string, localUri: string): Promise<ChatMessage> {
