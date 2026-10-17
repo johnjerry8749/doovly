@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
+import { supabase } from "@/lib/supabase";
 
 import {
   getSubscriptionPlans,
@@ -27,7 +28,26 @@ import {
   purchasePackage,
   restorePurchases,
 } from "@/lib/revenuecat";
-import type { PurchasesPackage } from "react-native-purchases";
+import type { CustomerInfo, PurchasesPackage } from "react-native-purchases";
+
+async function notifyProActivated(info: CustomerInfo): Promise<void> {
+  const entitlement = info.entitlements.active.doovly_pro;
+  if (!entitlement) return;
+
+  try {
+    const { error } = await supabase.functions.invoke("notify-pro-subscription", {
+      body: {
+        productId: entitlement.productIdentifier,
+        purchaseDate: entitlement.latestPurchaseDate ?? info.originalPurchaseDate ?? null,
+        expiresAt: entitlement.expirationDate ?? null,
+      },
+    });
+    if (error) console.warn("[Pro subscription] System message/notification could not be delivered:", error.message);
+  } catch (error) {
+    // Purchase confirmation is authoritative; messaging must not undo a successful purchase.
+    console.warn("[Pro subscription] System message/notification delivery failed:", error);
+  }
+}
 
 const PRIMARY = "#159447";
 const TEXT_DARK = "#111827";
@@ -100,6 +120,7 @@ export default function Subscription() {
       const info = await purchasePackage(selectedPackage);
       if (isPro(info)) {
         setProActive(true);
+        await notifyProActivated(info);
       } else {
         Alert.alert("Pro not confirmed", "Purchase completed, but Pro access has not been confirmed yet. Please use Restore Purchases.");
       }
