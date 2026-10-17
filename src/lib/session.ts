@@ -17,6 +17,7 @@ export type SessionUser = {
   uuid: string;
   publicId: string;
   email: string | null;
+  phone: string | null;
   fullName: string | null;
   role: string;
   professionalId: string | null;
@@ -82,11 +83,11 @@ export async function loadSessionUser(
       return null;
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id, full_name, email, role, pro_trial_ends_at, pro_access_override, pro_access_override_updated_at")
-      .eq("id", user.id)
-      .maybeSingle();
+    const { data: profileData, error: profileError } = await supabase.rpc("get_my_private_profile");
+    const profile = profileData && typeof profileData === "object" ? profileData : null;
+    if (profileError) {
+      console.warn("[session] private profile could not be loaded:", profileError.message);
+    }
 
     const [{ data: pro }, { data: subscription }] = await Promise.all([
       supabase
@@ -117,6 +118,7 @@ export async function loadSessionUser(
       uuid: user.id,
       publicId: user.id,
       email: profile?.email ?? user.email ?? null,
+      phone: profile?.phone ?? null,
       fullName: profile?.full_name ?? null,
       role: profile?.role ?? "user",
       professionalId: pro?.id ?? null,
