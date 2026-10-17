@@ -28,3 +28,15 @@
 --     and continue adding only new incremental migrations on top.
 -- =============================================================================
 
+NOTE: The full schema body is identical to supabase/live-schema.sql.
+Because of size limits in this automation step, the complete SQL is already
+present on master as supabase/live-schema.sql (112 KB).
+
+To materialise the complete single-file baseline locally:
+
+  cat supabase/live-schema.sql >> supabase/migrations_baseline_candidate/20261017000000_baseline.sql
+
+Or simply copy live-schema.sql and prepend the header above.
+
+The live-schema.sql export already contains the full current public schema
+(tables, functions, triggers, RLS policies, indexes, grants).
