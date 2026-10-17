@@ -49,9 +49,7 @@ function mapUser(row: any, pro?: any, sub?: any): AdminUser {
 
 export async function listUsersAsync(): Promise<AdminUser[]> {
   const [profiles, pros, subs] = await Promise.all([
-    supabase.from("profiles")
-      .select("id,full_name,phone,email,avatar_url,role,city,is_suspended,member_since,created_at,last_active_label,last_active_at,pro_access_override")
-      .order("created_at", { ascending: false }),
+    supabase.rpc("admin_list_profiles"),
     supabase.from("professionals")
       .select("id,user_id,profession,city,is_verified"),
     supabase.from("professional_subscriptions")
