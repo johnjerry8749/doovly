@@ -18,7 +18,6 @@ import { supabase } from "@/lib/supabase";
 import Subscription from "./subscription";
 import {
   getCustomerInfo,
-  hasProEntitlement,
   restorePurchases,
   PRO_ENTITLEMENT,
 } from "@/lib/revenuecat";
@@ -91,11 +90,12 @@ function ActiveSubscription() {
   async function handleRestore() {
     setRestoring(true);
     try {
-      const info = await restorePurchases();
-      if (hasProEntitlement(info)) {
-        Alert.alert("Restored", "Your Pro subscription is active.");
+      await restorePurchases();
+      await loadSessionUser(true);
+      if (isCurrentUserPro()) {
+        Alert.alert("Pro active", "Doovly Pro access is active on this account.");
       } else {
-        Alert.alert("No purchases found", "We could not find an active subscription.");
+        Alert.alert("Pro access unavailable", "This account does not currently have Doovly Pro access enabled.");
       }
     } catch {
       Alert.alert("Restore failed", "Please try again later.");
