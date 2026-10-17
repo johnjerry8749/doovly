@@ -187,8 +187,10 @@ export default function ChatConversation() {
   const { id, initialMessage } = useLocalSearchParams<{
     id: string;
     initialMessage?: string;
+    promotionId?: string;
   }>();
   const conversationId = String(id ?? "");
+  const targetPromotionId = typeof promotionId === "string" ? promotionId : "";
   const draftFromRoute =
     typeof initialMessage === "string"
       ? initialMessage
@@ -400,13 +402,28 @@ export default function ChatConversation() {
     if (messages.length === lastScrolledMessageCount.current) return;
 
     const timer = setTimeout(() => {
-      listRef.current?.scrollToEnd({ animated: false });
+      if (targetPromotionId) {
+        const targetIndex = messages.findIndex((message) =>
+          message.text.startsWith("[[DOOVLY_PROMOTION_ANALYTICS:" + targetPromotionId + "]]"),
+        );
+        if (targetIndex >= 0) {
+          try {
+            listRef.current?.scrollToIndex({ index: targetIndex, animated: false, viewPosition: 0.45 });
+          } catch {
+            listRef.current?.scrollToEnd({ animated: false });
+          }
+        } else {
+          listRef.current?.scrollToEnd({ animated: false });
+        }
+      } else {
+        listRef.current?.scrollToEnd({ animated: false });
+      }
       lastScrolledMessageCount.current = messages.length;
       initialScrollDone.current = true;
     }, 80);
 
     return () => clearTimeout(timer);
-  }, [messages.length, conversationId]);
+  }, [messages.length, conversationId, targetPromotionId]);
 
   // When the keyboard opens, make sure the composer and newest message are
   // brought above it on both iOS and Android.
