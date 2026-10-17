@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
 
     const { data: current, error: currentError } = await admin
       .from("professional_subscriptions")
-      .select("id,plan_code,status,admin_override,updated_at,expiry_notified_at")
+      .select("id,plan_code,status,admin_override,updated_at,end_date,expiry_reminder_sent_at,expiry_notified_at")
       .eq("professional_id", professional.id)
       .order("updated_at", { ascending: false })
       .limit(1)
@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (planError) throw planError;
 
-      const values = {
+      const values: Record<string, unknown> = {
         user_id: userId,
         professional_id: professional.id,
         plan_id: plan?.id ?? null,
@@ -224,8 +224,14 @@ Deno.serve(async (req) => {
         revenuecat_app_user_id: userId,
         store_product_id: productId || null,
         admin_override: false,
-      } as Record<string, unknown>;
-      if (eventType === "INITIAL_PURCHASE" || eventType === "TRIAL_STARTED") {
+      };
+      // Reset expiry tracking whenever RevenueCat starts a new period or changes its end date.
+      // This lets renewals receive their own 3-day reminder and eventual expiry notice.
+      const startsNewPeriod =
+        eventType === "INITIAL_PURCHASE" ||
+        eventType === "TRIAL_STARTED" ||
+        (values.end_date != null && values.end_date !== current?.end_date);
+      if (startsNewPeriod) {
         values.expiry_reminder_sent_at = null;
         values.expiry_notified_at = null;
       }
@@ -257,16 +263,10 @@ Deno.serve(async (req) => {
             })
           : "the end of your current billing period";
         const body = "Your Doovly Pro access is active, including unlimited chat coins. Your current period ends " + expiry + ".";
-        try {
-          await sendProNotification(userId, "Doovly Pro activated", body, "pro_activated", current?.id);
-        } catch (deliveryError) {
-          console.error("[revenuecat-pro-webhook] activation notification failed", deliveryError);
-        }
-        try {
-          await sendDoovlyMessage(userId, body);
-        } catch (deliveryError) {
-          console.error("[revenuecat-pro-webhook] activation chat failed", deliveryError);
-        }
+        // Do not acknowledge this RevenueCat event if either delivery fails. RevenueCat can retry.
+        // Each individual delivery should be idempotent in a future outbox-based enhancement.
+        await sendProNotification(userId, "Doovly Pro activated", body, "pro_activated", current?.id);
+        await sendDoovlyMessage(userId, body);
       }
       await saveReceipt(eventId, userId, eventType);
       return json({ ok: true, status: "active", event: eventType });
@@ -279,7 +279,6 @@ Deno.serve(async (req) => {
           status: "expired",
           status_label: "Expired",
           admin_override: false,
-          expiry_notified_at: new Date().toISOString(),
         })
         .eq("id", current.id);
       if (error) throw error;
@@ -291,16 +290,14 @@ Deno.serve(async (req) => {
       if (proError) throw proError;
 
       const body = "Your Doovly Pro subscription has expired. Your account has returned to the Free plan. You can subscribe again at any time to restore Pro benefits.";
-      try {
-        await sendProNotification(userId, "Doovly Pro expired", body, "pro_expired", current.id);
-      } catch (deliveryError) {
-        console.error("[revenuecat-pro-webhook] expiry notification failed", deliveryError);
-      }
-      try {
-        await sendDoovlyMessage(userId, body);
-      } catch (deliveryError) {
-        console.error("[revenuecat-pro-webhook] expiry chat failed", deliveryError);
-      }
+      // Leave expiry_notified_at unset until both deliveries succeed so a webhook retry can recover.
+      await sendProNotification(userId, "Doovly Pro expired", body, "pro_expired", current.id);
+      await sendDoovlyMessage(userId, body);
+      const { error: expiryStampError } = await admin
+        .from("professional_subscriptions")
+        .update({ expiry_notified_at: new Date().toISOString() })
+        .eq("id", current.id);
+      if (expiryStampError) throw expiryStampError;
     }
     await saveReceipt(eventId, userId, eventType);
     return json({ ok: true, status: "expired", event: eventType });
