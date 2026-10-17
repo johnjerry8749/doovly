@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { getCurrentUser, isCurrentUserPro } from "@/services/savedProviders";
+import { loadSessionUser } from "@/lib/session";
 import { getCachedSessionUser } from "@/lib/session";
 import Subscription from "./subscription";
 import {
@@ -198,12 +199,25 @@ function ActiveSubscription() {
 }
 
 export default function SubscriptionRoute() {
-  // Pro users see the active-subscription status UI.
-  // Everyone else sees the existing plans / upgrade screen (untouched).
-  if (isCurrentUserPro()) {
-    return <ActiveSubscription />;
-  }
-  return <Subscription />;
+  const [proActive, setProActive] = useState(isCurrentUserPro());
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void loadSessionUser(true)
+        .then(() => {
+          if (active) setProActive(isCurrentUserPro());
+        })
+        .catch((error) => {
+          console.warn("[subscription] access refresh failed:", error);
+          if (active) setProActive(isCurrentUserPro());
+        });
+      return () => { active = false; };
+    }, []),
+  );
+
+  // Refresh the authoritative admin override whenever this route receives focus.
+  return proActive ? <ActiveSubscription /> : <Subscription />;
 }
 
 const styles = StyleSheet.create({
