@@ -3,8 +3,9 @@
  * Real auth only — no mock session fallbacks.
  */
 
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { isProEntitlementCached } from "@/lib/revenuecat";
+import { addCustomerInfoListener, isProEntitlementCached } from "@/lib/revenuecat";
 
 import {
   loadSessionUser,
@@ -93,6 +94,53 @@ export function isCurrentUserPro(): boolean {
       s.proTrialEndsAt &&
       new Date(s.proTrialEndsAt).getTime() > Date.now(),
   );
+}
+
+/**
+ * Reactive Pro access for screens whose limits or controls depend on Pro.
+ * Updates when the admin changes the profile override or RevenueCat refreshes.
+ */
+export function useCurrentUserPro(): boolean {
+  const [pro, setPro] = useState(() => isCurrentUserPro());
+
+  useEffect(() => {
+    let active = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const refresh = async () => {
+      await loadSessionUser(true);
+      if (active) setPro(isCurrentUserPro());
+    };
+
+    const removeCustomerListener = addCustomerInfoListener(() => {
+      if (active) setPro(isCurrentUserPro());
+    });
+
+    void refresh()
+      .then(() => {
+        const session = getCachedSessionUser();
+        if (!active || !session) return;
+        channel = supabase
+          .channel("reactive-pro-access-" + session.uuid)
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "profiles", filter: "id=eq." + session.uuid },
+            () => { void refresh(); },
+          )
+          .subscribe();
+      })
+      .catch((error) => {
+        console.warn("[Pro access] refresh failed:", error);
+      });
+
+    return () => {
+      active = false;
+      removeCustomerListener();
+      if (channel) void supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return pro;
 }
 
 export function isCurrentUserVerified(): boolean {
