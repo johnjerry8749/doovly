@@ -148,6 +148,16 @@ export default function Profile() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Loading....</Text>
+          {role === "admin" && (
+            <TouchableOpacity
+              style={styles.adminloginButton}
+              activeOpacity={0.8}
+              onPress={() => router.push("/admin")}
+            >
+              <Ionicons name="shield-outline" size={20} color="#FFFFFF" />
+              <Text style={styles.adminloginText}>Admin Login</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </SafeAreaView>
     );
