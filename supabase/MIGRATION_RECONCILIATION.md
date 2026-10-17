@@ -42,3 +42,19 @@ Even if two files have identical contents, their distinct names and their relati
 ## Validation note
 
 The consolidated archive was checked after cleanup: it contains 53 source-file headers, retains its archive-only warning, and has no Git merge-conflict markers. This validates the archive text, **not** that all SQL has been replay-tested or that the live schema is fully reproducible from the repository.
+
+## Live schema inspection (2026-10-17)
+
+A read-only inspection was performed directly against the linked Supabase project after the local CLI dump failed. The live project currently reports:
+
+- 30 base tables in `public`, with row-level security enabled on the inspected tables.
+- 75 policies in `public`.
+- 23 functions in `public`.
+- 21 triggers in `public`.
+- 112 indexes in `public`.
+- Installed extensions: `pg_cron`, `pg_graphql`, `pg_net`, `pg_stat_statements`, `pgcrypto`, `plpgsql`, `supabase_vault`, and `uuid-ossp`.
+- Storage bucket observed: `profile-images` (public).
+
+These are live catalog observations, not a full `pg_dump` and not proof that a replacement baseline will replay successfully. The local CLI export failed before producing a verified dump. No schema-changing SQL was run, no migration history was altered, and no production rows were changed during this inspection.
+
+The missing live history entry `20261017000412 secure_professional_subscription_records` remains unresolved as a source-file recovery task. Current live policy inspection shows an `Admins can manage professional subscriptions` policy on `professional_subscriptions`, but that observation alone is not enough to reconstruct the original migration exactly.
