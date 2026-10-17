@@ -23,6 +23,8 @@ export type SessionUser = {
   professionalUuid: string | null;
   subscribed: boolean;
   paidSubscribed: boolean;
+  /** True when an admin has explicitly set the subscription access override. */
+  subscriptionOverride: boolean;
   proTrialEndsAt: string | null;
   verified: boolean;
 };
@@ -69,11 +71,24 @@ export async function loadSessionUser(
       .eq("id", user.id)
       .maybeSingle();
 
-    const { data: pro } = await supabase
-      .from("professionals")
-      .select("id, subscribed, is_verified")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const [{ data: pro }, { data: subscription }] = await Promise.all([
+      supabase
+        .from("professionals")
+        .select("id, subscribed, is_verified")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("professional_subscriptions")
+        .select("plan_code,status,admin_override,updated_at")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    const subscriptionOverride = Boolean(subscription?.admin_override);
+    const subscriptionGrantsPro =
+      subscription?.plan_code === "pro" && subscription?.status === "active";
 
     cached = {
       uuid: user.id,
@@ -84,7 +99,10 @@ export async function loadSessionUser(
       professionalId: pro?.id ?? null,
       professionalUuid: pro?.id ?? null,
       subscribed: Boolean(pro?.subscribed),
-      paidSubscribed: Boolean(pro?.subscribed),
+      paidSubscribed: subscriptionOverride
+        ? subscriptionGrantsPro
+        : Boolean(pro?.subscribed),
+      subscriptionOverride,
       proTrialEndsAt: profile?.pro_trial_ends_at ?? null,
       verified: Boolean(pro?.is_verified),
     };
@@ -106,7 +124,9 @@ export function getCachedSessionUser(): SessionUser | null {
 
   return {
     ...cached,
-    subscribed: cached.subscribed || trialActive,
+    subscribed: cached.subscriptionOverride
+      ? cached.paidSubscribed
+      : cached.subscribed || trialActive,
   };
 }
 
