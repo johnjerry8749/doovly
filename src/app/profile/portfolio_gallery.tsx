@@ -27,7 +27,7 @@ import {
 import {
   getLoggedInProfessionalId,
   getProfessionalById,
-  isCurrentUserPro,
+  useCurrentUserPro,
 } from "@/services/savedProviders";
 import { invalidateProfessionalsCache } from "@/services/professionals";
 
@@ -62,7 +62,7 @@ export default function PortfolioGallery() {
 
   const proId = getLoggedInProfessionalId();
   const pro = proId ? getProfessionalById(proId) : undefined;
-  const isPro = isCurrentUserPro();
+  const isPro = useCurrentUserPro();
 
   const portfolioLimit = isPro
     ? PRO_PORTFOLIO_LIMIT
