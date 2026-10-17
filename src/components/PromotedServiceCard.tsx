@@ -146,11 +146,12 @@ export function PromotedServiceCard({
         </Text>
       </TouchableOpacity>
 
-{canBook && (
-      <TouchableOpacity
-        style={styles.bookButton}
-        activeOpacity={0.8}
-        onPress={() =>
+<TouchableOpacity
+        style={[styles.bookButton, !canBook && styles.bookButtonDisabled]}
+        activeOpacity={canBook ? 0.8 : 1}
+        disabled={!canBook}
+        onPress={() => {
+          if (!canBook) return;
           router.push({
             pathname: "/bookme/[id]",
             params: {
@@ -159,13 +160,12 @@ export function PromotedServiceCard({
               serviceName,
               price: price || String(priceValue || ""),
             },
-          })
-        }
+          });
+        }}
       >
         <Text style={styles.bookText}>Book Now</Text>
         <Ionicons name="arrow-forward" size={13} color={GREEN} />
       </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -278,5 +278,8 @@ const styles = StyleSheet.create({
     color: GREEN,
     fontSize: 12,
     fontWeight: "800",
+  },
+  bookButtonDisabled: {
+    opacity: 0.55,
   },
 });
