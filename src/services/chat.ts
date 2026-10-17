@@ -142,20 +142,21 @@ async function getUserUuid(publicId: string): Promise<string | null> {
 }
 
 async function getParticipant(userId: string): Promise<ChatParticipant> {
-  const [{ data: profile }, { data: pro }] = await Promise.all([
+  const [{ data: profile }, { data: pro }, { data: privateProfile }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id,full_name,avatar_url,phone,email,role")
+      .select("id,full_name,avatar_url")
       .eq("id", userId)
       .maybeSingle(),
     supabase
       .from("professionals")
-      .select("id,is_verified,avatar_url,profession,profiles!professionals_user_id_fkey(full_name,avatar_url)")
+      .select("id,is_verified,avatar_url,profession,phone,profiles!professionals_user_id_fkey(full_name,avatar_url)")
       .eq("user_id", userId)
       .maybeSingle(),
+    supabase.rpc("get_chat_participant_profile", { p_user_id: userId }),
   ]);
 
-  const isSystem = profile?.email?.toLowerCase() === "system@doovly.app";
+  const isSystem = privateProfile?.email?.toLowerCase() === "system@doovly.app";
 
   return {
     id: profile?.id ?? pro?.id ?? userId,
@@ -165,7 +166,7 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
       : imageFromUrl(pro?.avatar_url ?? pro?.profiles?.avatar_url ?? profile?.avatar_url),
     verified: isSystem ? false : Boolean(pro?.is_verified),
     profession: isSystem ? "Official Doovly" : pro?.profession ?? null,
-    phone: profile?.phone ?? null,
+    phone: privateProfile?.phone ?? pro?.phone ?? null,
     isSystem,
   };
 }
