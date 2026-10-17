@@ -157,15 +157,6 @@ export default function ChatList() {
         <Text style={styles.headerTitle}>
           Messages
         </Text>
-
-        <View style={styles.headerIcon}>
-          <Image
-            source={require("@/assets/images/icon.png")}
-            style={styles.doovlyLogo}
-            resizeMode="cover"
-            accessibilityLabel="Doovly"
-          />
-        </View>
       </View>
 
       {/* Search */}
