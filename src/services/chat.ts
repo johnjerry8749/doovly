@@ -426,9 +426,7 @@ export async function isCurrentUserChatProAsync(): Promise<boolean> {
 
   // Use the database's effective Pro decision for chat, matching the rule
   // enforced by the message trigger and respecting admin overrides and trials.
-  const { data, error } = await supabase.rpc("is_chat_pro", {
-    p_user_id: session.uuid,
-  });
+  const { data, error } = await supabase.rpc("get_my_chat_pro");
 
   if (error) throw error;
   return data === true;
