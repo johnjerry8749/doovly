@@ -502,6 +502,7 @@ export default function Home() {
                 key={item.promotionId}
                 professionalId={item.professionalId}
                 serviceId={item.serviceId}
+                promotionId={item.promotionId}
                 serviceName={item.serviceName}
                 serviceDescription={item.serviceDescription}
                 city={item.city}
