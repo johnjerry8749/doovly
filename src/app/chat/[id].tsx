@@ -799,6 +799,19 @@ export default function ChatConversation() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          onScrollToIndexFailed={({ index, averageItemLength }) => {
+            listRef.current?.scrollToOffset({
+              offset: Math.max(0, averageItemLength * index),
+              animated: false,
+            });
+            setTimeout(() => {
+              listRef.current?.scrollToIndex({
+                index,
+                animated: false,
+                viewPosition: 0.45,
+              });
+            }, 180);
+          }}
           ListEmptyComponent={
             loadingConversation ? (
               <View style={styles.centered}>
