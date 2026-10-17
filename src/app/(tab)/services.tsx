@@ -394,6 +394,7 @@ export default function Services() {
         <PromotedServiceCard
           professionalId={item.professionalId}
           serviceId={item.serviceId}
+          promotionId={item.promotionId}
           serviceName={item.serviceName}
           serviceDescription={item.serviceDescription}
           city={item.city}
