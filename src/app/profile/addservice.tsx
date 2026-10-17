@@ -27,7 +27,7 @@ import {
 } from "@/services/professionals";
 import {
   getLoggedInProfessionalId,
-  isCurrentUserPro,
+  useCurrentUserPro,
 } from "@/services/savedProviders";
 
 const PRIMARY = "#16A34A";
@@ -52,7 +52,7 @@ function formatPrice(value: string): string {
 export default function AddService() {
   const proId = getLoggedInProfessionalId();
   const pro = proId ? getProfessionalById(proId) : undefined;
-  const isPro = isCurrentUserPro();
+  const isPro = useCurrentUserPro();
   const [categories, setCategories] = useState<{ name: string; icon?: string }[]>([]);
 
   const [services, setServices] = useState<ProService[]>([]);
