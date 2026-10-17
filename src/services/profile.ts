@@ -48,8 +48,6 @@ export async function getProfileForEditAsync(): Promise<ProfileEditData | null> 
       avatar_key,
       profiles!professionals_user_id_fkey (
         full_name,
-        email,
-        phone,
         avatar_url
       )
     `)
@@ -72,8 +70,8 @@ export async function getProfileForEditAsync(): Promise<ProfileEditData | null> 
     name: row?.profession
       ? profile?.full_name ?? s.fullName ?? ""
       : profile?.full_name ?? s.fullName ?? "",
-    phone: row?.phone ?? profile?.phone ?? s.phone ?? "",
-    email: row?.email ?? profile?.email ?? s.email ?? "",
+    phone: row?.phone ?? s.phone ?? "",
+    email: row?.email ?? s.email ?? "",
     profession: row?.profession ?? "Other",
     bio: row?.bio ?? "",
     city: row?.city ?? "",
