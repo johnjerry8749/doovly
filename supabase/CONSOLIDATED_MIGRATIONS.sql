@@ -1344,3 +1344,199 @@ for update
 to authenticated
 using ((select public.is_admin()))
 with check ((select public.is_admin()));
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005212000_enable_professionals_realtime.sql
+-- =====================================================================
+
+-- Keep professional subscription state synchronized with frontend clients in real time.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'professionals'
+  ) then
+    alter publication supabase_realtime add table public.professionals;
+  end if;
+end
+$$;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005213000_link_subscription_plan_codes.sql
+-- =====================================================================
+
+-- Use stable database plan/feature codes instead of client mock IDs.
+alter table public.subscription_plans add column if not exists code text;
+alter table public.subscription_plan_features add column if not exists code text;
+
+update public.subscription_plans
+set code = lower(coalesce(code, mock_id))
+where code is null or btrim(code) = '';
+
+update public.subscription_plan_features
+set code = coalesce(code, mock_id)
+where code is null or btrim(code) = '';
+
+create unique index if not exists subscription_plans_code_key
+on public.subscription_plans(code);
+
+create unique index if not exists subscription_plan_features_plan_code_key
+on public.subscription_plan_features(plan_id, code);
+
+alter table public.subscription_plans alter column code set not null;
+alter table public.subscription_plan_features alter column code set not null;
+
+do $
+begin
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='subscription_plans') then
+    alter publication supabase_realtime add table public.subscription_plans;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='subscription_plan_features') then
+    alter publication supabase_realtime add table public.subscription_plan_features;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='subscription_plan_meta') then
+    alter publication supabase_realtime add table public.subscription_plan_meta;
+  end if;
+end
+$;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005213100_allow_admin_subscription_plan_inserts.sql
+-- =====================================================================
+
+create policy "Admins can insert subscription plans"
+on public.subscription_plans
+for insert
+to authenticated
+with check ((select public.is_admin()));
+
+create policy "Admins can insert plan meta"
+on public.subscription_plan_meta
+for insert
+to authenticated
+with check ((select public.is_admin()));
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006001000_add_welcome_notification_on_signup.sql
+-- =====================================================================
+
+-- Automatically create the first in-app notification for every new Doovly user.
+-- The notification UI already supplies the Doovly logo for general/system notifications.
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  next_role TEXT;
+BEGIN
+  next_role := COALESCE(NEW.raw_user_meta_data ->> 'role', 'user');
+
+  IF next_role NOT IN ('user', 'admin', 'professional') THEN
+    next_role := 'user';
+  END IF;
+
+  INSERT INTO public.profiles (id, full_name, phone, email, role, city, mock_id)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data ->> 'full_name', NEW.email, 'User'),
+    NEW.phone,
+    NEW.email,
+    next_role,
+    NEW.raw_user_meta_data ->> 'city',
+    NEW.raw_user_meta_data ->> 'mock_id'
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = COALESCE(EXCLUDED.email, public.profiles.email),
+    full_name = COALESCE(NULLIF(EXCLUDED.full_name, ''), public.profiles.full_name);
+
+  INSERT INTO public.notifications (
+    user_id,
+    type,
+    title,
+    body,
+    unread,
+    avatar_url,
+    time_label
+  )
+  VALUES (
+    NEW.id,
+    'general',
+    'Welcome to Doovly 👋',
+    'Thanks for joining Doovly! Explore services and find trusted professionals near you.',
+    TRUE,
+    NULL,
+    'Just now'
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006002000_enable_notification_realtime.sql
+-- =====================================================================
+
+-- Enable realtime delivery for user in-app notifications.
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006003000_allow_users_to_delete_notifications.sql
+-- =====================================================================
+
+-- Allow authenticated users to delete only their own notifications.
+drop policy if exists "Users can delete own notifications" on public.notifications;
+
+create policy "Users can delete own notifications"
+on public.notifications
+for delete
+to authenticated
+using ((select auth.uid()) = user_id);
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006004000_add_other_service_category.sql
+-- =====================================================================
+
+-- Add a catch-all service/profession category for new and unlisted professions.
+INSERT INTO public.service_categories (mock_id, name, icon, sort_order)
+SELECT
+  'other',
+  'Other',
+  'briefcase-outline',
+  COALESCE((SELECT MAX(sort_order) FROM public.service_categories), 0) + 1
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.service_categories WHERE LOWER(TRIM(name)) = 'other'
+);
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006004100_default_profession_to_other.sql
+-- =====================================================================
+
+-- Store a default profession on every user profile without creating a professional listing.
+-- New registrations receive Other automatically; Edit Profile updates this field.
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS profession TEXT NOT NULL DEFAULT 'Other';
+
+UPDATE public.profiles
+SET profession = 'Other'
+WHERE profession IS NULL OR BTRIM(profession) = '';
