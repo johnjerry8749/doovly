@@ -95,3 +95,22 @@ This records the current end state, not the original SQL or exact historical int
 - The live `is_admin()` function is marked SECURITY DEFINER with `search_path=public`; `set_updated_at()` is not SECURITY DEFINER and also has `search_path=public`.
 
 These are read-only observations of the live end state. No production grants, policies, tables, or migration history were changed during this check.
+
+## Baseline drift check against live table columns (2026-10-17)
+
+A read-only comparison of `supabase/migrations/001_schema.sql` with the live `public` table catalog found that this file is **not a complete current baseline**:
+
+- The file defines 25 tables; the live project has 30 public tables.
+- Entirely absent from `001_schema.sql`: `chat_credits`, `promotion_packages`, `service_promotions`, `service_promotion_analytics`, and `service_promotion_events`.
+- Live columns not represented in the baseline were found in:
+  - `profiles`: `expo_push_token`, `profession`, `pro_trial_started_at`, `pro_trial_ends_at`
+  - `bookings`: `source_offer_id`, `service_id`, `promotion_id`
+  - `notifications`: `request_id`, `data`
+  - `subscription_plans`: `code`
+  - `subscription_plan_features`: `code`
+  - `verification_applications`: `submitted_at`, `admin_notified_at`
+  - `conversations`: `offer_id`, `text_allowed`, `text_allowed_by`, `text_allowed_at`, `blocked_by`, `blocked_at`
+  - `messages`: `image_url`
+- `password_reset_rate_limits` has schema drift in both directions: live has `email_hash` and `attempts`, while the baseline instead defines `key_hash` and `request_count`.
+
+The comparison above is a column-presence check only. It does not establish matching types, defaults, generated expressions, constraints, indexes, RLS, grants, function bodies, triggers, views, extensions, or storage policies. It is evidence that `001_schema.sql` must not be used by itself as a current replacement schema. No production data or schema was changed.
