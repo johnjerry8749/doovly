@@ -22,7 +22,7 @@ import { loadSessionUser } from "@/lib/session";
 import {
   getCurrentUserRole,
   getLoggedInProfessionalId,
-  isCurrentUserPro,
+  useCurrentUserPro,
 } from "@/services/savedProviders";
 import { listMyServiceRequests } from "@/services/serviceRequests";
 
@@ -108,7 +108,7 @@ export default function Profile() {
   const [pro, setPro] = useState<ReturnType<typeof getProfessionalById>>( 
     proId ? getProfessionalById(proId) : undefined,
   );
-  const isPro = isCurrentUserPro();
+  const isPro = useCurrentUserPro();
   const requestCount = listMyServiceRequests().length;
 
   useEffect(() => {
