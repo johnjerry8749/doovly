@@ -17,7 +17,7 @@ import {
   toggleSave,
   getRemainingSlots,
   getSaveLimit,
-  getCurrentUser,
+  useCurrentUserPro,
   type SaveResult,
 } from "@/services/savedProviders";
 import type { Professional } from "@/services/professionals";
@@ -26,6 +26,7 @@ const PRIMARY = "#159447";
 
 export default function SavedProviders() {
   const [list, setList] = useState<Professional[]>([]);
+  const isPro = useCurrentUserPro();
 
   const refresh = useCallback(() => {
     setList(getSavedProviders());
@@ -67,14 +68,14 @@ export default function SavedProviders() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {!getCurrentUser().subscribed && limit != null && (
+      {!isPro && limit != null && (
         <Text style={styles.limitHint}>
           {remaining} of {limit} free saves left
           {remaining === 0 ? " · Upgrade to Pro for unlimited" : ""}
         </Text>
       )}
 
-      {getCurrentUser().subscribed && (
+      {isPro && (
         <Text style={styles.limitHint}>Pro · Unlimited saves</Text>
       )}
 
