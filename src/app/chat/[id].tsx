@@ -184,7 +184,7 @@ function RequestCard({ card }: { card: RequestCardData }) {
 }
 
 export default function ChatConversation() {
-  const { id, initialMessage } = useLocalSearchParams<{
+  const { id, initialMessage, promotionId } = useLocalSearchParams<{
     id: string;
     initialMessage?: string;
     promotionId?: string;
