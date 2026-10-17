@@ -180,7 +180,7 @@ export async function listAdminPromotions(): Promise<AdminPromotion[]> {
 
   const [services, profiles, packages] = await Promise.all([
     serviceIds.length ? supabase.from("services").select("id,name").in("id", serviceIds) : Promise.resolve({ data: [], error: null } as any),
-    userIds.length ? supabase.from("profiles").select("id,full_name,email").in("id", userIds) : Promise.resolve({ data: [], error: null } as any),
+    userIds.length ? supabase.rpc("admin_list_profiles") : Promise.resolve({ data: [], error: null } as any),
     packageIds.length ? supabase.from("promotion_packages").select("id,name").in("id", packageIds) : Promise.resolve({ data: [], error: null } as any),
   ]);
 
