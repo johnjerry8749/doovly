@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { getCurrentUser, isCurrentUserPro } from "@/services/savedProviders";
 import { loadSessionUser } from "@/lib/session";
+import { supabase } from "@/lib/supabase";
 import { getCachedSessionUser } from "@/lib/session";
 import Subscription from "./subscription";
 import {
@@ -204,15 +205,36 @@ export default function SubscriptionRoute() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      void loadSessionUser(true)
-        .then(() => {
-          if (active) setProActive(isCurrentUserPro());
-        })
-        .catch((error) => {
-          console.warn("[subscription] access refresh failed:", error);
-          if (active) setProActive(isCurrentUserPro());
-        });
-      return () => { active = false; };
+      let accessChannel: ReturnType<typeof supabase.channel> | null = null;
+
+      const refreshAccess = () => {
+        void loadSessionUser(true)
+          .then(() => {
+            if (active) setProActive(isCurrentUserPro());
+          })
+          .catch((error) => {
+            console.warn("[subscription] access refresh failed:", error);
+            if (active) setProActive(isCurrentUserPro());
+          });
+      };
+
+      refreshAccess();
+      void supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!active || !user) return;
+        accessChannel = supabase
+          .channel("subscription-route-access-" + user.id)
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "profiles", filter: "id=eq." + user.id },
+            refreshAccess,
+          )
+          .subscribe();
+      });
+
+      return () => {
+        active = false;
+        if (accessChannel) void supabase.removeChannel(accessChannel);
+      };
     }, []),
   );
 
