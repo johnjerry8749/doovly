@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { loadSessionUser } from "@/lib/session";
+import { isCurrentUserPro } from "@/services/savedProviders";
 import { uploadImage } from "@/services/cloudinary";
 import { recordAcceptedOfferBooking, updateBookingStatus } from "@/services/bookings";
 import type { Booking } from "@/services/bookings";
@@ -421,16 +422,12 @@ export function getMessages(_conversationId: string): ChatMessage[] {
   return [];
 }
 export async function getChatCreditsAsync(): Promise<number | null> {
-  const session = await loadSessionUser();
+  const session = await loadSessionUser(true);
   if (!session) return 0;
 
-  const { data: professional } = await supabase
-    .from("professionals")
-    .select("subscribed")
-    .eq("user_id", session.uuid)
-    .maybeSingle();
-
-  if (professional?.subscribed) return null;
+  // Use the same effective Pro decision as every other feature. This respects
+  // an admin's explicit grant/revocation even if RevenueCat is still active.
+  if (isCurrentUserPro()) return null;
 
   const { data, error } = await supabase.rpc("get_my_chat_credits");
 
@@ -439,14 +436,9 @@ export async function getChatCreditsAsync(): Promise<number | null> {
 }
 
 export async function isCurrentUserChatProAsync(): Promise<boolean> {
-  const session = await loadSessionUser();
+  const session = await loadSessionUser(true);
   if (!session) return false;
-  const { data } = await supabase
-    .from("professionals")
-    .select("subscribed")
-    .eq("user_id", session.uuid)
-    .maybeSingle();
-  return Boolean(data?.subscribed);
+  return isCurrentUserPro();
 }
 
 export async function sendImageMessage(conversationId: string, localUri: string): Promise<ChatMessage> {
