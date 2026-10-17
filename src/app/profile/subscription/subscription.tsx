@@ -65,7 +65,7 @@ export default function Subscription() {
 
     void (async () => {
       try {
-        const [packages, customerInfo] = await Promise.all([
+        const [packages] = await Promise.all([
           getProPackages(),
           loadSessionUser(true).then(() => getCustomerInfo()),
         ]);
