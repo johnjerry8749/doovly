@@ -158,7 +158,14 @@ export default function ChatList() {
           Messages
         </Text>
 
-        <View style={styles.headerIcon} />
+        <View style={styles.headerIcon}>
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={styles.doovlyLogo}
+            resizeMode="cover"
+            accessibilityLabel="Doovly"
+          />
+        </View>
       </View>
 
       {/* Search */}
@@ -314,6 +321,12 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  doovlyLogo: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
   },
 
   // =========================
