@@ -41,5 +41,26 @@ as $function$
   ) ps on true;
 $function$;
 
-revoke execute on function public.is_chat_pro(uuid) from public, anon;
-grant execute on function public.is_chat_pro(uuid) to authenticated;
+-- The parameterized helper is for trusted database code (such as the message trigger),
+-- not direct client calls with arbitrary user IDs.
+revoke execute on function public.is_chat_pro(uuid) from public, anon, authenticated;
+
+create or replace function public.get_my_chat_pro()
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $function$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null then
+    raise exception 'Not authenticated';
+  end if;
+  return public.is_chat_pro(uid);
+end;
+$function$;
+
+revoke execute on function public.get_my_chat_pro() from public, anon;
+grant execute on function public.get_my_chat_pro() to authenticated;
