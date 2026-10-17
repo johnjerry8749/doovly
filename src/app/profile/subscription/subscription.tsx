@@ -28,6 +28,8 @@ import {
   restorePurchases,
 } from "@/lib/revenuecat";
 import type { PurchasesPackage } from "react-native-purchases";
+import { isCurrentUserPro } from "@/services/savedProviders";
+import { loadSessionUser } from "@/lib/session";
 
 const PRIMARY = "#159447";
 const TEXT_DARK = "#111827";
@@ -58,19 +60,19 @@ export default function Subscription() {
   useEffect(() => {
     let active = true;
     const removeListener = addCustomerInfoListener((info) => {
-      if (active) setProActive(isPro(info));
+      if (active) setProActive(isCurrentUserPro());
     });
 
     void (async () => {
       try {
         const [packages, customerInfo] = await Promise.all([
           getProPackages(),
-          getCustomerInfo(),
+          loadSessionUser(true).then(() => getCustomerInfo()),
         ]);
         if (!active) return;
         setMonthlyPackage(packages.monthly);
         setYearlyPackage(packages.yearly);
-        setProActive(isPro(customerInfo));
+        setProActive(isCurrentUserPro());
         if (!packages.monthly || !packages.yearly) {
           Alert.alert("Subscriptions unavailable", "Subscription packages are not available right now. Please try again later.");
         }
@@ -99,7 +101,8 @@ export default function Subscription() {
     try {
       const info = await purchasePackage(selectedPackage);
       if (isPro(info)) {
-        setProActive(true);
+        await loadSessionUser(true);
+        setProActive(isCurrentUserPro());
       } else {
         Alert.alert("Pro not confirmed", "Purchase completed, but Pro access has not been confirmed yet. Please use Restore Purchases.");
       }
@@ -119,7 +122,8 @@ export default function Subscription() {
     setRestoring(true);
     try {
       const info = await restorePurchases();
-      const active = isPro(info);
+      await loadSessionUser(true);
+      const active = isCurrentUserPro();
       setProActive(active);
       if (active) {
         Alert.alert("Purchases restored", "Doovly Pro is active on this account.");
