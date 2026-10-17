@@ -45,7 +45,7 @@ export function PromotedServiceCard({
   cardRef,
   onCardLayout,
 }: PromotedServiceCardProps) {
-  const [isOwnPromotion, setIsOwnPromotion] = useState(false);
+  const [canBook, setCanBook] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -53,7 +53,11 @@ export function PromotedServiceCard({
     const checkPromotionOwner = async () => {
       try {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (!active || authError || !user) return;
+        if (!active || authError) return;
+        if (!user) {
+          setCanBook(true);
+          return;
+        }
 
         const { data: professional, error: professionalError } = await supabase
           .from("professionals")
@@ -62,9 +66,9 @@ export function PromotedServiceCard({
           .maybeSingle();
 
         if (!active || professionalError || !professional) return;
-        setIsOwnPromotion(professional.user_id === user.id);
+        setCanBook(professional.user_id !== user.id);
       } catch {
-        // Keep the existing booking action available if the ownership check cannot complete.
+        // Fail closed if ownership cannot be verified.
       }
     };
 
@@ -142,7 +146,7 @@ export function PromotedServiceCard({
         </Text>
       </TouchableOpacity>
 
-{!isOwnPromotion && (
+{canBook && (
       <TouchableOpacity
         style={styles.bookButton}
         activeOpacity={0.8}
