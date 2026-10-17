@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { trackPromotionEvent } from "@/services/promotionAnalytics";
 import { supabase } from "@/lib/supabase";
+import { listConversationsAsync } from "@/services/chat";
 
 const GREEN = "#159447";
 
@@ -166,30 +167,8 @@ export function PromotedServiceCard({
               if (professionalError) throw professionalError;
 
               if (professional?.user_id === user.id) {
-                const { data: systemProfile, error: systemError } = await supabase
-                  .from("profiles")
-                  .select("id")
-                  .eq("email", "system@doovly.app")
-                  .maybeSingle();
-                if (systemError) throw systemError;
-                if (!systemProfile?.id) {
-                  Alert.alert("Doovly Chat", "Your promotion results chat is not available yet. Please try again shortly.");
-                  return;
-                }
-
-                const pairFilter =
-                  "and(participant_a.eq." + user.id +
-                  ",participant_b.eq." + systemProfile.id +
-                  "),and(participant_a.eq." + systemProfile.id +
-                  ",participant_b.eq." + user.id + ")";
-                const { data: conversation, error: conversationError } = await supabase
-                  .from("conversations")
-                  .select("id")
-                  .or(pairFilter)
-                  .limit(1)
-                  .maybeSingle();
-                if (conversationError) throw conversationError;
-
+                const conversations = await listConversationsAsync();
+                const conversation = conversations.find((item) => item.participant.isSystem);
                 if (!conversation?.id) {
                   Alert.alert("Doovly Chat", "Your promotion results chat is not available yet. Please try again shortly.");
                   return;
