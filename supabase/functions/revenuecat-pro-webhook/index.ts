@@ -190,6 +190,18 @@ Deno.serve(async (req) => {
 
     if (currentError) throw currentError;
 
+    // Ignore out-of-order RevenueCat events for an older billing period.
+    // In particular, an old EXPIRATION must not deactivate a subscription that has renewed.
+    const incomingEndDate = eventDate(event.expiration_at_ms);
+    if (
+      current?.end_date &&
+      incomingEndDate &&
+      incomingEndDate < current.end_date
+    ) {
+      await saveReceipt(eventId, userId, eventType);
+      return json({ ok: true, ignored: "stale billing-period event", event: eventType });
+    }
+
     // An explicit admin decision wins over routine renewals and expirations.
     // A genuinely new purchase made after the override can restore store access.
     if (current?.admin_override) {
