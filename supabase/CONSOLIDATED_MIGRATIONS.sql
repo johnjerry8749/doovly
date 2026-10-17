@@ -1,7 +1,7 @@
-<<<<<<< HEAD
+
 ﻿
 -- SOURCE: 001_schema.sql
-=======
+
 -- Doovly consolidated migration archive
 -- Concatenated from supabase/migrations on master.
 -- ARCHIVE ONLY, NOT SAFE TO RUN AS ONE MIGRATION against production.
@@ -11,7 +11,7 @@
 -- =====================================================================
 -- SOURCE FILE: supabase/migrations/001_schema.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
+
 
 -- ============================================================
 -- Doovly schema
@@ -1087,13 +1087,12 @@ revoke execute on function public.notify_offer_created() from anon, authenticate
 grant execute on function public.notify_booking_created() to service_role;
 grant execute on function public.notify_offer_created() to service_role;
 
-<<<<<<< HEAD
+
 -- SOURCE: 20261005193200_configure_production_subscription_plans.sql
-=======
+
 -- =====================================================================
 -- SOURCE FILE: supabase/migrations/20261005193200_configure_production_subscription_plans.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 insert into public.subscription_plans (mock_id,name,tagline,monthly_price,yearly_price,popular,sort_order)
 values ('basic','Basic','Get started for free',0,0,false,0),('pro','Pro','Unlock more opportunities',2500,25000,true,1)
@@ -1118,13 +1117,13 @@ insert into public.subscription_plan_meta (promo_title,promo_subtitle,yearly_sav
 select 'Unlock more opportunities','Upgrade to get advanced tools, more visibility and grow your business faster.',17
 where not exists (select 1 from public.subscription_plan_meta);
 
-<<<<<<< HEAD
+
 -- SOURCE: 20261005193300_reduce_duplicate_permissive_policies.sql
-=======
+
 -- =====================================================================
 -- SOURCE FILE: supabase/migrations/20261005193300_reduce_duplicate_permissive_policies.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
+
 
 drop policy if exists "Pros can manage own portfolio" on public.portfolio_items;
 create policy "Pros can insert own portfolio" on public.portfolio_items for insert to authenticated with check (public.is_admin() or (select auth.uid()) in (select user_id from public.professionals where id = professional_id));
@@ -1141,13 +1140,13 @@ create policy "Admins can insert plan features" on public.subscription_plan_feat
 create policy "Admins can update plan features" on public.subscription_plan_features for update to authenticated using (public.is_admin()) with check (public.is_admin());
 create policy "Admins can delete plan features" on public.subscription_plan_features for delete to authenticated using (public.is_admin());
 
-<<<<<<< HEAD
+
 -- SOURCE: 20261005193400_harden_functions_and_fk_indexes.sql
-=======
+
 -- =====================================================================
 -- SOURCE FILE: supabase/migrations/20261005193400_harden_functions_and_fk_indexes.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
+
 
 create index if not exists idx_admin_notifications_created_by on public.admin_notifications(created_by);
 create index if not exists idx_conversation_reads_user_id on public.conversation_reads(user_id);
@@ -1173,14 +1172,14 @@ revoke execute on function public.is_admin() from anon;
 revoke execute on function public.notify_booking_created() from public, anon, authenticated;
 revoke execute on function public.notify_offer_created() from public, anon, authenticated;
 
-<<<<<<< HEAD
+
 -- SOURCE: 20261005193500_optimize_remaining_update_rls.sql
-=======
+
 
 -- =====================================================================
 -- SOURCE FILE: supabase/migrations/20261005193500_optimize_remaining_update_rls.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
+
 
 alter policy "Users can update own conversations" on public.conversations
 using ((select auth.uid()) = participant_a or (select auth.uid()) = participant_b);
@@ -1188,13 +1187,13 @@ using ((select auth.uid()) = participant_a or (select auth.uid()) = participant_
 alter policy "Request owners can update offers" on public.service_request_offers
 using ((select auth.uid()) in (select created_by from public.service_requests where id = request_id));
 
-<<<<<<< HEAD
+
 -- SOURCE: 20261005195000_comment_edit_delete_policies.sql
-=======
+
 -- =====================================================================
 -- SOURCE FILE: supabase/migrations/20261005195000_comment_edit_delete_policies.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
+
 
 -- Allow users to edit and delete only their own service-request comments.
 
@@ -1214,13 +1213,12 @@ to authenticated
 using ((select auth.uid()) = user_id);
 
 
-<<<<<<< HEAD
+
 -- SOURCE: 20261005200000_fix_service_category_icons.sql
-=======
 -- =====================================================================
 -- SOURCE FILE: supabase/migrations/20261005200000_fix_service_category_icons.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
+
 
 -- Normalize service category icons to valid MaterialCommunityIcons names.
 update public.service_categories
@@ -1232,13 +1230,13 @@ end
 where name in ('Barber', 'Nail Tech');
 
 
-<<<<<<< HEAD
+
 -- SOURCE: 20261005201000_add_verification_submission_policies.sql
-=======
+
 -- =====================================================================
 -- SOURCE FILE: supabase/migrations/20261005201000_add_verification_submission_policies.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
+
 
 drop policy if exists "Users can create verification applications" on public.verification_applications;
 create policy "Users can create verification applications"
@@ -1308,13 +1306,12 @@ with check (
   )
 );
 
-<<<<<<< HEAD
+
 -- SOURCE: 20261005202000_protect_admin_profile_controls.sql
-=======
 -- =====================================================================
 -- SOURCE FILE: supabase/migrations/20261005202000_protect_admin_profile_controls.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
+
 
 -- Protect suspension and role fields from non-admin profile updates.
 create or replace function public.prevent_non_admin_profile_privilege_changes()
@@ -1362,13 +1359,12 @@ using (public.is_admin())
 with check (public.is_admin());
 
 
-<<<<<<< HEAD
+
 -- SOURCE: 20261005202100_allow_admin_subscription_management.sql
-=======
 -- =====================================================================
 -- SOURCE FILE: supabase/migrations/20261005202100_allow_admin_subscription_management.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
+
 
 -- Allow admins to manage professional subscription records.
 drop policy if exists "Admins can manage professional subscriptions" on public.professional_subscriptions;
@@ -1381,13 +1377,12 @@ using (public.is_admin())
 with check (public.is_admin());
 
 
-<<<<<<< HEAD
+
 -- SOURCE: 20261005203000_allow_delete_own_request_comments.sql
-=======
 -- =====================================================================
 -- SOURCE FILE: supabase/migrations/20261005203000_allow_delete_own_request_comments.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
+
 
 -- Allow authenticated users to delete their own service request comments.
 CREATE POLICY "Users can delete own comments"
@@ -1396,13 +1391,11 @@ CREATE POLICY "Users can delete own comments"
   USING (auth.uid() = user_id OR public.is_admin());
 
 
-<<<<<<< HEAD
--- SOURCE: 20261005210200_allow_admin_professional_subscription_state.sql
-=======
--- =====================================================================
+
+-- SOURCE: 20261005210200_allow_admin_professional_subscription_state.sq-- =====================================================================
 -- SOURCE FILE: supabase/migrations/20261005210200_allow_admin_professional_subscription_state.sql
 -- =====================================================================
->>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
+
 
 -- Allow administrators to keep the professionals.subscribed flag in sync
 -- when managing subscriptions from the admin dashboard.
