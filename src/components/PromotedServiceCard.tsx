@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { trackPromotionEvent } from "@/services/promotionAnalytics";
+import { supabase } from "@/lib/supabase";
 
 const GREEN = "#159447";
 
@@ -44,6 +45,35 @@ export function PromotedServiceCard({
   cardRef,
   onCardLayout,
 }: PromotedServiceCardProps) {
+  const [isOwnPromotion, setIsOwnPromotion] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const checkPromotionOwner = async () => {
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (!active || authError || !user) return;
+
+        const { data: professional, error: professionalError } = await supabase
+          .from("professionals")
+          .select("user_id")
+          .eq("id", professionalId)
+          .maybeSingle();
+
+        if (!active || professionalError || !professional) return;
+        setIsOwnPromotion(professional.user_id === user.id);
+      } catch {
+        // Keep the existing booking action available if the ownership check cannot complete.
+      }
+    };
+
+    void checkPromotionOwner();
+    return () => {
+      active = false;
+    };
+  }, [professionalId]);
+
   const priceLabel =
     price ||
     (priceValue > 0
@@ -112,6 +142,7 @@ export function PromotedServiceCard({
         </Text>
       </TouchableOpacity>
 
+{!isOwnPromotion && (
       <TouchableOpacity
         style={styles.bookButton}
         activeOpacity={0.8}
@@ -130,6 +161,7 @@ export function PromotedServiceCard({
         <Text style={styles.bookText}>Book Now</Text>
         <Ionicons name="arrow-forward" size={13} color={GREEN} />
       </TouchableOpacity>
+      )}
     </View>
   );
 }
