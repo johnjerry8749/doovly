@@ -399,7 +399,7 @@ export default function ChatConversation() {
   // can replace a partial list with the full conversation later.
   useEffect(() => {
     if (!messages.length) return;
-    if (messages.length === lastScrolledMessageCount.current) return;
+    if (messages.length === lastScrolledMessageCount.current && !targetPromotionId) return;
 
     const timer = setTimeout(() => {
       if (targetPromotionId) {
