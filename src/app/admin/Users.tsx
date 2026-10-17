@@ -255,7 +255,7 @@ export default function Users() {
             </View>
             <View style={styles.cardBadges}>
               {user.verified && verificationBadge("Verified")}
-              {user.subscription === "Pro" && proBadge("Pro")}
+              {proBadge(user.subscription)}
               {user.isSuspended && (
                 <View style={[styles.badge, { backgroundColor: "#FEE2E2" }]}>
                   <Text style={[styles.badgeText, { color: "#DC2626" }]}>
