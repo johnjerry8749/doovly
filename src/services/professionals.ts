@@ -190,6 +190,7 @@ export async function listActivePromotedServicesAsync(): Promise<PromotedService
         rating,
         review_count,
         avatar_url,
+        email,
         profiles!professionals_user_id_fkey (
           full_name,
           avatar_url
