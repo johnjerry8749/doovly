@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   StyleSheet,
@@ -50,6 +51,8 @@ export function PromotedServiceCard({
   onCardLayout,
 }: PromotedServiceCardProps) {
   const [isOwner, setIsOwner] = useState(false);
+  const [openingDestination, setOpeningDestination] = useState(false);
+  const openingDestinationRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -151,9 +154,19 @@ export function PromotedServiceCard({
       </TouchableOpacity>
 
 <TouchableOpacity
-        style={[styles.bookButton, isOwner && styles.bookButtonDisabled]}
+        style={[
+          styles.bookButton,
+          isOwner && styles.bookButtonDisabled,
+          openingDestination && styles.bookButtonOpening,
+        ]}
         activeOpacity={0.8}
+        disabled={openingDestination}
         onPress={async () => {
+          // Lock synchronously so rapid taps cannot stack multiple routes or queries.
+          if (openingDestinationRef.current) return;
+          openingDestinationRef.current = true;
+          setOpeningDestination(true);
+
           try {
             const { data: { user }, error: authError } = await supabase.auth.getUser();
             if (authError) throw authError;
@@ -171,6 +184,8 @@ export function PromotedServiceCard({
                 const conversation = conversations.find((item) => item.participant.isSystem);
                 if (!conversation?.id) {
                   Alert.alert("Doovly Chat", "Your promotion results chat is not available yet. Please try again shortly.");
+                  openingDestinationRef.current = false;
+                  setOpeningDestination(false);
                   return;
                 }
 
@@ -194,11 +209,19 @@ export function PromotedServiceCard({
           } catch (error) {
             console.warn("Could not open promotion results or booking:", error);
             Alert.alert("Please try again", "Doovly could not open this promotion right now.");
+            openingDestinationRef.current = false;
+            setOpeningDestination(false);
           }
         }}
       >
-        <Text style={styles.bookText}>Book Now</Text>
-        <Ionicons name="arrow-forward" size={13} color={GREEN} />
+        {openingDestination ? (
+          <ActivityIndicator size="small" color={GREEN} />
+        ) : (
+          <>
+            <Text style={styles.bookText}>{isOwner ? "Analytics" : "Book Now"}</Text>
+            <Ionicons name="arrow-forward" size={13} color={GREEN} />
+          </>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -314,6 +337,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   bookButtonDisabled: {
-    opacity: 0.55,
+    opacity: 0.72,
+  },
+  bookButtonOpening: {
+    opacity: 0.8,
   },
 });
