@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   StyleSheet,
@@ -51,8 +50,7 @@ export function PromotedServiceCard({
   onCardLayout,
 }: PromotedServiceCardProps) {
   const [isOwner, setIsOwner] = useState(false);
-  const [openingDestination, setOpeningDestination] = useState(false);
-  const openingDestinationRef = useRef(false);
+    const openingDestinationRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -154,17 +152,12 @@ export function PromotedServiceCard({
       </TouchableOpacity>
 
 <TouchableOpacity
-        style={[
-          styles.bookButton,
-          openingDestination && styles.bookButtonOpening,
-        ]}
+        style={styles.bookButton}
         activeOpacity={0.8}
-        disabled={openingDestination}
         onPress={async () => {
           // Lock synchronously so rapid taps cannot stack multiple routes or queries.
           if (openingDestinationRef.current) return;
           openingDestinationRef.current = true;
-          setOpeningDestination(true);
 
           try {
             const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -184,7 +177,6 @@ export function PromotedServiceCard({
                 if (!conversation?.id) {
                   Alert.alert("Doovly Chat", "Your promotion results chat is not available yet. Please try again shortly.");
                   openingDestinationRef.current = false;
-                  setOpeningDestination(false);
                   return;
                 }
 
@@ -209,18 +201,11 @@ export function PromotedServiceCard({
             console.warn("Could not open promotion results or booking:", error);
             Alert.alert("Please try again", "Doovly could not open this promotion right now.");
             openingDestinationRef.current = false;
-            setOpeningDestination(false);
           }
         }}
       >
-        {openingDestination ? (
-          <ActivityIndicator size="small" color={GREEN} />
-        ) : (
-          <>
-            <Text style={styles.bookText}>{isOwner ? "View Results" : "Book Now"}</Text>
-            {!isOwner && <Ionicons name="arrow-forward" size={13} color={GREEN} />}
-          </>
-        )}
+        <Text style={styles.bookText}>{isOwner ? "View Results" : "Book Now"}</Text>
+        {!isOwner && <Ionicons name="arrow-forward" size={13} color={GREEN} />}
       </TouchableOpacity>
     </View>
   );
@@ -334,8 +319,5 @@ const styles = StyleSheet.create({
     color: GREEN,
     fontSize: 12,
     fontWeight: "800",
-  },
-  bookButtonOpening: {
-    opacity: 0.8,
   },
 });
