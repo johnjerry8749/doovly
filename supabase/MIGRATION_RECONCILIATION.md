@@ -42,3 +42,75 @@ Even if two files have identical contents, their distinct names and their relati
 ## Validation note
 
 The consolidated archive was checked after cleanup: it contains 53 source-file headers, retains its archive-only warning, and has no Git merge-conflict markers. This validates the archive text, **not** that all SQL has been replay-tested or that the live schema is fully reproducible from the repository.
+
+## Live schema inspection (2026-10-17)
+
+A read-only inspection was performed directly against the linked Supabase project after the local CLI dump failed. The live project currently reports:
+
+- 30 base tables in `public`, with row-level security enabled on the inspected tables.
+- 75 policies in `public`.
+- 23 functions in `public`.
+- 21 triggers in `public`.
+- 112 indexes in `public`.
+- Installed extensions: `pg_cron`, `pg_graphql`, `pg_net`, `pg_stat_statements`, `pgcrypto`, `plpgsql`, `supabase_vault`, and `uuid-ossp`.
+- Storage bucket observed: `profile-images` (public).
+
+These are live catalog observations, not a full `pg_dump` and not proof that a replacement baseline will replay successfully. The local CLI export failed before producing a verified dump. No schema-changing SQL was run, no migration history was altered, and no production rows were changed during this inspection.
+
+The missing live history entry `20261017000412 secure_professional_subscription_records` remains unresolved as a source-file recovery task. Current live policy inspection shows an `Admins can manage professional subscriptions` policy on `professional_subscriptions`, but that observation alone is not enough to reconstruct the original migration exactly.
+
+## Live schema inventory checked directly through Supabase
+
+Read-only catalog queries against the linked live project confirmed the following inventory on 2026-10-17:
+
+- 30 base tables in `public`.
+- 1 view in `public`: `v_professionals_app`.
+- 75 row-level security policies across 28 public tables.
+- 23 functions in `public`.
+- 20 non-internal triggers in `public`.
+- Installed extensions observed: `pg_cron`, `pg_graphql`, `pg_net`, `pg_stat_statements`, `pgcrypto`, `plpgsql`, `supabase_vault`, and `uuid-ossp`.
+
+The 30 public tables are: `admin_notifications`, `bookings`, `chat_credits`, `cities`, `conversation_reads`, `conversations`, `messages`, `notifications`, `password_reset_rate_limits`, `portfolio_items`, `professional_subscriptions`, `professionals`, `profiles`, `promotion_packages`, `reviews`, `saved_providers`, `service_categories`, `service_promotion_analytics`, `service_promotion_events`, `service_promotions`, `service_request_comments`, `service_request_likes`, `service_request_offers`, `service_requests`, `services`, `subscription_plan_features`, `subscription_plan_meta`, `subscription_plans`, `verification_applications`, and `verification_documents`.
+
+This inventory was collected with read-only queries and did not modify production. It is useful for reconciliation, but **it is not a complete schema export**: exact table DDL, all constraints and indexes, function bodies, policies, triggers, grants, storage configuration, and other managed schemas still need to be captured and validated before calling any single file a reproducible baseline.
+
+### Additional evidence for the missing subscription-security migration
+
+A read-only inspection of the live `public.professional_subscriptions` table confirms these current security/schema facts:
+
+- RLS is enabled, with one policy: `Admins can manage professional subscriptions`, for `authenticated`, using `is_admin()` and checking `is_admin()`.
+- The table references `professionals(id)` with `ON DELETE CASCADE`, `profiles(id)` with `ON DELETE CASCADE`, and `subscription_plans(id)` with `ON DELETE SET NULL`.
+- Check constraints currently restrict `plan_code` to `free` or `pro`, and `status` to `active`, `expired`, or `cancelled`.
+- The table has indexes on `professional_id`, `plan_id`, and `user_id`, plus its primary-key and unique-`mock_id` indexes.
+- The `professional_subscriptions_updated_at` trigger calls `set_updated_at()`.
+
+This records the current end state, not the original SQL or exact historical intent of the missing migration. Do not recreate a migration from this evidence alone or mark it as historically recovered.
+
+### Follow-up verification: missing subscription-security migration
+
+- Searched the repository's current files and GitHub commit history for the exact name `secure_professional_subscription_records`; no source file or historical commit with that filename was found.
+- The live migration history entry therefore remains unrecovered. The current live table's state is documented above, but that state does not establish the missing migration's original SQL.
+- Live table grants currently show `authenticated` has table-level `SELECT`, `INSERT`, and `UPDATE`; `service_role` has all table privileges except none are grantable onward; the `postgres` owner has the owner-level privileges. RLS is enabled and not forced.
+- The only current RLS policy found on `professional_subscriptions` is `Admins can manage professional subscriptions` for `authenticated`, with both `USING (is_admin())` and `WITH CHECK (is_admin())`. There is no current non-admin read policy on this table.
+- The live `is_admin()` function is marked SECURITY DEFINER with `search_path=public`; `set_updated_at()` is not SECURITY DEFINER and also has `search_path=public`.
+
+These are read-only observations of the live end state. No production grants, policies, tables, or migration history were changed during this check.
+
+## Baseline drift check against live table columns (2026-10-17)
+
+A read-only comparison of `supabase/migrations/001_schema.sql` with the live `public` table catalog found that this file is **not a complete current baseline**:
+
+- The file defines 25 tables; the live project has 30 public tables.
+- Entirely absent from `001_schema.sql`: `chat_credits`, `promotion_packages`, `service_promotions`, `service_promotion_analytics`, and `service_promotion_events`.
+- Live columns not represented in the baseline were found in:
+  - `profiles`: `expo_push_token`, `profession`, `pro_trial_started_at`, `pro_trial_ends_at`
+  - `bookings`: `source_offer_id`, `service_id`, `promotion_id`
+  - `notifications`: `request_id`, `data`
+  - `subscription_plans`: `code`
+  - `subscription_plan_features`: `code`
+  - `verification_applications`: `submitted_at`, `admin_notified_at`
+  - `conversations`: `offer_id`, `text_allowed`, `text_allowed_by`, `text_allowed_at`, `blocked_by`, `blocked_at`
+  - `messages`: `image_url`
+- `password_reset_rate_limits` has schema drift in both directions: live has `email_hash` and `attempts`, while the baseline instead defines `key_hash` and `request_count`.
+
+The comparison above is a column-presence check only. It does not establish matching types, defaults, generated expressions, constraints, indexes, RLS, grants, function bodies, triggers, views, extensions, or storage policies. It is evidence that `001_schema.sql` must not be used by itself as a current replacement schema. No production data or schema was changed.
