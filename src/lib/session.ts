@@ -31,6 +31,23 @@ export type SessionUser = {
 
 let cached: SessionUser | null = null;
 let loadPromise: Promise<SessionUser | null> | null = null;
+let accessChannel: ReturnType<typeof supabase.channel> | null = null;
+let accessChannelUserId: string | null = null;
+
+function watchSessionAccess(userId: string) {
+  if (accessChannel && accessChannelUserId === userId) return;
+  if (accessChannel) void supabase.removeChannel(accessChannel);
+
+  accessChannelUserId = userId;
+  accessChannel = supabase
+    .channel("session-pro-access-" + userId)
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "profiles", filter: "id=eq." + userId },
+      () => { void loadSessionUser(true); },
+    )
+    .subscribe();
+}
 
 export async function getSession(): Promise<Session | null> {
   const { data, error } = await supabase.auth.getSession();
@@ -67,7 +84,7 @@ export async function loadSessionUser(
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id, full_name, email, role, pro_trial_ends_at")
+      .select("id, full_name, email, role, pro_trial_ends_at, pro_access_override, pro_access_override_updated_at")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -86,9 +103,15 @@ export async function loadSessionUser(
         .maybeSingle(),
     ]);
 
-    const subscriptionOverride = Boolean(subscription?.admin_override);
-    const subscriptionGrantsPro =
-      subscription?.plan_code === "pro" && subscription?.status === "active";
+    const hasProfileOverride =
+      profile?.pro_access_override !== null &&
+      profile?.pro_access_override !== undefined;
+    const subscriptionOverride = hasProfileOverride || Boolean(subscription?.admin_override);
+    const subscriptionGrantsPro = hasProfileOverride
+      ? profile.pro_access_override === true
+      : subscription?.admin_override
+        ? subscription?.plan_code === "pro" && subscription?.status === "active"
+        : Boolean(pro?.subscribed);
 
     cached = {
       uuid: user.id,
@@ -99,13 +122,12 @@ export async function loadSessionUser(
       professionalId: pro?.id ?? null,
       professionalUuid: pro?.id ?? null,
       subscribed: Boolean(pro?.subscribed),
-      paidSubscribed: subscriptionOverride
-        ? subscriptionGrantsPro
-        : Boolean(pro?.subscribed),
+      paidSubscribed: subscriptionGrantsPro,
       subscriptionOverride,
       proTrialEndsAt: profile?.pro_trial_ends_at ?? null,
       verified: Boolean(pro?.is_verified),
     };
+    watchSessionAccess(user.id);
     return getCachedSessionUser();
   })().finally(() => {
     loadPromise = null;
@@ -132,6 +154,9 @@ export function getCachedSessionUser(): SessionUser | null {
 
 export function clearSessionCache() {
   cached = null;
+  accessChannelUserId = null;
+  if (accessChannel) void supabase.removeChannel(accessChannel);
+  accessChannel = null;
 }
 
 export function bindAuthListener(
