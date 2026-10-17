@@ -327,13 +327,18 @@ export async function addReview(
   const proUuid = await resolveProfessionalUuid(professionalId);
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("Please sign in before writing a review.");
+  }
 
   const { data, error } = await supabase
     .from("reviews")
     .insert({
       professional_id: proUuid,
-      user_id: user?.id ?? null,
+      user_id: user.id,
       user_name: payload.userName.trim() || "Anonymous",
       comment: payload.comment.trim(),
       display_date: new Date().toLocaleDateString("en-US", {
@@ -345,7 +350,15 @@ export async function addReview(
     .select("id, user_id, user_name, comment, display_date, created_at")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("You have already reviewed this professional.");
+    }
+    if (error.code === "42501" && /own professional profile/i.test(error.message)) {
+      throw new Error("You cannot review your own professional profile.");
+    }
+    throw error;
+  }
   invalidateProfessionalsCache();
   return mapReviewRow(data);
 }
