@@ -131,3 +131,24 @@ This is a structural/text comparison, not a successful clean-database restore te
 ## Recommended consolidation decision
 
 Do not rewrite or delete the 53 existing migration files on `master` yet. Keep them as historical source until all 33 live migration-history entries have been reconciled. For a clean-install path, prepare a separate candidate baseline from the exported schema, review it for managed-role/extension assumptions and security settings, then test it on a separate empty Supabase project. Keep production migration history unchanged; do not mark migrations applied or reset production to make the repository appear consistent.
+
+
+## Migration-history filename audit (2026-10-17)
+
+Compared all 33 live migration-history entries with the 53 filenames under `supabase/migrations/`. Twenty-six live entries have a repository file with the same normalized migration name. Seven live entries do not have an exact name match:
+
+| Live migration-history entry | Finding |
+| --- | --- |
+| `20261003195238 create_professional_for_every_profile_v2` | No exact-name repository file |
+| `20261003205240 create_profile_images_storage` | No exact-name repository file |
+| `20261005190017 notification_triggers_for_bookings_and_offers` | No exact-name repository file |
+| `20261005190318 configure_production_subscription_plans_v2` | No exact-name repository file |
+| `20261005190515 harden_functions_and_foreign_key_indexes` | No exact-name repository file |
+| `20261006113326 prevent_duplicate_active_bookings` | No exact-name repository file |
+| `20261017000412 secure_professional_subscription_records` | No exact-name repository file |
+
+“ No exact-name repository file” does not prove the SQL is absent from the repository: a later file or the original baseline may contain equivalent statements. Each entry needs a content-level search and schema-effect comparison before classifying it as missing. Conversely, a filename match is not proof that its SQL is identical to the version applied in production.
+
+There are also repository migration files with no exact-name match in the live history. This can be caused by renaming, migration history changes, a statement being included in another migration, or a file that was never applied. Do not automatically apply, delete, or mark these files as applied based on names alone.
+
+The next safe step is a content-level audit of the unmatched entries and then a clean-project replay test of a candidate baseline. Production remains unchanged.
