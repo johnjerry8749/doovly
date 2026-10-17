@@ -60,7 +60,7 @@ let audienceCache: {
 
 async function audienceIds(audienceType: NotificationAudience): Promise<string[]> {
   const [profilesRes, professionalsRes, subscriptionsRes] = await Promise.all([
-    supabase.from("profiles").select("id,is_suspended"),
+    supabase.rpc("admin_list_profiles"),
     supabase.from("professionals").select("user_id,is_verified"),
     supabase
       .from("professional_subscriptions")
