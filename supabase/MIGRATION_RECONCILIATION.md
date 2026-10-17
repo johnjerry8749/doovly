@@ -58,3 +58,19 @@ A read-only inspection was performed directly against the linked Supabase projec
 These are live catalog observations, not a full `pg_dump` and not proof that a replacement baseline will replay successfully. The local CLI export failed before producing a verified dump. No schema-changing SQL was run, no migration history was altered, and no production rows were changed during this inspection.
 
 The missing live history entry `20261017000412 secure_professional_subscription_records` remains unresolved as a source-file recovery task. Current live policy inspection shows an `Admins can manage professional subscriptions` policy on `professional_subscriptions`, but that observation alone is not enough to reconstruct the original migration exactly.
+
+## Live schema inventory checked directly through Supabase
+
+Read-only catalog queries against the linked live project confirmed the following inventory on 2026-10-17:
+
+- 30 base tables in `public`.
+- 1 view in `public`: `v_professionals_app`.
+- 75 row-level security policies across 28 public tables.
+- 23 functions in `public`.
+- 20 non-internal triggers in `public`.
+- Installed extensions observed: `pg_cron`, `pg_graphql`, `pg_net`, `pg_stat_statements`, `pgcrypto`, `plpgsql`, `supabase_vault`, and `uuid-ossp`.
+
+The 30 public tables are: `admin_notifications`, `bookings`, `chat_credits`, `cities`, `conversation_reads`, `conversations`, `messages`, `notifications`, `password_reset_rate_limits`, `portfolio_items`, `professional_subscriptions`, `professionals`, `profiles`, `promotion_packages`, `reviews`, `saved_providers`, `service_categories`, `service_promotion_analytics`, `service_promotion_events`, `service_promotions`, `service_request_comments`, `service_request_likes`, `service_request_offers`, `service_requests`, `services`, `subscription_plan_features`, `subscription_plan_meta`, `subscription_plans`, `verification_applications`, and `verification_documents`.
+
+This inventory was collected with read-only queries and did not modify production. It is useful for reconciliation, but **it is not a complete schema export**: exact table DDL, all constraints and indexes, function bodies, policies, triggers, grants, storage configuration, and other managed schemas still need to be captured and validated before calling any single file a reproducible baseline.
+
