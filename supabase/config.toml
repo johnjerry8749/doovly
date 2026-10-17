@@ -7,6 +7,9 @@ project_id = "doovly"
 [functions.revenuecat-promotion-webhook]
 verify_jwt = false
 
+[functions.notify-pro-subscription]
+verify_jwt = false
+
 [functions.request-password-reset]
 verify_jwt = false
 

@@ -293,6 +293,13 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
     };
   }
 
+  // A slow or temporarily incomplete profile lookup must not replace the
+  // already-cached Doovly system identity/logo with a generic user avatar.
+  const cachedParticipant = conversationMemoryCache.get(row.id)?.participant;
+  if (!participant.isSystem && cachedParticipant?.isSystem) {
+    participant = cachedParticipant;
+  }
+
   conversationMemoryCache.set(row.id, {
     id: row.id,
     participant,

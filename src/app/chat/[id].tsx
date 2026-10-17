@@ -281,6 +281,7 @@ export default function ChatConversation() {
 
     let liveLoadInProgress = false;
     let refreshQueued = false;
+    let loadTimeout: ReturnType<typeof setTimeout> | undefined;
 
     const loadLive = async () => {
       // Realtime can fire several times in quick succession. Queue one extra
@@ -361,6 +362,7 @@ export default function ChatConversation() {
         console.warn("Chat conversation refresh failed:", error);
       } finally {
         liveLoadInProgress = false;
+        if (loadTimeout) clearTimeout(loadTimeout);
         if (active) setLoadingConversation(false);
         if (active && refreshQueued) {
           refreshQueued = false;
@@ -369,7 +371,21 @@ export default function ChatConversation() {
       }
     };
 
-    // Use Supabase as the only source for this conversation and its messages.
+    // Do not leave the entire screen on a spinner if the live request stalls.
+    // The cache effect above can still restore the conversation while this runs.
+    loadTimeout = setTimeout(() => {
+      if (!active) return;
+      setLoadingConversation(false);
+      void getCachedConversationsAsync()
+        .then((cached) => {
+          if (!active) return;
+          const stored = cached?.find((item) => item.id === conversationId);
+          if (stored) setConversation((current) => current ?? stored);
+        })
+        .catch(() => {});
+    }, 8000);
+
+    // Use Supabase as the live source; cached conversation renders first when available.
     void loadLive();
 
     let cleanup: (() => void) | undefined;
@@ -381,6 +397,7 @@ export default function ChatConversation() {
 
     return () => {
       active = false;
+      if (loadTimeout) clearTimeout(loadTimeout);
       cleanup?.();
     };
   }, [conversationId]);
@@ -682,7 +699,7 @@ export default function ChatConversation() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.centered}>
-          <Text style={styles.emptyText}>Conversation not found.</Text>
+          <Text style={styles.emptyText}>Could not load this conversation. Check your connection and try again.</Text>
           <TouchableOpacity onPress={() => router.back()}>
             <Text style={styles.backLink}>Go back</Text>
           </TouchableOpacity>
