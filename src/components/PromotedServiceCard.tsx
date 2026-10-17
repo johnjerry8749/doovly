@@ -16,6 +16,7 @@ const GREEN = "#159447";
 type PromotedServiceCardProps = {
   professionalId: string;
   serviceId: string;
+  promotionId: string;
   serviceName: string;
   serviceDescription?: string;
   city?: string;
@@ -34,6 +35,7 @@ type PromotedServiceCardProps = {
 export function PromotedServiceCard({
   professionalId,
   serviceId,
+  promotionId,
   serviceName,
   serviceDescription = "",
   city = "",
@@ -45,7 +47,7 @@ export function PromotedServiceCard({
   cardRef,
   onCardLayout,
 }: PromotedServiceCardProps) {
-  const [canBook, setCanBook] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -55,7 +57,7 @@ export function PromotedServiceCard({
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (!active || authError) return;
         if (!user) {
-          setCanBook(true);
+          setIsOwner(false);
           return;
         }
 
@@ -66,7 +68,7 @@ export function PromotedServiceCard({
           .maybeSingle();
 
         if (!active || professionalError || !professional) return;
-        setCanBook(professional.user_id !== user.id);
+        setIsOwner(professional.user_id === user.id);
       } catch {
         // Fail closed if ownership cannot be verified.
       }
@@ -147,20 +149,72 @@ export function PromotedServiceCard({
       </TouchableOpacity>
 
 <TouchableOpacity
-        style={[styles.bookButton, !canBook && styles.bookButtonDisabled]}
-        activeOpacity={canBook ? 0.8 : 1}
-        disabled={!canBook}
-        onPress={() => {
-          if (!canBook) return;
-          router.push({
-            pathname: "/bookme/[id]",
-            params: {
-              id: professionalId,
-              serviceId,
-              serviceName,
-              price: price || String(priceValue || ""),
-            },
-          });
+        style={[styles.bookButton, isOwner && styles.bookButtonDisabled]}
+        activeOpacity={0.8}
+        onPress={async () => {
+          try {
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            if (authError) throw authError;
+
+            if (user) {
+              const { data: professional, error: professionalError } = await supabase
+                .from("professionals")
+                .select("user_id")
+                .eq("id", professionalId)
+                .maybeSingle();
+              if (professionalError) throw professionalError;
+
+              if (professional?.user_id === user.id) {
+                const { data: systemProfile, error: systemError } = await supabase
+                  .from("profiles")
+                  .select("id")
+                  .eq("email", "system@doovly.app")
+                  .maybeSingle();
+                if (systemError) throw systemError;
+                if (!systemProfile?.id) {
+                  Alert.alert("Doovly Chat", "Your promotion results chat is not available yet. Please try again shortly.");
+                  return;
+                }
+
+                const pairFilter =
+                  "and(participant_a.eq." + user.id +
+                  ",participant_b.eq." + systemProfile.id +
+                  "),and(participant_a.eq." + systemProfile.id +
+                  ",participant_b.eq." + user.id + ")";
+                const { data: conversation, error: conversationError } = await supabase
+                  .from("conversations")
+                  .select("id")
+                  .or(pairFilter)
+                  .limit(1)
+                  .maybeSingle();
+                if (conversationError) throw conversationError;
+
+                if (!conversation?.id) {
+                  Alert.alert("Doovly Chat", "Your promotion results chat is not available yet. Please try again shortly.");
+                  return;
+                }
+
+                router.push({
+                  pathname: "/chat/[id]",
+                  params: { id: conversation.id, promotionId },
+                });
+                return;
+              }
+            }
+
+            router.push({
+              pathname: "/bookme/[id]",
+              params: {
+                id: professionalId,
+                serviceId,
+                serviceName,
+                price: price || String(priceValue || ""),
+              },
+            });
+          } catch (error) {
+            console.warn("Could not open promotion results or booking:", error);
+            Alert.alert("Please try again", "Doovly could not open this promotion right now.");
+          }
         }}
       >
         <Text style={styles.bookText}>Book Now</Text>
