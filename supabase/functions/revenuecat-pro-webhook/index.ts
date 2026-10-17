@@ -249,8 +249,7 @@ Deno.serve(async (req) => {
         .eq("id", professional.id);
       if (proError) throw proError;
 
-      if ((eventType === "INITIAL_PURCHASE" || eventType === "TRIAL_STARTED") &&
-          !(current?.status === "active" && current?.plan_code === "pro")) {
+      if (eventType === "INITIAL_PURCHASE" || eventType === "TRIAL_STARTED") {
         const endDate = eventDate(event.expiration_at_ms);
         const expiry = endDate
           ? new Date(endDate + "T00:00:00Z").toLocaleDateString("en-NG", {
@@ -260,9 +259,13 @@ Deno.serve(async (req) => {
         const body = "Your Doovly Pro access is active, including unlimited chat coins. Your current period ends " + expiry + ".";
         try {
           await sendProNotification(userId, "Doovly Pro activated", body, "pro_activated", current?.id);
+        } catch (deliveryError) {
+          console.error("[revenuecat-pro-webhook] activation notification failed", deliveryError);
+        }
+        try {
           await sendDoovlyMessage(userId, body);
         } catch (deliveryError) {
-          console.error("[revenuecat-pro-webhook] activation delivery failed", deliveryError);
+          console.error("[revenuecat-pro-webhook] activation chat failed", deliveryError);
         }
       }
       await saveReceipt(eventId, userId, eventType);
@@ -290,9 +293,13 @@ Deno.serve(async (req) => {
       const body = "Your Doovly Pro subscription has expired. Your account has returned to the Free plan. You can subscribe again at any time to restore Pro benefits.";
       try {
         await sendProNotification(userId, "Doovly Pro expired", body, "pro_expired", current.id);
+      } catch (deliveryError) {
+        console.error("[revenuecat-pro-webhook] expiry notification failed", deliveryError);
+      }
+      try {
         await sendDoovlyMessage(userId, body);
       } catch (deliveryError) {
-        console.error("[revenuecat-pro-webhook] expiry delivery failed", deliveryError);
+        console.error("[revenuecat-pro-webhook] expiry chat failed", deliveryError);
       }
     }
     await saveReceipt(eventId, userId, eventType);
