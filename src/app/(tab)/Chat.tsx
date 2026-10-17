@@ -60,8 +60,9 @@ export default function ChatList() {
         setLoading(false);
       }
 
-      // Always refresh from Supabase in the background.
-      await refresh(!cached);
+      // An empty cache is still a valid cache result, but the first live
+      // load should clear its initial loading state when it finishes.
+      await refresh(!cached?.length);
     };
 
     void start();
