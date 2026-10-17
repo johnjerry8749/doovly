@@ -218,7 +218,7 @@ export function PromotedServiceCard({
         ) : (
           <>
             <Text style={styles.bookText}>{isOwner ? "View Results" : "Book Now"}</Text>
-            <Ionicons name="arrow-forward" size={13} color={GREEN} />
+            {!isOwner && <Ionicons name="arrow-forward" size={13} color={GREEN} />}
           </>
         )}
       </TouchableOpacity>
