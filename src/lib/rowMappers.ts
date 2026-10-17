@@ -128,8 +128,8 @@ export function mapProfessionalRow(row: any): Professional {
     latitude: Number(row.latitude ?? 0),
     longitude: Number(row.longitude ?? 0),
     role: profile?.role ?? "user",
-    email: row.email ?? profile?.email ?? "",
-    phone: row.phone ?? profile?.phone ?? "",
+    email: row.email ?? "",
+    phone: row.phone ?? "",
     bio: row.bio ?? undefined,
     services: (row.services ?? []).map(mapServiceRow),
     portfolio: (row.portfolio_items ?? []).map(mapPortfolioRow),
@@ -154,9 +154,6 @@ export const PROFESSIONAL_SELECT = `
   avatar_key,
   profiles!professionals_user_id_fkey (
     full_name,
-    email,
-    phone,
-    role,
     avatar_url
   ),
   services (
