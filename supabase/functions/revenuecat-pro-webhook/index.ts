@@ -63,6 +63,36 @@ Deno.serve(async (req) => {
       return json({ ok: true, ignored: eventType });
     }
 
+    const { data: profile, error: profileError } = await admin
+      .from("profiles")
+      .select("pro_access_override,pro_access_override_updated_at")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profileError) throw profileError;
+
+    const hasProfileOverride =
+      profile?.pro_access_override !== null &&
+      profile?.pro_access_override !== undefined;
+    if (hasProfileOverride) {
+      const overrideAt = new Date(profile.pro_access_override_updated_at ?? 0).getTime();
+      const newPurchaseAfterOverride =
+        eventType === "INITIAL_PURCHASE" &&
+        Number.isFinite(eventAt) &&
+        eventAt > overrideAt;
+      if (!newPurchaseAfterOverride) {
+        return json({ ok: true, ignored: "admin profile override takes precedence" });
+      }
+
+      const { error: clearOverrideError } = await admin
+        .from("profiles")
+        .update({
+          pro_access_override: null,
+          pro_access_override_updated_at: null,
+        })
+        .eq("id", userId);
+      if (clearOverrideError) throw clearOverrideError;
+    }
+
     const { data: professional, error: professionalError } = await admin
       .from("professionals")
       .select("id,user_id")
@@ -71,7 +101,8 @@ Deno.serve(async (req) => {
 
     if (professionalError) throw professionalError;
     if (!professional) {
-      return json({ ok: true, ignored: "no professional profile for app user" });
+      // The profile-level override is sufficient for non-professional accounts.
+      return json({ ok: true, ignored: "no professional profile; profile access synced" });
     }
 
     const { data: current, error: currentError } = await admin
