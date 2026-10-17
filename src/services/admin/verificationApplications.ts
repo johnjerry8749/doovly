@@ -96,9 +96,7 @@ async function loadRelatedRows(applicationRows: any[]) {
   const [profilesRes, professionalsRes, documentsRes] = await Promise.all([
     userIds.length
       ? supabase
-          .from("profiles")
-          .select("id,full_name,email,phone,city,avatar_url")
-          .in("id", userIds)
+          .rpc("admin_list_profiles")
       : Promise.resolve({ data: [], error: null } as any),
     professionalIds.length
       ? supabase
