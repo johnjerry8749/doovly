@@ -41,7 +41,8 @@ begin
            p.full_name
     from public.professional_subscriptions ps
     left join public.profiles p on p.id = ps.user_id
-    where ps.plan_code = 'pro'
+    where ps.user_id is not null
+      and ps.plan_code = 'pro'
       and ps.status = 'active'
       and ps.admin_override = false
       and ps.end_date = current_date + 3
