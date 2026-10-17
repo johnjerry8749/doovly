@@ -86,7 +86,7 @@ async function fetchAll(): Promise<Professional[]> {
   if (error) throw error;
   // The official Doovly account is a system-chat identity, never a public professional card.
   const list = (data ?? [])
-    .filter((row: any) => row.profiles?.email?.toLowerCase() !== "system@doovly.app")
+    .filter((row: any) => (row.email ?? row.profiles?.email)?.toLowerCase() !== "system@doovly.app")
     .map(mapProfessionalRow);
   list.sort((a, b) => {
     const aPromoted = a.services.some((service) => service.promotionActive);
@@ -192,8 +192,7 @@ export async function listActivePromotedServicesAsync(): Promise<PromotedService
         avatar_url,
         profiles!professionals_user_id_fkey (
           full_name,
-          avatar_url,
-          email
+          avatar_url
         )
       )
     `)
