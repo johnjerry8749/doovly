@@ -3189,3 +3189,381 @@ create unique index if not exists service_request_offers_request_user_unique
 
 create index if not exists idx_service_request_offers_request_user
   on public.service_request_offers(request_id, user_id);
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008001000_add_verification_submission_notifications.sql
+-- =====================================================================
+
+alter table public.verification_applications
+  add column if not exists submitted_at timestamptz,
+  add column if not exists admin_notified_at timestamptz;
+
+create index if not exists idx_verification_apps_status_created
+  on public.verification_applications (status, created_at desc);
+
+create index if not exists idx_verification_docs_application_title
+  on public.verification_documents (application_id, title);
+
+drop policy if exists "Users can create verification applications" on public.verification_applications;
+create policy "Users can create verification applications"
+on public.verification_applications
+for insert
+to authenticated
+with check (
+  (select auth.uid()) = user_id
+  and exists (
+    select 1 from public.professionals p
+    where p.id = professional_id
+      and p.user_id = (select auth.uid())
+  )
+);
+
+drop policy if exists "Users can update own verification applications" on public.verification_applications;
+create policy "Users can update own verification applications"
+on public.verification_applications
+for update
+to authenticated
+using (
+  (select auth.uid()) = user_id
+  and status in ('pending','rejected')
+)
+with check (
+  (select auth.uid()) = user_id
+  and status in ('pending','rejected')
+);
+
+drop policy if exists "Users can create verification documents" on public.verification_documents;
+create policy "Users can create verification documents"
+on public.verification_documents
+for insert
+to authenticated
+with check (
+  exists (
+    select 1 from public.verification_applications va
+    join public.professionals p on p.id = va.professional_id
+    where va.id = application_id
+      and (va.user_id = (select auth.uid()) or p.user_id = (select auth.uid()))
+  )
+);
+
+drop policy if exists "Users can update verification documents" on public.verification_documents;
+create policy "Users can update verification documents"
+on public.verification_documents
+for update
+to authenticated
+using (
+  exists (
+    select 1 from public.verification_applications va
+    join public.professionals p on p.id = va.professional_id
+    where va.id = application_id
+      and (va.user_id = (select auth.uid()) or p.user_id = (select auth.uid()))
+  )
+)
+with check (
+  exists (
+    select 1 from public.verification_applications va
+    join public.professionals p on p.id = va.professional_id
+    where va.id = application_id
+      and (va.user_id = (select auth.uid()) or p.user_id = (select auth.uid()))
+  )
+);
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008003000_fix_service_request_like_uniqueness.sql
+-- =====================================================================
+
+create unique index if not exists service_request_likes_request_user_unique
+  on public.service_request_likes(request_id, user_id);
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008004000_fix_conversation_reads_rls.sql
+-- =====================================================================
+
+create or replace function public.increment_conversation_unread(p_conversation_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_sender uuid := auth.uid();
+  v_recipient uuid;
+  v_is_member boolean;
+begin
+  if v_sender is null then raise exception 'Not authenticated'; end if;
+  select exists(
+    select 1 from public.conversations c
+    where c.id = p_conversation_id
+      and (c.participant_a = v_sender or c.participant_b = v_sender)
+  ) into v_is_member;
+  if not v_is_member then raise exception 'Not a conversation participant'; end if;
+
+  select case when participant_a = v_sender then participant_b else participant_a end
+    into v_recipient
+  from public.conversations
+  where id = p_conversation_id;
+
+  insert into public.conversation_reads(conversation_id, user_id, unread_count, last_read_at)
+  values (p_conversation_id, v_recipient, 1, null)
+  on conflict (conversation_id, user_id)
+  do update set unread_count = public.conversation_reads.unread_count + 1;
+end;
+$$;
+
+revoke all on function public.increment_conversation_unread(uuid) from public;
+grant execute on function public.increment_conversation_unread(uuid) to authenticated;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008010000_sync_service_request_like_counts.sql
+-- =====================================================================
+
+create or replace function public.sync_service_request_likes_count()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_request_id uuid;
+begin
+  v_request_id := coalesce(NEW.request_id, OLD.request_id);
+
+  update public.service_requests
+  set likes_count = (
+    select count(*)::integer
+    from public.service_request_likes
+    where request_id = v_request_id
+  )
+  where id = v_request_id;
+
+  return coalesce(NEW, OLD);
+end;
+$$;
+
+drop trigger if exists trg_sync_service_request_likes_count on public.service_request_likes;
+
+create trigger trg_sync_service_request_likes_count
+after insert or delete on public.service_request_likes
+for each row
+execute function public.sync_service_request_likes_count();
+
+update public.service_requests r
+set likes_count = (
+  select count(*)::integer
+  from public.service_request_likes l
+  where l.request_id = r.id
+);
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008012000_realtime_service_request_like_counts.sql
+-- =====================================================================
+
+-- Keep service-request like counts live in the app.
+-- likes_count is maintained by the existing likes trigger; publishing
+-- service_requests UPDATE lets open request feeds receive the new count
+-- immediately when another user likes/unlikes a request.
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'service_requests'
+  ) then
+    alter publication supabase_realtime add table public.service_requests;
+  end if;
+end
+$$;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008160000_service_promotions.sql
+-- =====================================================================
+
+-- Service promotion foundation: admin-controlled packages, IAP-backed promotions, and analytics.
+-- Payment activation is performed only by the RevenueCat webhook.
+
+create table if not exists public.promotion_packages (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  name text not null,
+  duration_days integer not null check (duration_days > 0),
+  product_id text not null unique,
+  active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.service_promotions (
+  id uuid primary key default gen_random_uuid(),
+  service_id uuid not null references public.services(id) on delete cascade,
+  professional_id uuid not null references public.professionals(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  package_id uuid not null references public.promotion_packages(id) on delete restrict,
+  product_id text not null,
+  status text not null default 'pending'
+    check (status in ('pending','active','expired','cancelled','refunded')),
+  amount numeric(12,2),
+  currency text,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  revenuecat_app_user_id text,
+  transaction_id text,
+  revenuecat_event_id text unique,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_service_promotions_service
+  on public.service_promotions(service_id);
+create index if not exists idx_service_promotions_user
+  on public.service_promotions(user_id);
+create index if not exists idx_service_promotions_active
+  on public.service_promotions(status, starts_at, ends_at);
+create unique index if not exists idx_service_promotions_transaction
+  on public.service_promotions(transaction_id)
+  where transaction_id is not null;
+
+create table if not exists public.service_promotion_analytics (
+  id uuid primary key default gen_random_uuid(),
+  promotion_id uuid not null references public.service_promotions(id) on delete cascade,
+  metric_date date not null default current_date,
+  impressions integer not null default 0,
+  service_views integer not null default 0,
+  booking_requests integer not null default 0,
+  bookings integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (promotion_id, metric_date)
+);
+
+create index if not exists idx_promotion_analytics_promotion
+  on public.service_promotion_analytics(promotion_id, metric_date);
+
+create trigger promotion_packages_updated_at
+  before update on public.promotion_packages
+  for each row execute function public.set_updated_at();
+
+create trigger service_promotions_updated_at
+  before update on public.service_promotions
+  for each row execute function public.set_updated_at();
+
+create trigger service_promotion_analytics_updated_at
+  before update on public.service_promotion_analytics
+  for each row execute function public.set_updated_at();
+
+alter table public.promotion_packages enable row level security;
+alter table public.service_promotions enable row level security;
+alter table public.service_promotion_analytics enable row level security;
+
+revoke all on public.promotion_packages from anon;
+revoke all on public.service_promotions from anon;
+revoke all on public.service_promotion_analytics from anon;
+
+grant select on public.promotion_packages to authenticated;
+grant select, insert, update on public.service_promotions to authenticated;
+grant select on public.service_promotion_analytics to authenticated;
+grant select, insert, update, delete on public.promotion_packages to service_role;
+grant select, insert, update, delete on public.service_promotions to service_role;
+grant select, insert, update, delete on public.service_promotion_analytics to service_role;
+
+create policy "Authenticated users can view active promotion packages"
+on public.promotion_packages
+for select
+to authenticated
+using (active = true or public.is_admin());
+
+create policy "Admins can manage promotion packages"
+on public.promotion_packages
+for all
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "Users can view own promotions and active promotions"
+on public.service_promotions
+for select
+to authenticated
+using (
+  auth.uid() = user_id
+  or (
+    status = 'active'
+    and starts_at <= now()
+    and ends_at > now()
+  )
+  or public.is_admin()
+);
+
+create policy "Users can create pending promotions for their own services"
+on public.service_promotions
+for insert
+to authenticated
+with check (
+  auth.uid() = user_id
+  and status = 'pending'
+  and exists (
+    select 1
+    from public.services s
+    join public.professionals p on p.id = s.professional_id
+    where s.id = service_id
+      and p.id = professional_id
+      and p.user_id = auth.uid()
+  )
+);
+
+create policy "Users can update their own pending promotions"
+on public.service_promotions
+for update
+to authenticated
+using (auth.uid() = user_id and status = 'pending')
+with check (auth.uid() = user_id and status = 'pending');
+
+create policy "Users can view own promotion analytics"
+on public.service_promotion_analytics
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.service_promotions sp
+    where sp.id = promotion_id
+      and (sp.user_id = auth.uid() or public.is_admin())
+  )
+);
+
+grant select on public.services to authenticated;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008170000_configure_promotion_packages.sql
+-- =====================================================================
+
+-- Configure the RevenueCat-backed service promotion products.
+-- Prices remain in RevenueCat; duration is backend configuration used for fulfillment.
+insert into public.promotion_packages
+  (code, name, duration_days, product_id, active, sort_order)
+values
+  ('boost_2days', '2-Day Promotion', 2, 'boost_2days', true, 1),
+  ('boost_5days', '5-Day Promotion', 5, 'boost_5days', true, 2),
+  ('boost_14days', '14-Day Promotion', 14, 'boost_14days', true, 3),
+  ('boost_30days', '30-Day Promotion', 30, 'boost_30days', true, 4)
+on conflict (code) do update set
+  name = excluded.name,
+  duration_days = excluded.duration_days,
+  product_id = excluded.product_id,
+  active = excluded.active,
+  sort_order = excluded.sort_order;
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008171000_index_service_promotion_package.sql
+-- =====================================================================
+
+create index if not exists idx_service_promotions_package
+  on public.service_promotions(package_id);
