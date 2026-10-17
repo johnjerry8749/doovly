@@ -1,6 +1,8 @@
 # Supabase migration reconciliation
 
-**Status: reconciliation in progress — do not delete or squash migration files yet.**
+**Status: inventory and mapping audit complete; destructive cleanup is not yet safe. Do not delete or squash migration files yet.**
+
+See [`MIGRATION_STATUS_MAP.md`](./MIGRATION_STATUS_MAP.md) for the complete 53-file ↔ 33-entry mapping, all timestamp mismatches, remote-only entries, repository-only files, and the safe cutover checklist. This audit changed documentation only; production SQL and migration history remain untouched.
 
 ## Current verified state
 
