@@ -1540,3 +1540,954 @@ ALTER TABLE public.profiles
 UPDATE public.profiles
 SET profession = 'Other'
 WHERE profession IS NULL OR BTRIM(profession) = '';
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006040000_add_expo_push_notifications.sql
+-- =====================================================================
+
+alter table public.profiles
+  add column if not exists expo_push_token text;
+
+create index if not exists profiles_expo_push_token_idx
+  on public.profiles (expo_push_token)
+  where expo_push_token is not null;
+
+create or replace function public.send_notification_push()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  token text;
+  payload jsonb;
+begin
+  select p.expo_push_token into token
+  from public.profiles p
+  where p.id = new.user_id
+    and p.expo_push_token is not null
+    and length(trim(p.expo_push_token)) > 0
+  limit 1;
+
+  if token is null then
+    return new;
+  end if;
+
+  payload := jsonb_build_object(
+    'to', token,
+    'title', coalesce(new.title, 'Doovly'),
+    'body', coalesce(new.body, ''),
+    'sound', 'default',
+    'data', coalesce(new.data, jsonb_build_object('notificationId', new.id::text)),
+    'priority', 'high'
+  );
+
+  perform net.http_post(
+    url := 'https://exp.host/--/api/v2/push/send',
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    body := payload
+  );
+
+  return new;
+exception when others then
+  raise warning '[push notification] %', sqlerrm;
+  return new;
+end;
+$$;
+
+drop trigger if exists notifications_send_push on public.notifications;
+
+create trigger notifications_send_push
+after insert on public.notifications
+for each row
+execute function public.send_notification_push();
+
+revoke all on function public.send_notification_push() from public, anon, authenticated;
+grant execute on function public.send_notification_push() to postgres;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006120000_chat_coins_pro_images_calls_location_rules.sql
+-- =====================================================================
+
+-- Chat monetization and privacy rules
+-- 15 free chat coins per user, Pro unlimited text/images/calls.
+-- Location sharing is only allowed after booking/offer approval.
+
+insert into public.service_categories (name, icon, sort_order)
+select 'Other', 'briefcase-outline', coalesce(max(sort_order), 0) + 1
+from public.service_categories
+where not exists (
+  select 1 from public.service_categories where lower(trim(name)) = 'other'
+);
+
+alter table public.professionals alter column profession set default 'Other';
+alter table public.profiles alter column profession set default 'Other';
+
+update public.profiles
+set profession = 'Other'
+where profession is null or btrim(profession) = '';
+
+create table if not exists public.chat_credits (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  remaining integer not null default 15,
+  updated_at timestamptz not null default now(),
+  constraint chat_credits_remaining_check check (remaining >= 0)
+);
+
+alter table public.chat_credits enable row level security;
+
+drop policy if exists "Users can view own chat credits" on public.chat_credits;
+create policy "Users can view own chat credits"
+on public.chat_credits
+for select to authenticated
+using ((select auth.uid()) = user_id);
+
+revoke insert, update, delete on public.chat_credits from anon, authenticated;
+
+insert into public.chat_credits (user_id, remaining)
+select id, 15 from public.profiles
+on conflict (user_id) do nothing;
+
+alter table public.messages add column if not exists image_url text;
+
+alter table public.messages drop constraint if exists messages_kind_check;
+alter table public.messages add constraint messages_kind_check
+check (kind = any (array[
+  'text'::text, 'image'::text, 'location'::text,
+  'location_stopped'::text, 'request_card'::text, 'system'::text
+]));
+
+create or replace function public.is_chat_pro(p_user_id uuid)
+returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.professionals p
+    where p.user_id = p_user_id and p.subscribed = true
+  );
+$$;
+
+revoke execute on function public.is_chat_pro(uuid) from public, anon, authenticated;
+
+create or replace function public.enforce_chat_message_rules()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  pro_user boolean;
+  credits integer;
+  booking_status text;
+  offer_status text;
+begin
+  if new.kind in ('text', 'image') then
+    if new.sender_id <> auth.uid() then
+      raise exception 'You can only send messages as yourself';
+    end if;
+
+    if not exists (
+      select 1 from public.conversations c
+      where c.id = new.conversation_id
+        and (c.participant_a = new.sender_id or c.participant_b = new.sender_id)
+    ) then
+      raise exception 'You are not a participant in this conversation';
+    end if;
+
+    pro_user := public.is_chat_pro(new.sender_id);
+
+    if new.kind = 'image' and not pro_user then
+      raise exception 'IMAGE_CHAT_PRO_REQUIRED';
+    end if;
+
+    if not pro_user then
+      insert into public.chat_credits (user_id, remaining)
+      values (new.sender_id, 15)
+      on conflict (user_id) do nothing;
+
+      update public.chat_credits
+      set remaining = remaining - 1, updated_at = now()
+      where user_id = new.sender_id and remaining > 0
+      returning remaining into credits;
+
+      if not found then
+        raise exception 'CHAT_CREDITS_EXHAUSTED';
+      end if;
+    end if;
+  end if;
+
+  if new.kind = 'location' then
+    select lower(coalesce(b.status, ''))
+    into booking_status
+    from public.conversations c
+    left join public.bookings b on b.id = c.booking_id
+    where c.id = new.conversation_id;
+
+    if booking_status is not null and booking_status <> '' then
+      if booking_status not in ('accepted', 'ongoing', 'upcoming', 'booked', 'awaiting_approval') then
+        raise exception 'LOCATION_REQUIRES_PROVIDER_APPROVAL';
+      end if;
+    else
+      select lower(coalesce(sro.status, ''))
+      into offer_status
+      from public.conversations c
+      left join public.service_request_offers sro on sro.id = c.offer_id
+      where c.id = new.conversation_id;
+
+      if offer_status is not null and offer_status <> '' and offer_status <> 'accepted' then
+        raise exception 'LOCATION_REQUIRES_PROVIDER_APPROVAL';
+      end if;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_enforce_chat_message_rules on public.messages;
+create trigger trg_enforce_chat_message_rules
+before insert on public.messages
+for each row execute function public.enforce_chat_message_rules();
+
+revoke execute on function public.enforce_chat_message_rules() from public, anon, authenticated;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+  next_role text;
+begin
+  next_role := coalesce(new.raw_user_meta_data ->> 'role', 'user');
+
+  if next_role not in ('user', 'admin', 'professional') then
+    next_role := 'user';
+  end if;
+
+  insert into public.profiles (
+    id, full_name, phone, email, role, city, profession, mock_id
+  )
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'full_name', new.email, 'User'),
+    new.phone,
+    new.email,
+    next_role,
+    new.raw_user_meta_data ->> 'city',
+    'Other',
+    new.raw_user_meta_data ->> 'mock_id'
+  )
+  on conflict (id) do update set
+    email = coalesce(excluded.email, public.profiles.email),
+    full_name = coalesce(nullif(excluded.full_name, ''), public.profiles.full_name);
+
+  insert into public.chat_credits (user_id, remaining)
+  values (new.id, 15)
+  on conflict (user_id) do nothing;
+
+  insert into public.notifications (
+    user_id, type, title, body, unread, avatar_url, time_label
+  )
+  values (
+    new.id, 'general', 'Welcome to Doovly 👋',
+    'Thanks for joining Doovly! Explore services and find trusted professionals near you.',
+    true, null, 'Just now'
+  );
+
+  return new;
+end;
+$function$;
+
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006121500_chat_system_message_kind.sql
+-- =====================================================================
+
+-- Keep booking accept/decline events out of free chat coin usage.
+
+alter table public.messages drop constraint if exists messages_kind_check;
+
+alter table public.messages add constraint messages_kind_check
+check (kind = any (array[
+  'text'::text,
+  'image'::text,
+  'location'::text,
+  'location_stopped'::text,
+  'request_card'::text,
+  'system'::text
+]));
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006123000_fix_new_account_professional_profiles.sql
+-- =====================================================================
+
+-- Create a professional profile automatically for every normal Doovly account.
+-- This keeps the existing profile, services, booking and offer flows usable
+-- immediately after signup without changing the account's role.
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+  next_role text;
+  next_city text;
+  next_profession text;
+  next_phone text;
+begin
+  next_role := coalesce(new.raw_user_meta_data ->> 'role', 'user');
+
+  if next_role not in ('user', 'admin', 'professional') then
+    next_role := 'user';
+  end if;
+
+  next_city := coalesce(nullif(btrim(new.raw_user_meta_data ->> 'city'), ''), 'Lagos');
+  next_profession := coalesce(nullif(btrim(new.raw_user_meta_data ->> 'profession'), ''), 'Other');
+  next_phone := coalesce(
+    nullif(btrim(new.phone), ''),
+    nullif(btrim(new.raw_user_meta_data ->> 'phone'), '')
+  );
+
+  insert into public.profiles (
+    id, full_name, phone, email, role, city, profession, mock_id
+  )
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'full_name', new.email, 'User'),
+    new.phone,
+    new.email,
+    next_role,
+    next_city,
+    next_profession,
+    new.raw_user_meta_data ->> 'mock_id'
+  )
+  on conflict (id) do update set
+    email = coalesce(excluded.email, public.profiles.email),
+    full_name = coalesce(nullif(excluded.full_name, ''), public.profiles.full_name),
+    phone = coalesce(excluded.phone, public.profiles.phone),
+    city = coalesce(excluded.city, public.profiles.city),
+    profession = coalesce(excluded.profession, public.profiles.profession);
+
+  if next_role <> 'admin' then
+    insert into public.professionals (
+      user_id,
+      profession,
+      city,
+      price_from,
+      price_from_value,
+      email,
+      phone
+    )
+    values (
+      new.id,
+      next_profession,
+      next_city,
+      '₦0',
+      0,
+      new.email,
+      next_phone
+    )
+    on conflict (user_id) do nothing;
+  end if;
+
+  insert into public.chat_credits (user_id, remaining)
+  values (new.id, 15)
+  on conflict (user_id) do nothing;
+
+  insert into public.notifications (
+    user_id, type, title, body, unread, avatar_url, time_label
+  )
+  values (
+    new.id, 'general', 'Welcome to Doovly 👋',
+    'Thanks for joining Doovly! Explore services and find trusted professionals near you.',
+    true, null, 'Just now'
+  );
+
+  return new;
+end;
+$function$;
+
+-- Repair accounts created before this trigger was fixed.
+insert into public.professionals (
+  user_id,
+  profession,
+  city,
+  price_from,
+  price_from_value,
+  email,
+  phone
+)
+select
+  p.id,
+  coalesce(nullif(btrim(p.profession), ''), 'Other'),
+  coalesce(nullif(btrim(p.city), ''), 'Lagos'),
+  '₦0',
+  0,
+  p.email,
+  p.phone
+from public.profiles p
+left join public.professionals pro on pro.user_id = p.id
+where pro.id is null
+  and p.role <> 'admin';
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006130000_booking_conversation_trigger.sql
+-- =====================================================================
+
+-- Always create the booking conversation at the database boundary.
+-- This prevents a booking from being created without its chat conversation.
+
+create or replace function public.create_booking_conversation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+  professional_user uuid;
+begin
+  select p.user_id
+    into professional_user
+  from public.professionals p
+  where p.id = new.professional_id;
+
+  if professional_user is null
+     or professional_user = new.customer_id then
+    return new;
+  end if;
+
+  insert into public.conversations (
+    participant_a,
+    participant_b,
+    booking_id,
+    last_message,
+    last_message_at
+  )
+  values (
+    new.customer_id,
+    professional_user,
+    new.id,
+    'Booking request: ' || coalesce(new.title, 'Booking'),
+    now()
+  )
+  on conflict (booking_id) do nothing;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists trg_create_booking_conversation on public.bookings;
+
+create trigger trg_create_booking_conversation
+after insert on public.bookings
+for each row
+execute function public.create_booking_conversation();
+
+-- Repair older bookings that were created without a conversation.
+insert into public.conversations (
+  participant_a,
+  participant_b,
+  booking_id,
+  last_message,
+  last_message_at
+)
+select
+  b.customer_id,
+  p.user_id,
+  b.id,
+  'Booking request: ' || coalesce(b.title, 'Booking'),
+  coalesce(b.created_at, now())
+from public.bookings b
+join public.professionals p on p.id = b.professional_id
+left join public.conversations c on c.booking_id = b.id
+where c.id is null
+  and p.user_id <> b.customer_id;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006140000_booking_chat_data_and_location_lock.sql
+-- =====================================================================
+
+create or replace function public.create_booking_conversation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+  professional_user uuid;
+  conversation_uuid uuid;
+begin
+  select p.user_id into professional_user
+  from public.professionals p
+  where p.id = new.professional_id;
+
+  if professional_user is null or professional_user = new.customer_id then
+    return new;
+  end if;
+
+  insert into public.conversations (
+    participant_a, participant_b, booking_id, last_message, last_message_at
+  )
+  values (
+    new.customer_id,
+    professional_user,
+    new.id,
+    'Booking request: ' || coalesce(new.title, new.service_name, 'Booking'),
+    now()
+  )
+  on conflict (booking_id) do update
+    set last_message = excluded.last_message,
+        last_message_at = excluded.last_message_at
+  returning id into conversation_uuid;
+
+  insert into public.messages (conversation_id, sender_id, text, kind, card)
+  select
+    conversation_uuid,
+    new.customer_id,
+    'Booking request: ' || coalesce(new.title, new.service_name, 'Booking'),
+    'request_card',
+    jsonb_build_object(
+      'kind', 'booking',
+      'title', coalesce(new.title, new.service_name, 'Booking'),
+      'category', new.service_name,
+      'location', coalesce(new.location, new.address),
+      'description', new.notes,
+      'amount', coalesce(new.amount, 0),
+      'date', new.display_date,
+      'statusLabel',
+        case lower(coalesce(new.status, 'pending'))
+          when 'pending' then 'Waiting for professional to accept'
+          when 'declined' then 'This booking was declined'
+          when 'cancelled' then 'This booking was declined'
+          else 'Accepted'
+        end
+    )
+  where not exists (
+    select 1 from public.messages m
+    where m.conversation_id = conversation_uuid
+      and m.kind = 'request_card'
+  );
+
+  return new;
+end;
+$function$;
+
+revoke execute on function public.create_booking_conversation() from public, anon, authenticated;
+
+drop policy if exists "Users can send messages in own conversations" on public.messages;
+
+create policy "Users can send messages in own conversations"
+on public.messages
+for insert
+to authenticated
+with check (
+  (select auth.uid()) = sender_id
+  and exists (
+    select 1
+    from public.conversations c
+    where c.id = messages.conversation_id
+      and (c.participant_a = (select auth.uid()) or c.participant_b = (select auth.uid()))
+      and (
+        messages.kind <> 'location'
+        or c.booking_id is null
+        or exists (
+          select 1 from public.bookings b
+          where b.id = c.booking_id
+            and lower(coalesce(b.status, 'pending')) = 'accepted'
+        )
+        or (
+          c.offer_id is not null
+          and exists (
+            select 1 from public.service_request_offers o
+            where o.id = c.offer_id
+              and lower(coalesce(o.status, 'pending')) = 'accepted'
+          )
+        )
+      )
+  )
+);
+
+delete from public.messages m
+where m.kind = 'location'
+  and exists (
+    select 1
+    from public.conversations c
+    left join public.bookings b on b.id = c.booking_id
+    left join public.service_request_offers o on o.id = c.offer_id
+    where c.id = m.conversation_id
+      and (
+        (b.id is not null and lower(coalesce(b.status, 'pending')) <> 'accepted')
+        or (o.id is not null and lower(coalesce(o.status, 'pending')) <> 'accepted')
+      )
+  );
+
+insert into public.messages (conversation_id, sender_id, text, kind, card)
+select
+  c.id,
+  b.customer_id,
+  'Booking request: ' || coalesce(b.title, b.service_name, 'Booking'),
+  'request_card',
+  jsonb_build_object(
+    'kind', 'booking',
+    'title', coalesce(b.title, b.service_name, 'Booking'),
+    'category', b.service_name,
+    'location', coalesce(b.location, b.address),
+    'description', b.notes,
+    'amount', coalesce(b.amount, 0),
+    'date', b.display_date,
+    'statusLabel',
+      case lower(coalesce(b.status, 'pending'))
+        when 'pending' then 'Waiting for professional to accept'
+        when 'declined' then 'This booking was declined'
+        when 'cancelled' then 'This booking was declined'
+        else 'Accepted'
+      end
+  )
+from public.conversations c
+join public.bookings b on b.id = c.booking_id
+where c.booking_id is not null
+  and not exists (
+    select 1 from public.messages m
+    where m.conversation_id = c.id and m.kind = 'request_card'
+  );
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006143000_prevent_duplicate_booking_and_offer_chat.sql
+-- =====================================================================
+
+-- Prevent duplicate booking orders and make offers follow the same chat-card flow.
+alter table public.bookings
+  add column if not exists source_offer_id uuid;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'bookings_source_offer_id_fkey'
+  ) then
+    alter table public.bookings
+      add constraint bookings_source_offer_id_fkey
+      foreign key (source_offer_id)
+      references public.service_request_offers(id)
+      on delete set null;
+  end if;
+end $$;
+
+create unique index if not exists bookings_source_offer_id_unique
+  on public.bookings(source_offer_id) where source_offer_id is not null;
+
+create unique index if not exists conversations_offer_id_unique
+  on public.conversations(offer_id) where offer_id is not null;
+
+create or replace function public.prevent_duplicate_booking_order()
+returns trigger
+language plpgsql
+as $function$
+declare existing_booking public.bookings;
+begin
+  select b.* into existing_booking
+  from public.bookings b
+  where b.customer_id = new.customer_id
+    and b.professional_id = new.professional_id
+    and lower(coalesce(b.title,'')) = lower(coalesce(new.title,''))
+    and coalesce(b.amount,0) = coalesce(new.amount,0)
+    and lower(coalesce(b.location,'')) = lower(coalesce(new.location,''))
+    and lower(coalesce(b.status,'pending')) in ('pending','accepted')
+  order by b.created_at desc limit 1;
+  if existing_booking.id is not null then return existing_booking; end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists trg_prevent_duplicate_booking_order on public.bookings;
+create trigger trg_prevent_duplicate_booking_order
+before insert on public.bookings
+for each row execute function public.prevent_duplicate_booking_order();
+
+create or replace function public.create_offer_conversation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare request_row record; conversation_uuid uuid;
+begin
+  select r.created_by,r.title,r.category,r.location,r.city,r.description
+    into request_row from public.service_requests r where r.id=new.request_id;
+
+  if request_row.created_by is null or new.user_id is null
+     or request_row.created_by=new.user_id then return new; end if;
+
+  insert into public.conversations
+    (participant_a,participant_b,service_request_id,offer_id,last_message,last_message_at)
+  values
+    (request_row.created_by,new.user_id,new.request_id,new.id,
+     'Offer: ₦'||to_char(new.amount,'FM999,999,999,990')||
+     ' on "'||coalesce(request_row.title,'Service request')||'"',now())
+  on conflict (offer_id) do update
+    set last_message=excluded.last_message,last_message_at=excluded.last_message_at
+  returning id into conversation_uuid;
+
+  insert into public.messages(conversation_id,sender_id,text,kind,card)
+  select conversation_uuid,new.user_id,
+    'Offer: ₦'||to_char(new.amount,'FM999,999,999,990')||
+    ' on "'||coalesce(request_row.title,'Service request')||'"',
+    'request_card',
+    jsonb_build_object(
+      'kind','offer','title',coalesce(request_row.title,'Service request'),
+      'category',request_row.category,'location',coalesce(request_row.location,request_row.city),
+      'description',request_row.description,'amount',new.amount,
+      'date',to_char(now(),'DD Mon YYYY'),
+      'statusLabel','Waiting for customer to accept')
+  where not exists(
+    select 1 from public.messages m
+    where m.conversation_id=conversation_uuid and m.kind='request_card');
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists trg_create_offer_conversation on public.service_request_offers;
+create trigger trg_create_offer_conversation
+after insert on public.service_request_offers
+for each row execute function public.create_offer_conversation();
+
+revoke execute on function public.create_offer_conversation() from public,anon,authenticated;
+
+drop policy if exists "Users can send messages in own conversations" on public.messages;
+create policy "Users can send messages in own conversations"
+on public.messages for insert to authenticated
+with check (
+  (select auth.uid())=sender_id
+  and exists(
+    select 1 from public.conversations c
+    where c.id=messages.conversation_id
+      and (c.participant_a=(select auth.uid()) or c.participant_b=(select auth.uid()))
+      and (
+        messages.kind <> 'location'
+        or (
+          c.booking_id is not null and exists(
+            select 1 from public.bookings b
+            where b.id=c.booking_id
+              and lower(coalesce(b.status,'pending'))='accepted')
+        )
+        or (
+          c.offer_id is not null and exists(
+            select 1 from public.service_request_offers o
+            where o.id=c.offer_id
+              and lower(coalesce(o.status,'pending'))='accepted')
+        )
+      )
+  )
+);
+
+insert into public.conversations
+  (participant_a,participant_b,service_request_id,offer_id,last_message,last_message_at)
+select r.created_by,o.user_id,o.request_id,o.id,
+  'Offer: ₦'||to_char(o.amount,'FM999,999,999,990')||
+  ' on "'||coalesce(r.title,'Service request')||'"',now()
+from public.service_request_offers o
+join public.service_requests r on r.id=o.request_id
+where not exists(select 1 from public.conversations c where c.offer_id=o.id)
+  and r.created_by is not null and o.user_id is not null and r.created_by<>o.user_id;
+
+insert into public.messages(conversation_id,sender_id,text,kind,card)
+select c.id,o.user_id,
+  'Offer: ₦'||to_char(o.amount,'FM999,999,999,990')||
+  ' on "'||coalesce(r.title,'Service request')||'"',
+  'request_card',
+  jsonb_build_object(
+    'kind','offer','title',coalesce(r.title,'Service request'),
+    'category',r.category,'location',coalesce(r.location,r.city),
+    'description',r.description,'amount',o.amount,
+    'date',to_char(o.created_at,'DD Mon YYYY'),
+    'statusLabel',case lower(coalesce(o.status,'pending'))
+      when 'accepted' then 'Offer accepted'
+      when 'declined' then 'Offer declined'
+      else 'Waiting for customer to accept' end)
+from public.service_request_offers o
+join public.service_requests r on r.id=o.request_id
+join public.conversations c on c.offer_id=o.id
+where not exists(
+  select 1 from public.messages m
+  where m.conversation_id=c.id and m.kind='request_card');
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006143230_one_chat_thread_per_user_pair.sql
+-- =====================================================================
+
+-- Keep exactly one social-style DM thread per user pair.
+-- Booking/request records reuse that thread; acceptance controls when text is unlocked.
+
+with ranked as (
+  select
+    id,
+    first_value(id) over (
+      partition by least(participant_a, participant_b), greatest(participant_a, participant_b)
+      order by created_at desc, id desc
+    ) as keep_id,
+    row_number() over (
+      partition by least(participant_a, participant_b), greatest(participant_a, participant_b)
+      order by created_at desc, id desc
+    ) as rn
+  from public.conversations
+)
+update public.messages m
+set conversation_id = r.keep_id
+from ranked r
+where m.conversation_id = r.id
+  and r.rn > 1;
+
+with ranked as (
+  select
+    id,
+    row_number() over (
+      partition by least(participant_a, participant_b), greatest(participant_a, participant_b)
+      order by created_at desc, id desc
+    ) as rn
+  from public.conversations
+)
+delete from public.conversations c
+using ranked r
+where c.id = r.id
+  and r.rn > 1;
+
+create unique index if not exists conversations_one_thread_per_pair
+  on public.conversations (
+    least(participant_a, participant_b),
+    greatest(participant_a, participant_b)
+  );
+
+create or replace function public.create_booking_conversation()
+returns trigger language plpgsql security definer set search_path=public as $function$
+declare
+  professional_user uuid;
+  conversation_uuid uuid;
+begin
+  select p.user_id into professional_user from public.professionals p where p.id = new.professional_id;
+  if professional_user is null or professional_user = new.customer_id then return new; end if;
+
+  select c.id into conversation_uuid
+  from public.conversations c
+  where (c.participant_a = new.customer_id and c.participant_b = professional_user)
+     or (c.participant_b = new.customer_id and c.participant_a = professional_user)
+  order by c.last_message_at desc nulls last limit 1;
+
+  if conversation_uuid is not null then
+    update public.conversations
+    set participant_a = new.customer_id,
+        participant_b = professional_user,
+        booking_id = new.id,
+        service_request_id = null,
+        offer_id = null,
+        last_message = 'Booking request: ' || coalesce(new.title,new.service_name,'Booking'),
+        last_message_at = now()
+    where id = conversation_uuid;
+  else
+    insert into public.conversations(participant_a,participant_b,booking_id,last_message,last_message_at)
+    values(new.customer_id,professional_user,new.id,
+      'Booking request: ' || coalesce(new.title,new.service_name,'Booking'),now())
+    returning id into conversation_uuid;
+  end if;
+
+  insert into public.messages(conversation_id,sender_id,text,kind,card)
+  values(
+    conversation_uuid,new.customer_id,
+    'Booking request: ' || coalesce(new.title,new.service_name,'Booking'),
+    'request_card',
+    jsonb_build_object(
+      'kind','booking',
+      'title',coalesce(new.title,new.service_name,'Booking'),
+      'category',new.service_name,
+      'location',coalesce(new.location,new.address),
+      'description',new.notes,
+      'amount',coalesce(new.amount,0),
+      'date',new.display_date,
+      'statusLabel',
+        case lower(coalesce(new.status,'pending'))
+          when 'pending' then 'Waiting for professional to accept'
+          when 'declined' then 'This booking was declined'
+          when 'cancelled' then 'This booking was declined'
+          else 'Accepted'
+        end
+    )
+  );
+  return new;
+end; $function$;
+
+create or replace function public.create_offer_conversation()
+returns trigger language plpgsql security definer set search_path=public as $function$
+declare
+  request_row record;
+  conversation_uuid uuid;
+begin
+  select r.created_by,r.title,r.category,r.location,r.city,r.description
+  into request_row
+  from public.service_requests r where r.id = new.request_id;
+
+  if request_row.created_by is null or new.user_id is null or request_row.created_by = new.user_id then return new; end if;
+
+  select c.id into conversation_uuid
+  from public.conversations c
+  where (c.participant_a = request_row.created_by and c.participant_b = new.user_id)
+     or (c.participant_b = request_row.created_by and c.participant_a = new.user_id)
+  order by c.last_message_at desc nulls last limit 1;
+
+  if conversation_uuid is not null then
+    update public.conversations
+    set participant_a = request_row.created_by,
+        participant_b = new.user_id,
+        service_request_id = new.request_id,
+        offer_id = new.id,
+        booking_id = null,
+        last_message = 'Offer: ₦' || to_char(new.amount,'FM999,999,999,990') ||
+          ' on "' || coalesce(request_row.title,'Service request') || '"',
+        last_message_at = now()
+    where id = conversation_uuid;
+  else
+    insert into public.conversations(
+      participant_a,participant_b,service_request_id,offer_id,last_message,last_message_at
+    )
+    values(
+      request_row.created_by,new.user_id,new.request_id,new.id,
+      'Offer: ₦' || to_char(new.amount,'FM999,999,999,990') ||
+        ' on "' || coalesce(request_row.title,'Service request') || '"',now()
+    )
+    returning id into conversation_uuid;
+  end if;
+
+  insert into public.messages(conversation_id,sender_id,text,kind,card)
+  values(
+    conversation_uuid,new.user_id,
+    'Offer: ₦' || to_char(new.amount,'FM999,999,999,990') ||
+      ' on "' || coalesce(request_row.title,'Service request') || '"',
+    'request_card',
+    jsonb_build_object(
+      'kind','offer',
+      'title',coalesce(request_row.title,'Service request'),
+      'category',request_row.category,
+      'location',coalesce(request_row.location,request_row.city),
+      'description',request_row.description,
+      'amount',new.amount,
+      'date',to_char(new.created_at,'DD Mon YYYY'),
+      'statusLabel',
+        case when lower(coalesce(new.status,'pending'))='accepted'
+          then 'Offer accepted'
+          else 'Waiting for customer to accept'
+        end
+    )
+  );
+  return new;
+end; $function$;
