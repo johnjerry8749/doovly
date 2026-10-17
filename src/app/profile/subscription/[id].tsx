@@ -13,9 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { getCurrentUser, isCurrentUserPro } from "@/services/savedProviders";
-import { loadSessionUser } from "@/lib/session";
+import { loadSessionUser, getCachedSessionUser } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
-import { getCachedSessionUser } from "@/lib/session";
 import Subscription from "./subscription";
 import {
   getCustomerInfo,
