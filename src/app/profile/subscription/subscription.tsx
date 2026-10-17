@@ -128,7 +128,7 @@ export default function Subscription() {
       if (active) {
         Alert.alert("Purchases restored", "Doovly Pro is active on this account.");
       } else {
-        Alert.alert("No active subscription", "No active Doovly Pro subscription was found for this account.");
+        Alert.alert("Pro access unavailable", "This account does not currently have Doovly Pro access enabled.");
       }
     } catch (error) {
       Alert.alert("Restore failed", error instanceof Error ? error.message : "Could not restore purchases. Please try again.");
