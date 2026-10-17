@@ -3567,3 +3567,614 @@ on conflict (code) do update set
 
 create index if not exists idx_service_promotions_package
   on public.service_promotions(package_id);
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261016190000_promotion_analytics_tracking.sql
+-- =====================================================================
+
+-- Reliable promotion analytics events and booking attribution.
+alter table public.bookings
+  add column if not exists service_id uuid references public.services(id) on delete set null,
+  add column if not exists promotion_id uuid references public.service_promotions(id) on delete set null;
+
+create index if not exists idx_bookings_promotion_id on public.bookings(promotion_id);
+
+create table if not exists public.service_promotion_events (
+  id uuid primary key default gen_random_uuid(),
+  promotion_id uuid not null references public.service_promotions(id) on delete cascade,
+  viewer_id uuid not null references public.profiles(id) on delete cascade,
+  metric_date date not null default current_date,
+  metric_type text not null check (metric_type in ('impressions', 'service_views')),
+  created_at timestamptz not null default now(),
+  unique (promotion_id, viewer_id, metric_date, metric_type)
+);
+
+alter table public.service_promotion_events enable row level security;
+revoke all on public.service_promotion_events from anon, authenticated;
+grant select, insert, update, delete on public.service_promotion_events to service_role;
+
+create or replace function public.track_service_promotion_event(
+  p_service_id uuid,
+  p_metric text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_promotion_id uuid;
+  v_event_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if p_metric not in ('impressions', 'service_views') then
+    raise exception 'Unsupported promotion metric';
+  end if;
+
+  select sp.id into v_promotion_id
+  from public.service_promotions sp
+  where sp.service_id = p_service_id
+    and sp.user_id <> auth.uid()
+    and sp.status = 'active'
+    and sp.starts_at <= now()
+    and sp.ends_at > now()
+  order by sp.ends_at desc
+  limit 1;
+
+  if v_promotion_id is null then
+    return;
+  end if;
+
+  insert into public.service_promotion_events (promotion_id, viewer_id, metric_date, metric_type)
+  values (v_promotion_id, auth.uid(), current_date, p_metric)
+  on conflict (promotion_id, viewer_id, metric_date, metric_type) do nothing
+  returning id into v_event_id;
+
+  -- Count at most one impression and one service view per user, per promotion, per day.
+  if v_event_id is null then
+    return;
+  end if;
+
+  insert into public.service_promotion_analytics (promotion_id, metric_date)
+  values (v_promotion_id, current_date)
+  on conflict (promotion_id, metric_date) do nothing;
+
+  execute format(
+    'update public.service_promotion_analytics set %I = %I + 1, updated_at = now() where promotion_id = $1 and metric_date = current_date',
+    p_metric, p_metric
+  ) using v_promotion_id;
+end;
+$$;
+
+revoke all on function public.track_service_promotion_event(uuid, text) from public, anon;
+grant execute on function public.track_service_promotion_event(uuid, text) to authenticated;
+
+create or replace function public.attribute_booking_to_promotion()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_promotion_id uuid;
+begin
+  if new.service_id is null then
+    return new;
+  end if;
+
+  if new.promotion_id is null then
+    select sp.id into v_promotion_id
+    from public.service_promotions sp
+    where sp.service_id = new.service_id
+      and sp.status = 'active'
+      and sp.starts_at <= now()
+      and sp.ends_at > now()
+    order by sp.ends_at desc
+    limit 1;
+    new.promotion_id := v_promotion_id;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists bookings_attribute_promotion on public.bookings;
+create trigger bookings_attribute_promotion
+before insert on public.bookings
+for each row execute function public.attribute_booking_to_promotion();
+
+create or replace function public.record_promotion_booking_metrics()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_promotion_id uuid;
+begin
+  v_promotion_id := new.promotion_id;
+  if tg_op = 'UPDATE' and v_promotion_id is null then
+    v_promotion_id := old.promotion_id;
+  end if;
+
+  if v_promotion_id is null then
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    if lower(coalesce(new.status, '')) in ('pending', 'accepted') then
+      insert into public.service_promotion_analytics (promotion_id, metric_date, booking_requests)
+      values (v_promotion_id, current_date, 1)
+      on conflict (promotion_id, metric_date)
+      do update set booking_requests = public.service_promotion_analytics.booking_requests + 1,
+                    updated_at = now();
+    end if;
+
+    if lower(coalesce(new.status, '')) = 'accepted' then
+      insert into public.service_promotion_analytics (promotion_id, metric_date, bookings)
+      values (v_promotion_id, current_date, 1)
+      on conflict (promotion_id, metric_date)
+      do update set bookings = public.service_promotion_analytics.bookings + 1,
+                    updated_at = now();
+    end if;
+  elsif tg_op = 'UPDATE'
+    and lower(coalesce(old.status, '')) <> 'accepted'
+    and lower(coalesce(new.status, '')) = 'accepted' then
+    insert into public.service_promotion_analytics (promotion_id, metric_date, bookings)
+    values (v_promotion_id, current_date, 1)
+    on conflict (promotion_id, metric_date)
+    do update set bookings = public.service_promotion_analytics.bookings + 1,
+                  updated_at = now();
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists bookings_record_promotion_metrics on public.bookings;
+drop trigger if exists bookings_record_promotion_insert_metrics on public.bookings;
+drop trigger if exists bookings_record_promotion_update_metrics on public.bookings;
+create trigger bookings_record_promotion_insert_metrics
+after insert on public.bookings
+for each row execute function public.record_promotion_booking_metrics();
+create trigger bookings_record_promotion_update_metrics
+after update of status on public.bookings
+for each row execute function public.record_promotion_booking_metrics();
+
+grant select on public.service_promotions to authenticated;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261016200000_expire_promotions_and_notify_results.sql
+-- =====================================================================
+
+-- Automatically end expired promotions and post a one-time results summary to Doovly chat.
+create extension if not exists pg_cron with schema pg_catalog;
+
+alter table public.service_promotions
+  add column if not exists end_notified_at timestamptz;
+
+create index if not exists idx_service_promotions_due_to_end
+  on public.service_promotions(status, ends_at)
+  where status in ('active', 'expired');
+
+create or replace function public.finish_expired_service_promotions()
+returns integer
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  p record;
+  v_system_user_id uuid;
+  v_conversation_id uuid;
+  v_impressions bigint;
+  v_views bigint;
+  v_requests bigint;
+  v_bookings bigint;
+  v_message text;
+  v_count integer := 0;
+begin
+  select id into v_system_user_id
+  from public.profiles
+  where lower(email) = 'system@doovly.app'
+  limit 1;
+
+  -- If the Doovly system profile is not available yet, do not mark messages
+  -- as delivered; a later scheduled run can retry the chat delivery.
+  for p in
+    select sp.id, sp.user_id, sp.service_id, sp.ends_at, sp.status, s.name as service_name
+    from public.service_promotions sp
+    left join public.services s on s.id = sp.service_id
+    where sp.ends_at <= now()
+      and (
+        sp.status = 'active'
+        or (sp.status = 'expired' and sp.end_notified_at is null)
+      )
+    order by sp.ends_at
+    for update of sp skip locked
+  loop
+    if p.status is distinct from 'expired' then
+      update public.service_promotions
+      set status = 'expired', updated_at = now()
+      where id = p.id and status = 'active';
+    end if;
+
+    if v_system_user_id is null then
+      continue;
+    end if;
+
+    select
+      coalesce(sum(a.impressions), 0),
+      coalesce(sum(a.service_views), 0),
+      coalesce(sum(a.booking_requests), 0),
+      coalesce(sum(a.bookings), 0)
+    into v_impressions, v_views, v_requests, v_bookings
+    from public.service_promotion_analytics a
+    where a.promotion_id = p.id;
+
+    select c.id into v_conversation_id
+    from public.conversations c
+    where (c.participant_a = p.user_id and c.participant_b = v_system_user_id)
+       or (c.participant_a = v_system_user_id and c.participant_b = p.user_id)
+    order by c.created_at desc
+    limit 1;
+
+    if v_conversation_id is null then
+      insert into public.conversations (
+        participant_a, participant_b, last_message, last_message_at
+      ) values (
+        p.user_id, v_system_user_id,
+        'Your promotion has ended. Your final results are ready.',
+        now()
+      )
+      returning id into v_conversation_id;
+    end if;
+
+    v_message :=
+      'Promotion ended — "' || coalesce(nullif(p.service_name, ''), 'Your service') ||
+      '" has finished its promotion period.' || E'\n\n' ||
+      'Final results:' || E'\n' ||
+      '• Impressions: ' || v_impressions || E'\n' ||
+      '• Service views: ' || v_views || E'\n' ||
+      '• Booking requests: ' || v_requests || E'\n' ||
+      '• Confirmed bookings: ' || v_bookings || E'\n\n' ||
+      'The promotion is no longer active. You can promote this service again whenever you are ready.';
+
+    insert into public.messages (conversation_id, sender_id, text, kind)
+    values (v_conversation_id, v_system_user_id, v_message, 'system');
+
+    update public.conversations
+    set last_message = 'Promotion ended — final results are ready.',
+        last_message_at = now()
+    where id = v_conversation_id;
+
+    insert into public.conversation_reads (
+      conversation_id, user_id, unread_count, last_read_at
+    ) values (
+      v_conversation_id, p.user_id, 1, null
+    )
+    on conflict (conversation_id, user_id)
+    do update set unread_count = public.conversation_reads.unread_count + 1;
+
+    insert into public.notifications (
+      user_id, type, title, body, unread, data
+    ) values (
+      p.user_id,
+      'general',
+      'Promotion ended',
+      '"' || coalesce(nullif(p.service_name, ''), 'Your service') ||
+      '" promotion has ended. Open Doovly chat to see your final results.',
+      true,
+      jsonb_build_object(
+        'type', 'promotion_ended',
+        'screen', 'chat',
+        'promotion_id', p.id,
+        'impressions', v_impressions,
+        'service_views', v_views,
+        'booking_requests', v_requests,
+        'bookings', v_bookings
+      )
+    );
+
+    update public.service_promotions
+    set end_notified_at = now(), updated_at = now()
+    where id = p.id and end_notified_at is null;
+
+    v_count := v_count + 1;
+    v_conversation_id := null;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+revoke all on function public.finish_expired_service_promotions() from public, anon, authenticated;
+
+do $$
+begin
+  if exists (select 1 from cron.job where jobname = 'finish-expired-service-promotions') then
+    perform cron.unschedule('finish-expired-service-promotions');
+  end if;
+  perform cron.schedule(
+    'finish-expired-service-promotions',
+    '* * * * *',
+    'select public.finish_expired_service_promotions();'
+  );
+end
+$$;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261016201000_fix_expired_promotion_status.sql
+-- =====================================================================
+
+-- Automatically end expired promotions and post a one-time results summary to Doovly chat.
+create extension if not exists pg_cron with schema pg_catalog;
+
+alter table public.service_promotions
+  add column if not exists end_notified_at timestamptz;
+
+create index if not exists idx_service_promotions_due_to_end
+  on public.service_promotions(status, ends_at)
+  where status in ('active', 'expired');
+
+create or replace function public.finish_expired_service_promotions()
+returns integer
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  p record;
+  v_system_user_id uuid;
+  v_conversation_id uuid;
+  v_impressions bigint;
+  v_views bigint;
+  v_requests bigint;
+  v_bookings bigint;
+  v_message text;
+  v_count integer := 0;
+begin
+  select id into v_system_user_id
+  from public.profiles
+  where lower(email) = 'system@doovly.app'
+  limit 1;
+
+  -- If the Doovly system profile is not available yet, do not mark messages
+  -- as delivered; a later scheduled run can retry the chat delivery.
+  for p in
+    select sp.id, sp.user_id, sp.service_id, sp.ends_at, sp.status, s.name as service_name
+    from public.service_promotions sp
+    left join public.services s on s.id = sp.service_id
+    where sp.ends_at <= now()
+      and (
+        sp.status = 'active'
+        or (sp.status = 'expired' and sp.end_notified_at is null)
+      )
+    order by sp.ends_at
+    for update of sp skip locked
+  loop
+    if p.status is distinct from 'expired' then
+      update public.service_promotions
+      set status = 'expired', updated_at = now()
+      where id = p.id and status = 'active';
+    end if;
+
+    if v_system_user_id is null then
+      continue;
+    end if;
+
+    select
+      coalesce(sum(a.impressions), 0),
+      coalesce(sum(a.service_views), 0),
+      coalesce(sum(a.booking_requests), 0),
+      coalesce(sum(a.bookings), 0)
+    into v_impressions, v_views, v_requests, v_bookings
+    from public.service_promotion_analytics a
+    where a.promotion_id = p.id;
+
+    select c.id into v_conversation_id
+    from public.conversations c
+    where (c.participant_a = p.user_id and c.participant_b = v_system_user_id)
+       or (c.participant_a = v_system_user_id and c.participant_b = p.user_id)
+    order by c.created_at desc
+    limit 1;
+
+    if v_conversation_id is null then
+      insert into public.conversations (
+        participant_a, participant_b, last_message, last_message_at
+      ) values (
+        p.user_id, v_system_user_id,
+        'Your promotion has ended. Your final results are ready.',
+        now()
+      )
+      returning id into v_conversation_id;
+    end if;
+
+    v_message :=
+      'Promotion ended — "' || coalesce(nullif(p.service_name, ''), 'Your service') ||
+      '" has finished its promotion period.' || E'\n\n' ||
+      'Final results:' || E'\n' ||
+      '• Impressions: ' || v_impressions || E'\n' ||
+      '• Service views: ' || v_views || E'\n' ||
+      '• Booking requests: ' || v_requests || E'\n' ||
+      '• Confirmed bookings: ' || v_bookings || E'\n\n' ||
+      'The promotion is no longer active. You can promote this service again whenever you are ready.';
+
+    insert into public.messages (conversation_id, sender_id, text, kind)
+    values (v_conversation_id, v_system_user_id, v_message, 'system');
+
+    update public.conversations
+    set last_message = 'Promotion ended — final results are ready.',
+        last_message_at = now()
+    where id = v_conversation_id;
+
+    insert into public.conversation_reads (
+      conversation_id, user_id, unread_count, last_read_at
+    ) values (
+      v_conversation_id, p.user_id, 1, null
+    )
+    on conflict (conversation_id, user_id)
+    do update set unread_count = public.conversation_reads.unread_count + 1;
+
+    insert into public.notifications (
+      user_id, type, title, body, unread, data
+    ) values (
+      p.user_id,
+      'general',
+      'Promotion ended',
+      '"' || coalesce(nullif(p.service_name, ''), 'Your service') ||
+      '" promotion has ended. Open Doovly chat to see your final results.',
+      true,
+      jsonb_build_object(
+        'type', 'promotion_ended',
+        'screen', 'chat',
+        'promotion_id', p.id,
+        'impressions', v_impressions,
+        'service_views', v_views,
+        'booking_requests', v_requests,
+        'bookings', v_bookings
+      )
+    );
+
+    update public.service_promotions
+    set end_notified_at = now(), updated_at = now()
+    where id = p.id and end_notified_at is null;
+
+    v_count := v_count + 1;
+    v_conversation_id := null;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+revoke all on function public.finish_expired_service_promotions() from public, anon, authenticated;
+
+do $$
+begin
+  if exists (select 1 from cron.job where jobname = 'finish-expired-service-promotions') then
+    perform cron.unschedule('finish-expired-service-promotions');
+  end if;
+  perform cron.schedule(
+    'finish-expired-service-promotions',
+    '* * * * *',
+    'select public.finish_expired_service_promotions();'
+  );
+end
+$$;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261016230846_secure_service_promotion_payment_fields.sql
+-- =====================================================================
+
+-- Lock service promotion payment-controlled fields to trusted server processes.
+-- Client users may create a pending promotion and cancel their own pending attempt,
+-- but cannot set payment metadata, schedule dates, or activate a promotion.
+
+drop policy if exists "Users can update own pending promotions" on public.service_promotions;
+drop policy if exists "Users can update their own pending promotions" on public.service_promotions;
+drop policy if exists "Owners may cancel own pending promotions" on public.service_promotions;
+
+drop policy if exists "Users can create own pending promotions" on public.service_promotions;
+drop policy if exists "Users can create pending promotions for their own services" on public.service_promotions;
+
+-- Remove broad/default grants, including any accidental anon access, then
+-- grant only the client operations needed by the app.
+revoke all privileges on table public.service_promotions from public, anon, authenticated;
+
+grant select on table public.service_promotions to authenticated;
+grant insert (service_id, professional_id, user_id, package_id, product_id)
+  on table public.service_promotions to authenticated;
+grant update (status)
+  on table public.service_promotions to authenticated;
+
+-- Only allow creating a pending promotion for a service owned by the caller,
+-- with a currently enabled package and the package's real RevenueCat product ID.
+create policy "Users can create own pending promotions"
+on public.service_promotions
+for insert
+to authenticated
+with check (
+  auth.uid() = user_id
+  and status = 'pending'
+  and exists (
+    select 1
+    from public.services s
+    join public.professionals p on p.id = s.professional_id
+    join public.promotion_packages pp
+      on pp.id = public.service_promotions.package_id
+     and pp.product_id = public.service_promotions.product_id
+     and pp.active = true
+    where s.id = public.service_promotions.service_id
+      and p.id = public.service_promotions.professional_id
+      and p.user_id = auth.uid()
+  )
+);
+
+-- The only permitted client update is cancelling its own pending attempt.
+-- The UPDATE column grant allows changing status only; payment fields and
+-- activation timestamps remain writable only by trusted server processes.
+create policy "Owners may cancel own pending promotions"
+on public.service_promotions
+for update
+to authenticated
+using (
+  auth.uid() = user_id
+  and status = 'pending'
+)
+with check (
+  auth.uid() = user_id
+  and status = 'cancelled'
+);
+
+-- Keep server-side RevenueCat webhook and expiry scheduler access intact.
+grant all privileges on table public.service_promotions to service_role;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261017010000_secure_profile_permissions_and_control_fields.sql
+-- =====================================================================
+
+-- Tighten profile permissions without changing the app's existing authenticated profile reads.
+-- Public/anonymous clients can read only fields intended for public display and cannot mutate profiles.
+REVOKE ALL PRIVILEGES ON TABLE public.profiles FROM anon;
+GRANT SELECT (id, full_name, avatar_url, city, profession, created_at, member_since, is_online, last_active_label)
+  ON TABLE public.profiles TO anon;
+
+-- Do not allow a logged-in user to elevate privileges or alter account/trial control fields
+-- through the ordinary profile update endpoint. Admin workflows remain supported.
+CREATE OR REPLACE FUNCTION public.guard_profile_control_fields()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = pg_catalog, public
+AS $$
+BEGIN
+  IF NOT COALESCE(public.is_admin(), false) THEN
+    IF NEW.role IS DISTINCT FROM OLD.role
+       OR NEW.is_suspended IS DISTINCT FROM OLD.is_suspended
+       OR NEW.pro_trial_started_at IS DISTINCT FROM OLD.pro_trial_started_at
+       OR NEW.pro_trial_ends_at IS DISTINCT FROM OLD.pro_trial_ends_at
+       OR NEW.mock_id IS DISTINCT FROM OLD.mock_id
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.member_since IS DISTINCT FROM OLD.member_since THEN
+      RAISE EXCEPTION 'Profile account-control fields can only be changed by an administrator'
+        USING ERRCODE = '42501';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS guard_profile_control_fields ON public.profiles;
+CREATE TRIGGER guard_profile_control_fields
+BEFORE UPDATE ON public.profiles
+FOR EACH ROW EXECUTE FUNCTION public.guard_profile_control_fields();
+
+REVOKE ALL ON FUNCTION public.guard_profile_control_fields() FROM PUBLIC, anon, authenticated;
