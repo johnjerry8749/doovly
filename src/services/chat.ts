@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase";
 import { loadSessionUser } from "@/lib/session";
-import { isCurrentUserPro } from "@/services/savedProviders";
 import { uploadImage } from "@/services/cloudinary";
 import { recordAcceptedOfferBooking, updateBookingStatus } from "@/services/bookings";
 import type { Booking } from "@/services/bookings";
