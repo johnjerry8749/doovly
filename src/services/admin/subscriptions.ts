@@ -117,6 +117,8 @@ export async function updateSubscription(
         plan_code:planCode,
         status:statusCode,
         status_label:status==="Active"?(plan==="Pro"?"Active":"Free"):status,
+    admin_override: true,
+        admin_override: true,
       })
       .select("id,user_id,professional_id,plan_id,plan_code,status,status_label,end_date,created_at")
       .single();
