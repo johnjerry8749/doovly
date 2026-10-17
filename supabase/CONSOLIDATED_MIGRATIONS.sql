@@ -1,5 +1,17 @@
+<<<<<<< HEAD
 ﻿
 -- SOURCE: 001_schema.sql
+=======
+-- Doovly consolidated migration archive
+-- Concatenated from supabase/migrations on master.
+-- ARCHIVE ONLY, NOT SAFE TO RUN AS ONE MIGRATION against production.
+-- Existing migration files and live database migration history remain authoritative.
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/001_schema.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- ============================================================
 -- Doovly schema
@@ -857,7 +869,13 @@ REVOKE ALL ON FUNCTION public.consume_password_reset_rate_limit(TEXT, INTEGER, I
 GRANT EXECUTE ON FUNCTION public.consume_password_reset_rate_limit(TEXT, INTEGER, INTEGER)
   TO service_role;
 
+<<<<<<< HEAD
 -- SOURCE: 20261005173000_fix_professional_and_service_write_policies.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005173000_fix_professional_and_service_write_policies.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Allow authenticated owners to manage professional profiles and their services.
 -- Safe to run after the existing public-read policies.
@@ -911,7 +929,13 @@ create index if not exists conversations_offer_id_idx
   on public.conversations(offer_id);
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261005190000_harden_admin_notification_policies.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005190000_harden_admin_notification_policies.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Admin notification RLS hardening
 drop policy if exists "Admins can send broadcasts" on public.admin_notifications;
@@ -936,7 +960,13 @@ to authenticated
 with check (is_admin());
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261005193000_optimize_auth_rls_policies.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005193000_optimize_auth_rls_policies.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 create or replace function public.is_admin()
 returns boolean
@@ -1012,7 +1042,13 @@ with check ((select auth.uid()) = sender_id and exists (
   where c.id = conversation_id and (c.participant_a = (select auth.uid()) or c.participant_b = (select auth.uid()))
 ));
 
+<<<<<<< HEAD
 -- SOURCE: 20261005193100_notification_triggers.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005193100_notification_triggers.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 create or replace function public.notify_booking_created()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -1033,7 +1069,11 @@ begin
   select sr.created_by into target_user from public.service_requests sr where sr.id = new.request_id;
   if target_user is not null and target_user <> new.user_id then
     insert into public.notifications (user_id,type,title,body,unread)
+<<<<<<< HEAD
     values (target_user,'general','New Offer','Someone sent an offer of â‚¦' || to_char(new.amount,'FM999,999,999,990') || ' on your service request.',true);
+=======
+    values (target_user,'general','New Offer','Someone sent an offer of ₦' || to_char(new.amount,'FM999,999,999,990') || ' on your service request.',true);
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
   end if;
   return new;
 end; $$;
@@ -1047,7 +1087,13 @@ revoke execute on function public.notify_offer_created() from anon, authenticate
 grant execute on function public.notify_booking_created() to service_role;
 grant execute on function public.notify_offer_created() to service_role;
 
+<<<<<<< HEAD
 -- SOURCE: 20261005193200_configure_production_subscription_plans.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005193200_configure_production_subscription_plans.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 insert into public.subscription_plans (mock_id,name,tagline,monthly_price,yearly_price,popular,sort_order)
 values ('basic','Basic','Get started for free',0,0,false,0),('pro','Pro','Unlock more opportunities',2500,25000,true,1)
@@ -1072,7 +1118,13 @@ insert into public.subscription_plan_meta (promo_title,promo_subtitle,yearly_sav
 select 'Unlock more opportunities','Upgrade to get advanced tools, more visibility and grow your business faster.',17
 where not exists (select 1 from public.subscription_plan_meta);
 
+<<<<<<< HEAD
 -- SOURCE: 20261005193300_reduce_duplicate_permissive_policies.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005193300_reduce_duplicate_permissive_policies.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 drop policy if exists "Pros can manage own portfolio" on public.portfolio_items;
 create policy "Pros can insert own portfolio" on public.portfolio_items for insert to authenticated with check (public.is_admin() or (select auth.uid()) in (select user_id from public.professionals where id = professional_id));
@@ -1089,7 +1141,13 @@ create policy "Admins can insert plan features" on public.subscription_plan_feat
 create policy "Admins can update plan features" on public.subscription_plan_features for update to authenticated using (public.is_admin()) with check (public.is_admin());
 create policy "Admins can delete plan features" on public.subscription_plan_features for delete to authenticated using (public.is_admin());
 
+<<<<<<< HEAD
 -- SOURCE: 20261005193400_harden_functions_and_fk_indexes.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005193400_harden_functions_and_fk_indexes.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 create index if not exists idx_admin_notifications_created_by on public.admin_notifications(created_by);
 create index if not exists idx_conversation_reads_user_id on public.conversation_reads(user_id);
@@ -1115,7 +1173,14 @@ revoke execute on function public.is_admin() from anon;
 revoke execute on function public.notify_booking_created() from public, anon, authenticated;
 revoke execute on function public.notify_offer_created() from public, anon, authenticated;
 
+<<<<<<< HEAD
 -- SOURCE: 20261005193500_optimize_remaining_update_rls.sql
+=======
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005193500_optimize_remaining_update_rls.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 alter policy "Users can update own conversations" on public.conversations
 using ((select auth.uid()) = participant_a or (select auth.uid()) = participant_b);
@@ -1123,7 +1188,13 @@ using ((select auth.uid()) = participant_a or (select auth.uid()) = participant_
 alter policy "Request owners can update offers" on public.service_request_offers
 using ((select auth.uid()) in (select created_by from public.service_requests where id = request_id));
 
+<<<<<<< HEAD
 -- SOURCE: 20261005195000_comment_edit_delete_policies.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005195000_comment_edit_delete_policies.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Allow users to edit and delete only their own service-request comments.
 
@@ -1143,7 +1214,13 @@ to authenticated
 using ((select auth.uid()) = user_id);
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261005200000_fix_service_category_icons.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005200000_fix_service_category_icons.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Normalize service category icons to valid MaterialCommunityIcons names.
 update public.service_categories
@@ -1155,7 +1232,13 @@ end
 where name in ('Barber', 'Nail Tech');
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261005201000_add_verification_submission_policies.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005201000_add_verification_submission_policies.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 drop policy if exists "Users can create verification applications" on public.verification_applications;
 create policy "Users can create verification applications"
@@ -1225,7 +1308,13 @@ with check (
   )
 );
 
+<<<<<<< HEAD
 -- SOURCE: 20261005202000_protect_admin_profile_controls.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005202000_protect_admin_profile_controls.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Protect suspension and role fields from non-admin profile updates.
 create or replace function public.prevent_non_admin_profile_privilege_changes()
@@ -1273,7 +1362,13 @@ using (public.is_admin())
 with check (public.is_admin());
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261005202100_allow_admin_subscription_management.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005202100_allow_admin_subscription_management.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Allow admins to manage professional subscription records.
 drop policy if exists "Admins can manage professional subscriptions" on public.professional_subscriptions;
@@ -1286,7 +1381,13 @@ using (public.is_admin())
 with check (public.is_admin());
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261005203000_allow_delete_own_request_comments.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005203000_allow_delete_own_request_comments.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Allow authenticated users to delete their own service request comments.
 CREATE POLICY "Users can delete own comments"
@@ -1295,7 +1396,13 @@ CREATE POLICY "Users can delete own comments"
   USING (auth.uid() = user_id OR public.is_admin());
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261005210200_allow_admin_professional_subscription_state.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005210200_allow_admin_professional_subscription_state.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Allow administrators to keep the professionals.subscribed flag in sync
 -- when managing subscriptions from the admin dashboard.
@@ -1308,7 +1415,13 @@ using ((select public.is_admin()))
 with check ((select public.is_admin()));
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261005212000_enable_professionals_realtime.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005212000_enable_professionals_realtime.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Keep professional subscription state synchronized with frontend clients in real time.
 do $$
@@ -1326,7 +1439,13 @@ end
 $$;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261005213000_link_subscription_plan_codes.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005213000_link_subscription_plan_codes.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Use stable database plan/feature codes instead of client mock IDs.
 alter table public.subscription_plans add column if not exists code text;
@@ -1364,7 +1483,13 @@ end
 $;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261005213100_allow_admin_subscription_plan_inserts.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005213100_allow_admin_subscription_plan_inserts.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 create policy "Admins can insert subscription plans"
 on public.subscription_plans
@@ -1379,7 +1504,13 @@ to authenticated
 with check ((select public.is_admin()));
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006001000_add_welcome_notification_on_signup.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006001000_add_welcome_notification_on_signup.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Automatically create the first in-app notification for every new Doovly user.
 -- The notification UI already supplies the Doovly logo for general/system notifications.
@@ -1425,7 +1556,11 @@ BEGIN
   VALUES (
     NEW.id,
     'general',
+<<<<<<< HEAD
     'Welcome to Doovly ðŸ‘‹',
+=======
+    'Welcome to Doovly 👋',
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
     'Thanks for joining Doovly! Explore services and find trusted professionals near you.',
     TRUE,
     NULL,
@@ -1444,13 +1579,25 @@ CREATE TRIGGER on_auth_user_created
   EXECUTE FUNCTION public.handle_new_user();
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006002000_enable_notification_realtime.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006002000_enable_notification_realtime.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Enable realtime delivery for user in-app notifications.
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006003000_allow_users_to_delete_notifications.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006003000_allow_users_to_delete_notifications.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Allow authenticated users to delete only their own notifications.
 drop policy if exists "Users can delete own notifications" on public.notifications;
@@ -1462,7 +1609,13 @@ to authenticated
 using ((select auth.uid()) = user_id);
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006004000_add_other_service_category.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006004000_add_other_service_category.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Add a catch-all service/profession category for new and unlisted professions.
 INSERT INTO public.service_categories (mock_id, name, icon, sort_order)
@@ -1476,7 +1629,13 @@ WHERE NOT EXISTS (
 );
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006004100_default_profession_to_other.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006004100_default_profession_to_other.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Store a default profession on every user profile without creating a professional listing.
 -- New registrations receive Other automatically; Edit Profile updates this field.
@@ -1488,7 +1647,13 @@ SET profession = 'Other'
 WHERE profession IS NULL OR BTRIM(profession) = '';
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006040000_add_expo_push_notifications.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006040000_add_expo_push_notifications.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 alter table public.profiles
   add column if not exists expo_push_token text;
@@ -1551,7 +1716,13 @@ revoke all on function public.send_notification_push() from public, anon, authen
 grant execute on function public.send_notification_push() to postgres;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006120000_chat_coins_pro_images_calls_location_rules.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006120000_chat_coins_pro_images_calls_location_rules.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Chat monetization and privacy rules
 -- 15 free chat coins per user, Pro unlimited text/images/calls.
@@ -1736,7 +1907,11 @@ begin
     user_id, type, title, body, unread, avatar_url, time_label
   )
   values (
+<<<<<<< HEAD
     new.id, 'general', 'Welcome to Doovly ðŸ‘‹',
+=======
+    new.id, 'general', 'Welcome to Doovly 👋',
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
     'Thanks for joining Doovly! Explore services and find trusted professionals near you.',
     true, null, 'Just now'
   );
@@ -1748,7 +1923,13 @@ $function$;
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006121500_chat_system_message_kind.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006121500_chat_system_message_kind.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Keep booking accept/decline events out of free chat coin usage.
 
@@ -1765,7 +1946,13 @@ check (kind = any (array[
 ]));
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006123000_fix_new_account_professional_profiles.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006123000_fix_new_account_professional_profiles.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Create a professional profile automatically for every normal Doovly account.
 -- This keeps the existing profile, services, booking and offer flows usable
@@ -1830,7 +2017,11 @@ begin
       new.id,
       next_profession,
       next_city,
+<<<<<<< HEAD
       'â‚¦0',
+=======
+      '₦0',
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
       0,
       new.email,
       next_phone
@@ -1846,7 +2037,11 @@ begin
     user_id, type, title, body, unread, avatar_url, time_label
   )
   values (
+<<<<<<< HEAD
     new.id, 'general', 'Welcome to Doovly ðŸ‘‹',
+=======
+    new.id, 'general', 'Welcome to Doovly 👋',
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
     'Thanks for joining Doovly! Explore services and find trusted professionals near you.',
     true, null, 'Just now'
   );
@@ -1869,7 +2064,11 @@ select
   p.id,
   coalesce(nullif(btrim(p.profession), ''), 'Other'),
   coalesce(nullif(btrim(p.city), ''), 'Lagos'),
+<<<<<<< HEAD
   'â‚¦0',
+=======
+  '₦0',
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
   0,
   p.email,
   p.phone
@@ -1879,7 +2078,13 @@ where pro.id is null
   and p.role <> 'admin';
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006130000_booking_conversation_trigger.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006130000_booking_conversation_trigger.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Always create the booking conversation at the database boundary.
 -- This prevents a booking from being created without its chat conversation.
@@ -1951,7 +2156,13 @@ where c.id is null
   and p.user_id <> b.customer_id;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006140000_booking_chat_data_and_location_lock.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006140000_booking_chat_data_and_location_lock.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 create or replace function public.create_booking_conversation()
 returns trigger
@@ -2097,7 +2308,13 @@ where c.booking_id is not null
     where m.conversation_id = c.id and m.kind = 'request_card'
   );
 
+<<<<<<< HEAD
 -- SOURCE: 20261006143000_prevent_duplicate_booking_and_offer_chat.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006143000_prevent_duplicate_booking_and_offer_chat.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Prevent duplicate booking orders and make offers follow the same chat-card flow.
 alter table public.bookings
@@ -2165,7 +2382,11 @@ begin
     (participant_a,participant_b,service_request_id,offer_id,last_message,last_message_at)
   values
     (request_row.created_by,new.user_id,new.request_id,new.id,
+<<<<<<< HEAD
      'Offer: â‚¦'||to_char(new.amount,'FM999,999,999,990')||
+=======
+     'Offer: ₦'||to_char(new.amount,'FM999,999,999,990')||
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
      ' on "'||coalesce(request_row.title,'Service request')||'"',now())
   on conflict (offer_id) do update
     set last_message=excluded.last_message,last_message_at=excluded.last_message_at
@@ -2173,7 +2394,11 @@ begin
 
   insert into public.messages(conversation_id,sender_id,text,kind,card)
   select conversation_uuid,new.user_id,
+<<<<<<< HEAD
     'Offer: â‚¦'||to_char(new.amount,'FM999,999,999,990')||
+=======
+    'Offer: ₦'||to_char(new.amount,'FM999,999,999,990')||
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
     ' on "'||coalesce(request_row.title,'Service request')||'"',
     'request_card',
     jsonb_build_object(
@@ -2227,7 +2452,11 @@ with check (
 insert into public.conversations
   (participant_a,participant_b,service_request_id,offer_id,last_message,last_message_at)
 select r.created_by,o.user_id,o.request_id,o.id,
+<<<<<<< HEAD
   'Offer: â‚¦'||to_char(o.amount,'FM999,999,999,990')||
+=======
+  'Offer: ₦'||to_char(o.amount,'FM999,999,999,990')||
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
   ' on "'||coalesce(r.title,'Service request')||'"',now()
 from public.service_request_offers o
 join public.service_requests r on r.id=o.request_id
@@ -2236,7 +2465,11 @@ where not exists(select 1 from public.conversations c where c.offer_id=o.id)
 
 insert into public.messages(conversation_id,sender_id,text,kind,card)
 select c.id,o.user_id,
+<<<<<<< HEAD
   'Offer: â‚¦'||to_char(o.amount,'FM999,999,999,990')||
+=======
+  'Offer: ₦'||to_char(o.amount,'FM999,999,999,990')||
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
   ' on "'||coalesce(r.title,'Service request')||'"',
   'request_card',
   jsonb_build_object(
@@ -2256,7 +2489,13 @@ where not exists(
   where m.conversation_id=c.id and m.kind='request_card');
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006143230_one_chat_thread_per_user_pair.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006143230_one_chat_thread_per_user_pair.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Keep exactly one social-style DM thread per user pair.
 -- Booking/request records reuse that thread; acceptance controls when text is unlocked.
@@ -2382,7 +2621,11 @@ begin
         service_request_id = new.request_id,
         offer_id = new.id,
         booking_id = null,
+<<<<<<< HEAD
         last_message = 'Offer: â‚¦' || to_char(new.amount,'FM999,999,999,990') ||
+=======
+        last_message = 'Offer: ₦' || to_char(new.amount,'FM999,999,999,990') ||
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
           ' on "' || coalesce(request_row.title,'Service request') || '"',
         last_message_at = now()
     where id = conversation_uuid;
@@ -2392,7 +2635,11 @@ begin
     )
     values(
       request_row.created_by,new.user_id,new.request_id,new.id,
+<<<<<<< HEAD
       'Offer: â‚¦' || to_char(new.amount,'FM999,999,999,990') ||
+=======
+      'Offer: ₦' || to_char(new.amount,'FM999,999,999,990') ||
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
         ' on "' || coalesce(request_row.title,'Service request') || '"',now()
     )
     returning id into conversation_uuid;
@@ -2401,7 +2648,11 @@ begin
   insert into public.messages(conversation_id,sender_id,text,kind,card)
   values(
     conversation_uuid,new.user_id,
+<<<<<<< HEAD
     'Offer: â‚¦' || to_char(new.amount,'FM999,999,999,990') ||
+=======
+    'Offer: ₦' || to_char(new.amount,'FM999,999,999,990') ||
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
       ' on "' || coalesce(request_row.title,'Service request') || '"',
     'request_card',
     jsonb_build_object(
@@ -2423,7 +2674,13 @@ begin
 end; $function$;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006150000_monthly_free_chat_coins.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006150000_monthly_free_chat_coins.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Reset free Doovly chat coins every one-month billing period.
 -- Pro users remain unlimited.
@@ -2586,7 +2843,13 @@ grant execute on function public.get_my_chat_credits() to authenticated;
 revoke execute on function public.enforce_chat_message_rules() from public, anon, authenticated;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006152000_fix_booking_conversation_unique_conflict.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006152000_fix_booking_conversation_unique_conflict.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- The booking conversation trigger uses ON CONFLICT (booking_id).
 -- Ensure PostgreSQL has a matching unique constraint/index.
@@ -2595,7 +2858,13 @@ on public.conversations (booking_id)
 where booking_id is not null;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006154000_fix_booking_conversation_conflict_target.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006154000_fix_booking_conversation_conflict_target.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 create or replace function public.create_booking_conversation()
 returns trigger
@@ -2667,7 +2936,13 @@ begin
 end;
 $function$;
 
+<<<<<<< HEAD
 -- SOURCE: 20261006170000_reuse_accepted_person_conversations.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006170000_reuse_accepted_person_conversations.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Reuse the existing accepted relationship conversation for repeat bookings/offers.
 -- Repeat work with the same person continues in the same chat instead of
@@ -2756,7 +3031,11 @@ begin
     update public.service_request_offers set status='accepted' where id=new.id and lower(coalesce(status,'pending'))='pending';
     update public.conversations set participant_a=request_row.created_by,participant_b=new.user_id,
       service_request_id=new.request_id,offer_id=new.id,booking_id=null,
+<<<<<<< HEAD
       last_message='Offer: â‚¦'||to_char(new.amount,'FM999,999,999,990')||' on "'||coalesce(request_row.title,'Service request')||'"',last_message_at=now()
+=======
+      last_message='Offer: ₦'||to_char(new.amount,'FM999,999,999,990')||' on "'||coalesce(request_row.title,'Service request')||'"',last_message_at=now()
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
     where id=existing_conversation returning id into conversation_uuid;
 
     select full_name into customer_name from public.profiles where id=request_row.created_by;
@@ -2776,7 +3055,11 @@ begin
   else
     insert into public.conversations(participant_a,participant_b,service_request_id,offer_id,last_message,last_message_at)
     values(request_row.created_by,new.user_id,new.request_id,new.id,
+<<<<<<< HEAD
       'Offer: â‚¦'||to_char(new.amount,'FM999,999,999,990')||' on "'||coalesce(request_row.title,'Service request')||'"',now())
+=======
+      'Offer: ₦'||to_char(new.amount,'FM999,999,999,990')||' on "'||coalesce(request_row.title,'Service request')||'"',now())
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
     on conflict (offer_id) where offer_id is not null do update
       set last_message=excluded.last_message,last_message_at=excluded.last_message_at
     returning id into conversation_uuid;
@@ -2784,7 +3067,11 @@ begin
 
   insert into public.messages(conversation_id,sender_id,text,kind,card)
   values(conversation_uuid,new.user_id,
+<<<<<<< HEAD
     'Offer: â‚¦'||to_char(new.amount,'FM999,999,999,990')||' on "'||coalesce(request_row.title,'Service request')||'"',
+=======
+    'Offer: ₦'||to_char(new.amount,'FM999,999,999,990')||' on "'||coalesce(request_row.title,'Service request')||'"',
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
     'request_card',jsonb_build_object('kind','offer','title',coalesce(request_row.title,'Service request'),
       'category',request_row.category,'location',coalesce(request_row.location,request_row.city),
       'description',request_row.description,'amount',new.amount,'date',to_char(new.created_at,'DD Mon YYYY'),
@@ -2806,7 +3093,13 @@ create trigger trg_create_offer_conversation after insert on public.service_requ
 for each row execute function public.create_offer_conversation();
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006180000_remove_legacy_mock_id_system.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006180000_remove_legacy_mock_id_system.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Remove the legacy mock-ID compatibility layer.
 -- This migration is intentionally kept on the cleanup branch until the
@@ -2892,7 +3185,11 @@ begin
       new.id,
       next_profession,
       next_city,
+<<<<<<< HEAD
       'â‚¦0',
+=======
+      '₦0',
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
       0,
       new.email,
       next_phone
@@ -2916,7 +3213,11 @@ begin
   values (
     new.id,
     'general',
+<<<<<<< HEAD
     'Welcome to Doovly ðŸ‘‹',
+=======
+    'Welcome to Doovly 👋',
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
     'Thanks for joining Doovly! Explore services and find trusted professionals near you.',
     true,
     null,
@@ -2949,7 +3250,13 @@ alter table public.conversations drop column if exists mock_id;
 alter table public.messages drop column if exists mock_id;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261006190000_add_chat_delete_and_block.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261006190000_add_chat_delete_and_block.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 alter table public.conversations
   add column if not exists blocked_by uuid null references public.profiles(id) on delete set null,
@@ -2985,7 +3292,13 @@ revoke execute on function public.delete_my_conversation(uuid) from public;
 grant execute on function public.delete_my_conversation(uuid) to authenticated;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261007190000_add_thirty_day_pro_trial.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261007190000_add_thirty_day_pro_trial.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 alter table public.profiles
   add column if not exists pro_trial_started_at timestamptz,
@@ -3041,7 +3354,11 @@ begin
       user_id, profession, city, price_from, price_from_value, email, phone
     )
     values (
+<<<<<<< HEAD
       new.id, next_profession, next_city, 'â‚¦0', 0, new.email, next_phone
+=======
+      new.id, next_profession, next_city, '₦0', 0, new.email, next_phone
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
     )
     on conflict (user_id) do nothing;
   end if;
@@ -3054,7 +3371,11 @@ begin
     user_id, type, title, body, unread, avatar_url, time_label
   )
   values (
+<<<<<<< HEAD
     new.id, 'general', 'Welcome to Doovly ðŸ‘‹',
+=======
+    new.id, 'general', 'Welcome to Doovly 👋',
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
     'Thanks for joining Doovly! Explore services and find trusted professionals near you.',
     true, null, 'Just now'
   );
@@ -3087,7 +3408,13 @@ as $function$
 $function$;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261007235327_prevent_duplicate_service_request_offers.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261007235327_prevent_duplicate_service_request_offers.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Prevent one professional/account from submitting more than one offer on the same service request.
 -- Existing duplicate rows are consolidated by keeping the oldest offer.
@@ -3105,7 +3432,13 @@ create index if not exists idx_service_request_offers_request_user
   on public.service_request_offers(request_id, user_id);
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261008001000_add_verification_submission_notifications.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008001000_add_verification_submission_notifications.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 alter table public.verification_applications
   add column if not exists submitted_at timestamptz,
@@ -3182,13 +3515,25 @@ with check (
 );
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261008003000_fix_service_request_like_uniqueness.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008003000_fix_service_request_like_uniqueness.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 create unique index if not exists service_request_likes_request_user_unique
   on public.service_request_likes(request_id, user_id);
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261008004000_fix_conversation_reads_rls.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008004000_fix_conversation_reads_rls.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 create or replace function public.increment_conversation_unread(p_conversation_id uuid)
 returns void
@@ -3225,7 +3570,13 @@ revoke all on function public.increment_conversation_unread(uuid) from public;
 grant execute on function public.increment_conversation_unread(uuid) to authenticated;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261008010000_sync_service_request_like_counts.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008010000_sync_service_request_like_counts.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 create or replace function public.sync_service_request_likes_count()
 returns trigger
@@ -3264,7 +3615,13 @@ set likes_count = (
   where l.request_id = r.id
 );
 
+<<<<<<< HEAD
 -- SOURCE: 20261008012000_realtime_service_request_like_counts.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008012000_realtime_service_request_like_counts.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Keep service-request like counts live in the app.
 -- likes_count is maintained by the existing likes trigger; publishing
@@ -3286,7 +3643,13 @@ end
 $$;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261008160000_service_promotions.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008160000_service_promotions.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Service promotion foundation: admin-controlled packages, IAP-backed promotions, and analytics.
 -- Payment activation is performed only by the RevenueCat webhook.
@@ -3443,7 +3806,13 @@ using (
 grant select on public.services to authenticated;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261008170000_configure_promotion_packages.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008170000_configure_promotion_packages.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Configure the RevenueCat-backed service promotion products.
 -- Prices remain in RevenueCat; duration is backend configuration used for fulfillment.
@@ -3461,12 +3830,24 @@ on conflict (code) do update set
   active = excluded.active,
   sort_order = excluded.sort_order;
 
+<<<<<<< HEAD
 -- SOURCE: 20261008171000_index_service_promotion_package.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261008171000_index_service_promotion_package.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 create index if not exists idx_service_promotions_package
   on public.service_promotions(package_id);
 
+<<<<<<< HEAD
 -- SOURCE: 20261016190000_promotion_analytics_tracking.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261016190000_promotion_analytics_tracking.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Reliable promotion analytics events and booking attribution.
 alter table public.bookings
@@ -3643,7 +4024,13 @@ for each row execute function public.record_promotion_booking_metrics();
 grant select on public.service_promotions to authenticated;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261016200000_expire_promotions_and_notify_results.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261016200000_expire_promotions_and_notify_results.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Automatically end expired promotions and post a one-time results summary to Doovly chat.
 create extension if not exists pg_cron with schema pg_catalog;
@@ -3729,6 +4116,7 @@ begin
     end if;
 
     v_message :=
+<<<<<<< HEAD
       'Promotion ended â€” "' || coalesce(nullif(p.service_name, ''), 'Your service') ||
       '" has finished its promotion period.' || E'\n\n' ||
       'Final results:' || E'\n' ||
@@ -3736,13 +4124,26 @@ begin
       'â€¢ Service views: ' || v_views || E'\n' ||
       'â€¢ Booking requests: ' || v_requests || E'\n' ||
       'â€¢ Confirmed bookings: ' || v_bookings || E'\n\n' ||
+=======
+      'Promotion ended — "' || coalesce(nullif(p.service_name, ''), 'Your service') ||
+      '" has finished its promotion period.' || E'\n\n' ||
+      'Final results:' || E'\n' ||
+      '• Impressions: ' || v_impressions || E'\n' ||
+      '• Service views: ' || v_views || E'\n' ||
+      '• Booking requests: ' || v_requests || E'\n' ||
+      '• Confirmed bookings: ' || v_bookings || E'\n\n' ||
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
       'The promotion is no longer active. You can promote this service again whenever you are ready.';
 
     insert into public.messages (conversation_id, sender_id, text, kind)
     values (v_conversation_id, v_system_user_id, v_message, 'system');
 
     update public.conversations
+<<<<<<< HEAD
     set last_message = 'Promotion ended â€” final results are ready.',
+=======
+    set last_message = 'Promotion ended — final results are ready.',
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
         last_message_at = now()
     where id = v_conversation_id;
 
@@ -3802,7 +4203,13 @@ end
 $$;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261016201000_fix_expired_promotion_status.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261016201000_fix_expired_promotion_status.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Automatically end expired promotions and post a one-time results summary to Doovly chat.
 create extension if not exists pg_cron with schema pg_catalog;
@@ -3888,6 +4295,7 @@ begin
     end if;
 
     v_message :=
+<<<<<<< HEAD
       'Promotion ended â€” "' || coalesce(nullif(p.service_name, ''), 'Your service') ||
       '" has finished its promotion period.' || E'\n\n' ||
       'Final results:' || E'\n' ||
@@ -3895,13 +4303,26 @@ begin
       'â€¢ Service views: ' || v_views || E'\n' ||
       'â€¢ Booking requests: ' || v_requests || E'\n' ||
       'â€¢ Confirmed bookings: ' || v_bookings || E'\n\n' ||
+=======
+      'Promotion ended — "' || coalesce(nullif(p.service_name, ''), 'Your service') ||
+      '" has finished its promotion period.' || E'\n\n' ||
+      'Final results:' || E'\n' ||
+      '• Impressions: ' || v_impressions || E'\n' ||
+      '• Service views: ' || v_views || E'\n' ||
+      '• Booking requests: ' || v_requests || E'\n' ||
+      '• Confirmed bookings: ' || v_bookings || E'\n\n' ||
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
       'The promotion is no longer active. You can promote this service again whenever you are ready.';
 
     insert into public.messages (conversation_id, sender_id, text, kind)
     values (v_conversation_id, v_system_user_id, v_message, 'system');
 
     update public.conversations
+<<<<<<< HEAD
     set last_message = 'Promotion ended â€” final results are ready.',
+=======
+    set last_message = 'Promotion ended — final results are ready.',
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
         last_message_at = now()
     where id = v_conversation_id;
 
@@ -3961,7 +4382,13 @@ end
 $$;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261016230846_secure_service_promotion_payment_fields.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261016230846_secure_service_promotion_payment_fields.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Lock service promotion payment-controlled fields to trusted server processes.
 -- Client users may create a pending promotion and cancel their own pending attempt,
@@ -4027,7 +4454,13 @@ with check (
 grant all privileges on table public.service_promotions to service_role;
 
 
+<<<<<<< HEAD
 -- SOURCE: 20261017010000_secure_profile_permissions_and_control_fields.sql
+=======
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261017010000_secure_profile_permissions_and_control_fields.sql
+-- =====================================================================
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
 
 -- Tighten profile permissions without changing the app's existing authenticated profile reads.
 -- Public/anonymous clients can read only fields intended for public display and cannot mutate profiles.
@@ -4066,4 +4499,7 @@ BEFORE UPDATE ON public.profiles
 FOR EACH ROW EXECUTE FUNCTION public.guard_profile_control_fields();
 
 REVOKE ALL ON FUNCTION public.guard_profile_control_fields() FROM PUBLIC, anon, authenticated;
+<<<<<<< HEAD
 
+=======
+>>>>>>> ac71f6c8a1e97903ba0e06d6b0aa203b6e652a0c
