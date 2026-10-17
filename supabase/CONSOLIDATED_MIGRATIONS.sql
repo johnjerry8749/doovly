@@ -1135,3 +1135,212 @@ revoke execute on function public.handle_new_user() from public, anon, authentic
 revoke execute on function public.is_admin() from anon;
 revoke execute on function public.notify_booking_created() from public, anon, authenticated;
 revoke execute on function public.notify_offer_created() from public, anon, authenticated;
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005193500_optimize_remaining_update_rls.sql
+-- =====================================================================
+
+alter policy "Users can update own conversations" on public.conversations
+using ((select auth.uid()) = participant_a or (select auth.uid()) = participant_b);
+
+alter policy "Request owners can update offers" on public.service_request_offers
+using ((select auth.uid()) in (select created_by from public.service_requests where id = request_id));
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005195000_comment_edit_delete_policies.sql
+-- =====================================================================
+
+-- Allow users to edit and delete only their own service-request comments.
+
+drop policy if exists "Users can update own comments" on public.service_request_comments;
+create policy "Users can update own comments"
+on public.service_request_comments
+for update
+to authenticated
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
+
+drop policy if exists "Users can delete own comments" on public.service_request_comments;
+create policy "Users can delete own comments"
+on public.service_request_comments
+for delete
+to authenticated
+using ((select auth.uid()) = user_id);
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005200000_fix_service_category_icons.sql
+-- =====================================================================
+
+-- Normalize service category icons to valid MaterialCommunityIcons names.
+update public.service_categories
+set icon = case name
+  when 'Barber' then 'content-cut'
+  when 'Nail Tech' then 'hand-wash-outline'
+  else icon
+end
+where name in ('Barber', 'Nail Tech');
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005201000_add_verification_submission_policies.sql
+-- =====================================================================
+
+drop policy if exists "Users can create verification applications" on public.verification_applications;
+create policy "Users can create verification applications"
+on public.verification_applications
+for insert
+to authenticated
+with check (
+  (select auth.uid()) = user_id
+  and exists (
+    select 1
+    from public.professionals p
+    where p.id = professional_id
+      and p.user_id = (select auth.uid())
+  )
+);
+
+drop policy if exists "Users can update own verification applications" on public.verification_applications;
+create policy "Users can update own verification applications"
+on public.verification_applications
+for update
+to authenticated
+using (
+  (select auth.uid()) = user_id
+  and status = 'pending'
+)
+with check (
+  (select auth.uid()) = user_id
+  and status in ('pending','rejected')
+);
+
+drop policy if exists "Users can create verification documents" on public.verification_documents;
+create policy "Users can create verification documents"
+on public.verification_documents
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.verification_applications va
+    join public.professionals p on p.id = va.professional_id
+    where va.id = application_id
+      and (va.user_id = (select auth.uid()) or p.user_id = (select auth.uid()))
+  )
+);
+
+drop policy if exists "Users can update verification documents" on public.verification_documents;
+create policy "Users can update verification documents"
+on public.verification_documents
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.verification_applications va
+    join public.professionals p on p.id = va.professional_id
+    where va.id = application_id
+      and (va.user_id = (select auth.uid()) or p.user_id = (select auth.uid()))
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.verification_applications va
+    join public.professionals p on p.id = va.professional_id
+    where va.id = application_id
+      and (va.user_id = (select auth.uid()) or p.user_id = (select auth.uid()))
+  )
+);
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005202000_protect_admin_profile_controls.sql
+-- =====================================================================
+
+-- Protect suspension and role fields from non-admin profile updates.
+create or replace function public.prevent_non_admin_profile_privilege_changes()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    if new.is_suspended is distinct from old.is_suspended then
+      raise exception 'Only admins can suspend or unsuspend users';
+    end if;
+
+    if new.role is distinct from old.role then
+      raise exception 'Only admins can change user roles';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_profile_admin_fields on public.profiles;
+
+create trigger protect_profile_admin_fields
+before update on public.profiles
+for each row
+execute function public.prevent_non_admin_profile_privilege_changes();
+
+drop policy if exists "Users can update own profile" on public.profiles;
+drop policy if exists "Admins can update profiles" on public.profiles;
+
+create policy "Users can update own profile"
+on public.profiles
+for update
+to authenticated
+using ((select auth.uid()) = id)
+with check ((select auth.uid()) = id);
+
+create policy "Admins can update profiles"
+on public.profiles
+for update
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005202100_allow_admin_subscription_management.sql
+-- =====================================================================
+
+-- Allow admins to manage professional subscription records.
+drop policy if exists "Admins can manage professional subscriptions" on public.professional_subscriptions;
+
+create policy "Admins can manage professional subscriptions"
+on public.professional_subscriptions
+for all
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005203000_allow_delete_own_request_comments.sql
+-- =====================================================================
+
+-- Allow authenticated users to delete their own service request comments.
+CREATE POLICY "Users can delete own comments"
+  ON public.service_request_comments
+  FOR DELETE
+  USING (auth.uid() = user_id OR public.is_admin());
+
+
+-- =====================================================================
+-- SOURCE FILE: supabase/migrations/20261005210200_allow_admin_professional_subscription_state.sql
+-- =====================================================================
+
+-- Allow administrators to keep the professionals.subscribed flag in sync
+-- when managing subscriptions from the admin dashboard.
+
+create policy "Admins can update professionals"
+on public.professionals
+for update
+to authenticated
+using ((select public.is_admin()))
+with check ((select public.is_admin()));
