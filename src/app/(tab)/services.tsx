@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   ActivityIndicator,
-  Animated,
   Alert,
   FlatList,
   Image,
@@ -14,7 +13,7 @@ import {
   View,
   type ViewToken,
 } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -37,72 +36,13 @@ import { listCities, listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 import { PromotedServiceCard } from "@/components/PromotedServiceCard";
 import { trackPromotionEvent } from "@/services/promotionAnalytics";
+import {
+  MovingServiceDescription,
+  HomeSearchBar,
+  ServiceCategoryScroller,
+} from "@/components/home";
 
 const GREEN = "#159447";
-
-function MovingServiceDescription({ text, color = "#666" }: { text: string; color?: string }) {
-  const translateX = React.useRef(new Animated.Value(0)).current;
-  const [containerWidth, setContainerWidth] = useState(0);
-  const [textWidth, setTextWidth] = useState(0);
-
-  const movingWidth = Math.max(
-    containerWidth,
-    Math.min(text.length * 5.2, containerWidth * 2.4),
-  );
-
-  useEffect(() => {
-    translateX.stopAnimation();
-    translateX.setValue(0);
-    if (!text.trim() || containerWidth <= 0 || movingWidth <= containerWidth) return;
-
-    const distance = movingWidth - containerWidth;
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.delay(500),
-        Animated.timing(translateX, {
-          toValue: -distance,
-          duration: Math.max(2800, distance * 42),
-          useNativeDriver: true,
-        }),
-        Animated.delay(500),
-        Animated.timing(translateX, {
-          toValue: 0,
-          duration: Math.max(2800, distance * 42),
-          useNativeDriver: true,
-        }),
-        Animated.delay(700),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [text, containerWidth, movingWidth, translateX]);
-
-  if (!text.trim()) return null;
-
-  return (
-    <View
-      style={{ width: "100%", height: 26, overflow: "hidden", marginTop: 2, marginBottom: 2 }}
-      onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}
-    >
-      <Animated.Text
-        numberOfLines={2}
-        onLayout={(event) => {
-          const measuredWidth = event.nativeEvent.layout.width;
-          if (measuredWidth !== textWidth) setTextWidth(measuredWidth);
-        }}
-        style={{
-          width: movingWidth || undefined,
-          color,
-          fontSize: 10,
-          lineHeight: 12,
-          transform: [{ translateX }],
-        }}
-      >
-        {text.trim()}
-      </Animated.Text>
-    </View>
-  );
-}
 
 export default function Services() {
   const [search, setSearch] = useState("");
@@ -496,46 +436,21 @@ export default function Services() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search professionals..."
-            placeholderTextColor="#9CA3AF"
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
+        <HomeSearchBar
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search professionals..."
+          containerStyle={styles.searchContainer}
+          inputStyle={styles.searchInput}
+        />
       </View>
 
       <View style={styles.fixedCategorySection}>
-        <FlatList
-          horizontal
-          data={categories}
-          keyExtractor={(item, index) => `${item.name}-${index}`}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContainer}
-          renderItem={({ item: filter }) => {
-            const active = selectedFilter === filter.name;
-            return (
-              <TouchableOpacity
-                style={styles.filterItem}
-                onPress={() => setSelectedFilter(filter.name)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.filterCircle, active && styles.activeFilterCircle]}>
-                  <MaterialCommunityIcons
-                    name={filter.icon as any}
-                    size={22}
-                    color={active ? "#fff" : GREEN}
-                  />
-                </View>
-                <Text style={[styles.filterName, active && styles.activeFilterName]} numberOfLines={1}>
-                  {filter.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          }}
+        <ServiceCategoryScroller
+          services={categories}
+          selectedCategory={selectedFilter}
+          onSelect={setSelectedFilter}
+          variant="services"
         />
       </View>
 
