@@ -731,11 +731,21 @@ export default function ChatConversation() {
           <Ionicons name="arrow-back" size={22} color={PRIMARY} />
         </TouchableOpacity>
 
-        <Image
-          source={p.image}
-          style={[styles.headerAvatar, p.isSystem && styles.systemHeaderAvatar]}
-          resizeMode="cover"
-        />
+        <TouchableOpacity
+          activeOpacity={0.8}
+          disabled={!conversation.participant.professionalId || Boolean(p.isSystem)}
+          onPress={() => {
+            const id = conversation.participant.professionalId;
+            if (!id || p.isSystem) return;
+            router.push({ pathname: "/professional/[id]", params: { id: String(id) } });
+          }}
+        >
+          <Image
+            source={p.image}
+            style={[styles.headerAvatar, p.isSystem && styles.systemHeaderAvatar]}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
 
         <View style={styles.headerInfo}>
           <Text style={styles.headerName} numberOfLines={1}>
