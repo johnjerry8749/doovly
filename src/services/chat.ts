@@ -158,13 +158,18 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
 
   const normalizedEmail = String(profile?.email ?? "").trim().toLowerCase();
   const normalizedRole = String(profile?.role ?? "").trim().toLowerCase();
+  const normalizedName = String(profile?.full_name ?? pro?.profiles?.full_name ?? "")
+    .trim()
+    .toLowerCase();
   const isSystem =
     normalizedEmail === "system@doovly.app" ||
-    normalizedRole === "system";
+    normalizedRole === "system" ||
+    normalizedName === "doovly";
 
   return {
     id: profile?.id ?? pro?.id ?? userId,
-    professionalId: pro?.id ?? null,
+    // The system identity must never be treated as a bookable professional.
+    professionalId: isSystem ? null : pro?.id ?? null,
     name: isSystem ? "Doovly" : profile?.full_name ?? pro?.profiles?.full_name ?? "User",
     image: isSystem
       ? require("@/assets/images/icon.png")
@@ -174,7 +179,7 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
         ),
     verified: isSystem ? false : Boolean(pro?.is_verified),
     profession: isSystem ? "Official Doovly" : pro?.profession ?? null,
-    phone: profile?.phone ?? null,
+    phone: isSystem ? null : profile?.phone ?? null,
     isSystem,
   };
 }
