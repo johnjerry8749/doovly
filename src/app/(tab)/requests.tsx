@@ -355,7 +355,7 @@ export default function RequestsScreen() {
     );
 
     try {
-      const comment = await addServiceRequestComment(chatRequest.id, text);
+      const comment = await addServiceRequestComment({ requestId: chatRequest.id, text });
       setAllRequests((current) =>
         current.map((request) =>
           request.id === chatRequest.id
