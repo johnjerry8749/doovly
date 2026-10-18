@@ -719,6 +719,13 @@ export default function ChatConversation() {
   }
 
   const p = conversation.participant;
+  const openParticipantProfile = () => {
+    if (p.isSystem || !p.professionalId) return;
+    router.push({
+      pathname: "/professional/[id]",
+      params: { id: p.professionalId },
+    });
+  };
   const waitingLabel =
     convKind === "offer"
       ? "Waiting for provider to accept..."
@@ -741,11 +748,19 @@ export default function ChatConversation() {
           <Ionicons name="arrow-back" size={22} color={PRIMARY} />
         </TouchableOpacity>
 
-        <Image
-          source={p.image}
-          style={[styles.headerAvatar, p.isSystem && styles.systemHeaderAvatar]}
-          resizeMode="cover"
-        />
+        <TouchableOpacity
+          onPress={openParticipantProfile}
+          activeOpacity={p.isSystem || !p.professionalId ? 1 : 0.75}
+          disabled={p.isSystem || !p.professionalId}
+          accessibilityRole={p.isSystem || !p.professionalId ? undefined : "button"}
+          accessibilityLabel={p.isSystem ? "Doovly" : `Open ${p.name}'s profile`}
+        >
+          <Image
+            source={p.image}
+            style={[styles.headerAvatar, p.isSystem && styles.systemHeaderAvatar]}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
 
         <View style={styles.headerInfo}>
           <Text style={styles.headerName} numberOfLines={1}>
