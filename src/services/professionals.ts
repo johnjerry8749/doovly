@@ -197,7 +197,8 @@ export async function listActivePromotedServicesAsync(): Promise<PromotedService
         profiles!professionals_user_id_fkey (
           full_name,
           avatar_url,
-          email
+          email,
+          role
         )
       )
     `)
@@ -231,7 +232,9 @@ export async function listActivePromotedServicesAsync(): Promise<PromotedService
       service.id !== row.service_id ||
       service.professional_id !== row.professional_id ||
       professional.id !== row.professional_id ||
-      profile?.email?.toLowerCase() === "system@doovly.app" ||
+      String(profile?.email ?? "").trim().toLowerCase() === "system@doovly.app" ||
+      String(profile?.role ?? "").trim().toLowerCase() === "system" ||
+      String(profile?.full_name ?? "").trim().toLowerCase() === "doovly" ||
       seenServices.has(String(service.id))
     ) {
       continue;
@@ -296,7 +299,12 @@ export async function getProfessionalByIdAsync(
     .maybeSingle();
 
   if (error) throw error;
-  if (!data || data.profiles?.email?.toLowerCase() === "system@doovly.app") {
+  if (
+    !data ||
+    String(data.profiles?.email ?? "").trim().toLowerCase() === "system@doovly.app" ||
+    String(data.profiles?.role ?? "").trim().toLowerCase() === "system" ||
+    String(data.profiles?.full_name ?? "").trim().toLowerCase() === "doovly"
+  ) {
     return undefined;
   }
   return mapProfessionalRow(data);
