@@ -1,6 +1,6 @@
 export { MovingServiceDescription } from "./MovingServiceDescription";
 export { HomeHeader } from "./HomeHeader";
-export { HomeSearchBar } from "./HomeSearchBar";
-export { ServiceCategoryScroller } from "./ServiceCategoryScroller";
+export { SearchBar } from "./SearchBar";
+export { CategoryScroller } from "./CategoryScroller";
 export { EmptyProfessionals } from "./EmptyProfessionals";
 export { TextCategoryChips } from "./TextCategoryChips";
