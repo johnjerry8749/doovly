@@ -38,8 +38,8 @@ import { PromotedServiceCard } from "@/components/PromotedServiceCard";
 import { trackPromotionEvent } from "@/services/promotionAnalytics";
 import {
   MovingServiceDescription,
-  HomeSearchBar,
-  ServiceCategoryScroller,
+  SearchBar,
+  CategoryScroller,
 } from "@/components/home";
 
 const GREEN = "#159447";
@@ -436,7 +436,7 @@ export default function Services() {
           </TouchableOpacity>
         </View>
 
-        <HomeSearchBar
+        <SearchBar
           value={search}
           onChangeText={setSearch}
           placeholder="Search professionals..."
@@ -446,7 +446,7 @@ export default function Services() {
       </View>
 
       <View style={styles.fixedCategorySection}>
-        <ServiceCategoryScroller
+        <CategoryScroller
           services={categories}
           selectedCategory={selectedFilter}
           onSelect={setSelectedFilter}
@@ -643,36 +643,6 @@ const styles = StyleSheet.create({
   fixedCategorySection: {
     backgroundColor: "#FFFFFF",
     paddingTop: 10,
-  },
-  filterContainer: {
-    paddingHorizontal: 12,
-    paddingBottom: 8,
-  },
-  filterItem: {
-    alignItems: "center",
-    marginRight: 14,
-    width: 72,
-  },
-  filterCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#ECFDF5",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  activeFilterCircle: {
-    backgroundColor: GREEN,
-  },
-  filterName: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#333",
-    textAlign: "center",
-  },
-  activeFilterName: {
-    color: GREEN,
   },
   sectionHeader: {
     flexDirection: "row",
