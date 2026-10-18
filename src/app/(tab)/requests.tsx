@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
+import { supabase } from "@/lib/supabase";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listServiceRequests,
@@ -92,10 +93,11 @@ const getCommentUserId = (comment: ServiceRequestComment) => {
     authorId?: string | number;
     posterUserId?: string | number;
   };
+  // Prefer the real Supabase auth UUID; userId is the display/model ID.
   return (
-    c.professionalId ??
     c.authUserId ??
     c.userId ??
+    c.professionalId ??
     c.createdByUserId ??
     c.authorId
   );
@@ -148,21 +150,54 @@ const openUserProfile = async ({
   const now = Date.now();
   if (now - lastProfileNavAt < PROFILE_NAV_COOLDOWN_MS) return;
 
-  let professionals;
-  try {
-    professionals = await listProfessionalsAsync();
-  } catch {
-    return;
+  let professionalId: string | null = null;
+  const rawUserId = String(userId ?? "").trim();
+
+  // Resolve a commenter by their real auth UUID directly from Supabase.
+  // This avoids silently failing when the professional list cache is stale.
+  if (rawUserId) {
+    try {
+      const { data } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", rawUserId)
+        .maybeSingle();
+      if (data?.id) professionalId = String(data.id);
+
+      // Also support callers that already passed the professional row ID.
+      if (!professionalId) {
+        const { data: byProfessionalId } = await supabase
+          .from("professionals")
+          .select("id")
+          .eq("id", rawUserId)
+          .maybeSingle();
+        if (byProfessionalId?.id) professionalId = String(byProfessionalId.id);
+      }
+    } catch {
+      // Fall through to the in-memory list lookup below.
+    }
   }
 
-  const professional = findProfessionalForUser(userId, userName, professionals);
-  if (!professional) return;
+  if (!professionalId) {
+    try {
+      const professionals = await listProfessionalsAsync();
+      const professional = findProfessionalForUser(userId, userName, professionals);
+      if (professional) professionalId = String(professional.id);
+    } catch {
+      // Keep the screen stable if profile lookup fails.
+    }
+  }
+
+  if (!professionalId) {
+    Alert.alert("Profile unavailable", "This user does not have a professional profile yet.");
+    return;
+  }
 
   lastProfileNavAt = now;
   beforeNavigate?.();
   router.push({
     pathname: "/professional/[id]",
-    params: { id: String(professional.id), from: "requests" },
+    params: { id: professionalId, from: "requests" },
   });
 };
 
