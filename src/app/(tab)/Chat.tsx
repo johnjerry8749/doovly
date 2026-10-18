@@ -216,15 +216,18 @@ export default function ChatList() {
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() => openChat(item)}
-            onLongPress={() => onHoldChat(item)}
-            delayLongPress={500}
-            activeOpacity={0.7}
-          >
-            {/* Avatar + Verification */}
-            <View style={styles.avatarWrap}>
+          <View style={styles.row}>
+            {/* Avatar opens the professional profile; Doovly system avatar is not navigable. */}
+            <TouchableOpacity
+              style={styles.avatarWrap}
+              activeOpacity={0.75}
+              disabled={!item.participant.professionalId || Boolean(item.participant.isSystem)}
+              onPress={() => {
+                const id = item.participant.professionalId;
+                if (!id || item.participant.isSystem) return;
+                router.push({ pathname: "/professional/[id]", params: { id: String(id) } });
+              }}
+            >
               <Image
                 source={item.participant.image}
                 style={[
@@ -233,42 +236,35 @@ export default function ChatList() {
                 ]}
                 resizeMode="cover"
               />
-            </View>
+            </TouchableOpacity>
 
-            {/* Message Content */}
-            <View style={styles.rowBody}>
+            {/* Message content opens the conversation and preserves long-press actions. */}
+            <TouchableOpacity
+              style={styles.rowBody}
+              onPress={() => openChat(item)}
+              onLongPress={() => onHoldChat(item)}
+              delayLongPress={500}
+              activeOpacity={0.7}
+            >
               <View style={styles.rowTop}>
-                <Text
-                  style={styles.name}
-                  numberOfLines={1}
-                >
+                <Text style={styles.name} numberOfLines={1}>
                   {item.participant.name}
                 </Text>
-
-                <Text style={styles.time}>
-                  {item.lastMessageAt}
-                </Text>
+                <Text style={styles.time}>{item.lastMessageAt}</Text>
               </View>
 
               <View style={styles.rowBottom}>
-                <Text
-                  style={styles.preview}
-                  numberOfLines={1}
-                >
+                <Text style={styles.preview} numberOfLines={1}>
                   {item.lastMessage}
                 </Text>
-
-                {/* Unread count */}
                 {item.unreadCount > 0 && (
                   <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
-                      {item.unreadCount}
-                    </Text>
+                    <Text style={styles.badgeText}>{item.unreadCount}</Text>
                   </View>
                 )}
               </View>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
         )}
       />
     </SafeAreaView>
