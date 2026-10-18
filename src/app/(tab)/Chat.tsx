@@ -216,15 +216,22 @@ export default function ChatList() {
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() => openChat(item)}
-            onLongPress={() => onHoldChat(item)}
-            delayLongPress={500}
-            activeOpacity={0.7}
-          >
-            {/* Avatar + Verification */}
-            <View style={styles.avatarWrap}>
+          <View style={styles.row}>
+            {/* Avatar opens the participant's professional profile when available. */}
+            <TouchableOpacity
+              style={styles.avatarWrap}
+              onPress={() => {
+                if (item.participant.isSystem || !item.participant.professionalId) return;
+                router.push({
+                  pathname: "/professional/[id]",
+                  params: { id: item.participant.professionalId },
+                });
+              }}
+              disabled={item.participant.isSystem || !item.participant.professionalId}
+              activeOpacity={0.75}
+              accessibilityRole={item.participant.isSystem || !item.participant.professionalId ? undefined : "button"}
+              accessibilityLabel={`Open ${item.participant.name}'s profile`}
+            >
               <Image
                 source={item.participant.image}
                 style={[
@@ -233,15 +240,18 @@ export default function ChatList() {
                 ]}
                 resizeMode="cover"
               />
-            </View>
+            </TouchableOpacity>
 
             {/* Message Content */}
-            <View style={styles.rowBody}>
+            <TouchableOpacity
+              style={styles.rowBody}
+              onPress={() => openChat(item)}
+              onLongPress={() => onHoldChat(item)}
+              delayLongPress={500}
+              activeOpacity={0.7}
+            >
               <View style={styles.rowTop}>
-                <Text
-                  style={styles.name}
-                  numberOfLines={1}
-                >
+                <Text style={styles.name} numberOfLines={1}>
                   {item.participant.name}
                 </Text>
 
@@ -251,10 +261,7 @@ export default function ChatList() {
               </View>
 
               <View style={styles.rowBottom}>
-                <Text
-                  style={styles.preview}
-                  numberOfLines={1}
-                >
+                <Text style={styles.preview} numberOfLines={1}>
                   {item.lastMessage}
                 </Text>
 
@@ -267,8 +274,8 @@ export default function ChatList() {
                   </View>
                 )}
               </View>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
         )}
       />
     </SafeAreaView>
