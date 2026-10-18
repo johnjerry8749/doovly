@@ -112,12 +112,60 @@ async function uploadRequestImages(images: ImageSourcePropType[] | undefined) {
   return { urls, keys };
 }
 
+async function hydrateRequestAvatarUrls(rows: any[]): Promise<any[]> {
+  if (!rows.length) return rows;
+
+  const userIds = Array.from(new Set(
+    rows.flatMap((row) => [
+      row.created_by,
+      ...(row.service_request_comments ?? []).map((comment: any) => comment.user_id),
+    ]).filter((id): id is string => typeof id === "string" && id.length > 0),
+  ));
+  if (!userIds.length) return rows;
+
+  try {
+    const [profilesResult, professionalsResult] = await Promise.all([
+      supabase.from("profiles").select("id,avatar_url").in("id", userIds),
+      supabase.from("professionals").select("user_id,avatar_url").in("user_id", userIds),
+    ]);
+
+    const avatarByUserId = new Map<string, string>();
+    for (const profile of profilesResult.data ?? []) {
+      if (profile.avatar_url) avatarByUserId.set(profile.id, profile.avatar_url);
+    }
+    for (const professional of professionalsResult.data ?? []) {
+      if (professional.avatar_url) avatarByUserId.set(professional.user_id, professional.avatar_url);
+    }
+
+    return rows.map((row) => ({
+      ...row,
+      poster_avatar_url: row.poster_avatar_url || avatarByUserId.get(row.created_by) || null,
+      service_request_comments: (row.service_request_comments ?? []).map((comment: any) => ({
+        ...comment,
+        user_avatar_url: comment.user_avatar_url || avatarByUserId.get(comment.user_id) || null,
+      })),
+    }));
+  } catch (error) {
+    console.warn("[ServiceRequests] Could not hydrate profile avatars:", error);
+    return rows;
+  }
+}
+
+async function getCurrentAvatarUrl(userId: string): Promise<string | null> {
+  const [profileResult, professionalResult] = await Promise.all([
+    supabase.from("profiles").select("avatar_url").eq("id", userId).maybeSingle(),
+    supabase.from("professionals").select("avatar_url").eq("user_id", userId).maybeSingle(),
+  ]);
+  return professionalResult.data?.avatar_url || profileResult.data?.avatar_url || null;
+}
+
 async function fetchAll(): Promise<ServiceRequest[]> {
   const { data, error } = await supabase
     .from("service_requests").select(SERVICE_REQUEST_SELECT)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  cache = (data ?? []).map(mapServiceRequestRow);
+  const hydratedRows = await hydrateRequestAvatarUrls(data ?? []);
+  cache = hydratedRows.map(mapServiceRequestRow);
   notifyRequestListeners();
   return cache;
 }
@@ -170,7 +218,8 @@ export async function getServiceRequestByIdAsync(id: string): Promise<ServiceReq
     return undefined;
   }
 
-  const mapped = mapServiceRequestRow(data);
+  const hydratedRows = await hydrateRequestAvatarUrls([data]);
+  const mapped = mapServiceRequestRow(hydratedRows[0]);
   if (cache) {
     cache = cache.map((request) => request.id === mapped.id ? mapped : request);
     notifyRequestListeners();
@@ -185,12 +234,13 @@ export function isOwnServiceRequest(request: ServiceRequest): boolean {
 export async function createServiceRequest(input: CreateServiceRequestInput): Promise<ServiceRequest> {
   const s = await loadSessionUser(true); if (!s) throw new Error("Not logged in");
   const uploaded = await uploadRequestImages(input.images);
+  const avatarUrl = await getCurrentAvatarUrl(s.uuid);
   const { data, error } = await supabase.from("service_requests").insert({
     title: input.title.trim(), category: input.category, profession: input.category,
     location: input.location.trim(), city: input.city.trim(), description: input.description.trim(),
     icon: input.icon, icon_background: input.iconBackground, images: uploaded.urls, image_keys: uploaded.keys,
     time_ago: "Just now", is_new: true, created_by: s.uuid,
-    poster_name: s.fullName || "You", poster_avatar_url: null, poster_verified: s.verified,
+    poster_name: s.fullName || "You", poster_avatar_url: avatarUrl, poster_verified: s.verified,
     likes_count: 0, max_offers: Math.max(1, Math.min(20, input.maxOffers)), offers_count: 0, offered_by: [],
   }).select(SERVICE_REQUEST_SELECT).single();
   if (error) throw error;
@@ -237,12 +287,13 @@ export async function addServiceRequestComment(input: AddCommentInput): Promise<
   if (!s || !input.text.trim()) return null;
   const request = await getServiceRequestByIdAsync(input.requestId);
   if (!request) return null;
+  const avatarUrl = await getCurrentAvatarUrl(s.uuid);
 
   const { data, error } = await supabase.from("service_request_comments").insert({
     request_id: requestUuid(input.requestId),
     user_id: s.uuid,
     user_name: input.userName?.trim() || s.fullName || "You",
-    user_avatar_url: null,
+    user_avatar_url: avatarUrl,
     text: input.text.trim(),
     time_ago: "Just now",
   }).select("id,user_id,user_name,user_avatar_url,text,time_ago,created_at").single();
