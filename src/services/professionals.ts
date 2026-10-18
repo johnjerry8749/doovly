@@ -89,7 +89,9 @@ async function fetchAll(): Promise<Professional[]> {
     .filter((row: any) => {
       const email = String(row.profiles?.email ?? row.email ?? "").trim().toLowerCase();
       const role = String(row.profiles?.role ?? row.role ?? "").trim().toLowerCase();
-      return email !== "system@doovly.app" && role !== "system";
+      const name = String(row.profiles?.full_name ?? row.full_name ?? "").trim().toLowerCase();
+      // Hide the official Doovly identity even if its email or role is configured differently.
+      return email !== "system@doovly.app" && role !== "system" && name !== "doovly";
     })
     .map(mapProfessionalRow);
   list.sort((a, b) => {
