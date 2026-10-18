@@ -162,7 +162,7 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
     name: isSystem ? "Doovly" : profile?.full_name ?? pro?.profiles?.full_name ?? "User",
     image: isSystem
       ? require("@/assets/images/icon.png")
-      : imageFromUrl(pro?.avatar_url ?? pro?.profiles?.avatar_url ?? profile?.avatar_url),
+      : imageFromUrl(profile?.avatar_url ?? pro?.profiles?.avatar_url ?? pro?.avatar_url),
     verified: isSystem ? false : Boolean(pro?.is_verified),
     profession: isSystem ? "Official Doovly" : pro?.profession ?? null,
     phone: profile?.phone ?? null,
@@ -683,7 +683,20 @@ export async function allowTextAsync(conversationId: string): Promise<boolean> {
 
 export async function canSendMessageAsync(conversationId: string): Promise<boolean> {
   const status = await getBookingStatusAsync(conversationId);
-  return status === "Accepted";
+  if (status === "Accepted") return true;
+  if (status === "Declined") return false;
+
+  // Keep an established one-to-one conversation usable when a newer booking
+  // or offer is still pending. A brand-new thread remains locked until accept.
+  const { data, error } = await supabase
+    .from("messages")
+    .select("id")
+    .eq("conversation_id", conversationId)
+    .in("kind", ["text", "image", "location"])
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
 }
 
 export function canSendMessage(_conversationId: string): boolean {
