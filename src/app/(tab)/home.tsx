@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
-  ActivityIndicator,
-  Animated,
   Dimensions,
   Alert,
   FlatList,
@@ -15,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -37,71 +35,13 @@ import { listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 import { PromotedServiceCard } from "@/components/PromotedServiceCard";
 import { trackPromotionEvent } from "@/services/promotionAnalytics";
-
-function MovingServiceDescription({ text, color = "#666" }: { text: string; color?: string }) {
-  const translateX = React.useRef(new Animated.Value(0)).current;
-  const [containerWidth, setContainerWidth] = useState(0);
-  const [textWidth, setTextWidth] = useState(0);
-
-  // Keep the description to two lines while gently moving it horizontally.
-  const movingWidth = Math.max(
-    containerWidth,
-    Math.min(text.length * 5.2, containerWidth * 2.4),
-  );
-
-  useEffect(() => {
-    translateX.stopAnimation();
-    translateX.setValue(0);
-    if (!text.trim() || containerWidth <= 0 || movingWidth <= containerWidth) return;
-
-    const distance = movingWidth - containerWidth;
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.delay(500),
-        Animated.timing(translateX, {
-          toValue: -distance,
-          duration: Math.max(2800, distance * 42),
-          useNativeDriver: true,
-        }),
-        Animated.delay(500),
-        Animated.timing(translateX, {
-          toValue: 0,
-          duration: Math.max(2800, distance * 42),
-          useNativeDriver: true,
-        }),
-        Animated.delay(700),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [text, containerWidth, movingWidth, translateX]);
-
-  if (!text.trim()) return null;
-
-  return (
-    <View
-      style={{ width: "100%", height: 26, overflow: "hidden", marginTop: 2, marginBottom: 2 }}
-      onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}
-    >
-      <Animated.Text
-        numberOfLines={2}
-        onLayout={(event) => {
-          const measuredWidth = event.nativeEvent.layout.width;
-          if (measuredWidth !== textWidth) setTextWidth(measuredWidth);
-        }}
-        style={{
-          width: movingWidth || undefined,
-          color,
-          fontSize: 10,
-          lineHeight: 12,
-          transform: [{ translateX }],
-        }}
-      >
-        {text.trim()}
-      </Animated.Text>
-    </View>
-  );
-}
+import {
+  MovingServiceDescription,
+  HomeHeader,
+  HomeSearchBar,
+  ServiceCategoryScroller,
+  EmptyProfessionals,
+} from "@/components/home";
 
 export default function Home() {
   const {
@@ -383,51 +323,19 @@ export default function Home() {
         onScroll={checkVisiblePromotedCards}
         scrollEventThrottle={250}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.locationContainer}
-            onPress={() => setShowLocationModal(true)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="location" size={16} color="#159447" />
-            {loadingLocation ? (
-              <View style={styles.locationLoading}>
-                <ActivityIndicator size="small" color="#159447" />
-                <Text style={styles.locationLoadingText}>Getting location...</Text>
-              </View>
-            ) : (
-              <Text style={styles.locationText} numberOfLines={1}>
-                {locationName}
-              </Text>
-            )}
-            <Ionicons name="chevron-down" size={14} color="#6B7280" />
-          </TouchableOpacity>
+        <HomeHeader
+          locationName={locationName}
+          loadingLocation={loadingLocation}
+          onLocationPress={() => setShowLocationModal(true)}
+          onNotificationPress={() =>
+            router.push({
+              pathname: "/notification/[id]",
+              params: { id: String(getCurrentUserId()) },
+            })
+          }
+        />
 
-          <TouchableOpacity
-            style={styles.notificationButton}
-            activeOpacity={0.7}
-            onPress={() =>
-              router.push({
-                pathname: "/notification/[id]",
-                params: { id: String(getCurrentUserId()) },
-              })
-            }
-          >
-            <Ionicons name="notifications-outline" size={28} color="#111" />
-            <View style={styles.notificationDot} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search professionals..."
-            placeholderTextColor="#9CA3AF"
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
+        <HomeSearchBar value={search} onChangeText={setSearch} />
 
         <View style={styles.bannerContainer}>
           <Image
@@ -444,34 +352,11 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.servicesContainer}
-        >
-          {services.map((service, index) => {
-            const active = selectedCategory === service.name;
-            return (
-              <TouchableOpacity
-                key={`${service.name}-${index}`}
-                style={styles.serviceItem}
-                activeOpacity={0.7}
-                onPress={() => setSelectedCategory(service.name)}
-              >
-                <View style={styles.serviceCircle}>
-                  <MaterialCommunityIcons
-                    name={service.icon as any}
-                    size={26}
-                    color={active ? "#159447" : "#087A38"}
-                  />
-                </View>
-                <Text style={[styles.serviceName, active && { color: "#159447" }]}>
-                  {service.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        <ServiceCategoryScroller
+          services={services}
+          selectedCategory={selectedCategory}
+          onSelect={setSelectedCategory}
+        />
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Professions</Text>
@@ -481,20 +366,7 @@ export default function Home() {
         </View>
 
         {displayedProfessionals.length === 0 && filteredPromotedServices.length === 0 ? (
-          <View style={styles.emptyProsContainer}>
-            <Ionicons name="search-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyProsTitle}>No Avaliable professionals near you</Text>
-            <Text style={styles.emptyProsSubtitle}>
-              Try another location or view all in Nigeria.
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyProsButton}
-              onPress={viewAllInNigeria}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.emptyProsButtonText}>View all in Nigeria</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyProfessionals onViewAllInNigeria={viewAllInNigeria} />
         ) : (
           <View style={styles.professionalsGrid}>
             {filteredPromotedServices.map((item) => (
@@ -696,43 +568,6 @@ export default function Home() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, marginBottom: 35, backgroundColor: "#fff" },
   container: { paddingHorizontal: 16, paddingBottom: 0 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 10,
-    marginBottom: 18,
-  },
-  locationContainer: { flexDirection: "row", alignItems: "center", flex: 1, marginRight: 12, gap: 6 },
-  locationText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111",
-    flexShrink: 1,
-    marginLeft: 6,
-  },
-  locationLoading: { flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 6 },
-  locationLoadingText: { fontSize: 13, color: "#6B7280" },
-  notificationButton: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
-  notificationDot: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: "#159447",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F3F3",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 45,
-    marginBottom: 18,
-  },
-  searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: "#111" },
   bannerContainer: {
     width: "100%",
     height: 135,
@@ -749,18 +584,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 17, fontWeight: "800", color: "#111" },
   seeAll: { fontSize: 14, fontWeight: "600", color: "#159447" },
-  servicesContainer: { flexDirection: "row", gap: 14, paddingBottom: 22 },
-  serviceItem: { alignItems: "center", width: 72 },
-  serviceCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 31,
-    backgroundColor: "#E8F5E9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 7,
-  },
-  serviceName: { fontSize: 12, fontWeight: "600", color: "#333", textAlign: "center" },
   professionalsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -803,18 +626,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cityText: { fontSize: 10, color: "#777", marginBottom: 4 },
-  price: { fontSize: 12, fontWeight: "700", color: "#159447" },
-  emptyProsContainer: { alignItems: "center", paddingVertical: 30, paddingHorizontal: 20 },
-  emptyProsTitle: { fontSize: 15, fontWeight: "700", color: "#333", marginTop: 12, textAlign: "center" },
-  emptyProsSubtitle: { fontSize: 13, color: "#888", marginTop: 6, textAlign: "center" },
-  emptyProsButton: {
-    marginTop: 14,
-    backgroundColor: "#159447",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  emptyProsButtonText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   verifiedContainer: {
     flexDirection: "row",
     alignItems: "center",
