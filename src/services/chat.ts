@@ -8,6 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type ChatParticipant = {
   id: string;
+  professionalId?: string | null;
   name: string;
   image: ImageSourcePropType;
   verified?: boolean;
@@ -159,6 +160,7 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
 
   return {
     id: profile?.id ?? pro?.id ?? userId,
+    professionalId: pro?.id ?? null,
     name: isSystem ? "Doovly" : profile?.full_name ?? pro?.profiles?.full_name ?? "User",
     image: isSystem
       ? require("@/assets/images/icon.png")
