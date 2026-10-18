@@ -14,9 +14,12 @@ type Props = {
   onChangeText: (text: string) => void;
   /** Defaults to "Search professionals..." */
   placeholder?: string;
-  /** Optional override for the outer container (Services / Requests variants). */
+  /**
+   * When provided, replaces the default Home container styles entirely
+   * (so Services/Requests keep their exact padding/height/margins).
+   */
   containerStyle?: StyleProp<ViewStyle>;
-  /** Optional override for the TextInput. */
+  /** When provided, replaces the default Home input styles entirely. */
   inputStyle?: StyleProp<TextStyle>;
   /** Icon name — default search-outline (Home/Services), search (Requests). */
   iconName?: React.ComponentProps<typeof Ionicons>["name"];
@@ -24,7 +27,8 @@ type Props = {
 
 /**
  * Shared search input used by Home, Services, and Requests.
- * Default styles match Home; pass containerStyle/inputStyle for other screens.
+ * Default styles match Home; pass containerStyle/inputStyle for other screens
+ * so their original spacing is preserved exactly.
  */
 export function HomeSearchBar({
   value,
@@ -35,10 +39,16 @@ export function HomeSearchBar({
   iconName = "search-outline",
 }: Props) {
   return (
-    <View style={[styles.searchContainer, containerStyle]}>
+    <View
+      style={
+        containerStyle
+          ? [styles.rowBase, containerStyle]
+          : styles.searchContainer
+      }
+    >
       <Ionicons name={iconName} size={18} color="#9CA3AF" />
       <TextInput
-        style={[styles.searchInput, inputStyle]}
+        style={inputStyle ? [styles.inputBase, inputStyle] : styles.searchInput}
         placeholder={placeholder}
         placeholderTextColor="#9CA3AF"
         value={value}
@@ -49,6 +59,16 @@ export function HomeSearchBar({
 }
 
 const styles = StyleSheet.create({
+  rowBase: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  inputBase: {
+    flex: 1,
+    fontSize: 15,
+    color: "#111",
+  },
+  // Home defaults (unchanged)
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
