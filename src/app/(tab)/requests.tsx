@@ -47,7 +47,7 @@ import { listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 import CreateJobModal from "@/components/CreateJobModal";
 import RequestImageSlider from "@/components/RequestImageSlider";
-import { HomeSearchBar, TextCategoryChips } from "@/components/home";
+import { SearchBar, TextCategoryChips } from "@/components/home";
 
 const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
@@ -445,18 +445,16 @@ export default function RequestsScreen() {
     }
   };
 
-  const renderOfferButton = (item: ServiceRequest) => {
-    return (
-      <TouchableOpacity
-        style={styles.sendOfferBtn}
-        onPress={() => setOfferRequest(item)}
-        activeOpacity={0.85}
-      >
-        <Ionicons name="paper-plane" size={18} color="#fff" />
-        <Text style={styles.sendOfferText}>Send Offer</Text>
-      </TouchableOpacity>
-    );
-  };
+  const renderOfferButton = (item: ServiceRequest) => (
+    <TouchableOpacity
+      style={styles.sendOfferBtn}
+      onPress={() => setOfferRequest(item)}
+      activeOpacity={0.85}
+    >
+      <Ionicons name="paper-plane" size={18} color="#fff" />
+      <Text style={styles.sendOfferText}>Send Offer</Text>
+    </TouchableOpacity>
+  );
 
   const renderRequest = ({ item }: { item: ServiceRequest }) => {
     const liked = !!likedIds[item.id];
@@ -629,7 +627,7 @@ export default function RequestsScreen() {
       </View>
 
       <View style={styles.topControls}>
-        <HomeSearchBar
+        <SearchBar
           value={search}
           onChangeText={setSearch}
           placeholder="Search requests…"
