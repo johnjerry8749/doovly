@@ -70,6 +70,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    marginRight: 8,
   },
   filterChipActive: {
     backgroundColor: GREEN,
