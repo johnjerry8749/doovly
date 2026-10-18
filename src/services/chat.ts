@@ -13,6 +13,7 @@ export type ChatParticipant = {
   verified?: boolean;
   profession?: string | null;
   phone?: string | null;
+  professionalId?: string | null;
   isSystem?: boolean;
 };
 
@@ -167,6 +168,7 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
       : imageFromUrl(pro?.avatar_url ?? pro?.profiles?.avatar_url ?? profile?.avatar_url),
     verified: isSystem ? false : Boolean(pro?.is_verified),
     profession: isSystem ? "Official Doovly" : pro?.profession ?? null,
+    professionalId: isSystem ? null : pro?.id ?? null,
     phone: profile?.phone ?? null,
     isSystem,
   };
