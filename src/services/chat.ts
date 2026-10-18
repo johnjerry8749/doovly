@@ -162,7 +162,10 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
     name: isSystem ? "Doovly" : profile?.full_name ?? pro?.profiles?.full_name ?? "User",
     image: isSystem
       ? require("@/assets/images/icon.png")
-      : imageFromUrl(profile?.avatar_url ?? pro?.profiles?.avatar_url ?? pro?.avatar_url),
+      : imageFromUrl(
+          [profile?.avatar_url, pro?.profiles?.avatar_url, pro?.avatar_url]
+            .find((url) => typeof url === "string" && url.trim().length > 0)?.trim() ?? null,
+        ),
     verified: isSystem ? false : Boolean(pro?.is_verified),
     profession: isSystem ? "Official Doovly" : pro?.profession ?? null,
     phone: profile?.phone ?? null,
