@@ -47,6 +47,7 @@ import { listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 import CreateJobModal from "@/components/CreateJobModal";
 import RequestImageSlider from "@/components/RequestImageSlider";
+import { HomeSearchBar, TextCategoryChips } from "@/components/home";
 
 const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
@@ -79,91 +80,17 @@ const getRequestUserId = (request: ServiceRequest) => {
     r.posterUserId ??
     r.posterId ??
     r.createdByUserId ??
-    r.userId
+    r.userId ??
+    null
   );
 };
 
 const getCommentUserId = (comment: ServiceRequestComment) => {
   const c = comment as ServiceRequestComment & {
-    professionalId?: string | number;
     userId?: string | number;
-    authUserId?: string | number;
-    createdByUserId?: string | number;
-    authorId?: string | number;
-    posterUserId?: string | number;
+    posterId?: string | number;
   };
-  return (
-    c.professionalId ??
-    c.authUserId ??
-    c.userId ??
-    c.createdByUserId ??
-    c.authorId
-  );
-};
-
-const findProfessionalForUser = (
-  userId?: string | number | null,
-  userName?: string | null,
-  professionals = listProfessionals(),
-) => {
-  if (!professionals.length) return undefined;
-
-  const id = normalize(userId);
-  const name = normalize(userName);
-
-  if (id) {
-    const baseId = id.replace(/^[up]/, "");
-    const variants = [id, baseId, `u${baseId}`, `p${baseId}`];
-    const byId = professionals.find((p) => variants.includes(normalize(p.id)));
-    if (byId) return byId;
-
-    const byUser = professionals.find((p) => {
-      const extra = p as typeof p & {
-        userId?: string | number;
-        profileId?: string | number;
-      };
-      return variants.some(
-        (v) =>
-          normalize(extra.userId) === v || normalize(extra.profileId) === v,
-      );
-    });
-    if (byUser) return byUser;
-  }
-
-  if (name) return professionals.find((p) => normalize(p.name) === name);
-  return undefined;
-};
-
-let lastProfileNavAt = 0;
-
-const openUserProfile = async ({
-  userId,
-  userName,
-  beforeNavigate,
-}: {
-  userId?: string | number | null;
-  userName?: string | null;
-  beforeNavigate?: () => void;
-}) => {
-  const now = Date.now();
-  if (now - lastProfileNavAt < PROFILE_NAV_COOLDOWN_MS) return;
-
-  let professionals;
-  try {
-    professionals = await listProfessionalsAsync();
-  } catch {
-    return;
-  }
-
-  const professional = findProfessionalForUser(userId, userName, professionals);
-  if (!professional) return;
-
-  lastProfileNavAt = now;
-  beforeNavigate?.();
-  router.push({
-    pathname: "/professional/[id]",
-    params: { id: String(professional.id), from: "requests" },
-  });
+  return c.userId ?? c.posterId ?? null;
 };
 
 export default function RequestsScreen() {
@@ -187,29 +114,31 @@ export default function RequestsScreen() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [categoryFilters, setCategoryFilters] = useState<string[]>(["All"]);
   const [cities, setCities] = useState<string[]>([]);
-  const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
   const [allRequests, setAllRequests] = useState(() => listServiceRequests());
+  const [likedIds, setLikedIds] = useState<Record<string, boolean>>({});
   const [createVisible, setCreateVisible] = useState(false);
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
-  const [offerPrice, setOfferPrice] = useState("");
-  const [sendingOffer, setSendingOffer] = useState(false);
+  const [offerAmount, setOfferAmount] = useState("");
+  const [offerSending, setOfferSending] = useState(false);
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
   const [chatText, setChatText] = useState("");
-  const commentListRef = useRef<FlatList<ServiceRequestComment>>(null);
+  const lastProfileNavAt = useRef(0);
 
   useEffect(() => {
     let active = true;
     listLikedServiceRequestIds()
       .then((ids) => {
         if (!active) return;
-        setLikedIds((current) => {
-          const next: Record<string, boolean> = {};
-          ids.forEach((id) => { next[id] = true; });
-          return { ...current, ...next };
+        const map: Record<string, boolean> = {};
+        ids.forEach((id) => {
+          map[id] = true;
         });
+        setLikedIds(map);
       })
-      .catch((error) => console.warn("[Requests] failed to load liked requests:", error));
-    return () => { active = false; };
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -221,7 +150,9 @@ export default function RequestsScreen() {
         setCities(nextCities);
       })
       .catch((error) => console.warn("[Requests] failed to load filters:", error));
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filteredCities = useMemo(() => {
@@ -232,7 +163,6 @@ export default function RequestsScreen() {
 
   const matchesLocationCity = (itemCity?: string, itemArea?: string) => {
     if (
-      loadingLocation ||
       showAllNigeria ||
       !locationName ||
       locationName === "All Nigeria" ||
@@ -331,12 +261,7 @@ export default function RequestsScreen() {
     try {
       await Share.share({
         title: item.title,
-        message: `${item.title}
-${item.category} @ ${item.location}, ${item.city}
-
-${item.description}
-
-— Shared from Doovly`,
+        message: `${item.title}\n${item.category} @ ${item.location}, ${item.city}\n\n${item.description}\n\n— Shared from Doovly`,
       });
     } catch {
       // cancelled
@@ -348,64 +273,74 @@ ${item.description}
     setChatText("");
   };
 
-  const closeChat = () => {
-    setChatRequest(null);
-    setChatText("");
+  const openUserProfile = ({
+    userId,
+    userName,
+  }: {
+    userId?: string | number | null;
+    userName?: string;
+  }) => {
+    const now = Date.now();
+    if (now - lastProfileNavAt.current < PROFILE_NAV_COOLDOWN_MS) return;
+    lastProfileNavAt.current = now;
+    if (userId) {
+      router.push({
+        pathname: "/professional/[id]",
+        params: { id: String(userId), name: userName || "" },
+      });
+    }
   };
 
-  const deleteComment = (requestId: string, comment: ServiceRequestComment) => {
-    if (!requestId || !comment.userId || comment.userId !== getCurrentUserId()) return;
-
-    Alert.alert("Delete comment?", "This comment will be removed.", [
+  const deleteComment = async (
+    requestId: string,
+    comment: ServiceRequestComment,
+  ) => {
+    Alert.alert("Delete comment", "Remove this comment?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
           try {
-            const deleted = await deleteServiceRequestComment(comment.id);
-            if (!deleted) {
-              Alert.alert("Could not delete comment", "Please try again.");
-              return;
-            }
-
+            await deleteServiceRequestComment(requestId, comment.id);
             const removeComment = (request: ServiceRequest) =>
               request.id === requestId
-                ? { ...request, comments: request.comments.filter((entry) => entry.id !== comment.id) }
+                ? {
+                    ...request,
+                    comments: request.comments.filter(
+                      (entry) => entry.id !== comment.id,
+                    ),
+                  }
                 : request;
-
             setAllRequests((current) => current.map(removeComment));
-            setChatRequest((current) => current?.id === requestId ? removeComment(current) : current);
-          } catch {
-            Alert.alert("Could not delete comment", "Please try again.");
+            if (chatRequest?.id === requestId) {
+              setChatRequest((current) =>
+                current ? removeComment(current) : current,
+              );
+            }
+          } catch (error) {
+            Alert.alert(
+              "Could not delete",
+              error instanceof Error ? error.message : "Please try again.",
+            );
           }
         },
       },
     ]);
   };
 
-  const sendChatMessage = async () => {
-    if (!chatRequest) return;
+  const sendComment = async () => {
+    if (!chatRequest || !chatText.trim()) return;
     const text = chatText.trim();
-    if (!text) return;
-
-    const currentUserId = getCurrentUserId();
-    const currentProfessional = findProfessionalForUser(currentUserId);
-    const optimistic = {
-      id: `local-${Date.now()}`,
-      userId: currentUserId,
-      userName: currentProfessional?.name || "You",
-      userAvatar: currentProfessional?.image || MY_AVATAR,
+    const optimistic: ServiceRequestComment = {
+      id: `temp-${Date.now()}`,
+      userName: "You",
+      userAvatar: MY_AVATAR,
       text,
-      time: "Just now",
+      createdAt: new Date().toISOString(),
     } as ServiceRequestComment;
 
-    const previousRequest = chatRequest;
     setChatText("");
-    setChatRequest({
-      ...chatRequest,
-      comments: [...(chatRequest.comments || []), optimistic],
-    });
     setAllRequests((current) =>
       current.map((request) =>
         request.id === chatRequest.id
@@ -413,140 +348,104 @@ ${item.description}
           : request,
       ),
     );
+    setChatRequest((current) =>
+      current
+        ? { ...current, comments: [...(current.comments || []), optimistic] }
+        : current,
+    );
 
     try {
-      const comment = await addServiceRequestComment({
-        requestId: chatRequest.id,
-        text,
-        userName: currentProfessional?.name || "You",
-        userAvatar: currentProfessional?.image || MY_AVATAR,
-      });
-
-      if (!comment) throw new Error("Comment could not be posted.");
-
+      const comment = await addServiceRequestComment(chatRequest.id, text);
       setAllRequests((current) =>
         current.map((request) =>
-          request.id === previousRequest.id
-            ? { ...request, comments: [...(request.comments || []).filter((x) => x.id !== optimistic.id), comment] }
-            : request,
-        ),
-      );
-      setChatRequest((current) =>
-        current?.id === previousRequest.id
-          ? { ...current, comments: [...(current.comments || []).filter((x) => x.id !== optimistic.id), comment] }
-          : current,
-      );
-      requestAnimationFrame(() => commentListRef.current?.scrollToEnd({ animated: true }));
-    } catch {
-      setAllRequests((current) =>
-        current.map((request) =>
-          request.id === previousRequest.id
-            ? { ...request, comments: (request.comments || []).filter((x) => x.id !== optimistic.id) }
-            : request,
-        ),
-      );
-      setChatRequest((current) =>
-        current?.id === previousRequest.id
-          ? { ...current, comments: (current.comments || []).filter((x) => x.id !== optimistic.id) }
-          : current,
-      );
-      Alert.alert("Could not post comment", "Please try again.");
-    }
-  };
-
-  const closeOffer = () => {
-    setOfferRequest(null);
-    setOfferPrice("");
-  };
-
-  const submitOffer = async () => {
-    if (!offerRequest || sendingOffer) return;
-    const amountNum = Number(offerPrice.replace(/[^\d]/g, ""));
-    if (!amountNum) return;
-
-    setSendingOffer(true);
-    try {
-      const result = await submitServiceRequestOffer({
-        requestId: offerRequest.id,
-        amount: amountNum,
-      });
-
-      if (!result?.ok) {
-        const messages: Record<string, string> = {
-        own: "You cannot send an offer on your own request.",
-        already: "You already sent an offer on this request.",
-        full: "This request is no longer accepting offers.",
-      };
-        Alert.alert(
-          result?.reason === "own" ? "Not allowed" : result?.reason === "already" ? "Already sent" : "Error",
-          messages[result?.reason ?? ""] || "Could not send offer. Try again.",
-        );
-        return;
-      }
-
-
-      const offererProId = getLoggedInProfessionalId() ?? getCurrentUserId();
-    const offererPro = getProfessionalById(String(offererProId));
-    const locationLabel = [offerRequest.location, offerRequest.city]
-      .filter(Boolean)
-      .join(", ");
-
-    const conv = await createOfferConversationAsync({
-      requestId: offerRequest.id,
-      requestTitle: offerRequest.title,
-      requestCategory: offerRequest.category,
-      requestLocation: locationLabel,
-      requestDescription: offerRequest.description,
-      amount: amountNum,
-      requestOwnerId: String(
-        offerRequest.createdByUserId ?? result.recipientUserId,
-      ),
-      requestOwnerName: offerRequest.posterName || "Provider",
-      requestOwnerImage: offerRequest.posterAvatar as number,
-      offererProfessionalId: String(offererProId),
-      offererName: offererPro?.name ?? "You",
-      offererImage:
-        (offererPro?.image as number) ??
-        (require("@/assets/profile_1.jpg") as number),
-    });
-
-      const currentUserId = getCurrentUserId();
-      setAllRequests((current) =>
-        current.map((request) =>
-          request.id === offerRequest.id
+          request.id === chatRequest.id
             ? {
                 ...request,
-                offeredByUserIds: Array.from(
-                  new Set([...(request.offeredByUserIds || []), currentUserId]),
-                ),
-                offersCount: (request.offersCount || 0) + 1,
+                comments: [
+                  ...(request.comments || []).filter((x) => x.id !== optimistic.id),
+                  comment,
+                ],
               }
             : request,
         ),
       );
-      closeOffer();
-      router.push({ pathname: "/chat/[id]", params: { id: conv.id } });
+      setChatRequest((current) =>
+        current
+          ? {
+              ...current,
+              comments: [
+                ...(current.comments || []).filter((x) => x.id !== optimistic.id),
+                comment,
+              ],
+            }
+          : current,
+      );
+    } catch {
+      setAllRequests((current) =>
+        current.map((request) =>
+          request.id === chatRequest.id
+            ? {
+                ...request,
+                comments: (request.comments || []).filter(
+                  (x) => x.id !== optimistic.id,
+                ),
+              }
+            : request,
+        ),
+      );
+      setChatRequest((current) =>
+        current
+          ? {
+              ...current,
+              comments: (current.comments || []).filter(
+                (x) => x.id !== optimistic.id,
+              ),
+            }
+          : current,
+      );
+      Alert.alert("Could not send", "Please try again.");
+    }
+  };
+
+  const submitOffer = async () => {
+    if (!offerRequest || offerSending) return;
+    const amount = Number(String(offerAmount).replace(/[^0-9.]/g, ""));
+    if (!amount || amount <= 0) {
+      Alert.alert("Invalid amount", "Enter a valid offer amount.");
+      return;
+    }
+    setOfferSending(true);
+    try {
+      const can = await canSendOfferOnRequest(offerRequest.id);
+      if (!can.ok) {
+        Alert.alert("Cannot send offer", can.reason || "Not allowed.");
+        setOfferSending(false);
+        return;
+      }
+      await submitServiceRequestOffer(offerRequest.id, amount);
+      const proId = await getLoggedInProfessionalId();
+      if (proId) {
+        await createOfferConversationAsync({
+          professionalId: String(proId),
+          requestId: offerRequest.id,
+          amount,
+        });
+      }
+      setOfferRequest(null);
+      setOfferAmount("");
+      Alert.alert("Offer sent", "Your offer was submitted.");
+      void refreshRequests();
     } catch (error) {
-      console.warn("[Requests] offer submission failed:", error);
-      Alert.alert("Could not send offer", "Please try again.");
+      Alert.alert(
+        "Offer failed",
+        error instanceof Error ? error.message : "Please try again.",
+      );
     } finally {
-      setSendingOffer(false);
+      setOfferSending(false);
     }
   };
 
   const renderOfferButton = (item: ServiceRequest) => {
-    const check = canSendOfferOnRequest(item);
-    if (!check.ok) {
-      if (check.reason === "already") {
-        return (
-          <View style={[styles.sendOfferBtn, { opacity: 0.55 }]}>
-            <Ionicons name="checkmark" size={18} color="#fff" />
-            <Text style={styles.sendOfferText}>Offer sent</Text>
-          </View>
-        );
-      }
-      return null;
-    }
     return (
       <TouchableOpacity
         style={styles.sendOfferBtn}
@@ -582,39 +481,26 @@ ${item.description}
               {item.posterName}
             </Text>
             <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={13} color="#6B7280" />
+              <Ionicons name="location-outline" size={12} color={GREEN} />
               <Text style={styles.locationText} numberOfLines={1}>
-                {item.location}, {item.city}
+                {item.location}
+                {item.city ? `, ${item.city}` : ""}
               </Text>
             </View>
           </View>
-          <Text style={styles.timeAgo}>{item.timeAgo}</Text>
         </TouchableOpacity>
 
-        <View style={styles.titleRow}>
-          <Text style={styles.cardTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
-          {item.isNew ? (
-            <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>NEW</Text>
-            </View>
-          ) : null}
-        </View>
-
-        {item.images?.length ? (
-          <RequestImageSlider images={item.images} height={180} borderRadius={0} />
-        ) : null}
-
-        <View style={styles.metaRow}>
-          <View style={styles.categoryChip}>
-            <Text style={styles.categoryChipText}>{item.category}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.description} numberOfLines={3}>
+        <Text style={styles.cardTitle}>{item.title}</Text>
+        <Text style={styles.cardMeta}>
+          {item.category} · {item.profession}
+        </Text>
+        <Text style={styles.cardDesc} numberOfLines={3}>
           {item.description}
         </Text>
+
+        {item.images && item.images.length > 0 ? (
+          <RequestImageSlider images={item.images} />
+        ) : null}
 
         <View style={styles.engagementRow}>
           <TouchableOpacity
@@ -624,7 +510,7 @@ ${item.description}
           >
             <Ionicons
               name={liked ? "heart" : "heart-outline"}
-              size={20}
+              size={18}
               color={liked ? "#EF4444" : "#6B7280"}
             />
             <Text style={styles.engagementText}>{likesDisplay}</Text>
@@ -743,39 +629,19 @@ ${item.description}
       </View>
 
       <View style={styles.topControls}>
-        <View style={styles.searchRow}>
-          <Ionicons name="search" size={18} color="#9CA3AF" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search requests…"
-            placeholderTextColor="#9CA3AF"
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filtersScroll}
-          contentContainerStyle={styles.filtersRow}
-          keyboardShouldPersistTaps="handled"
-        >
-          {categoryFilters.map((category) => {
-            const active = categoryFilter === category;
-            return (
-              <TouchableOpacity
-                key={category}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setCategoryFilter(category)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        <HomeSearchBar
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search requests…"
+          iconName="search"
+          containerStyle={styles.searchRow}
+          inputStyle={styles.searchInput}
+        />
+        <TextCategoryChips
+          categories={categoryFilters}
+          selected={categoryFilter}
+          onSelect={setCategoryFilter}
+        />
       </View>
 
       <FlatList
@@ -797,101 +663,73 @@ ${item.description}
         visible={createVisible}
         onClose={() => setCreateVisible(false)}
         onSaved={(created) => {
-          setAllRequests((current) => [
-            created,
-            ...current.filter((item) => item.id !== created.id),
-          ]);
+          setAllRequests((current) => [created, ...current]);
           setCreateVisible(false);
         }}
       />
 
-      {/* Offer modal */}
-      <Modal visible={!!offerRequest} transparent animationType="slide" onRequestClose={closeOffer}>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          <Pressable style={styles.modalOverlay} onPress={closeOffer}>
-            <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
-              <Text style={styles.modalTitle}>Send Offer</Text>
-              <Text style={styles.modalSub} numberOfLines={2}>
-                {offerRequest?.title}
+      <Modal
+        visible={!!offerRequest}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setOfferRequest(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setOfferRequest(null)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Send offer</Text>
+            <Text style={styles.modalSub}>{offerRequest?.title}</Text>
+            <View style={styles.offerField}>
+              <Text style={styles.naira}>₦</Text>
+              <TextInput
+                style={styles.offerInput}
+                placeholder="Enter amount"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numeric"
+                value={offerAmount}
+                onChangeText={setOfferAmount}
+              />
+            </View>
+            <TouchableOpacity
+              style={styles.sendOfferBtn}
+              onPress={submitOffer}
+              disabled={offerSending}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.sendOfferText}>
+                {offerSending ? "Sending…" : "Submit offer"}
               </Text>
-              <View style={styles.offerField}>
-                <Text style={styles.naira}>₦</Text>
-                <TextInput
-                  value={offerPrice}
-                  onChangeText={setOfferPrice}
-                  placeholder="Enter amount"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                  style={styles.offerInput}
-                />
-              </View>
-              <TouchableOpacity
-                style={[styles.sendOfferBtn, !offerPrice.replace(/\D/g, "") && { opacity: 0.5 }]}
-                onPress={submitOffer}
-                disabled={!offerPrice.replace(/\D/g, "")}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="paper-plane" size={18} color="#fff" />
-                <Text style={styles.sendOfferText}>Send Offer</Text>
-              </TouchableOpacity>
-            </Pressable>
+            </TouchableOpacity>
           </Pressable>
-        </KeyboardAvoidingView>
+        </Pressable>
       </Modal>
 
-      {/* Comments modal (half screen) */}
-      <Modal visible={!!chatRequest} transparent animationType="slide" onRequestClose={closeChat}>
+      <Modal
+        visible={!!chatRequest}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setChatRequest(null)}
+      >
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <Pressable style={styles.modalOverlay} onPress={closeChat}>
-            <Pressable style={styles.commentModalSheet} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={styles.modalOverlay} onPress={() => setChatRequest(null)}>
+            <Pressable
+              style={styles.commentModalSheet}
+              onPress={(e) => e.stopPropagation()}
+            >
               <View style={styles.commentModalHandle} />
               <Text style={styles.modalTitle}>Comments</Text>
               <FlatList
-                ref={commentListRef}
                 data={chatComments}
-                keyExtractor={(c) => c.id}
+                keyExtractor={(item) => item.id}
                 style={styles.commentList}
-                keyboardShouldPersistTaps="handled"
-                renderItem={({ item: c }) => (
+                renderItem={({ item }) => (
                   <View style={styles.commentRow}>
-                    <TouchableOpacity
-                      activeOpacity={0.75}
-                      onPress={() =>
-                        openUserProfile({
-                          userId: getCommentUserId(c),
-                          userName: c.userName,
-                          beforeNavigate: closeChat,
-                        })
-                      }
-                    >
-                      <Image source={c.userAvatar} style={styles.commentAvatar} />
-                    </TouchableOpacity>
+                    <Image source={item.userAvatar} style={styles.commentAvatar} />
                     <View style={{ flex: 1 }}>
-                      <TouchableOpacity
-                        activeOpacity={0.75}
-                        onPress={() =>
-                          openUserProfile({
-                            userId: getCommentUserId(c),
-                            userName: c.userName,
-                            beforeNavigate: closeChat,
-                          })
-                        }
-                      >
-                        <Text style={styles.commentName}>{c.userName}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        activeOpacity={1}
-                        onLongPress={() => deleteComment(chatRequest?.id ?? "", c)}
-                        delayLongPress={450}
-                      >
-                        <Text style={styles.commentText}>{c.text}</Text>
-                      </TouchableOpacity>
+                      <Text style={styles.commentName}>{item.userName}</Text>
+                      <Text style={styles.commentText}>{item.text}</Text>
                     </View>
                   </View>
                 )}
@@ -904,7 +742,7 @@ ${item.description}
                   value={chatText}
                   onChangeText={setChatText}
                 />
-                <TouchableOpacity onPress={sendChatMessage} style={styles.commentSend}>
+                <TouchableOpacity style={styles.commentSend} onPress={sendComment}>
                   <Ionicons name="send" size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -913,14 +751,18 @@ ${item.description}
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Location modal */}
-      <Modal visible={showLocationModal} transparent animationType="fade">
+      <Modal
+        visible={showLocationModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLocationModal(false)}
+      >
         <Pressable style={styles.modalOverlay} onPress={() => setShowLocationModal(false)}>
-          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Location</Text>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Choose location</Text>
             <TouchableOpacity style={styles.locOption} onPress={getUserLocation}>
-              <Ionicons name="navigate" size={20} color={GREEN} />
-              <Text style={styles.locOptionText}>Use my location</Text>
+              <Ionicons name="navigate" size={22} color={GREEN} />
+              <Text style={styles.locOptionText}>Use current location</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.locOption}
@@ -929,22 +771,26 @@ ${item.description}
                 setShowCityPicker(true);
               }}
             >
-              <Ionicons name="business" size={20} color={GREEN} />
-              <Text style={styles.locOptionText}>Choose city</Text>
+              <Ionicons name="list-outline" size={22} color={GREEN} />
+              <Text style={styles.locOptionText}>Select a city</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.locOption} onPress={viewAllInNigeria}>
-              <Ionicons name="globe" size={20} color={GREEN} />
-              <Text style={styles.locOptionText}>All Nigeria</Text>
+              <Ionicons name="globe-outline" size={22} color={GREEN} />
+              <Text style={styles.locOptionText}>View all in Nigeria</Text>
             </TouchableOpacity>
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
 
-      {/* City picker */}
-      <Modal visible={showCityPicker} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={closeCityPicker}>
-          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Select city</Text>
+      <Modal
+        visible={showCityPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={closeCityPicker}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { maxHeight: "80%" }]}>
+            <Text style={styles.modalTitle}>Select a city</Text>
             <TextInput
               style={styles.citySearch}
               placeholder="Search city…"
@@ -954,16 +800,19 @@ ${item.description}
             />
             <FlatList
               data={filteredCities}
-              keyExtractor={(c) => c}
-              style={{ maxHeight: 320 }}
-              renderItem={({ item: city }) => (
-                <TouchableOpacity style={styles.locOption} onPress={() => selectCity(city)}>
-                  <Text style={styles.locOptionText}>{city}</Text>
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.locOption} onPress={() => selectCity(item)}>
+                  <Ionicons name="location-outline" size={20} color={GREEN} />
+                  <Text style={styles.locOptionText}>{item}</Text>
                 </TouchableOpacity>
               )}
             />
-          </Pressable>
-        </Pressable>
+            <TouchableOpacity onPress={closeCityPicker} style={{ paddingVertical: 12 }}>
+              <Text style={{ textAlign: "center", color: "#888", fontWeight: "600" }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -982,17 +831,17 @@ const styles = StyleSheet.create({
   },
   headerTextWrap: { flex: 1, marginRight: 12 },
   headerTitle: { fontSize: 22, fontWeight: "800", color: "#111827" },
-  headerLocationRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
-  headerSubtitle: { fontSize: 13, color: "#6B7280", marginLeft: 4, maxWidth: 180 },
+  headerLocationRow: { flexDirection: "row", alignItems: "center", marginTop: 4, gap: 4 },
+  headerSubtitle: { fontSize: 13, color: "#6B7280", flexShrink: 1 },
   dropdownIcon: { marginLeft: 2 },
   createBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
     backgroundColor: GREEN,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 10,
+    gap: 4,
   },
   createBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   topControls: { backgroundColor: "#F9FAFB", paddingBottom: 4, zIndex: 2 },
@@ -1010,55 +859,35 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: "#111" },
-  filtersScroll: { maxHeight: 44, marginBottom: 6 },
-  filtersRow: { paddingHorizontal: 16, paddingVertical: 4, alignItems: "center", gap: 8 },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    marginRight: 8,
-  },
-  filterChipActive: { backgroundColor: GREEN, borderColor: GREEN },
-  filterChipText: { fontSize: 13, fontWeight: "600", color: "#6B7280" },
-  filterChipTextActive: { color: "#fff" },
-  listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100, flexGrow: 1 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 40 },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
   posterRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  posterAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#E5E7EB", marginRight: 10 },
-  posterInfo: { flex: 1, minWidth: 0 },
-  posterName: { fontSize: 14, fontWeight: "700", color: "#111827" },
-  locationRow: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2 },
-  locationText: { fontSize: 12, color: "#6B7280", flex: 1 },
-  timeAgo: { fontSize: 12, color: "#9CA3AF" },
-  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8 },
-  cardTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#111827" },
-  newBadge: { backgroundColor: "#DCFCE7", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  newBadgeText: { fontSize: 10, fontWeight: "800", color: GREEN },
-  metaRow: { flexDirection: "row", marginTop: 8, marginBottom: 6 },
-  categoryChip: { backgroundColor: "#F0FDF4", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  categoryChipText: { fontSize: 12, fontWeight: "600", color: GREEN },
-  description: { fontSize: 14, color: "#4B5563", lineHeight: 20, marginBottom: 10 },
-  engagementRow: { flexDirection: "row", gap: 16, marginBottom: 8 },
+  posterAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#E5E7EB" },
+  posterInfo: { flex: 1, marginLeft: 10 },
+  posterName: { fontSize: 14, fontWeight: "700", color: "#111" },
+  locationRow: { flexDirection: "row", alignItems: "center", marginTop: 2, gap: 3 },
+  locationText: { fontSize: 12, color: "#6B7280", flexShrink: 1 },
+  cardTitle: { fontSize: 16, fontWeight: "800", color: "#111827", marginBottom: 4 },
+  cardMeta: { fontSize: 12, color: "#6B7280", marginBottom: 6 },
+  cardDesc: { fontSize: 14, color: "#374151", lineHeight: 20, marginBottom: 8 },
+  engagementRow: { flexDirection: "row", gap: 16, marginTop: 8, marginBottom: 8 },
   engagementBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
   engagementText: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
-  commentPreview: { flexDirection: "row", gap: 8, marginTop: 4, marginBottom: 4 },
+  commentPreview: { flexDirection: "row", gap: 8, marginTop: 4 },
   commentAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#E5E7EB" },
   commentBody: { flex: 1 },
-  commentName: { fontSize: 13, fontWeight: "700", color: "#111827" },
-  commentText: { fontSize: 13, color: "#4B5563" },
-  writeCommentHint: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6 },
+  commentName: { fontSize: 12, fontWeight: "700", color: "#111" },
+  commentText: { fontSize: 13, color: "#374151", marginTop: 2 },
+  writeCommentHint: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
   writeCommentHintText: { fontSize: 13, color: GREEN, fontWeight: "600" },
-  viewMoreComments: { fontSize: 13, color: GREEN, fontWeight: "600", marginTop: 4 },
+  viewMoreComments: { fontSize: 12, color: "#6B7280", marginTop: 6, fontWeight: "600" },
   sendOfferBtn: {
     flexDirection: "row",
     alignItems: "center",
