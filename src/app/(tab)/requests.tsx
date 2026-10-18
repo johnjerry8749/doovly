@@ -356,6 +356,7 @@ export default function RequestsScreen() {
 
     try {
       const comment = await addServiceRequestComment({ requestId: chatRequest.id, text });
+      if (!comment) throw new Error("Comment could not be saved.");
       setAllRequests((current) =>
         current.map((request) =>
           request.id === chatRequest.id
