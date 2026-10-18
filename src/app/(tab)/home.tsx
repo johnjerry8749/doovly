@@ -313,6 +313,14 @@ export default function Home() {
 
   const promotedProfessionalIds = new Set(filteredPromotedServices.map((item) => item.professionalId));
   const displayedProfessionals = nearbyProfessionals.filter((person) => !promotedProfessionalIds.has(person.id));
+  // Home: single horizontal row, max 10 cards (promoted first)
+  const homeRowPromoted = filteredPromotedServices.slice(0, 10);
+  const homeRowProfessionals = displayedProfessionals.slice(
+    0,
+    Math.max(0, 10 - homeRowPromoted.length),
+  );
+  // Keep card width similar to previous 3-column look (~31% of content width)
+  const homeCardWidth = Math.floor((Dimensions.get("window").width - 32 - 16) / 3);
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -363,11 +371,15 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-        {displayedProfessionals.length === 0 && filteredPromotedServices.length === 0 ? (
+        {homeRowPromoted.length === 0 && homeRowProfessionals.length === 0 ? (
           <EmptyProfessionals onViewAllInNigeria={viewAllInNigeria} />
         ) : (
-          <View style={styles.professionalsGrid}>
-            {filteredPromotedServices.map((item) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.professionalsRow}
+          >
+            {homeRowPromoted.map((item) => (
               <PromotedServiceCard
                 key={item.promotionId}
                 professionalId={item.professionalId}
@@ -382,7 +394,7 @@ export default function Home() {
                 category={item.profession}
                 rating={item.rating}
                 reviewCount={item.reviewCount}
-                cardStyle={styles.professionalCard}
+                cardStyle={[styles.professionalCard, { width: homeCardWidth }]}
                 DescriptionComponent={MovingServiceDescription}
                 cardRef={(node) => {
                   if (node) promotedCardRefs.current[item.serviceId] = node;
@@ -391,10 +403,10 @@ export default function Home() {
                 onCardLayout={checkVisiblePromotedCards}
               />
             ))}
-            {displayedProfessionals.map((person) => (
+            {homeRowProfessionals.map((person) => (
               <TouchableOpacity
                 key={String(person.id) + "-" + String(favTick)}
-                style={styles.professionalCard}
+                style={[styles.professionalCard, { width: homeCardWidth }]}
                 activeOpacity={0.8}
                 onPress={() =>
                   router.push({
@@ -447,7 +459,7 @@ export default function Home() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         )}
 
         <View style={styles.verifiedContainer}>
@@ -581,11 +593,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 17, fontWeight: "800", color: "#111" },
   seeAll: { fontSize: 14, fontWeight: "600", color: "#159447" },
-  professionalsGrid: {
+  professionalsRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 8,
     paddingBottom: 25,
+    paddingRight: 8,
   },
   professionalCard: {
     width: "31%",
