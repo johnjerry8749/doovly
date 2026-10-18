@@ -725,9 +725,29 @@ export default function RequestsScreen() {
                 style={styles.commentList}
                 renderItem={({ item }) => (
                   <View style={styles.commentRow}>
-                    <Image source={item.userAvatar} style={styles.commentAvatar} />
+                    <TouchableOpacity
+                      activeOpacity={0.75}
+                      onPress={() =>
+                        openUserProfile({
+                          userId: getCommentUserId(item),
+                          userName: item.userName,
+                        })
+                      }
+                    >
+                      <Image source={item.userAvatar} style={styles.commentAvatar} />
+                    </TouchableOpacity>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.commentName}>{item.userName}</Text>
+                      <TouchableOpacity
+                        activeOpacity={0.75}
+                        onPress={() =>
+                          openUserProfile({
+                            userId: getCommentUserId(item),
+                            userName: item.userName,
+                          })
+                        }
+                      >
+                        <Text style={styles.commentName}>{item.userName}</Text>
+                      </TouchableOpacity>
                       <Text style={styles.commentText}>{item.text}</Text>
                     </View>
                   </View>
