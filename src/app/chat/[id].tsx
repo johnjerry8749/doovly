@@ -281,6 +281,10 @@ export default function ChatConversation() {
 
   useEffect(() => {
     let active = true;
+    setBookingStatus("Pending");
+    setBookingStatusLoaded(false);
+    setMessagingUnlocked(false);
+    setChatBlocked(false);
 
     let liveLoadInProgress = false;
     let refreshQueued = false;
