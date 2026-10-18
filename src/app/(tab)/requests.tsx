@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
+import { supabase } from "@/lib/supabase";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listServiceRequests,
@@ -87,10 +88,12 @@ const getRequestUserId = (request: ServiceRequest) => {
 
 const getCommentUserId = (comment: ServiceRequestComment) => {
   const c = comment as ServiceRequestComment & {
+    authUserId?: string | number;
     userId?: string | number;
     posterId?: string | number;
   };
-  return c.userId ?? c.posterId ?? null;
+  // Resolve the real auth UUID first; userId can be a public/mapped ID.
+  return c.authUserId ?? c.userId ?? c.posterId ?? null;
 };
 
 export default function RequestsScreen() {
@@ -273,21 +276,63 @@ export default function RequestsScreen() {
     setChatText("");
   };
 
-  const openUserProfile = ({
+  const openUserProfile = async ({
     userId,
     userName,
   }: {
     userId?: string | number | null;
     userName?: string;
   }) => {
+    const rawUserId = String(userId ?? "").trim();
+    if (!rawUserId) {
+      Alert.alert("Profile unavailable", "This user's profile could not be identified.");
+      return;
+    }
+
     const now = Date.now();
     if (now - lastProfileNavAt.current < PROFILE_NAV_COOLDOWN_MS) return;
     lastProfileNavAt.current = now;
-    if (userId) {
+
+    try {
+      // Comments store auth.users.id, while the profile route requires professionals.id.
+      // Resolve that relationship before navigating instead of passing the wrong UUID.
+      const { data: byUserId, error: userLookupError } = await supabase
+        .from("professionals")
+        .select("id")
+        .eq("user_id", rawUserId)
+        .maybeSingle();
+
+      if (userLookupError) throw userLookupError;
+
+      let professionalId = byUserId?.id as string | undefined;
+      if (!professionalId) {
+        const { data: byProfessionalId, error: professionalLookupError } = await supabase
+          .from("professionals")
+          .select("id")
+          .eq("id", rawUserId)
+          .maybeSingle();
+
+        if (professionalLookupError) throw professionalLookupError;
+        professionalId = byProfessionalId?.id;
+      }
+
+      if (!professionalId) {
+        Alert.alert(
+          "Profile unavailable",
+          userName
+            ? `${userName} does not have a professional profile yet.`
+            : "This user does not have a professional profile yet.",
+        );
+        return;
+      }
+
       router.push({
         pathname: "/professional/[id]",
-        params: { id: String(userId), name: userName || "" },
+        params: { id: String(professionalId) },
       });
+    } catch (error) {
+      console.warn("[Requests] Could not open commenter profile:", error);
+      Alert.alert("Could not open profile", "Please try again.");
     }
   };
 
