@@ -155,7 +155,9 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
       .maybeSingle(),
   ]);
 
-  const isSystem = profile?.email?.toLowerCase() === "system@doovly.app";
+  const normalizedEmail = String(profile?.email ?? "").trim().toLowerCase();
+  const normalizedRole = String(profile?.role ?? "").trim().toLowerCase();
+  const isSystem = normalizedEmail === "system@doovly.app" || normalizedRole === "system";
 
   return {
     id: profile?.id ?? pro?.id ?? userId,
