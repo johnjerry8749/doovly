@@ -8,7 +8,7 @@ type Props = {
 
 /**
  * Empty state when no professionals match filters/location.
- * Exact copy of original empty UI.
+ * Exact copy of original empty UI and styles from home.tsx.
  */
 export function EmptyProfessionals({ onViewAllInNigeria }: Props) {
   return (
@@ -34,11 +34,11 @@ export function EmptyProfessionals({ onViewAllInNigeria }: Props) {
 const styles = StyleSheet.create({
   emptyProsContainer: {
     alignItems: "center",
-    paddingVertical: 40,
+    paddingVertical: 30,
     paddingHorizontal: 20,
   },
   emptyProsTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: "#333",
     marginTop: 12,
@@ -46,16 +46,15 @@ const styles = StyleSheet.create({
   },
   emptyProsSubtitle: {
     fontSize: 13,
-    color: "#777",
+    color: "#888",
     marginTop: 6,
     textAlign: "center",
-    lineHeight: 18,
   },
   emptyProsButton: {
-    marginTop: 18,
+    marginTop: 14,
     backgroundColor: "#159447",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 10,
   },
   emptyProsButtonText: {
