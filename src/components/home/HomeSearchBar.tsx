@@ -1,23 +1,45 @@
 import React from "react";
-import { StyleSheet, TextInput, View } from "react-native";
+import {
+  StyleSheet,
+  TextInput,
+  View,
+  type StyleProp,
+  type ViewStyle,
+  type TextStyle,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
   value: string;
   onChangeText: (text: string) => void;
+  /** Defaults to "Search professionals..." */
+  placeholder?: string;
+  /** Optional override for the outer container (Services / Requests variants). */
+  containerStyle?: StyleProp<ViewStyle>;
+  /** Optional override for the TextInput. */
+  inputStyle?: StyleProp<TextStyle>;
+  /** Icon name — default search-outline (Home/Services), search (Requests). */
+  iconName?: React.ComponentProps<typeof Ionicons>["name"];
 };
 
 /**
- * Search input bar.
- * Exact same dimensions, colors, and padding as original.
+ * Shared search input used by Home, Services, and Requests.
+ * Default styles match Home; pass containerStyle/inputStyle for other screens.
  */
-export function HomeSearchBar({ value, onChangeText }: Props) {
+export function HomeSearchBar({
+  value,
+  onChangeText,
+  placeholder = "Search professionals...",
+  containerStyle,
+  inputStyle,
+  iconName = "search-outline",
+}: Props) {
   return (
-    <View style={styles.searchContainer}>
-      <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+    <View style={[styles.searchContainer, containerStyle]}>
+      <Ionicons name={iconName} size={18} color="#9CA3AF" />
       <TextInput
-        style={styles.searchInput}
-        placeholder="Search professionals..."
+        style={[styles.searchInput, inputStyle]}
+        placeholder={placeholder}
         placeholderTextColor="#9CA3AF"
         value={value}
         onChangeText={onChangeText}
