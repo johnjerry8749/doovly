@@ -212,6 +212,7 @@ export default function ChatConversation() {
   const [bookingStatus, setBookingStatus] =
     useState<BookingChatStatus>("Pending");
   const [bookingStatusLoaded, setBookingStatusLoaded] = useState(false);
+  const [messagingUnlocked, setMessagingUnlocked] = useState(false);
   const [decisionProcessing, setDecisionProcessing] = useState(false);
   const decisionInProgress = useRef(false);
   const listRef = useRef<FlatList>(null);
@@ -305,11 +306,12 @@ export default function ChatConversation() {
 
           // Fetch the two things needed to render the DM in parallel.
           // Do not make location/status/kind/credits block the first paint.
-          const [msgsResult, statusResult, kindResult, blockedResult] = await Promise.allSettled([
+          const [msgsResult, statusResult, kindResult, blockedResult, unlockedResult] = await Promise.allSettled([
             getMessagesAsync(conv.id),
             getBookingStatusAsync(conv.id),
             getConversationKindAsync(conv.id),
             isConversationBlockedAsync(conv.id),
+            canSendMessageAsync(conv.id),
           ]);
 
           if (active && msgsResult.status === "fulfilled") {
@@ -341,6 +343,10 @@ export default function ChatConversation() {
 
           if (active && blockedResult.status === "fulfilled") {
             setChatBlocked(blockedResult.value);
+          }
+
+          if (active && unlockedResult.status === "fulfilled") {
+            setMessagingUnlocked(unlockedResult.value);
           }
 
           // These are secondary and can finish after the conversation is visible.
@@ -996,7 +1002,7 @@ export default function ChatConversation() {
               <Ionicons name="ban-outline" size={14} color={TEXT_MUTED} />
               <Text style={styles.lockedText}>This chat is blocked. Messaging is disabled.</Text>
             </View>
-          ) : bookingStatus === "Accepted" ? (
+          ) : messagingUnlocked ? (
             <>
               {bookingStatus === "Accepted" && !p.isSystem && (
                 <>
