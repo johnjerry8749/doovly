@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   getConversationAsync,
@@ -360,11 +361,11 @@ export default function ChatConversation() {
               if (active) setSharing(value);
             }),
             markConversationReadAsync(conv.id),
-            isCurrentUserChatProAsync().then((value) => {
-              if (active) setChatPro(value);
-            }),
             getChatCreditsAsync().then((value) => {
-              if (active) setChatCoins(value);
+              if (active) {
+                setChatCoins(value);
+                setChatPro(value === null);
+              }
             }),
           ]);
         }
@@ -635,14 +636,33 @@ export default function ChatConversation() {
           onPress: async () => {
             setSending(true);
             try {
+              const permission = await Location.requestForegroundPermissionsAsync();
+              if (!permission.granted) {
+                Alert.alert(
+                  "Location permission needed",
+                  "Allow Doovly to access your location to share it in this chat.",
+                );
+                return;
+              }
+
+              const position = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+              });
               const msg = await shareLocation(conversationId, {
-                label: "Service location",
+                label: "Current location",
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
               });
               setSharing(true);
               setMessages((prev) => [...prev, msg]);
               setTimeout(
                 () => listRef.current?.scrollToEnd({ animated: true }),
                 50,
+              );
+            } catch (error: any) {
+              Alert.alert(
+                "Location sharing failed",
+                error?.message ?? "Could not get or share your current location. Please try again.",
               );
             } finally {
               setSending(false);
@@ -1040,7 +1060,7 @@ export default function ChatConversation() {
                     activeOpacity={0.7}
                     onPress={onPickImage}
                   >
-                    <Ionicons name="image-outline" size={22} color={chatPro ? TEXT_MUTED : "#D1D5DB"} />
+                    <Ionicons name="image-outline" size={22} color={TEXT_MUTED} />
                   </TouchableOpacity>
 
                   <TouchableOpacity
