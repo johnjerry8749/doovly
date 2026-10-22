@@ -241,7 +241,7 @@ export default function ChatConversation() {
         ? "Unlimited chat coins"
         : chatCoins == null
           ? "Balance is loading"
-          : `You have ${chatCoins} remaining on this chat`,
+          : `You have ${chatCoins} chat coins left`,
     );
     if (coinHintTimer.current) clearTimeout(coinHintTimer.current);
     coinHintTimer.current = setTimeout(() => setCoinHint(null), 1800);
