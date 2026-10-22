@@ -226,6 +226,26 @@ export default function ChatConversation() {
   const [chatCoins, setChatCoins] = useState<number | null>(null);
   const [chatPro, setChatPro] = useState(false);
   const [chatBlocked, setChatBlocked] = useState(false);
+  const [coinHint, setCoinHint] = useState<string | null>(null);
+  const coinHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (coinHintTimer.current) clearTimeout(coinHintTimer.current);
+    };
+  }, []);
+
+  const showCoinHint = () => {
+    setCoinHint(
+      chatPro
+        ? "Unlimited chat coins"
+        : chatCoins == null
+          ? "Balance is loading"
+          : `You have ${chatCoins} remaining on this chat`,
+    );
+    if (coinHintTimer.current) clearTimeout(coinHintTimer.current);
+    coinHintTimer.current = setTimeout(() => setCoinHint(null), 1800);
+  };
 
   // The header balance belongs to the signed-in account, never to the chat participant.
   // Verify the auth user before and after fetching so a late response cannot apply
@@ -1105,27 +1125,25 @@ export default function ChatConversation() {
                   >
                     <Ionicons name="image-outline" size={22} color={TEXT_MUTED} />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.coinBalance}
-                    activeOpacity={0.75}
-                    accessibilityRole="button"
-                    accessibilityLabel={chatPro ? "Show unlimited chat coins" : chatCoins == null ? "Loading your chat coins" : `Show remaining chat coins: ${chatCoins}`}
-                    onPress={() =>
-                      Alert.alert(
-                        chatPro ? "Unlimited chat coins" : "Chat coins remaining",
-                        chatPro
-                          ? "Your Doovly Pro subscription gives you unlimited chat coins."
-                          : chatCoins == null
-                            ? "Your chat coin balance is still loading. Please try again shortly."
-                            : `You have ${chatCoins} chat coins remaining on this chat.`,
-                      )
-                    }
-                  >
-                    <FontAwesome5 name="coins" size={16} color={PRIMARY} />
-                    <Text style={styles.coinBalanceText}>
-                      {chatPro ? "∞" : chatCoins ?? "…"}
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={styles.coinBalanceWrap}>
+                    {coinHint ? (
+                      <View style={styles.coinHintBubble} pointerEvents="none">
+                        <Text style={styles.coinHintText}>{coinHint}</Text>
+                      </View>
+                    ) : null}
+                    <TouchableOpacity
+                      style={styles.coinBalance}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityLabel={chatPro ? "Show unlimited chat coins" : chatCoins == null ? "Loading your chat coins" : `Show remaining chat coins: ${chatCoins}`}
+                      onPress={showCoinHint}
+                    >
+                      <FontAwesome5 name="coins" size={16} color={PRIMARY} />
+                      <Text style={styles.coinBalanceText}>
+                        {chatPro ? "∞" : chatCoins ?? "…"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </>
               )}
 
@@ -1498,6 +1516,29 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
+  },
+  coinBalanceWrap: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  coinHintBubble: {
+    position: "absolute",
+    bottom: 42,
+    zIndex: 20,
+    minWidth: 140,
+    maxWidth: 210,
+    alignSelf: "center",
+    backgroundColor: "#111827",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  coinHintText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "600",
+    textAlign: "center",
   },
   coinBalance: {
     minWidth: 42,
