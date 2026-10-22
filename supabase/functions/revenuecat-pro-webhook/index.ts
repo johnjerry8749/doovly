@@ -44,7 +44,7 @@ async function sendProNotification(userId: string, title: string, body: string, 
 
 async function sendDoovlyMessage(userId: string, body: string) {
   const { data: system, error: systemError } = await admin.from("profiles")
-    .select("id").eq("email", "system@doovly.app").maybeSingle();
+    .select("id").eq("email", "system@doovly.com").maybeSingle();
   if (systemError) throw systemError;
   if (!system?.id) throw new Error("Doovly system profile is missing");
 
