@@ -212,7 +212,7 @@ export default function ChatConversation() {
   const [sending, setSending] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [bookingStatus, setBookingStatus] =
-    useState<BookingChatStatus>("Pending");
+  useState<BookingChatStatus>("Pending");
   const [bookingStatusLoaded, setBookingStatusLoaded] = useState(false);
   const [messagingUnlocked, setMessagingUnlocked] = useState(false);
   const [decisionProcessing, setDecisionProcessing] = useState(false);
