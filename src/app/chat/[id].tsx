@@ -834,9 +834,6 @@ export default function ChatConversation() {
           <Text style={styles.headerStatus}>
             {p.isSystem ? "Official Doovly" : conversation.participant.profession || "Professional"}
           </Text>
-          {!p.isSystem && <Text style={[styles.headerStatus, { paddingBottom: 2 }]}>
-            🪙 {chatPro ? "Unlimited" : `${chatCoins ?? 0} coins`}
-          </Text>}
         </View>
 
         {!p.isSystem && <TouchableOpacity
@@ -1106,18 +1103,16 @@ export default function ChatConversation() {
                   >
                     <Ionicons name="image-outline" size={22} color={TEXT_MUTED} />
                   </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.attachBtn}
-                    activeOpacity={0.7}
-                    onPress={sharing ? onStopSharing : onShareLocation}
+                  <View
+                    style={styles.coinBalance}
+                    accessibilityRole="text"
+                    accessibilityLabel={chatPro ? "Your chat coins: Unlimited" : `Your chat coins: ${chatCoins ?? 0} remaining`}
                   >
-                    <Ionicons
-                      name={sharing ? "location" : "location-outline"}
-                      size={22}
-                      color={sharing ? "#DC2626" : TEXT_MUTED}
-                    />
-                  </TouchableOpacity>
+                    <Ionicons name="logo-bitcoin" size={17} color={PRIMARY} />
+                    <Text style={styles.coinBalanceText}>
+                      {chatPro ? "∞" : chatCoins ?? 0}
+                    </Text>
+                  </View>
                 </>
               )}
 
@@ -1490,6 +1485,22 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
+  },
+  coinBalance: {
+    minWidth: 42,
+    height: 36,
+    paddingHorizontal: 8,
+    borderRadius: 18,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 3,
+  },
+  coinBalanceText: {
+    color: PRIMARY,
+    fontSize: 13,
+    fontWeight: "700",
   },
   input: {
     flex: 1,
