@@ -1,7 +1,10 @@
 import { supabase } from "@/lib/supabase";
 import { loadSessionUser } from "@/lib/session";
 import { uploadImage } from "@/services/cloudinary";
-import { recordAcceptedOfferBooking, updateBookingStatus } from "@/services/bookings";
+import {
+  recordAcceptedOfferBooking,
+  updateBookingStatus,
+} from "@/services/bookings";
 import type { Booking } from "@/services/bookings";
 import type { ImageSourcePropType } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -36,7 +39,13 @@ export type ChatMessage = {
   createdAt: string;
   isMine: boolean;
   location?: { label: string; latitude?: number; longitude?: number };
-  kind?: "text" | "image" | "location" | "location_stopped" | "request_card" | "system";
+  kind?:
+    | "text"
+    | "image"
+    | "location"
+    | "location_stopped"
+    | "request_card"
+    | "system";
   imageUrl?: string;
   card?: RequestCardData;
 };
@@ -84,19 +93,25 @@ async function writeCache<T>(key: string, value: T): Promise<void> {
   }
 }
 
-export async function getCachedConversationsAsync(): Promise<Conversation[] | null> {
+export async function getCachedConversationsAsync(): Promise<
+  Conversation[] | null
+> {
   const session = await loadSessionUser();
   if (!session) return null;
   return readCache<Conversation[]>(conversationCacheKey(session.uuid));
 }
 
-export async function cacheConversationsAsync(conversations: Conversation[]): Promise<void> {
+export async function cacheConversationsAsync(
+  conversations: Conversation[],
+): Promise<void> {
   const session = await loadSessionUser();
   if (!session) return;
   await writeCache(conversationCacheKey(session.uuid), conversations);
 }
 
-export async function getCachedMessagesAsync(conversationId: string): Promise<ChatMessage[] | null> {
+export async function getCachedMessagesAsync(
+  conversationId: string,
+): Promise<ChatMessage[] | null> {
   const conversationUuid = conversationId;
   return readCache<ChatMessage[]>(messagesCacheKey(conversationUuid));
 }
@@ -151,14 +166,22 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
       .maybeSingle(),
     supabase
       .from("professionals")
-      .select("id,is_verified,avatar_url,profession,profiles!professionals_user_id_fkey(full_name,avatar_url)")
+      .select(
+        "id,is_verified,avatar_url,profession,profiles!professionals_user_id_fkey(full_name,avatar_url)",
+      )
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
 
-  const normalizedEmail = String(profile?.email ?? "").trim().toLowerCase();
-  const normalizedRole = String(profile?.role ?? "").trim().toLowerCase();
-  const normalizedName = String(profile?.full_name ?? pro?.profiles?.full_name ?? "")
+  const normalizedEmail = String(profile?.email ?? "")
+    .trim()
+    .toLowerCase();
+  const normalizedRole = String(profile?.role ?? "")
+    .trim()
+    .toLowerCase();
+  const normalizedName = String(
+    profile?.full_name ?? pro?.profiles?.full_name ?? "",
+  )
     .trim()
     .toLowerCase();
   const isSystem =
@@ -169,17 +192,20 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
   return {
     id: profile?.id ?? pro?.id ?? userId,
     // The system identity must never be treated as a bookable professional.
-    professionalId: isSystem ? null : pro?.id ?? null,
-    name: isSystem ? "Doovly" : profile?.full_name ?? pro?.profiles?.full_name ?? "User",
+    professionalId: isSystem ? null : (pro?.id ?? null),
+    name: isSystem
+      ? "Doovly"
+      : (profile?.full_name ?? pro?.profiles?.full_name ?? "User"),
     image: isSystem
       ? require("@/assets/images/icon.png")
       : imageFromUrl(
           [profile?.avatar_url, pro?.profiles?.avatar_url, pro?.avatar_url]
-            .find((url) => typeof url === "string" && url.trim().length > 0)?.trim() ?? null,
+            .find((url) => typeof url === "string" && url.trim().length > 0)
+            ?.trim() ?? null,
         ),
     verified: isSystem ? false : Boolean(pro?.is_verified),
-    profession: isSystem ? "Official Doovly" : pro?.profession ?? null,
-    phone: isSystem ? null : profile?.phone ?? null,
+    profession: isSystem ? "Official Doovly" : (pro?.profession ?? null),
+    phone: isSystem ? null : (profile?.phone ?? null),
     isSystem,
   };
 }
@@ -198,7 +224,10 @@ export async function getTotalUnreadCountAsync(): Promise<number> {
     .select("unread_count")
     .eq("user_id", session.uuid);
 
-  return (data ?? []).reduce((sum, row) => sum + Number(row.unread_count ?? 0), 0);
+  return (data ?? []).reduce(
+    (sum, row) => sum + Number(row.unread_count ?? 0),
+    0,
+  );
 }
 
 export function getTotalUnreadCount(): number {
@@ -217,7 +246,9 @@ export async function listConversationsAsync(): Promise<Conversation[]> {
 
   const { data, error } = await supabase
     .from("conversations")
-     .select("id,participant_a,participant_b,last_message,last_message_at,booking_id,service_request_id,offer_id,blocked_by,blocked_at")
+    .select(
+      "id,participant_a,participant_b,last_message,last_message_at,booking_id,service_request_id,offer_id,blocked_by,blocked_at",
+    )
     .or(`participant_a.eq.${session.uuid},participant_b.eq.${session.uuid}`)
     .order("last_message_at", { ascending: false });
 
@@ -226,7 +257,10 @@ export async function listConversationsAsync(): Promise<Conversation[]> {
   const rows = data ?? [];
   const result: Conversation[] = [];
   for (const row of rows) {
-    const otherId = row.participant_a === session.uuid ? row.participant_b : row.participant_a;
+    const otherId =
+      row.participant_a === session.uuid
+        ? row.participant_b
+        : row.participant_a;
     const participant = await getParticipant(otherId);
     const { data: read } = await supabase
       .from("conversation_reads")
@@ -243,7 +277,12 @@ export async function listConversationsAsync(): Promise<Conversation[]> {
         .eq("id", row.booking_id)
         .maybeSingle();
       const status = String(booking?.status ?? "").toLowerCase();
-      bookingStatus = status === "pending" ? "Pending" : status === "declined" || status === "cancelled" ? "Declined" : "Accepted";
+      bookingStatus =
+        status === "pending"
+          ? "Pending"
+          : status === "declined" || status === "cancelled"
+            ? "Declined"
+            : "Accepted";
     } else if (row.service_request_id && row.offer_id) {
       const { data: offer } = await supabase
         .from("service_request_offers")
@@ -251,7 +290,12 @@ export async function listConversationsAsync(): Promise<Conversation[]> {
         .eq("id", row.offer_id)
         .maybeSingle();
       const status = String(offer?.status ?? "").toLowerCase();
-      bookingStatus = status === "pending" ? "Pending" : status === "declined" ? "Declined" : "Accepted";
+      bookingStatus =
+        status === "pending"
+          ? "Pending"
+          : status === "declined"
+            ? "Declined"
+            : "Accepted";
     }
 
     const conversation: Conversation = {
@@ -274,7 +318,9 @@ export function listConversations(): Conversation[] {
   return [];
 }
 
-export async function getConversationAsync(conversationId: string): Promise<Conversation | undefined> {
+export async function getConversationAsync(
+  conversationId: string,
+): Promise<Conversation | undefined> {
   const session = await loadSessionUser();
   if (!session || !conversationId) return undefined;
 
@@ -282,7 +328,9 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
 
   const { data: row, error } = await supabase
     .from("conversations")
-    .select("id,participant_a,participant_b,last_message,last_message_at,blocked_by,blocked_at")
+    .select(
+      "id,participant_a,participant_b,last_message,last_message_at,blocked_by,blocked_at",
+    )
     .eq("id", conversationUuid)
     .or(`participant_a.eq.${session.uuid},participant_b.eq.${session.uuid}`)
     .maybeSingle();
@@ -329,11 +377,18 @@ export async function getConversationAsync(conversationId: string): Promise<Conv
   };
 }
 
-export function getConversation(_conversationId: string): Conversation | undefined {
+export function getConversation(
+  _conversationId: string,
+): Conversation | undefined {
   return conversationMemoryCache.get(_conversationId);
 }
 
-async function touchConversation(conversationId: string, senderId: string, preview: string, createdAt: string) {
+async function touchConversation(
+  conversationId: string,
+  senderId: string,
+  preview: string,
+  createdAt: string,
+) {
   const { data: conversation, error: conversationError } = await supabase
     .from("conversations")
     .select("participant_a,participant_b")
@@ -357,9 +412,12 @@ async function touchConversation(conversationId: string, senderId: string, previ
       ? conversation.participant_b
       : conversation.participant_a;
 
-  const { error: readError } = await supabase.rpc("increment_conversation_unread", {
-    p_conversation_id: conversationId,
-  });
+  const { error: readError } = await supabase.rpc(
+    "increment_conversation_unread",
+    {
+      p_conversation_id: conversationId,
+    },
+  );
   if (readError) throw readError;
 }
 
@@ -403,14 +461,19 @@ function mapMessage(row: any, currentUserId: string): ChatMessage {
     kind,
     card,
     imageUrl: row.image_url ?? undefined,
-    location:
-      row.location_label
-        ? { label: row.location_label, latitude: row.latitude ?? undefined, longitude: row.longitude ?? undefined }
-        : undefined,
+    location: row.location_label
+      ? {
+          label: row.location_label,
+          latitude: row.latitude ?? undefined,
+          longitude: row.longitude ?? undefined,
+        }
+      : undefined,
   };
 }
 
-export async function getMessagesAsync(conversationId: string): Promise<ChatMessage[]> {
+export async function getMessagesAsync(
+  conversationId: string,
+): Promise<ChatMessage[]> {
   const session = await loadSessionUser();
   if (!session) return [];
 
@@ -418,7 +481,9 @@ export async function getMessagesAsync(conversationId: string): Promise<ChatMess
 
   const { data, error } = await supabase
     .from("messages")
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
+    .select(
+      "id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at",
+    )
     .eq("conversation_id", conversationUuid)
     .order("created_at", { ascending: true });
 
@@ -474,7 +539,10 @@ export async function getChatCreditsAsync(): Promise<number | null> {
   return Number(data?.remaining ?? 15);
 }
 
-export async function sendImageMessage(conversationId: string, localUri: string): Promise<ChatMessage> {
+export async function sendImageMessage(
+  conversationId: string,
+  localUri: string,
+): Promise<ChatMessage> {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
   if (!localUri) throw new Error("No image selected");
@@ -482,7 +550,9 @@ export async function sendImageMessage(conversationId: string, localUri: string)
     throw new Error("CHAT_BLOCKED");
   }
   if ((await getBookingStatusAsync(conversationId)) !== "Accepted") {
-    throw new Error("Image messaging is available after the request is accepted");
+    throw new Error(
+      "Image messaging is available after the request is accepted",
+    );
   }
   if (!(await isCurrentUserChatProAsync())) {
     throw new Error("IMAGE_CHAT_PRO_REQUIRED");
@@ -498,16 +568,26 @@ export async function sendImageMessage(conversationId: string, localUri: string)
       kind: "image",
       image_url: imageUrl,
     })
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
+    .select(
+      "id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at",
+    )
     .single();
 
   if (error) throw error;
-  await touchConversation(conversationId, session.uuid, "📷 Image", data.created_at);
+  await touchConversation(
+    conversationId,
+    session.uuid,
+    "📷 Image",
+    data.created_at,
+  );
   await notifyUnread();
   return mapMessage(data, session.uuid);
 }
 
-export async function sendMessage(conversationId: string, text: string): Promise<ChatMessage> {
+export async function sendMessage(
+  conversationId: string,
+  text: string,
+): Promise<ChatMessage> {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
   if (!text.trim()) throw new Error("Message cannot be empty");
@@ -529,7 +609,9 @@ export async function sendMessage(conversationId: string, text: string): Promise
       text: text.trim(),
       kind: "text",
     })
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
+    .select(
+      "id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at",
+    )
     .single();
 
   if (error) throw error;
@@ -543,7 +625,9 @@ export async function sendMessage(conversationId: string, text: string): Promise
   return mapMessage(data, session.uuid);
 }
 
-export async function markConversationReadAsync(conversationId: string): Promise<void> {
+export async function markConversationReadAsync(
+  conversationId: string,
+): Promise<void> {
   const session = await loadSessionUser(true);
   if (!session) return;
 
@@ -552,7 +636,12 @@ export async function markConversationReadAsync(conversationId: string): Promise
   const { error } = await supabase
     .from("conversation_reads")
     .upsert(
-      { conversation_id: conversationUuid, user_id: session.uuid, unread_count: 0, last_read_at: new Date().toISOString() },
+      {
+        conversation_id: conversationUuid,
+        user_id: session.uuid,
+        unread_count: 0,
+        last_read_at: new Date().toISOString(),
+      },
       { onConflict: "conversation_id,user_id" },
     );
 
@@ -564,7 +653,9 @@ export function markConversationRead(_conversationId: string) {
   // Legacy synchronous API retained; callers should use markConversationReadAsync.
 }
 
-async function latestLocation(conversationId: string): Promise<ChatMessage | null> {
+async function latestLocation(
+  conversationId: string,
+): Promise<ChatMessage | null> {
   const messages = await getMessagesAsync(conversationId);
   let active: ChatMessage | null = null;
   for (const message of messages) {
@@ -574,7 +665,9 @@ async function latestLocation(conversationId: string): Promise<ChatMessage | nul
   return active;
 }
 
-export async function isSharingLocationAsync(conversationId: string): Promise<boolean> {
+export async function isSharingLocationAsync(
+  conversationId: string,
+): Promise<boolean> {
   return Boolean(await latestLocation(conversationId));
 }
 
@@ -590,7 +683,10 @@ export function getActiveSharedLocation(_conversationId: string) {
   return null;
 }
 
-export async function shareLocation(conversationId: string, location: { label: string; latitude?: number; longitude?: number }): Promise<ChatMessage> {
+export async function shareLocation(
+  conversationId: string,
+  location: { label: string; latitude?: number; longitude?: number },
+): Promise<ChatMessage> {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
 
@@ -605,16 +701,25 @@ export async function shareLocation(conversationId: string, location: { label: s
       latitude: location.latitude ?? null,
       longitude: location.longitude ?? null,
     })
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
+    .select(
+      "id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at",
+    )
     .single();
 
   if (error) throw error;
-  await touchConversation(conversationId, session.uuid, data.text, data.created_at);
+  await touchConversation(
+    conversationId,
+    session.uuid,
+    data.text,
+    data.created_at,
+  );
   await notifyUnread();
   return mapMessage(data, session.uuid);
 }
 
-export async function stopSharingLocation(conversationId: string): Promise<ChatMessage | null> {
+export async function stopSharingLocation(
+  conversationId: string,
+): Promise<ChatMessage | null> {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
 
@@ -628,16 +733,26 @@ export async function stopSharingLocation(conversationId: string): Promise<ChatM
       text: "Location sharing stopped",
       kind: "location_stopped",
     })
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
+    .select(
+      "id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at",
+    )
     .single();
 
   if (error) throw error;
-  await touchConversation(conversationId, session.uuid, data.text, data.created_at);
+  await touchConversation(
+    conversationId,
+    session.uuid,
+    data.text,
+    data.created_at,
+  );
   await notifyUnread();
   return mapMessage(data, session.uuid);
 }
 
-export function canOpenSharedLocation(_conversationId: string, message: ChatMessage): boolean {
+export function canOpenSharedLocation(
+  _conversationId: string,
+  message: ChatMessage,
+): boolean {
   return message.kind === "location" && Boolean(message.location);
 }
 
@@ -646,27 +761,47 @@ async function conversationRowFor(id: string) {
 
   const { data, error } = await supabase
     .from("conversations")
-    .select("id,booking_id,service_request_id,offer_id,text_allowed,text_allowed_by,text_allowed_at,blocked_by,blocked_at")
+    .select(
+      "id,booking_id,service_request_id,offer_id,text_allowed,text_allowed_by,text_allowed_at,blocked_by,blocked_at",
+    )
     .eq("id", conversationUuid)
     .maybeSingle();
   if (error) throw error;
   return data;
 }
 
-export async function getBookingStatusAsync(conversationId: string): Promise<BookingChatStatus> {
+export async function getBookingStatusAsync(
+  conversationId: string,
+): Promise<BookingChatStatus> {
   const row = await conversationRowFor(conversationId);
   if (!row) return "Accepted";
 
   if (row.booking_id) {
-    const { data } = await supabase.from("bookings").select("status").eq("id", row.booking_id).maybeSingle();
+    const { data } = await supabase
+      .from("bookings")
+      .select("status")
+      .eq("id", row.booking_id)
+      .maybeSingle();
     const status = String(data?.status ?? "").toLowerCase();
-    return status === "pending" ? "Pending" : status === "declined" || status === "cancelled" ? "Declined" : "Accepted";
+    return status === "pending"
+      ? "Pending"
+      : status === "declined" || status === "cancelled"
+        ? "Declined"
+        : "Accepted";
   }
 
   if (row.service_request_id && row.offer_id) {
-    const { data } = await supabase.from("service_request_offers").select("status").eq("id", row.offer_id).maybeSingle();
+    const { data } = await supabase
+      .from("service_request_offers")
+      .select("status")
+      .eq("id", row.offer_id)
+      .maybeSingle();
     const status = String(data?.status ?? "").toLowerCase();
-    return status === "pending" ? "Pending" : status === "declined" ? "Declined" : "Accepted";
+    return status === "pending"
+      ? "Pending"
+      : status === "declined"
+        ? "Declined"
+        : "Accepted";
   }
 
   return "Accepted";
@@ -676,31 +811,45 @@ export function getBookingStatus(_conversationId: string): BookingChatStatus {
   return "Accepted";
 }
 
-export async function isTextAllowedAsync(conversationId: string): Promise<boolean> {
+export async function isTextAllowedAsync(
+  conversationId: string,
+): Promise<boolean> {
   const row = await conversationRowFor(conversationId);
   return Boolean(row?.text_allowed);
 }
 
-export async function isConversationBlockedAsync(conversationId: string): Promise<boolean> {
+export async function isConversationBlockedAsync(
+  conversationId: string,
+): Promise<boolean> {
   const row = await conversationRowFor(conversationId);
   return Boolean(row?.blocked_by);
 }
 
-export async function blockConversationAsync(conversationId: string): Promise<void> {
+export async function blockConversationAsync(
+  conversationId: string,
+): Promise<void> {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
-  const { error } = await supabase.from("conversations").update({
-    blocked_by: session.uuid,
-    blocked_at: new Date().toISOString(),
-  }).eq("id", conversationId).or(`participant_a.eq.${session.uuid},participant_b.eq.${session.uuid}`);
+  const { error } = await supabase
+    .from("conversations")
+    .update({
+      blocked_by: session.uuid,
+      blocked_at: new Date().toISOString(),
+    })
+    .eq("id", conversationId)
+    .or(`participant_a.eq.${session.uuid},participant_b.eq.${session.uuid}`);
   if (error) throw error;
   conversationMemoryCache.delete(conversationId);
 }
 
-export async function deleteConversationAsync(conversationId: string): Promise<void> {
+export async function deleteConversationAsync(
+  conversationId: string,
+): Promise<void> {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
-  const { error } = await supabase.rpc("delete_my_conversation", { p_conversation_id: conversationId });
+  const { error } = await supabase.rpc("delete_my_conversation", {
+    p_conversation_id: conversationId,
+  });
   if (error) throw error;
   conversationMemoryCache.delete(conversationId);
   await AsyncStorage.removeItem(messagesCacheKey(conversationId));
@@ -718,7 +867,9 @@ export async function allowTextAsync(conversationId: string): Promise<boolean> {
   return Boolean(data);
 }
 
-export async function canSendMessageAsync(conversationId: string): Promise<boolean> {
+export async function canSendMessageAsync(
+  conversationId: string,
+): Promise<boolean> {
   const status = await getBookingStatusAsync(conversationId);
   if (status === "Accepted") return true;
   if (status === "Declined") return false;
@@ -740,54 +891,95 @@ export function canSendMessage(_conversationId: string): boolean {
   return true;
 }
 
-export async function isProfessionalInConversationAsync(conversationId: string, currentUserId: string): Promise<boolean> {
+export async function isProfessionalInConversationAsync(
+  conversationId: string,
+  currentUserId: string,
+): Promise<boolean> {
   const session = await loadSessionUser();
   if (!session) return false;
   const row = await conversationRowFor(conversationId);
   if (!row) return false;
   if (row.booking_id) {
-    const { data } = await supabase.from("bookings").select("professional_id").eq("id", row.booking_id).maybeSingle();
-    const professional = data?.professional_id ? await supabase.from("professionals").select("user_id").eq("id", data.professional_id).maybeSingle() : null;
-    return professional?.data?.user_id === session.uuid && session.uuid === currentUserId;
+    const { data } = await supabase
+      .from("bookings")
+      .select("professional_id")
+      .eq("id", row.booking_id)
+      .maybeSingle();
+    const professional = data?.professional_id
+      ? await supabase
+          .from("professionals")
+          .select("user_id")
+          .eq("id", data.professional_id)
+          .maybeSingle()
+      : null;
+    return (
+      professional?.data?.user_id === session.uuid &&
+      session.uuid === currentUserId
+    );
   }
   return false;
 }
 
-export function isProfessionalInConversation(_conversationId: string, _currentUserId: string): boolean {
+export function isProfessionalInConversation(
+  _conversationId: string,
+  _currentUserId: string,
+): boolean {
   return false;
 }
 
-export async function isAcceptorInConversationAsync(conversationId: string, currentUserId: string): Promise<boolean> {
+export async function isAcceptorInConversationAsync(
+  conversationId: string,
+  currentUserId: string,
+): Promise<boolean> {
   const row = await conversationRowFor(conversationId);
   if (!row) return false;
 
   if (row.booking_id) {
-    const { data: booking } = await supabase.from("bookings").select("professional_id").eq("id", row.booking_id).maybeSingle();
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("professional_id")
+      .eq("id", row.booking_id)
+      .maybeSingle();
     if (!booking?.professional_id) return false;
-    const { data: pro } = await supabase.from("professionals").select("user_id").eq("id", booking.professional_id).maybeSingle();
+    const { data: pro } = await supabase
+      .from("professionals")
+      .select("user_id")
+      .eq("id", booking.professional_id)
+      .maybeSingle();
     return pro?.user_id === currentUserId;
   }
 
   if (row.service_request_id) {
-    const { data: request } = await supabase.from("service_requests").select("created_by").eq("id", row.service_request_id).maybeSingle();
+    const { data: request } = await supabase
+      .from("service_requests")
+      .select("created_by")
+      .eq("id", row.service_request_id)
+      .maybeSingle();
     return request?.created_by === currentUserId;
   }
 
   return false;
 }
 
-export function isAcceptorInConversation(_conversationId: string, _currentUserId: string): boolean {
+export function isAcceptorInConversation(
+  _conversationId: string,
+  _currentUserId: string,
+): boolean {
   return false;
 }
 
-export async function getConversationKindAsync(conversationId: string): Promise<"booking" | "offer" | undefined> {
+export async function getConversationKindAsync(
+  conversationId: string,
+): Promise<"booking" | "offer" | undefined> {
   const row = await conversationRowFor(conversationId);
   if (row?.booking_id) return "booking";
   if (row?.service_request_id) return "offer";
   return undefined;
 }
 
-export function getConversationKind(_conversationId: string): "booking" | "offer" | undefined {
+export function getConversationKind(
+  _conversationId: string,
+): "booking" | "offer" | undefined {
   return undefined;
 }
 
@@ -811,15 +1003,15 @@ async function createConversation(
 
   const bookingUuid = options.bookingId ?? null;
   const requestUuid = options.serviceRequestId ?? null;
-  const offerUuid = options.offerId
-    ? options.offerId
-    : null;
+  const offerUuid = options.offerId ? options.offerId : null;
 
   // One social-style thread per pair. A booking or offer never creates a second DM.
   const { data: pairConversation, error: pairError } = await supabase
     .from("conversations")
     .select("id")
-    .or(`and(participant_a.eq.${session.uuid},participant_b.eq.${participantUuid}),and(participant_a.eq.${participantUuid},participant_b.eq.${session.uuid})`)
+    .or(
+      `and(participant_a.eq.${session.uuid},participant_b.eq.${participantUuid}),and(participant_a.eq.${participantUuid},participant_b.eq.${session.uuid})`,
+    )
     .order("last_message_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -919,13 +1111,10 @@ export async function openBookingChatAsync(
     if (conv) return conv;
   }
 
-  const conversation = await createConversation(
-    otherUuid,
-    {
-      bookingId: bookingUuid,
-      lastMessage: `Booking: ${booking.title}`,
-    },
-  );
+  const conversation = await createConversation(otherUuid, {
+    bookingId: bookingUuid,
+    lastMessage: `Booking: ${booking.title}`,
+  });
 
   return conversation;
 }
@@ -943,14 +1132,17 @@ export async function createBookingConversationAsync(input: {
   category?: string;
   description?: string;
 }): Promise<Conversation> {
-  if (!input.bookingId) throw new Error("A real booking is required to start chat");
+  if (!input.bookingId)
+    throw new Error("A real booking is required to start chat");
   return createConversation(input.professionalId, {
     bookingId: input.bookingId,
     lastMessage: `Booking request: ${input.bookingTitle}`,
   });
 }
 
-export function createBookingConversation(input: Parameters<typeof createBookingConversationAsync>[0]): Conversation {
+export function createBookingConversation(
+  input: Parameters<typeof createBookingConversationAsync>[0],
+): Conversation {
   throw new Error("Use createBookingConversationAsync for real chat");
 }
 
@@ -999,11 +1191,16 @@ export async function createOfferConversationAsync(input: {
   });
 }
 
-export function createOfferConversation(_input: Parameters<typeof createOfferConversationAsync>[0]): Conversation {
+export function createOfferConversation(
+  _input: Parameters<typeof createOfferConversationAsync>[0],
+): Conversation {
   throw new Error("Use createOfferConversationAsync for real chat");
 }
 
-export async function acceptBooking(conversationId: string, acceptorDisplayName: string): Promise<ChatMessage> {
+export async function acceptBooking(
+  conversationId: string,
+  acceptorDisplayName: string,
+): Promise<ChatMessage> {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
   const row = await conversationRowFor(conversationId);
@@ -1053,21 +1250,20 @@ export async function acceptBooking(conversationId: string, acceptorDisplayName:
           minute: "2-digit",
         });
 
-        const { error: bookingError } = await supabase
-          .from("bookings")
-          .insert({
-            customer_id: request.created_by,
-            professional_id: offer.professional_id,
-            title: request.title,
-            professional_name: professional?.profiles?.full_name ?? "Professional",
-            customer_name: customer?.full_name ?? "Customer",
-            status: "accepted",
-            amount: offer.amount,
-            location: request.location ?? request.city ?? "Nigeria",
-            display_date: displayDate,
-            rating: 5,
-            reviews_count: 0,
-          });
+        const { error: bookingError } = await supabase.from("bookings").insert({
+          customer_id: request.created_by,
+          professional_id: offer.professional_id,
+          title: request.title,
+          professional_name:
+            professional?.profiles?.full_name ?? "Professional",
+          customer_name: customer?.full_name ?? "Customer",
+          status: "accepted",
+          amount: offer.amount,
+          location: request.location ?? request.city ?? "Nigeria",
+          display_date: displayDate,
+          rating: 5,
+          reviews_count: 0,
+        });
 
         if (bookingError) throw bookingError;
       }
@@ -1082,15 +1278,25 @@ export async function acceptBooking(conversationId: string, acceptorDisplayName:
       text: `${acceptorDisplayName} accepted the request`,
       kind: "system",
     })
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
+    .select(
+      "id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at",
+    )
     .single();
   if (error) throw error;
-  await touchConversation(conversationId, session.uuid, data.text, data.created_at);
+  await touchConversation(
+    conversationId,
+    session.uuid,
+    data.text,
+    data.created_at,
+  );
   await notifyUnread();
   return mapMessage(data, session.uuid);
 }
 
-export async function declineBooking(conversationId: string, acceptorDisplayName: string): Promise<ChatMessage> {
+export async function declineBooking(
+  conversationId: string,
+  acceptorDisplayName: string,
+): Promise<ChatMessage> {
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
   const row = await conversationRowFor(conversationId);
@@ -1099,7 +1305,11 @@ export async function declineBooking(conversationId: string, acceptorDisplayName
   if (row.booking_id) {
     await updateBookingStatus(row.booking_id, "Declined");
   } else if (row.service_request_id && row.offer_id) {
-    const { error } = await supabase.from("service_request_offers").update({ status: "declined" }).eq("id", row.offer_id).eq("status", "pending");
+    const { error } = await supabase
+      .from("service_request_offers")
+      .update({ status: "declined" })
+      .eq("id", row.offer_id)
+      .eq("status", "pending");
     if (error) throw error;
   }
 
@@ -1111,15 +1321,24 @@ export async function declineBooking(conversationId: string, acceptorDisplayName
       text: `${acceptorDisplayName} declined the request`,
       kind: "system",
     })
-    .select("id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at")
+    .select(
+      "id,conversation_id,sender_id,text,kind,location_label,latitude,longitude,card,image_url,created_at",
+    )
     .single();
   if (error) throw error;
-  await touchConversation(conversationId, session.uuid, data.text, data.created_at);
+  await touchConversation(
+    conversationId,
+    session.uuid,
+    data.text,
+    data.created_at,
+  );
   await notifyUnread();
   return mapMessage(data, session.uuid);
 }
 
-export async function ensureChatRealtime(onChange?: () => void): Promise<() => void> {
+export async function ensureChatRealtime(
+  onChange?: () => void,
+): Promise<() => void> {
   const session = await loadSessionUser();
   if (!session) return () => {};
 
@@ -1131,18 +1350,30 @@ export async function ensureChatRealtime(onChange?: () => void): Promise<() => v
 
     realtimeChannel = supabase
       .channel(`doovly-chat-${session.uuid}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => {
-        void notifyUnread();
-        chatRealtimeListeners.forEach((listener) => listener());
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => {
-        void notifyUnread();
-        chatRealtimeListeners.forEach((listener) => listener());
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_reads" }, () => {
-        void notifyUnread();
-        chatRealtimeListeners.forEach((listener) => listener());
-      })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages" },
+        () => {
+          void notifyUnread();
+          chatRealtimeListeners.forEach((listener) => listener());
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "conversations" },
+        () => {
+          void notifyUnread();
+          chatRealtimeListeners.forEach((listener) => listener());
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "conversation_reads" },
+        () => {
+          void notifyUnread();
+          chatRealtimeListeners.forEach((listener) => listener());
+        },
+      )
       .subscribe();
   }
 
