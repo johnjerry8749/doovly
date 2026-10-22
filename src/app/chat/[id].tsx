@@ -477,7 +477,9 @@ export default function ChatConversation() {
     try {
       const msg = await sendMessage(conversationId, trimmed);
       setMessages((prev) => [...prev, msg]);
-      setChatCoins(await getChatCreditsAsync());
+      const refreshedCredits = await getChatCreditsAsync();
+      setChatCoins(refreshedCredits);
+      setChatPro(refreshedCredits === null);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (error: any) {
       setText(trimmed);
@@ -530,14 +532,23 @@ export default function ChatConversation() {
     try {
       const msg = await sendImageMessage(conversationId, result.assets[0].uri);
       setMessages((prev) => [...prev, msg]);
-      setChatCoins(await getChatCreditsAsync());
+      const refreshedCredits = await getChatCreditsAsync();
+      setChatCoins(refreshedCredits);
+      setChatPro(refreshedCredits === null);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (error: any) {
       const message = String(error?.message ?? error);
       if (message.includes("CHAT_BLOCKED")) {
         Alert.alert("Chat blocked", "You cannot send messages in this chat.");
       } else if (message.includes("IMAGE_CHAT_PRO_REQUIRED")) {
-        Alert.alert("Pro feature", "Image messages require Doovly Pro.");
+        Alert.alert(
+          "Subscribe to Pro",
+          "Subscribe to Doovly Pro to send unlimited images in chat.",
+          [
+            { text: "Not now", style: "cancel" },
+            { text: "Subscribe", onPress: () => router.push("/profile/subscription/subscription") },
+          ],
+        );
       } else if (message.includes("CHAT_CREDITS_EXHAUSTED")) {
         Alert.alert("Chat coins finished", "Subscribe to Doovly Pro for unlimited chat.");
       } else {
