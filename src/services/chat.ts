@@ -511,10 +511,13 @@ export async function sendMessage(conversationId: string, text: string): Promise
   const session = await loadSessionUser(true);
   if (!session) throw new Error("Not logged in");
   if (!text.trim()) throw new Error("Message cannot be empty");
-  if (await isConversationBlockedAsync(conversationId)) {
-    throw new Error("CHAT_BLOCKED");
-  }
-  if (!(await canSendMessageAsync(conversationId))) {
+  // Run independent permission checks together to avoid adding network round trips.
+  const [blocked, canSend] = await Promise.all([
+    isConversationBlockedAsync(conversationId),
+    canSendMessageAsync(conversationId),
+  ]);
+  if (blocked) throw new Error("CHAT_BLOCKED");
+  if (!canSend) {
     throw new Error("Messaging is locked until the request is accepted");
   }
 
@@ -530,8 +533,13 @@ export async function sendMessage(conversationId: string, text: string): Promise
     .single();
 
   if (error) throw error;
-  await touchConversation(conversationId, session.uuid, data.text, data.created_at);
-  await notifyUnread();
+
+  // The message is now saved. Don't hold up the sender while updating the
+  // conversation preview and local unread badge; these tasks can finish in the background.
+  void Promise.allSettled([
+    touchConversation(conversationId, session.uuid, data.text, data.created_at),
+    notifyUnread(),
+  ]);
   return mapMessage(data, session.uuid);
 }
 
