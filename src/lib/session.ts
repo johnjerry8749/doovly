@@ -107,11 +107,17 @@ export async function loadSessionUser(
       profile?.pro_access_override !== null &&
       profile?.pro_access_override !== undefined;
     const subscriptionOverride = hasProfileOverride || Boolean(subscription?.admin_override);
+    // Paid access must come from the explicit admin override or an active Pro
+    // subscription record. Do not trust professionals.subscribed here: that flag
+    // can remain true after a subscription expires and incorrectly show the shield.
     const subscriptionGrantsPro = hasProfileOverride
       ? profile.pro_access_override === true
       : subscription?.admin_override
         ? subscription?.plan_code === "pro" && subscription?.status === "active"
-        : Boolean(pro?.subscribed);
+        : Boolean(
+            subscription?.plan_code === "pro" &&
+              String(subscription?.status ?? "").toLowerCase() === "active",
+          );
 
     cached = {
       uuid: user.id,
@@ -146,9 +152,11 @@ export function getCachedSessionUser(): SessionUser | null {
 
   return {
     ...cached,
+    // Keep the shield consistent with the same paid/trial access decision.
+    // The cached professionals.subscribed flag is not authoritative.
     subscribed: cached.subscriptionOverride
       ? cached.paidSubscribed
-      : cached.subscribed || trialActive,
+      : cached.paidSubscribed || trialActive,
   };
 }
 
