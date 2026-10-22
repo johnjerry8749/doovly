@@ -447,16 +447,31 @@ export async function isCurrentUserChatProAsync(): Promise<boolean> {
 }
 
 export async function getChatCreditsAsync(): Promise<number | null> {
-  const session = await loadSessionUser(true);
-  if (!session) return 0;
+  // Resolve the active Supabase auth identity directly. Do not derive the
+  // balance owner from the conversation participant or cached profile/session.
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  // Only the server-authoritative chat Pro result may produce Unlimited.
+  if (authError) throw authError;
+  if (!user) return 0;
+
+  // Pro status and monthly reset are enforced by server-side functions using
+  // auth.uid(). For non-Pro users, read the row belonging to this exact auth ID.
   if (await isCurrentUserChatProAsync()) return null;
 
-  const { data, error } = await supabase.rpc("get_my_chat_credits");
+  const { error: resetError } = await supabase.rpc("get_my_chat_credits");
+  if (resetError) throw resetError;
+
+  const { data, error } = await supabase
+    .from("chat_credits")
+    .select("remaining")
+    .eq("user_id", user.id)
+    .maybeSingle();
 
   if (error) throw error;
-  return Number(data ?? 15);
+  return Number(data?.remaining ?? 15);
 }
 
 export async function sendImageMessage(conversationId: string, localUri: string): Promise<ChatMessage> {
