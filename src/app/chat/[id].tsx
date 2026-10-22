@@ -227,6 +227,22 @@ export default function ChatConversation() {
   const [chatPro, setChatPro] = useState(false);
   const [chatBlocked, setChatBlocked] = useState(false);
 
+  // The header balance belongs to the signed-in account, never to the chat participant.
+  // Verify the auth user before and after fetching so a late response cannot apply
+  // another signed-in account's balance after an account/session change.
+  const refreshOwnChatCredits = async (expectedUserId: string) => {
+    if (!expectedUserId) return;
+    const sessionBefore = await loadSessionUser(true);
+    if (sessionBefore?.uuid !== expectedUserId) return;
+
+    const credits = await getChatCreditsAsync();
+    const sessionAfter = await loadSessionUser(true);
+    if (sessionAfter?.uuid !== expectedUserId) return;
+
+    setChatCoins(credits);
+    setChatPro(credits === null);
+  };
+
   useEffect(() => {
     let active = true;
     void loadSessionUser().then((session) => {
@@ -243,6 +259,32 @@ export default function ChatConversation() {
       active = false;
     };
   }, [conversationId]);
+
+  // Reset stale header state and load the balance only after the authenticated
+  // user's ID is known. This is independent of which participant is in the chat.
+  useEffect(() => {
+    let active = true;
+    setChatCoins(15);
+    setChatPro(false);
+    if (currentUserId) {
+      void (async () => {
+        try {
+          const session = await loadSessionUser(true);
+          if (!active || session?.uuid !== currentUserId) return;
+          const credits = await getChatCreditsAsync();
+          const verifiedSession = await loadSessionUser(true);
+          if (!active || verifiedSession?.uuid !== currentUserId) return;
+          setChatCoins(credits);
+          setChatPro(credits === null);
+        } catch (error) {
+          console.warn("Could not load the signed-in user's chat balance:", error);
+        }
+      })();
+    }
+    return () => {
+      active = false;
+    };
+  }, [currentUserId]);
 
   // Hydrate the DM from device storage first. This must never wait for Supabase.
   useEffect(() => {
@@ -361,12 +403,7 @@ export default function ChatConversation() {
               if (active) setSharing(value);
             }),
             markConversationReadAsync(conv.id),
-            getChatCreditsAsync().then((value) => {
-              if (active) {
-                setChatCoins(value);
-                setChatPro(value === null);
-              }
-            }),
+
           ]);
         }
 
@@ -477,9 +514,7 @@ export default function ChatConversation() {
     try {
       const msg = await sendMessage(conversationId, trimmed);
       setMessages((prev) => [...prev, msg]);
-      const refreshedCredits = await getChatCreditsAsync();
-      setChatCoins(refreshedCredits);
-      setChatPro(refreshedCredits === null);
+      await refreshOwnChatCredits(currentUserId);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (error: any) {
       setText(trimmed);
@@ -532,9 +567,7 @@ export default function ChatConversation() {
     try {
       const msg = await sendImageMessage(conversationId, result.assets[0].uri);
       setMessages((prev) => [...prev, msg]);
-      const refreshedCredits = await getChatCreditsAsync();
-      setChatCoins(refreshedCredits);
-      setChatPro(refreshedCredits === null);
+      await refreshOwnChatCredits(currentUserId);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (error: any) {
       const message = String(error?.message ?? error);
