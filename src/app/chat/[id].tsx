@@ -1103,16 +1103,25 @@ export default function ChatConversation() {
                   >
                     <Ionicons name="image-outline" size={22} color={TEXT_MUTED} />
                   </TouchableOpacity>
-                  <View
+                  <TouchableOpacity
                     style={styles.coinBalance}
-                    accessibilityRole="text"
-                    accessibilityLabel={chatPro ? "Your chat coins: Unlimited" : `Your chat coins: ${chatCoins ?? 0} remaining`}
+                    activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={chatPro ? "Show unlimited chat coins" : `Show remaining chat coins: ${chatCoins ?? 0}`}
+                    onPress={() =>
+                      Alert.alert(
+                        chatPro ? "Unlimited chat coins" : "Chat coins remaining",
+                        chatPro
+                          ? "Your Doovly Pro subscription gives you unlimited chat coins."
+                          : `You have ${chatCoins ?? 0} chat coins remaining.`,
+                      )
+                    }
                   >
                     <FontAwesome5 name="coins" size={16} color={PRIMARY} />
                     <Text style={styles.coinBalanceText}>
                       {chatPro ? "∞" : chatCoins ?? 0}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 </>
               )}
 
