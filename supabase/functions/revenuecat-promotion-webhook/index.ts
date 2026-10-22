@@ -7,7 +7,7 @@ const SUPABASE_SECRET_KEY =
   "";
 const WEBHOOK_AUTHORIZATION =
   Deno.env.get("REVENUECAT_WEBHOOK_AUTHORIZATION") ?? "";
-const SYSTEM_EMAIL = "system@doovly.app";
+const SYSTEM_EMAIL = "system@doovly.com";
 
 const admin = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
   auth: {
