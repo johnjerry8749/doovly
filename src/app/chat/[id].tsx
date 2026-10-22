@@ -50,6 +50,7 @@ import {
 } from "@/services/chat";
 import { loadSessionUser } from "@/lib/session";
 import { PromotionAnalyticsCard } from "@/components/PromotionAnalyticsCard";
+import { PromotionEndedCard } from "@/components/PromotionEndedCard";
 
 
 
@@ -853,6 +854,15 @@ export default function ChatConversation() {
             }
           }}
           renderItem={({ item }) => {
+            if (
+              p.isSystem &&
+              item.senderId === p.id &&
+              item.kind === "system" &&
+              item.text.startsWith("Promotion ended —")
+            ) {
+              return <PromotionEndedCard message={item.text} />;
+            }
+
             const analyticsMatch = item.text.match(/^\[\[DOOVLY_PROMOTION_ANALYTICS:([0-9a-f-]+)\]\]/i);
             if (analyticsMatch && p.isSystem && item.senderId === p.id) {
               return <PromotionAnalyticsCard promotionId={analyticsMatch[1]} />;
