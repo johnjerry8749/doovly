@@ -223,7 +223,7 @@ export default function ChatConversation() {
   const [currentUserId, setCurrentUserId] = useState("");
   const [isAcceptor, setIsAcceptor] = useState(false);
   const [convKind, setConvKind] = useState<"booking" | "offer" | undefined>();
-  const [chatCoins, setChatCoins] = useState<number | null>(15);
+  const [chatCoins, setChatCoins] = useState<number | null>(null);
   const [chatPro, setChatPro] = useState(false);
   const [chatBlocked, setChatBlocked] = useState(false);
 
@@ -264,7 +264,7 @@ export default function ChatConversation() {
   // user's ID is known. This is independent of which participant is in the chat.
   useEffect(() => {
     let active = true;
-    setChatCoins(15);
+    setChatCoins(null);
     setChatPro(false);
     if (currentUserId) {
       void (async () => {
@@ -514,7 +514,9 @@ export default function ChatConversation() {
     try {
       const msg = await sendMessage(conversationId, trimmed);
       setMessages((prev) => [...prev, msg]);
-      await refreshOwnChatCredits(currentUserId);
+      void refreshOwnChatCredits(currentUserId).catch((error) => {
+        console.warn("Could not refresh chat coins after sending:", error);
+      });
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
     } catch (error: any) {
       setText(trimmed);
@@ -1106,11 +1108,11 @@ export default function ChatConversation() {
                   <View
                     style={styles.coinBalance}
                     accessibilityRole="text"
-                    accessibilityLabel={chatPro ? "Your chat coins: Unlimited" : `Your chat coins: ${chatCoins ?? 0} remaining`}
+                    accessibilityLabel={chatPro ? "Your chat coins: Unlimited" : chatCoins == null ? "Loading your chat coins" : `Your chat coins: ${chatCoins} remaining`}
                   >
                     <FontAwesome5 name="coins" size={16} color={PRIMARY} />
                     <Text style={styles.coinBalanceText}>
-                      {chatPro ? "∞" : chatCoins ?? 0}
+                      {chatPro ? "∞" : chatCoins ?? "…"}
                     </Text>
                   </View>
                 </>
