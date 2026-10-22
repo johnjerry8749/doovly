@@ -91,7 +91,7 @@ async function fetchAll(): Promise<Professional[]> {
       const role = String(row.profiles?.role ?? row.role ?? "").trim().toLowerCase();
       const name = String(row.profiles?.full_name ?? row.full_name ?? "").trim().toLowerCase();
       // Hide the official Doovly identity even if its email or role is configured differently.
-      return email !== "system@doovly.app" && role !== "system" && name !== "doovly";
+      return email !== "system@doovly.com" && role !== "system" && name !== "doovly";
     })
     .map(mapProfessionalRow);
   list.sort((a, b) => {
@@ -234,7 +234,7 @@ export async function listActivePromotedServicesAsync(): Promise<PromotedService
       service.id !== row.service_id ||
       service.professional_id !== row.professional_id ||
       professional.id !== row.professional_id ||
-      String(profile?.email ?? "").trim().toLowerCase() === "system@doovly.app" ||
+      String(profile?.email ?? "").trim().toLowerCase() === "system@doovly.com" ||
       String(profile?.role ?? "").trim().toLowerCase() === "system" ||
       String(profile?.full_name ?? "").trim().toLowerCase() === "doovly" ||
       seenServices.has(String(service.id))
@@ -303,7 +303,7 @@ export async function getProfessionalByIdAsync(
   if (error) throw error;
   if (
     !data ||
-    String(data.profiles?.email ?? "").trim().toLowerCase() === "system@doovly.app" ||
+    String(data.profiles?.email ?? "").trim().toLowerCase() === "system@doovly.com" ||
     String(data.profiles?.role ?? "").trim().toLowerCase() === "system" ||
     String(data.profiles?.full_name ?? "").trim().toLowerCase() === "doovly"
   ) {
