@@ -16,7 +16,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
@@ -1108,7 +1108,7 @@ export default function ChatConversation() {
                     accessibilityRole="text"
                     accessibilityLabel={chatPro ? "Your chat coins: Unlimited" : `Your chat coins: ${chatCoins ?? 0} remaining`}
                   >
-                    <Ionicons name="logo-bitcoin" size={17} color={PRIMARY} />
+                    <FontAwesome5 name="coins" size={16} color={PRIMARY} />
                     <Text style={styles.coinBalanceText}>
                       {chatPro ? "∞" : chatCoins ?? 0}
                     </Text>
