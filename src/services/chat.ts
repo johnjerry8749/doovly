@@ -185,7 +185,7 @@ async function getParticipant(userId: string): Promise<ChatParticipant> {
     .trim()
     .toLowerCase();
   const isSystem =
-    normalizedEmail === "system@doovly.app" ||
+    normalizedEmail === "system@doovly.com" ||
     normalizedRole === "system" ||
     normalizedName === "doovly";
 
