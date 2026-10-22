@@ -428,7 +428,7 @@ declare
 begin
   select id into v_system_user_id
   from public.profiles
-  where lower(email) = 'system@doovly.app'
+  where lower(email) = 'system@doovly.com'
   limit 1;
 
   -- If the Doovly system profile is not available yet, do not mark messages
