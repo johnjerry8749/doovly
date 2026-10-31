@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { Asset } from "expo-asset";
 import {
   Dimensions,
   Alert,
   FlatList,
   Image,
+  type ImageSourcePropType,
   Modal,
   Pressable,
   ScrollView,
@@ -37,6 +39,7 @@ import { useLocation } from "@/context/LocationContext";
 import { PromotedServiceCard } from "@/components/PromotedServiceCard";
 import { trackPromotionEvent } from "@/services/promotionAnalytics";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { getDataState, subscribeDataState } from "@/lib/dataState";
 import {
   MovingServiceDescription,
   HomeHeader,
@@ -44,6 +47,8 @@ import {
   CategoryScroller,
   EmptyProfessionals,
 } from "@/components/home";
+
+const HOME_BANNER = require("@/assets/images/home_banner.png");
 
 export default function Home() {
   const {
@@ -67,6 +72,8 @@ export default function Home() {
   const [promotedServices, setPromotedServices] = useState<PromotedService[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [bannerSource, setBannerSource] = useState<ImageSourcePropType>(HOME_BANNER);
+  const [bannerKey, setBannerKey] = useState(0);
   const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
   const promotedCardRefs = useRef<Record<string, View | null>>({});
   const visibilityCheckAt = useRef(0);
@@ -84,9 +91,43 @@ export default function Home() {
     });
   }, []);
 
+  const loadHomeBanner = useCallback(async () => {
+    try {
+      // Resolve and cache the bundled asset again after a development-server
+      // interruption. This keeps the banner local; it never uses a remote URL.
+      const asset = Asset.fromModule(HOME_BANNER);
+      await asset.downloadAsync();
+      setBannerSource(asset.localUri ? { uri: asset.localUri } : HOME_BANNER);
+      setBannerKey((key) => key + 1);
+      return true;
+    } catch (error) {
+      console.warn("[Home] banner asset load failed; will retry:", error);
+      // Keep the original bundled source as a fallback until the next retry.
+      setBannerSource(HOME_BANNER);
+      setBannerKey((key) => key + 1);
+      return false;
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadHomeBanner();
+  }, [loadHomeBanner]);
+
+  useEffect(() => {
+    let wasOnline = getDataState().online;
+    return subscribeDataState((nextState) => {
+      if (!wasOnline && nextState.online) {
+        void loadHomeBanner();
+      }
+      wasOnline = nextState.online;
+    });
+  }, [loadHomeBanner]);
+
   const refreshHome = useCallback(async () => {
     if (refreshing) return;
     setRefreshing(true);
+    // Retry the local banner asset as part of Home pull-to-refresh too.
+    void loadHomeBanner();
     try {
       invalidateProfessionalsCache();
       const [nextServices, nextProfessionals, nextCities, nextPromotedServices] =
@@ -372,7 +413,8 @@ export default function Home() {
 
         <View style={styles.bannerContainer}>
           <Image
-            source={require("@/assets/images/home_banner.png")}
+            key={bannerKey}
+            source={bannerSource}
             style={styles.banner}
             resizeMode="cover"
           />
