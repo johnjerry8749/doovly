@@ -23,6 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listServiceRequests,
   listServiceRequestsAsync,
+  invalidateServiceRequestsCache,
   subscribeServiceRequests,
   canSendOfferOnRequest,
   submitServiceRequestOffer,
@@ -229,6 +230,7 @@ export default function RequestsScreen() {
     if (refreshing) return;
     setRefreshing(true);
     try {
+      invalidateServiceRequestsCache();
       const next = await listServiceRequestsAsync();
       setAllRequests(next);
     } catch (error) {
