@@ -226,15 +226,21 @@ export default function RequestsScreen() {
   const getComments = (item: ServiceRequest): ServiceRequestComment[] =>
     item.comments || [];
 
+  const loadRequests = async () => {
+    try {
+      const next = await listServiceRequestsAsync();
+      setAllRequests(next);
+    } catch (error) {
+      console.warn("[Requests] refresh failed:", error);
+    }
+  };
+
   const refreshRequests = async () => {
     if (refreshing) return;
     setRefreshing(true);
     try {
       invalidateServiceRequestsCache();
-      const next = await listServiceRequestsAsync();
-      setAllRequests(next);
-    } catch (error) {
-      console.warn("[Requests] pull-to-refresh failed:", error);
+      await loadRequests();
     } finally {
       setRefreshing(false);
     }
@@ -248,7 +254,7 @@ export default function RequestsScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      void refreshRequests();
+      void loadRequests();
     }, []),
   );
 
