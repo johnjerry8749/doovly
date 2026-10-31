@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 
 import {
   ensureProfessionalsLoaded,
+  invalidateProfessionalsCache,
   getProfessionalById,
 } from "@/services/professionals";
 import { loadSessionUser } from "@/lib/session";
@@ -152,6 +153,7 @@ export default function Profile() {
         setPro(undefined);
         return;
       }
+      invalidateProfessionalsCache();
       await ensureProfessionalsLoaded();
       setLoadedProId(session.professionalId);
       setPro(getProfessionalById(session.professionalId));
