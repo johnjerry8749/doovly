@@ -42,13 +42,16 @@ export async function bootstrapAppData(): Promise<void> {
 
   bootPromise = (async () => {
     setDataPhase("loading");
-    const online = await checkOnline();
-    if (!online) {
-      setDataPhase("offline", "No network connection");
-      return;
-    }
 
     try {
+      // Keep the connectivity check inside the try/finally so an offline
+      // return or a rejected check cannot leave bootPromise permanently set.
+      const online = await checkOnline();
+      if (!online) {
+        setDataPhase("offline", "No network connection");
+        return;
+      }
+
       await loadAllCaches();
       if (!unbindAuth) {
         unbindAuth = bindAuthListener(async (user) => {
@@ -93,6 +96,7 @@ export async function bootstrapAppData(): Promise<void> {
         setDataPhase("error", msg);
       }
     } finally {
+      // Always release the in-flight guard so a later retry can run.
       bootPromise = null;
     }
   })();
