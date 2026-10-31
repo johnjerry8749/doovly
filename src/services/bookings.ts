@@ -38,18 +38,21 @@ export const BOOKING_LIST_STATUSES: BookingStatus[] = ["Pending","Accepted","Dec
 let bookedCache: Booking[] | null = null;
 let receivedCache: Booking[] | null = null;
 let loadPromise: Promise<void> | null = null;
+let cacheGeneration = 0;
 
-async function fetchBookings() {
+async function fetchBookings(generation: number) {
   const s = await loadSessionUser();
-  if (!s) { bookedCache=[]; receivedCache=[]; return; }
+  if (!s) { if (generation === cacheGeneration) { bookedCache=[]; receivedCache=[]; } return; }
   const { data, error } = await supabase.from("bookings").select(BOOKING_SELECT).order("created_at",{ascending:false});
   if (error) throw error;
   const all=(data??[]).map(mapBookingRow);
-  bookedCache=all.filter(b=>String(b.customerId)===String(s.publicId)||String(b.customerId)===String(s.uuid));
-  receivedCache=s.professionalId ? all.filter(b=>String(b.professionalId)===String(s.professionalId)||String(b.professionalId)===String(s.professionalUuid)) : [];
+  if (generation === cacheGeneration) {
+    bookedCache=all.filter(b=>String(b.customerId)===String(s.publicId)||String(b.customerId)===String(s.uuid));
+    receivedCache=s.professionalId ? all.filter(b=>String(b.professionalId)===String(s.professionalId)||String(b.professionalId)===String(s.professionalUuid)) : [];
+  }
 }
-export async function ensureBookingsLoaded(){if(bookedCache&&receivedCache)return;if(!loadPromise)loadPromise=fetchBookings().finally(()=>{loadPromise=null});await loadPromise;}
-export function invalidateBookingsCache(){bookedCache=null;receivedCache=null;}
+export async function ensureBookingsLoaded(){if(bookedCache&&receivedCache)return;if(!loadPromise){const request=fetchBookings(cacheGeneration);const tracked=request.finally(()=>{if(loadPromise===tracked)loadPromise=null});loadPromise=tracked;}await loadPromise;}
+export function invalidateBookingsCache(){cacheGeneration+=1;bookedCache=null;receivedCache=null;loadPromise=null;}
 export function listBookedJobs(){if(!bookedCache)void ensureBookingsLoaded();return bookedCache??[];}
 export async function listBookedJobsAsync(){await ensureBookingsLoaded();return bookedCache??[];}
 export function listReceivedJobs(){if(!receivedCache)void ensureBookingsLoaded();return receivedCache??[];}
