@@ -133,10 +133,12 @@ export function PromotedServiceCard({
 
         {!!serviceDescription.trim() &&
           (DescriptionComponent ? (
-            <DescriptionComponent
-              text={serviceDescription.trim()}
-              color="rgba(255,255,255,0.82)"
-            />
+            <View style={styles.descriptionSlot}>
+              <DescriptionComponent
+                text={serviceDescription.trim()}
+                color="rgba(255,255,255,0.82)"
+              />
+            </View>
           ) : (
             <Text style={styles.description} numberOfLines={3}>
               {serviceDescription.trim()}
@@ -242,6 +244,12 @@ const styles = StyleSheet.create({
   profileTapArea: {
     alignItems: "stretch",
     flex: 1,
+    flexShrink: 1,
+    minHeight: 0,
+  },
+  descriptionSlot: {
+    height: 24,
+    overflow: "hidden",
   },
   avatar: {
     width: 52,
@@ -307,10 +315,13 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#FFFFFF",
     textAlign: "center",
-    marginTop: "auto",
+    marginTop: 2,
+    marginBottom: 2,
+    flexShrink: 0,
   },
   bookButton: {
     marginTop: 4,
+    flexShrink: 0,
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     paddingVertical: 8,
