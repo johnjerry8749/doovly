@@ -76,8 +76,9 @@ export function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: nu
 
 let cache: Professional[] | null = null;
 let loadPromise: Promise<Professional[]> | null = null;
+let cacheGeneration = 0;
 
-async function fetchAll(): Promise<Professional[]> {
+async function fetchAll(generation: number): Promise<Professional[]> {
   const { data, error } = await supabase
     .from("professionals")
     .select(PROFESSIONAL_SELECT)
@@ -100,22 +101,26 @@ async function fetchAll(): Promise<Professional[]> {
     if (aPromoted !== bPromoted) return aPromoted ? -1 : 1;
     return 0;
   });
-  cache = list;
+  if (generation === cacheGeneration) cache = list;
   return list;
 }
 
 export async function ensureProfessionalsLoaded(): Promise<Professional[]> {
   if (cache) return cache;
   if (!loadPromise) {
-    loadPromise = fetchAll().finally(() => {
-      loadPromise = null;
+    const request = fetchAll(cacheGeneration);
+    const tracked = request.finally(() => {
+      if (loadPromise === tracked) loadPromise = null;
     });
+    loadPromise = tracked;
   }
   return loadPromise;
 }
 
 export function invalidateProfessionalsCache() {
+  cacheGeneration += 1;
   cache = null;
+  loadPromise = null;
 }
 
 export function listProfessionals(): Professional[] {
