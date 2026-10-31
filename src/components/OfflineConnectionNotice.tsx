@@ -8,9 +8,10 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Updates from "expo-updates";
 import { retryBootstrap } from "@/lib/bootstrapData";
 import { checkOnline } from "@/lib/dataState";
-import { getDataState, subscribeDataState, type DataState } from "@/lib/dataState";
+import { getDataState, setDataPhase, subscribeDataState, type DataState } from "@/lib/dataState";
 
 export default function OfflineConnectionNotice() {
   const [dataState, setDataState] = useState<DataState>(getDataState);
@@ -26,6 +27,21 @@ export default function OfflineConnectionNotice() {
     setRetrying(true);
     try {
       await retryBootstrap();
+
+      // Re-mount the entire app only after every bootstrap cache has loaded.
+      // Expo Updates reloads the JS app while preserving the persisted auth
+      // session and query cache, so screen-level effects run again from clean
+      // in-memory state.
+      if (getDataState().phase === "ready") {
+        await Updates.reloadAsync();
+      } else if (getDataState().phase === "error") {
+        // Keep the recovery prompt visible instead of leaving failed screens
+        // stranded behind blank/loading states.
+        setDataPhase("error", getDataState().error ?? "Doovly could not refresh.");
+      }
+    } catch (error) {
+      console.warn("[OfflineConnectionNotice] app reload failed:", error);
+      setDataPhase("error", "Doovly could not refresh. Please tap Retry.");
     } finally {
       setRetrying(false);
     }
@@ -45,7 +61,7 @@ export default function OfflineConnectionNotice() {
     return () => clearInterval(interval);
   }, [dataState.phase, retrying, handleRetry]);
 
-  const visible = dataState.phase === "offline" || retrying;
+  const visible = dataState.phase === "offline" || dataState.phase === "error" || retrying;
 
   return (
     <Modal
