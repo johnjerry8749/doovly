@@ -23,6 +23,7 @@ import {
   blockConversationAsync,
   type Conversation,
 } from "@/services/chat";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 const PRIMARY = "#159447";
 const TEXT_DARK = "#111827";
@@ -35,6 +36,7 @@ export default function ChatList() {
   // can disappear immediately when a chat is opened.
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const refresh = useCallback(async (showInitialLoading = false) => {
     if (showInitialLoading) setLoading(true);
@@ -49,6 +51,16 @@ export default function ChatList() {
       if (showInitialLoading) setLoading(false);
     }
   }, []);
+
+  const refreshFromGesture = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await refresh(false);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refresh, refreshing]);
 
   useEffect(() => {
     let active = true;
@@ -192,6 +204,7 @@ export default function ChatList() {
 
       {/* Conversations */}
       <FlatList
+        refreshControl={<PullToRefresh refreshing={refreshing} onRefresh={() => void refreshFromGesture()} />}
         data={filtered}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
