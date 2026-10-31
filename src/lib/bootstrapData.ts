@@ -44,8 +44,7 @@ async function loadAllCaches() {
 
   // Refresh mounted React Query screens as well, while retaining the current
   // route and navigation state.
-  await queryClient.invalidateQueries();
-  await queryClient.refetchQueries({ type: "active" });
+  // invalidateQueries refetches active queries by default.
 }
 
 export async function bootstrapAppData(): Promise<void> {
