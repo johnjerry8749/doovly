@@ -843,7 +843,7 @@ export default function ChatConversation() {
           accessibilityLabel={p.isSystem ? "Doovly" : `Open ${p.name}'s profile`}
         >
           <Image
-            source={p.image}
+            source={p.isSystem ? require("@/assets/images/icon.png") : p.image}
             style={[styles.headerAvatar, p.isSystem && styles.systemHeaderAvatar]}
             resizeMode="cover"
           />
