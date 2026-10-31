@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -16,14 +16,16 @@ import { getDataState, setDataPhase, subscribeDataState, type DataState } from "
 export default function OfflineConnectionNotice() {
   const [dataState, setDataState] = useState<DataState>(getDataState);
   const [retrying, setRetrying] = useState(false);
+  const retryingRef = useRef(false);
 
   useEffect(() => {
     return subscribeDataState(setDataState);
   }, []);
 
   const handleRetry = useCallback(async () => {
-    if (retrying) return;
+    if (retryingRef.current) return;
 
+    retryingRef.current = true;
     setRetrying(true);
     try {
       await retryBootstrap();
@@ -43,9 +45,10 @@ export default function OfflineConnectionNotice() {
       console.warn("[OfflineConnectionNotice] app reload failed:", error);
       setDataPhase("error", "Doovly could not refresh. Please tap Retry.");
     } finally {
+      retryingRef.current = false;
       setRetrying(false);
     }
-  }, [retrying]);
+  }, []);
 
   useEffect(() => {
     if (dataState.phase !== "offline" || retrying) return;
@@ -53,7 +56,7 @@ export default function OfflineConnectionNotice() {
     // While the offline overlay is visible, quietly probe for restored
     // connectivity. The overlay stays up until the full refresh completes.
     const interval = setInterval(async () => {
-      if (retrying) return;
+      if (retryingRef.current) return;
       const online = await checkOnline(false);
       if (online) void handleRetry();
     }, 4000);
