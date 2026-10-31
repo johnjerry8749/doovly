@@ -233,7 +233,7 @@ export default function ChatList() {
               accessibilityLabel={`Open ${item.participant.name}'s profile`}
             >
               <Image
-                source={item.participant.image}
+                source={item.participant.isSystem ? require("@/assets/images/icon.png") : item.participant.image}
                 style={[
                   styles.avatar,
                   item.participant.isSystem && styles.systemAvatar,

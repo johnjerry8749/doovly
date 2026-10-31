@@ -883,7 +883,7 @@ export default function RequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#F9FAFB" },
+  safeArea: { flex: 1, backgroundColor: "#F9FAFB", marginBottom: 30,},
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 14,
     padding: 14,
-    marginBottom: 12,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },

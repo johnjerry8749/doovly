@@ -329,7 +329,7 @@ Deno.serve(async (req) => {
         Number(pkg.duration_days) * 24 * 60 * 60 * 1000,
     );
 
-    const { error: updateError } = await admin
+    const { data: activatedPromotion, error: updateError } = await admin
       .from("service_promotions")
       .update({
         status: "active",
@@ -345,9 +345,17 @@ Deno.serve(async (req) => {
         revenuecat_event_id: String(event.id ?? "") || null,
       })
       .eq("id", promotion.id)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
 
+    if (updateError?.code === "23505") {
+      return json({ ok: true, duplicate: true });
+    }
     if (updateError) throw updateError;
+    if (!activatedPromotion?.id) {
+      return json({ ok: true, duplicate: true, reason: "promotion already fulfilled" });
+    }
 
     await admin.from("service_promotion_analytics").upsert(
       {
