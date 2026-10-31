@@ -25,6 +25,7 @@ import {
   type NotifType,
 } from "@/services/inAppNotifications";
 import { getErrorMessage } from "@/utils/error";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 const PRIMARY = "#159447";
 const LIGHT_GREEN = "#E8F5E9";
@@ -102,11 +103,24 @@ export default function NotificationsScreen() {
   const [items, setItems] = useState<Notification[]>(() =>
     getNotificationsByUserId(userId),
   );
+  const [refreshing, setRefreshing] = useState(false);
 
   const refresh = useCallback(async () => {
     const list = await getNotificationsByUserIdAsync(userId);
     setItems(list);
   }, [userId]);
+
+  const refreshFromGesture = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await refresh();
+    } catch (error) {
+      console.warn("[Notifications] pull-to-refresh failed:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refresh, refreshing]);
 
   useFocusEffect(
     useCallback(() => {
@@ -203,6 +217,7 @@ export default function NotificationsScreen() {
   
 
       <ScrollView
+        refreshControl={<PullToRefresh refreshing={refreshing} onRefresh={() => void refreshFromGesture()} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
