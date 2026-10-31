@@ -106,8 +106,8 @@ export default function NotificationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const refresh = useCallback(async () => {
-    const list = await getNotificationsByUserIdAsync(userId);
-    setItems(list);
+    const list = await refreshNotificationsAsync();
+    setItems(list.filter((item) => item.userId === String(userId)));
   }, [userId]);
 
   const refreshFromGesture = useCallback(async () => {
