@@ -181,7 +181,17 @@ export default function Profile() {
   if (!resolvedPro) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.emptyContainer}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.emptyContainer}
+          refreshControl={
+            <PullToRefresh
+              refreshing={refreshing}
+              onRefresh={() => void refreshProfile()}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.emptyText}>Loading....</Text>
           {role === "admin" && (
             <TouchableOpacity
@@ -193,7 +203,7 @@ export default function Profile() {
               <Text style={styles.adminloginText}>Admin Login</Text>
             </TouchableOpacity>
           )}
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
