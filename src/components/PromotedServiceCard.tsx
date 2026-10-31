@@ -154,12 +154,13 @@ export function PromotedServiceCard({
           </View>
         )}
 
-        <Text style={styles.price} numberOfLines={1}>
-          {priceLabel}
-        </Text>
       </TouchableOpacity>
 
-<TouchableOpacity
+      <Text style={styles.price} numberOfLines={1}>
+        {priceLabel}
+      </Text>
+
+      <TouchableOpacity
         style={styles.bookButton}
         activeOpacity={0.8}
         onPress={async () => {
@@ -248,16 +249,16 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   descriptionSlot: {
-    height: 24,
+    height: 20,
     overflow: "hidden",
   },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignSelf: "center",
     marginTop: 1,
-    marginBottom: 3,
+    marginBottom: 2,
     borderWidth: 2,
     borderColor: "#FFFFFF",
     overflow: "hidden",
@@ -274,7 +275,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.92)",
   },
   name: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
     color: "#FFFFFF",
     textAlign: "center",
@@ -318,13 +319,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 2,
     flexShrink: 0,
+    includeFontPadding: false,
   },
   bookButton: {
     marginTop: 4,
     flexShrink: 0,
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 8,
     width: "100%",
     alignItems: "center",
