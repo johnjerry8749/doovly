@@ -15,7 +15,6 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 
 import {
   getNotificationsByUserId,
-  getNotificationsByUserIdAsync,
   getCurrentUserId,
   markNotificationRead,
   clearAllNotifications,
