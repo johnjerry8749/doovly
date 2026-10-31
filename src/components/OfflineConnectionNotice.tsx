@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -29,47 +30,55 @@ export default function OfflineConnectionNotice() {
     }
   }, [retrying]);
 
-  if (dataState.phase !== "offline" && !retrying) return null;
+  const visible = dataState.phase === "offline" || retrying;
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.card}>
-        <View style={styles.iconCircle}>
-          <Ionicons name="cloud-offline-outline" size={34} color="#159447" />
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={() => {
+        // Keep the offline notice visible until the connection is restored.
+      }}
+    >
+      <View style={styles.overlay} accessibilityViewIsModal>
+        <View style={styles.card}>
+          <View style={styles.iconCircle}>
+            <Ionicons name="cloud-offline-outline" size={34} color="#159447" />
+          </View>
+
+          <Text style={styles.title}>No Internet Connection</Text>
+          <Text style={styles.message}>
+            Please check your internet connection and try again.
+          </Text>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Retry internet connection"
+            disabled={retrying}
+            onPress={() => void handleRetry()}
+            style={({ pressed }) => [
+              styles.retryButton,
+              pressed && !retrying && styles.retryButtonPressed,
+              retrying && styles.retryButtonDisabled,
+            ]}
+          >
+            {retrying ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.retryText}>Retry</Text>
+            )}
+          </Pressable>
         </View>
-
-        <Text style={styles.title}>No Internet Connection</Text>
-        <Text style={styles.message}>
-          Please check your internet connection and try again.
-        </Text>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Retry internet connection"
-          disabled={retrying}
-          onPress={() => void handleRetry()}
-          style={({ pressed }) => [
-            styles.retryButton,
-            pressed && !retrying && styles.retryButtonPressed,
-            retrying && styles.retryButtonDisabled,
-          ]}
-        >
-          {retrying ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.retryText}>Retry</Text>
-          )}
-        </Pressable>
       </View>
-    </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 10000,
-    elevation: 10000,
+    flex: 1,
     backgroundColor: "rgba(17, 24, 39, 0.48)",
     alignItems: "center",
     justifyContent: "center",
