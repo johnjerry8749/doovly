@@ -14,6 +14,7 @@ const PENDING_READS_KEY = "doovly_notifications_pending_reads_v1";
 let cache: Notification[] = [];
 let loaded = false;
 let loading: Promise<Notification[]> | null = null;
+let cacheGeneration = 0;
 
 export function getCurrentUserId(): string {
   return getCachedSessionUser()?.uuid ?? "";
@@ -58,29 +59,36 @@ function isNetworkError(error: any): boolean {
   );
 }
 
-async function fetchMine(): Promise<Notification[]> {
+async function fetchMine(generation: number): Promise<Notification[]> {
   const s = await loadSessionUser();
-  if (!s) { cache = await readLocal(); loaded = true; return cache; }
+  if (!s) { const local = await readLocal(); if (generation === cacheGeneration) { cache = local; loaded = true; } return local; }
   const { data, error } = await supabase.from("notifications")
     .select("id,user_id,type,title,body,time_label,unread,avatar_url,created_at")
     .eq("user_id", s.uuid).order("created_at", { ascending:false });
   if (error) {
-    cache = await readLocal(); loaded = true; return cache;
+    const local = await readLocal(); if (generation === cacheGeneration) { cache = local; loaded = true; } return local;
   }
   const pendingReads = await readPendingReads();
   const pendingSet = new Set(pendingReads);
-  cache = (data ?? []).map(mapNotificationRow).map((n) =>
+  const fresh = (data ?? []).map(mapNotificationRow).map((n) =>
     pendingSet.has(n.id) ? { ...n, unread: false } : n,
   );
-  loaded = true;
-  await writeLocal(cache);
-  if (pendingReads.length) void syncPendingReads(pendingReads);
-  return cache;
+  if (generation === cacheGeneration) {
+    cache = fresh;
+    loaded = true;
+    await writeLocal(cache);
+    if (pendingReads.length) void syncPendingReads(pendingReads);
+  }
+  return fresh;
 }
 
 export async function ensureNotificationsLoaded(): Promise<Notification[]> {
   if (loaded) return cache;
-  if (!loading) loading = fetchMine().finally(() => { loading = null; });
+  if (!loading) {
+    const request = fetchMine(cacheGeneration);
+    const tracked = request.finally(() => { if (loading === tracked) loading = null; });
+    loading = tracked;
+  }
   return loading;
 }
 
@@ -99,9 +107,8 @@ export async function getMyNotificationsAsync(): Promise<Notification[]> {
 }
 
 export async function refreshNotificationsAsync(): Promise<Notification[]> {
-  loaded = false;
-  cache = [];
-  return fetchMine();
+  invalidateNotificationsCache();
+  return ensureNotificationsLoaded();
 }
 
 export function getUnreadCount(userId?: string): number {
@@ -205,7 +212,7 @@ export async function markAllNotificationsRead(userId?: string): Promise<void> {
   cache = cache.map(n => n.userId === String(uid) ? {...n,unread:false} : n); await writeLocal(cache);
 }
 
-export function invalidateNotificationsCache() { loaded = false; cache = []; }
+export function invalidateNotificationsCache() { cacheGeneration += 1; loaded = false; cache = []; loading = null; }
 
 export async function notifySubscribedProsInArea(input:{city:string;title:string;body:string}): Promise<number> {
   const city = input.city.trim().toLowerCase(); if (!city) return 0;
