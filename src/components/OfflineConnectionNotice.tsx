@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { retryBootstrap } from "@/lib/bootstrapData";
 import { getDataState, subscribeDataState, type DataState } from "@/lib/dataState";
 
@@ -34,7 +35,7 @@ export default function OfflineConnectionNotice() {
     <View style={styles.overlay}>
       <View style={styles.card}>
         <View style={styles.iconCircle}>
-          <Text style={styles.wifiIcon}>⌁</Text>
+          <Ionicons name="cloud-offline-outline" size={34} color="#159447" />
         </View>
 
         <Text style={styles.title}>No Internet Connection</Text>
@@ -91,12 +92,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
-  },
-  wifiIcon: {
-    fontSize: 38,
-    lineHeight: 42,
-    color: "#159447",
-    fontWeight: "700",
   },
   title: {
     fontSize: 18,
