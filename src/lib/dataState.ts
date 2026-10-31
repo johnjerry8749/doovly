@@ -65,10 +65,10 @@ export function setOnline(online: boolean) {
   emit();
 }
 
-export async function checkOnline(): Promise<boolean> {
+export async function checkOnline(updateState = true): Promise<boolean> {
   const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
   if (!url) {
-    setOnline(true);
+    if (updateState) setOnline(true);
     return true;
   }
 
@@ -82,10 +82,10 @@ export async function checkOnline(): Promise<boolean> {
       method: "HEAD",
       signal: controller.signal,
     });
-    setOnline(true);
+    if (updateState) setOnline(true);
     return true;
   } catch {
-    setOnline(false);
+    if (updateState) setOnline(false);
     return false;
   } finally {
     clearTimeout(timeout);

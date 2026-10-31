@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { retryBootstrap } from "@/lib/bootstrapData";
+import { checkOnline } from "@/lib/dataState";
 import { getDataState, subscribeDataState, type DataState } from "@/lib/dataState";
 
 export default function OfflineConnectionNotice() {
@@ -29,6 +30,20 @@ export default function OfflineConnectionNotice() {
       setRetrying(false);
     }
   }, [retrying]);
+
+  useEffect(() => {
+    if (dataState.phase !== "offline" || retrying) return;
+
+    // While the offline overlay is visible, quietly probe for restored
+    // connectivity. The overlay stays up until the full refresh completes.
+    const interval = setInterval(async () => {
+      if (retrying) return;
+      const online = await checkOnline(false);
+      if (online) void handleRetry();
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [dataState.phase, retrying, handleRetry]);
 
   const visible = dataState.phase === "offline" || retrying;
 

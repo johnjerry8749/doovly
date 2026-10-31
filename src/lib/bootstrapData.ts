@@ -4,6 +4,7 @@
  */
 
 import { loadSessionUser, bindAuthListener, clearSessionCache } from "@/lib/session";
+import { queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 import {
   setDataPhase,
@@ -14,10 +15,10 @@ import {
   ensureProfessionalsLoaded,
   invalidateProfessionalsCache,
 } from "@/services/professionals";
-import { ensureBookingsLoaded } from "@/services/bookings";
-import { ensureSavedLoaded } from "@/services/savedProviders";
-import { ensureNotificationsLoaded } from "@/services/inAppNotifications";
-import { ensureServiceRequestsLoaded } from "@/services/serviceRequests";
+import { ensureBookingsLoaded, invalidateBookingsCache } from "@/services/bookings";
+import { ensureSavedLoaded, invalidateSavedCache } from "@/services/savedProviders";
+import { ensureNotificationsLoaded, invalidateNotificationsCache } from "@/services/inAppNotifications";
+import { ensureServiceRequestsLoaded, invalidateServiceRequestsCache } from "@/services/serviceRequests";
 
 let bootstrapped = false;
 let bootPromise: Promise<void> | null = null;
@@ -25,8 +26,14 @@ let unbindAuth: (() => void) | null = null;
 let professionalsChannel: ReturnType<typeof supabase.channel> | null = null;
 
 async function loadAllCaches() {
+  // Drop in-memory service caches so reconnect never reuses pre-offline data.
   await loadSessionUser(true);
   invalidateProfessionalsCache();
+  invalidateBookingsCache();
+  invalidateSavedCache();
+  invalidateNotificationsCache();
+  invalidateServiceRequestsCache();
+
   await Promise.all([
     ensureProfessionalsLoaded(),
     ensureBookingsLoaded(),
@@ -34,6 +41,10 @@ async function loadAllCaches() {
     ensureNotificationsLoaded(),
     ensureServiceRequestsLoaded(),
   ]);
+
+  // Refresh mounted React Query screens as well, while retaining the current
+  // route and navigation state.
+  // invalidateQueries refetches active queries by default.
 }
 
 export async function bootstrapAppData(): Promise<void> {
