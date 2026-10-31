@@ -12,6 +12,8 @@ import * as Updates from "expo-updates";
 import { retryBootstrap } from "@/lib/bootstrapData";
 import { checkOnline } from "@/lib/dataState";
 import { getDataState, setDataPhase, subscribeDataState, type DataState } from "@/lib/dataState";
+import { queryClient } from "@/lib/queryClient";
+import { queryPersister } from "@/lib/queryPersister";
 
 export default function OfflineConnectionNotice() {
   const [dataState, setDataState] = useState<DataState>(getDataState);
@@ -28,17 +30,27 @@ export default function OfflineConnectionNotice() {
     retryingRef.current = true;
     setRetrying(true);
     try {
-      await retryBootstrap();
+      // Confirm that Supabase is reachable before restarting the JS app.
+      // Do not wait for individual screen caches here: a failed cache request
+      // must not prevent the full app refresh the user requested.
+      const online = await checkOnline();
+      if (!online) {
+        setDataPhase("offline", "No network connection");
+        return;
+      }
 
-      // Re-mount the entire app only after every bootstrap cache has loaded.
-      // Expo Updates reloads the JS app while preserving the persisted auth
-      // session and query cache, so screen-level effects run again from clean
-      // in-memory state.
-      if (getDataState().phase === "ready") {
+      if (Updates.isEnabled) {
+        // Remove persisted query data so the restarted app loads fresh values.
+        queryClient.clear();
+        await queryPersister.removeClient();
         await Updates.reloadAsync();
-      } else if (getDataState().phase === "error") {
-        // Keep the recovery prompt visible instead of leaving failed screens
-        // stranded behind blank/loading states.
+        return;
+      }
+
+      // Development clients may not have expo-updates enabled. Keep the
+      // existing bootstrap retry as a safe fallback for those environments.
+      await retryBootstrap();
+      if (getDataState().phase === "error") {
         setDataPhase("error", getDataState().error ?? "Doovly could not refresh.");
       }
     } catch (error) {
@@ -54,7 +66,7 @@ export default function OfflineConnectionNotice() {
     if (dataState.phase !== "offline" || retrying) return;
 
     // While the offline overlay is visible, quietly probe for restored
-    // connectivity. The overlay stays up until the full refresh completes.
+    // connectivity. Once Supabase responds, restart the complete app.
     const interval = setInterval(async () => {
       if (retryingRef.current) return;
       const online = await checkOnline(false);
