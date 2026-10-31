@@ -29,6 +29,8 @@ export const FREE_SAVE_LIMIT = 5;
 
 let savedIds: string[] = [];
 let savedLoaded = false;
+let savedLoadPromise: Promise<string[]> | null = null;
+let savedGeneration = 0;
 
 function sessionToAppUser(s: SessionUser): AppUser {
   return {
@@ -152,12 +154,11 @@ export function isCurrentUserVerified(): boolean {
   return getProfessionalById(proId)?.verified ?? false;
 }
 
-async function fetchSavedIds(): Promise<string[]> {
+async function fetchSavedIds(generation: number): Promise<string[]> {
   const s = await loadSessionUser();
   if (!s) {
-    savedIds = [];
-    savedLoaded = true;
-    return savedIds;
+    if (generation === savedGeneration) { savedIds = []; savedLoaded = true; }
+    return [];
   }
 
   const { data, error } = await supabase
@@ -167,19 +168,26 @@ async function fetchSavedIds(): Promise<string[]> {
 
   if (error) throw error;
 
-  savedIds = (data ?? []).map((row: any) => String(row.professional_id));
-  savedLoaded = true;
-  return savedIds;
+  const ids = (data ?? []).map((row: any) => String(row.professional_id));
+  if (generation === savedGeneration) { savedIds = ids; savedLoaded = true; }
+  return ids;
 }
 
 export async function ensureSavedLoaded(): Promise<string[]> {
   if (savedLoaded) return savedIds;
-  return fetchSavedIds();
+  if (!savedLoadPromise) {
+    const request = fetchSavedIds(savedGeneration);
+    const tracked = request.finally(() => { if (savedLoadPromise === tracked) savedLoadPromise = null; });
+    savedLoadPromise = tracked;
+  }
+  return savedLoadPromise;
 }
 
 export function invalidateSavedCache() {
+  savedGeneration += 1;
   savedLoaded = false;
   savedIds = [];
+  savedLoadPromise = null;
 }
 
 export function getSavedIds(): string[] {

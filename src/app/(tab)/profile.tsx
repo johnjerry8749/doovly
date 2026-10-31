@@ -27,6 +27,7 @@ import {
 } from "@/services/savedProviders";
 import { listMyServiceRequests } from "@/services/serviceRequests";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { getDataState, subscribeDataState } from "@/lib/dataState";
 
 const PRIMARY = "#159447";
 const GOLD = "#D4AF37";
@@ -105,6 +106,7 @@ export default function Profile() {
   const { signOut } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [dataPhase, setDataPhase] = useState(() => getDataState().phase);
   const role = getCurrentUserRole();
   const proId = getLoggedInProfessionalId();
   const [loadedProId, setLoadedProId] = useState<string | null>(proId);
@@ -114,25 +116,34 @@ export default function Profile() {
   const isPro = useCurrentUserPro();
   const requestCount = listMyServiceRequests().length;
 
+  useEffect(() => subscribeDataState((next) => setDataPhase(next.phase)), []);
+
   useEffect(() => {
+    if (dataPhase !== "ready") return;
     let active = true;
 
     const loadProfile = async () => {
-      const session = await loadSessionUser(true);
-      if (!session?.professionalId) {
-        if (active) {
-          setLoadedProId(null);
-          setPro(undefined);
+      try {
+        const session = await loadSessionUser(true);
+        if (!session?.professionalId) {
+          if (active) {
+            setLoadedProId(null);
+            setPro(undefined);
+          }
+          return;
         }
-        return;
-      }
 
-      await ensureProfessionalsLoaded();
-      const nextPro = getProfessionalById(session.professionalId);
+        await ensureProfessionalsLoaded();
+        const nextPro = getProfessionalById(session.professionalId);
 
-      if (active) {
-        setLoadedProId(session.professionalId);
-        setPro(nextPro);
+        if (active) {
+          setLoadedProId(session.professionalId);
+          setPro(nextPro);
+        }
+      } catch (error) {
+        console.warn("[Profile] load failed:", error);
+        // Keep any already-rendered profile visible; a later successful
+        // reconnect changes dataPhase to ready and retries this load.
       }
     };
 
@@ -141,7 +152,7 @@ export default function Profile() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [dataPhase]);
 
   const refreshProfile = async () => {
     if (refreshing) return;

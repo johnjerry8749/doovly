@@ -62,6 +62,7 @@ export type AddCommentInput = { requestId: string; text: string; userName?: stri
 
 let cache: ServiceRequest[] | null = null;
 let loadPromise: Promise<ServiceRequest[]> | null = null;
+let cacheGeneration = 0;
 const requestListeners = new Set<(requests: ServiceRequest[]) => void>();
 function notifyRequestListeners() {
   const snapshot = cache ?? [];
@@ -159,22 +160,29 @@ async function getCurrentAvatarUrl(userId: string): Promise<string | null> {
   return professionalResult.data?.avatar_url || profileResult.data?.avatar_url || null;
 }
 
-async function fetchAll(): Promise<ServiceRequest[]> {
+async function fetchAll(generation: number): Promise<ServiceRequest[]> {
   const { data, error } = await supabase
     .from("service_requests").select(SERVICE_REQUEST_SELECT)
     .order("created_at", { ascending: false });
   if (error) throw error;
   const hydratedRows = await hydrateRequestAvatarUrls(data ?? []);
-  cache = hydratedRows.map(mapServiceRequestRow);
-  notifyRequestListeners();
-  return cache;
+  const mapped = hydratedRows.map(mapServiceRequestRow);
+  if (generation === cacheGeneration) {
+    cache = mapped;
+    notifyRequestListeners();
+  }
+  return mapped;
 }
 export async function ensureServiceRequestsLoaded(): Promise<ServiceRequest[]> {
   if (cache) return cache;
-  if (!loadPromise) loadPromise = fetchAll().finally(() => { loadPromise = null; });
+  if (!loadPromise) {
+    const request = fetchAll(cacheGeneration);
+    const tracked = request.finally(() => { if (loadPromise === tracked) loadPromise = null; });
+    loadPromise = tracked;
+  }
   return loadPromise;
 }
-export function invalidateServiceRequestsCache() { cache = null; }
+export function invalidateServiceRequestsCache() { cacheGeneration += 1; cache = null; loadPromise = null; }
 export function listServiceRequests(): ServiceRequest[] {
   if (!cache) void ensureServiceRequestsLoaded();
   return cache ?? [];
