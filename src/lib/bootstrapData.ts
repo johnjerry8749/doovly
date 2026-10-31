@@ -4,7 +4,6 @@
  */
 
 import { loadSessionUser, bindAuthListener, clearSessionCache } from "@/lib/session";
-import { queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 import {
   setDataPhase,
