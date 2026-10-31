@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 
 import {
   ensureProfessionalsLoaded,
+  invalidateProfessionalsCache,
   getProfessionalById,
 } from "@/services/professionals";
 import { loadSessionUser } from "@/lib/session";
@@ -25,6 +26,7 @@ import {
   useCurrentUserPro,
 } from "@/services/savedProviders";
 import { listMyServiceRequests } from "@/services/serviceRequests";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 const PRIMARY = "#159447";
 const GOLD = "#D4AF37";
@@ -102,6 +104,7 @@ function MenuIcon({
 export default function Profile() {
   const { signOut } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const role = getCurrentUserRole();
   const proId = getLoggedInProfessionalId();
   const [loadedProId, setLoadedProId] = useState<string | null>(proId);
@@ -139,6 +142,27 @@ export default function Profile() {
       active = false;
     };
   }, []);
+
+  const refreshProfile = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const session = await loadSessionUser(true);
+      if (!session?.professionalId) {
+        setLoadedProId(null);
+        setPro(undefined);
+        return;
+      }
+      invalidateProfessionalsCache();
+      await ensureProfessionalsLoaded();
+      setLoadedProId(session.professionalId);
+      setPro(getProfessionalById(session.professionalId));
+    } catch (error) {
+      console.warn("[Profile] pull-to-refresh failed:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const resolvedPro =
     loadedProId && pro ? pro : proId ? getProfessionalById(proId) : undefined;
@@ -215,6 +239,7 @@ export default function Profile() {
 
       {/* Scrollable Content */}
       <ScrollView
+        refreshControl={<PullToRefresh refreshing={refreshing} onRefresh={() => void refreshProfile()} />}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

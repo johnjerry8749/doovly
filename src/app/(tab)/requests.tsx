@@ -23,6 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listServiceRequests,
   listServiceRequestsAsync,
+  invalidateServiceRequestsCache,
   subscribeServiceRequests,
   canSendOfferOnRequest,
   submitServiceRequestOffer,
@@ -49,6 +50,7 @@ import { useLocation } from "@/context/LocationContext";
 import CreateJobModal from "@/components/CreateJobModal";
 import RequestImageSlider from "@/components/RequestImageSlider";
 import { SearchBar, TextCategoryChips } from "@/components/home";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 const GREEN = "#159447";
 const MY_AVATAR = require("@/assets/profile_1.jpg");
@@ -123,6 +125,7 @@ export default function RequestsScreen() {
   const [offerRequest, setOfferRequest] = useState<ServiceRequest | null>(null);
   const [offerAmount, setOfferAmount] = useState("");
   const [offerSending, setOfferSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [chatRequest, setChatRequest] = useState<ServiceRequest | null>(null);
   const [chatText, setChatText] = useState("");
   const lastProfileNavAt = useRef(0);
@@ -223,12 +226,23 @@ export default function RequestsScreen() {
   const getComments = (item: ServiceRequest): ServiceRequestComment[] =>
     item.comments || [];
 
-  const refreshRequests = async () => {
+  const loadRequests = async () => {
     try {
       const next = await listServiceRequestsAsync();
       setAllRequests(next);
     } catch (error) {
       console.warn("[Requests] refresh failed:", error);
+    }
+  };
+
+  const refreshRequests = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      invalidateServiceRequestsCache();
+      await loadRequests();
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -240,7 +254,7 @@ export default function RequestsScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      void refreshRequests();
+      void loadRequests();
     }, []),
   );
 
@@ -689,6 +703,7 @@ export default function RequestsScreen() {
       </View>
 
       <FlatList
+        refreshControl={<PullToRefresh refreshing={refreshing} onRefresh={() => void refreshRequests()} />}
         data={filteredRequests}
         keyExtractor={(item) => item.id}
         renderItem={renderRequest}

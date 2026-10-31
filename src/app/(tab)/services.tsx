@@ -36,6 +36,7 @@ import { listCities, listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 import { PromotedServiceCard } from "@/components/PromotedServiceCard";
 import { trackPromotionEvent } from "@/services/promotionAnalytics";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import {
   MovingServiceDescription,
   SearchBar,
@@ -48,6 +49,7 @@ export default function Services() {
   const [search, setSearch] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [favTick, setFavTick] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [categories, setCategories] = useState(listServiceCategories());
   const [professionals, setProfessionals] = useState(listProfessionals());
   const [promotedServices, setPromotedServices] = useState<PromotedService[]>([]);
@@ -98,6 +100,29 @@ export default function Services() {
       };
     }, []),
   );
+
+  const refreshServices = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      invalidateProfessionalsCache();
+      const [nextCategories, nextProfessionals, nextCities, nextPromotedServices] =
+        await Promise.all([
+          listServiceCategoriesAsync(),
+          listProfessionalsAsync(),
+          listCitiesAsync(),
+          listActivePromotedServicesAsync(),
+        ]);
+      setCategories(nextCategories);
+      setProfessionals(nextProfessionals);
+      setCities(nextCities);
+      setPromotedServices(nextPromotedServices);
+    } catch (error) {
+      console.warn("Services pull-to-refresh failed:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshing]);
 
   const {
     locationName,
@@ -460,6 +485,7 @@ export default function Services() {
       </View>
 
       <FlatList
+        refreshControl={<PullToRefresh refreshing={refreshing} onRefresh={() => void refreshServices()} />}
         data={combinedCards}
         extraData={`${favTick}-${selectedFilter}-${filteredPromotedServices.map((service) => `${service.serviceId}:${service.serviceName}:${service.serviceDescription}:${service.price}:${service.priceValue}`).join("|")}`}
         keyExtractor={(item) =>

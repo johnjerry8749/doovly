@@ -21,6 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listProfessionals,
   listProfessionalsAsync,
+  invalidateProfessionalsCache,
   listActivePromotedServicesAsync,
   listServiceCategories,
   listServiceCategoriesAsync,
@@ -35,6 +36,7 @@ import { listCitiesAsync } from "@/services/cities";
 import { useLocation } from "@/context/LocationContext";
 import { PromotedServiceCard } from "@/components/PromotedServiceCard";
 import { trackPromotionEvent } from "@/services/promotionAnalytics";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import {
   MovingServiceDescription,
   HomeHeader,
@@ -64,6 +66,7 @@ export default function Home() {
   const [professionals, setProfessionals] = useState(listProfessionals());
   const [promotedServices, setPromotedServices] = useState<PromotedService[]>([]);
   const [cities, setCities] = useState<string[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [distanceByProfessionalId, setDistanceByProfessionalId] = useState<Record<string, number>>({});
   const promotedCardRefs = useRef<Record<string, View | null>>({});
   const visibilityCheckAt = useRef(0);
@@ -80,6 +83,29 @@ export default function Home() {
       });
     });
   }, []);
+
+  const refreshHome = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      invalidateProfessionalsCache();
+      const [nextServices, nextProfessionals, nextCities, nextPromotedServices] =
+        await Promise.all([
+          listServiceCategoriesAsync(),
+          listProfessionalsAsync(),
+          listCitiesAsync(),
+          listActivePromotedServicesAsync(),
+        ]);
+      setServices(nextServices);
+      setProfessionals(nextProfessionals);
+      setCities(nextCities);
+      setPromotedServices(nextPromotedServices);
+    } catch (error) {
+      console.warn("Home pull-to-refresh failed:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshing]);
 
   useEffect(() => {
     let active = true;
@@ -324,6 +350,7 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
+        refreshControl={<PullToRefresh refreshing={refreshing} onRefresh={() => void refreshHome()} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.container}
         onScroll={checkVisiblePromotedCards}

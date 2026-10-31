@@ -15,21 +15,38 @@ import {
   listBookedJobs,
   listReceivedJobs,
   ensureBookingsLoaded,
+  invalidateBookingsCache,
   type Booking,
 } from "@/services/bookings";
 
 import { getCurrentUserId } from "@/services/inAppNotifications";
 import { BookingCard } from "@/components/BookingCard";
+import { PullToRefresh } from "@/components/PullToRefresh";
 
 const GREEN = "#16A34A";
 
 export default function Bookings() {
   const [mainTab, setMainTab] = useState<"booked" | "received">("booked");
   const [tick, setTick] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     void ensureBookingsLoaded().then(() => setTick((t) => t + 1));
   }, []);
+
+  const refreshBookings = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      invalidateBookingsCache();
+      await ensureBookingsLoaded();
+      setTick((current) => current + 1);
+    } catch (error) {
+      console.warn("[Bookings] pull-to-refresh failed:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const data = useMemo<Booking[]>(() => {
     return mainTab === "booked" ? listBookedJobs() : listReceivedJobs();
@@ -107,6 +124,7 @@ export default function Bookings() {
 
       {/* BOOKINGS LIST — full record history, no filters */}
       <FlatList
+        refreshControl={<PullToRefresh refreshing={refreshing} onRefresh={() => void refreshBookings()} />}
         data={data}
         keyExtractor={(item) => `${mainTab}-${item.id}`}
         contentContainerStyle={styles.listContent}
