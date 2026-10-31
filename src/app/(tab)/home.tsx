@@ -21,6 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   listProfessionals,
   listProfessionalsAsync,
+  invalidateProfessionalsCache,
   listActivePromotedServicesAsync,
   listServiceCategories,
   listServiceCategoriesAsync,
@@ -87,6 +88,7 @@ export default function Home() {
     if (refreshing) return;
     setRefreshing(true);
     try {
+      invalidateProfessionalsCache();
       const [nextServices, nextProfessionals, nextCities, nextPromotedServices] =
         await Promise.all([
           listServiceCategoriesAsync(),
