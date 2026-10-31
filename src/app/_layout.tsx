@@ -16,6 +16,7 @@ import {
 import { bootstrapAppData, retryBootstrap } from "@/lib/bootstrapData";
 import { loadSessionUser } from "@/lib/session";
 import SystemNotificationBanner from "@/components/SystemNotificationBanner";
+import OfflineConnectionNotice from "@/components/OfflineConnectionNotice";
 import {
   addCustomerInfoListener,
   getCustomerInfo,
@@ -114,6 +115,7 @@ export default function RootLayout() {
       }}
     >
       <SystemNotificationBanner />
+      <OfflineConnectionNotice />
       <AuthProvider>
         <RevenueCatBootstrap />
         <LocationProvider>
