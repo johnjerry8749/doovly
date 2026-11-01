@@ -139,7 +139,8 @@ Deno.serve(async (request: Request) => {
     addStorageKey(profile?.avatar_url, storageKeys);
 
     const professionals = await fetchAllRows<any>(() =>
-      admin.from("professionals").select("id,avatar_url,avatar_key").eq("user_id", user.id)
+      admin.from("professionals").select("id,avatar_url,avatar_key")
+        .eq("user_id", user.id).order("id")
     );
     const professionalIds = professionals.map((row) => row.id);
 
@@ -152,8 +153,8 @@ Deno.serve(async (request: Request) => {
 
     if (professionalIds.length) {
       const portfolio = await fetchAllRows<any>(() =>
-        admin.from("portfolio_items").select("image_key,image_url")
-          .in("professional_id", professionalIds)
+        admin.from("portfolio_items").select("id,image_key,image_url")
+          .in("professional_id", professionalIds).order("id")
       );
       for (const item of portfolio) {
         addCloudinaryId(item.image_key, cloudinaryIds);
@@ -165,7 +166,7 @@ Deno.serve(async (request: Request) => {
 
     const requests = await fetchAllRows<any>(() =>
       admin.from("service_requests").select("id,images,image_keys")
-        .eq("created_by", user.id)
+        .eq("created_by", user.id).order("id")
     );
     for (const requestRow of requests) {
       for (const value of requestRow.images ?? []) {
@@ -177,13 +178,14 @@ Deno.serve(async (request: Request) => {
     }
 
     const applications = await fetchAllRows<any>(() =>
-      admin.from("verification_applications").select("id").eq("user_id", user.id)
+      admin.from("verification_applications").select("id")
+        .eq("user_id", user.id).order("id")
     );
     const applicationIds = applications.map((row) => row.id);
     if (applicationIds.length) {
       const documents = await fetchAllRows<any>(() =>
-        admin.from("verification_documents").select("preview_key,file_url")
-          .in("application_id", applicationIds)
+        admin.from("verification_documents").select("id,preview_key,file_url")
+          .in("application_id", applicationIds).order("id")
       );
       for (const document of documents) {
         addCloudinaryId(document.preview_key, cloudinaryIds);
@@ -194,8 +196,8 @@ Deno.serve(async (request: Request) => {
     }
 
     const messages = await fetchAllRows<any>(() =>
-      admin.from("messages").select("text,kind,image_url")
-        .eq("sender_id", user.id)
+      admin.from("messages").select("id,text,kind,image_url")
+        .eq("sender_id", user.id).order("id")
     );
     for (const message of messages) {
       if (message.kind === "image") addCloudinaryId(message.text, cloudinaryIds);
@@ -230,38 +232,44 @@ Deno.serve(async (request: Request) => {
 
     // These relationships use ON DELETE SET NULL, so remove the user's authored rows
     // explicitly before deleting the Auth user/profile.
-    const cleanupDeletes = [
-      admin.from("reviews").delete().eq("user_id", user.id),
-      admin.from("service_request_comments").delete().eq("user_id", user.id),
-      admin.from("service_requests").delete().eq("created_by", user.id),
-      admin.from("admin_notifications").delete().eq("created_by", user.id),
-    ];
-    if (professionalIds.length) {
-      cleanupDeletes.push(
-        admin.from("service_request_offers").delete().in("professional_id", professionalIds) as any,
-      );
-    }
-    const cleanupResults = await Promise.all(cleanupDeletes);
-    const cleanupError = cleanupResults.find((result) => result.error)?.error;
-    if (cleanupError) throw cleanupError;
+    const { error: reviewsError } = await admin.from("reviews").delete().eq("user_id", user.id);
+    if (reviewsError) throw reviewsError;
 
-    // Auth deletion cascades all remaining user-owned rows (profile, professional,
-    // services, portfolio, bookings, conversations/messages, offers, likes, etc.).
+    const { error: commentsError } = await admin
+      .from("service_request_comments").delete().eq("user_id", user.id);
+    if (commentsError) throw commentsError;
+
+    const { error: requestsError } = await admin
+      .from("service_requests").delete().eq("created_by", user.id);
+    if (requestsError) throw requestsError;
+
+    const { error: adminNotificationsError } = await admin
+      .from("admin_notifications").delete().eq("created_by", user.id);
+    if (adminNotificationsError) throw adminNotificationsError;
+
+    // Offers made as a professional use SET NULL for professional_id; remove them explicitly.
+    if (professionalIds.length) {
+      const { error: offersError } = await admin
+        .from("service_request_offers").delete().in("professional_id", professionalIds);
+      if (offersError) throw offersError;
+    }
+
+    // Keep RevenueCat's event IDs for webhook idempotency, but remove the deleted user's link.
+    const { error: receiptsError } = await admin
+      .from("revenuecat_pro_event_receipts").update({ user_id: null }).eq("user_id", user.id);
+    if (receiptsError) throw receiptsError;
+
+    // Auth deletion cascades remaining account-owned rows through the verified FK graph:
+    // profile, professional, services, portfolio, bookings, subscriptions, promotions,
+    // verification records, saved providers, likes, credits, notifications, conversations,
+    // messages, and conversation reads.
     const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
     if (deleteError) {
       console.error("Account deletion failed:", deleteError.message);
       return jsonResponse({ error: "We could not delete your account. Please contact Doovly Support." }, 500);
     }
 
-    return jsonResponse({
-      ok: true,
-      deleted: {
-        authoredReviews: cleanupResults[0].count ?? null,
-        authoredComments: cleanupResults[1].count ?? null,
-        serviceRequests: cleanupResults[2].count ?? null,
-        adminNotifications: cleanupResults[3].count ?? null,
-      },
-    });
+    return jsonResponse({ ok: true });
   } catch (error) {
     console.error("Unexpected account deletion error:", error instanceof Error ? error.message : String(error));
     return jsonResponse({
