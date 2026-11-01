@@ -42,10 +42,10 @@ function addStorageKey(value: unknown, keys: Set<string>) {
   // Accept legacy raw keys and public/signed URLs from this project's bucket.
   const marker = "/storage/v1/object/";
   if (key.includes(marker)) {
-    const afterMarker = key.split(marker)[1]?.replace(/^(public|sign|authenticated)\\//, "");
+    const afterMarker = key.split(marker)[1]?.replace(/^(public|sign|authenticated)\//, "");
     if (!afterMarker?.startsWith("profile-images/")) return;
     key = afterMarker.slice("profile-images/".length).split(/[?#]/)[0];
-  } else if (/^https?:\\/\\//i.test(key)) {
+  } else if (/^https?:\/\//i.test(key)) {
     return;
   }
 
