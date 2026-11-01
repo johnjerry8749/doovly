@@ -19,7 +19,7 @@ function addCloudinaryId(value: unknown, ids: Set<string>) {
   const input = value.trim();
 
   if (input.startsWith("doovly/")) {
-    ids.add(input.replace(/\\.[a-z0-9]+$/i, ""));
+    ids.add(input.replace(/\.[a-z0-9]+$/i, ""));
     return;
   }
 
@@ -31,7 +31,7 @@ function addCloudinaryId(value: unknown, ids: Set<string>) {
   const folderIndex = parts.findIndex((part) => part === "doovly");
   if (folderIndex < 0) return;
 
-  const publicId = parts.slice(folderIndex).join("/").replace(/\\.[a-z0-9]+$/i, "");
+  const publicId = parts.slice(folderIndex).join("/").replace(/\.[a-z0-9]+$/i, "");
   if (publicId.startsWith("doovly/")) ids.add(publicId);
 }
 
