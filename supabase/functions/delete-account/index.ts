@@ -38,13 +38,13 @@ function addCloudinaryId(value: unknown, ids: Set<string>) {
 function addStorageKey(value: unknown, keys: Set<string>) {
   if (typeof value !== "string" || !value.trim()) return;
   const key = value.trim();
-  if (!key.startsWith("doovly/") && !key.startsWith("avatars/") && !key.startsWith("portfolio/")) {
+  if (!key.startsWith("doovly/")) {
     keys.add(key);
   }
 }
 
 async function cloudinarySignature(publicId: string, timestamp: number, apiSecret: string) {
-  const value = "public_id=" + publicId + "&timestamp=" + timestamp + apiSecret;
+  const value = "invalidate=true&public_id=" + publicId + "&timestamp=" + timestamp + apiSecret;
   const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
