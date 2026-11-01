@@ -38,6 +38,8 @@ export default function Settings() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -150,22 +152,8 @@ export default function Settings() {
 
   const requestAccountDeletion = () => {
     if (deletingAccount) return;
-
-    Alert.alert(
-      "Delete your Doovly account?",
-      "This permanently deletes your account and associated account records. This action cannot be undone. Deleting your Doovly account does not cancel an active App Store or Google Play subscription; cancel any subscription separately in your store settings.",
-      [
-        { text: "Keep Account", style: "cancel" },
-        {
-          text: "Delete Account",
-          style: "destructive",
-          onPress: () => {
-            void deleteAccount();
-          },
-        },
-      ],
-      { cancelable: true },
-    );
+    setDeleteError("");
+    setDeleteConfirmVisible(true);
   };
 
   const deleteAccount = async () => {
@@ -183,7 +171,8 @@ export default function Settings() {
       await AsyncStorage.clear();
       router.replace("/(auth)/login");
     } catch (error) {
-      Alert.alert("Account Deletion Failed", getErrorMessage(error));
+      setDeleteError(getErrorMessage(error));
+      setDeleteConfirmVisible(false);
     } finally {
       setDeletingAccount(false);
     }
@@ -338,6 +327,78 @@ export default function Settings() {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        visible={deleteConfirmVisible || Boolean(deleteError)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!deletingAccount) {
+            setDeleteConfirmVisible(false);
+            setDeleteError("");
+          }
+        }}
+      >
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModal}>
+            {deleteError ? (
+              <>
+                <View style={styles.deleteErrorIcon}>
+                  <Ionicons name="alert-circle-outline" size={30} color="#DC2626" />
+                </View>
+                <Text style={styles.deleteModalTitle}>Deletion Unsuccessful</Text>
+                <Text style={styles.deleteModalMessage}>{deleteError}</Text>
+                <TouchableOpacity
+                  style={styles.deleteKeepButton}
+                  onPress={() => setDeleteError("")}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.deleteKeepButtonText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <View style={styles.deleteWarningIcon}>
+                  <Ionicons name="trash-outline" size={28} color="#DC2626" />
+                </View>
+                <Text style={styles.deleteModalTitle}>Delete your account?</Text>
+                <Text style={styles.deleteModalMessage}>
+                  This will permanently delete your Doovly account and associated account records. This action cannot be undone.
+                </Text>
+                <View style={styles.deleteSubscriptionNote}>
+                  <Ionicons name="information-circle-outline" size={17} color="#92400E" />
+                  <Text style={styles.deleteSubscriptionText}>
+                    Your App Store or Google Play subscription will not be cancelled automatically. Cancel it separately in your store settings.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.deleteConfirmButton, deletingAccount && styles.deleteButtonDisabled]}
+                  onPress={() => {
+                    setDeleteConfirmVisible(false);
+                    void deleteAccount();
+                  }}
+                  disabled={deletingAccount}
+                  activeOpacity={0.85}
+                >
+                  {deletingAccount ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.deleteConfirmButtonText}>Yes, Delete My Account</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteKeepButton}
+                  onPress={() => setDeleteConfirmVisible(false)}
+                  disabled={deletingAccount}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.deleteKeepButtonText}>Keep My Account</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -570,6 +631,97 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  deleteModalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(17, 24, 39, 0.55)",
+  },
+  deleteModal: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 22,
+    alignItems: "center",
+  },
+  deleteWarningIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  deleteErrorIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  deleteModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: TEXT_DARK,
+    textAlign: "center",
+    marginBottom: 9,
+  },
+  deleteModalMessage: {
+    fontSize: 14,
+    color: TEXT_MUTED,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+  deleteSubscriptionNote: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "#FFFBEB",
+    borderRadius: 10,
+    padding: 11,
+    marginTop: 15,
+  },
+  deleteSubscriptionText: {
+    flex: 1,
+    fontSize: 12,
+    color: "#92400E",
+    lineHeight: 18,
+  },
+  deleteConfirmButton: {
+    width: "100%",
+    minHeight: 48,
+    borderRadius: 11,
+    backgroundColor: "#DC2626",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+  },
+  deleteButtonDisabled: {
+    opacity: 0.7,
+  },
+  deleteConfirmButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  deleteKeepButton: {
+    width: "100%",
+    minHeight: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  deleteKeepButtonText: {
+    color: TEXT_DARK,
+    fontSize: 14,
+    fontWeight: "600",
   },
   footer: {
     alignItems: "center",
