@@ -44,7 +44,7 @@ function addStorageKey(value: unknown, keys: Set<string>) {
 }
 
 async function cloudinarySignature(publicId: string, timestamp: number, apiSecret: string) {
-  const value = \`public_id=\${publicId}&timestamp=\${timestamp}\${apiSecret}\`;
+  const value = "public_id=" + publicId + "&timestamp=" + timestamp + apiSecret;
   const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
@@ -65,13 +65,16 @@ async function deleteCloudinaryAsset(
     invalidate: "true",
   });
 
-  const response = await fetch(
-    \`https://api.cloudinary.com/v1_1/\${encodeURIComponent(cloudName)}/image/destroy\`,
-    { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body },
-  );
+  const endpoint = "https://api.cloudinary.com/v1_1/" +
+    encodeURIComponent(cloudName) + "/image/destroy";
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
   const result = await response.json().catch(() => ({}));
   if (!response.ok || (result.result !== "ok" && result.result !== "not found")) {
-    throw new Error(\`Cloudinary could not remove an account image (\${response.status}).\`);
+    throw new Error("Cloudinary could not remove an account image (" + response.status + ").");
   }
 }
 
@@ -172,7 +175,6 @@ Deno.serve(async (request: Request) => {
       }, 503);
     }
 
-    // Remove any legacy Supabase Storage profile-image objects first.
     if (storageKeys.size) {
       const keys = Array.from(storageKeys);
       for (let index = 0; index < keys.length; index += 100) {
@@ -181,15 +183,12 @@ Deno.serve(async (request: Request) => {
       }
     }
 
-    // Remove only Cloudinary public IDs linked to this user's own records.
     if (cloudName && cloudApiKey && cloudApiSecret) {
       for (const publicId of cloudinaryIds) {
         await deleteCloudinaryAsset(cloudName, cloudApiKey, cloudApiSecret, publicId);
       }
     }
 
-    // Delete only the Auth user proven by the supplied access token.
-    // Existing profile foreign keys cascade the account-owned relational rows.
     const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
     if (deleteError) {
       console.error("Account deletion failed:", deleteError.message);
