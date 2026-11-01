@@ -19,7 +19,7 @@ function addCloudinaryId(value: unknown, ids: Set<string>) {
   const input = value.trim();
 
   if (input.startsWith("doovly/")) {
-    ids.add(input.replace(/\.[a-z0-9]+$/i, ""));
+    ids.add(input.replace(/\\.[a-z0-9]+$/i, ""));
     return;
   }
 
@@ -31,15 +31,37 @@ function addCloudinaryId(value: unknown, ids: Set<string>) {
   const folderIndex = parts.findIndex((part) => part === "doovly");
   if (folderIndex < 0) return;
 
-  const publicId = parts.slice(folderIndex).join("/").replace(/\.[a-z0-9]+$/i, "");
+  const publicId = parts.slice(folderIndex).join("/").replace(/\\.[a-z0-9]+$/i, "");
   if (publicId.startsWith("doovly/")) ids.add(publicId);
 }
 
 function addStorageKey(value: unknown, keys: Set<string>) {
   if (typeof value !== "string" || !value.trim()) return;
-  const key = value.trim();
-  if (!key.startsWith("doovly/")) {
-    keys.add(key);
+  let key = value.trim();
+
+  // Accept legacy raw keys and public/signed URLs from this project's bucket.
+  const marker = "/storage/v1/object/";
+  if (key.includes(marker)) {
+    const afterMarker = key.split(marker)[1]?.replace(/^(public|sign|authenticated)\\//, "");
+    if (!afterMarker?.startsWith("profile-images/")) return;
+    key = afterMarker.slice("profile-images/".length).split(/[?#]/)[0];
+  } else if (/^https?:\\/\\//i.test(key)) {
+    return;
+  }
+
+  if (key.startsWith("profile-images/")) key = key.slice("profile-images/".length);
+  if (key) keys.add(decodeURIComponent(key));
+}
+
+async function fetchAllRows<T>(buildQuery: () => any): Promise<T[]> {
+  const rows: T[] = [];
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await buildQuery().range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const page = (data ?? []) as T[];
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
   }
 }
 
@@ -114,57 +136,73 @@ Deno.serve(async (request: Request) => {
       .from("profiles").select("avatar_url").eq("id", user.id).maybeSingle();
     if (profileError) throw profileError;
     addCloudinaryId(profile?.avatar_url, cloudinaryIds);
+    addStorageKey(profile?.avatar_url, storageKeys);
 
-    const { data: professionals, error: professionalError } = await admin
-      .from("professionals").select("id,avatar_url,avatar_key").eq("user_id", user.id);
-    if (professionalError) throw professionalError;
-    const professionalIds = (professionals ?? []).map((row) => row.id);
+    const professionals = await fetchAllRows<any>(() =>
+      admin.from("professionals").select("id,avatar_url,avatar_key").eq("user_id", user.id)
+    );
+    const professionalIds = professionals.map((row) => row.id);
 
-    for (const professional of professionals ?? []) {
+    for (const professional of professionals) {
       addCloudinaryId(professional.avatar_url, cloudinaryIds);
       addCloudinaryId(professional.avatar_key, cloudinaryIds);
+      addStorageKey(professional.avatar_url, storageKeys);
       addStorageKey(professional.avatar_key, storageKeys);
     }
 
     if (professionalIds.length) {
-      const { data: portfolio, error } = await admin
-        .from("portfolio_items").select("image_key,image_url")
-        .in("professional_id", professionalIds);
-      if (error) throw error;
-      for (const item of portfolio ?? []) {
+      const portfolio = await fetchAllRows<any>(() =>
+        admin.from("portfolio_items").select("image_key,image_url")
+          .in("professional_id", professionalIds)
+      );
+      for (const item of portfolio) {
         addCloudinaryId(item.image_key, cloudinaryIds);
         addCloudinaryId(item.image_url, cloudinaryIds);
         addStorageKey(item.image_key, storageKeys);
+        addStorageKey(item.image_url, storageKeys);
       }
     }
 
-    const { data: requests, error: requestsError } = await admin
-      .from("service_requests").select("images,image_keys").eq("created_by", user.id);
-    if (requestsError) throw requestsError;
-    for (const requestRow of requests ?? []) {
-      for (const value of requestRow.images ?? []) addCloudinaryId(value, cloudinaryIds);
-      for (const value of requestRow.image_keys ?? []) addCloudinaryId(value, cloudinaryIds);
+    const requests = await fetchAllRows<any>(() =>
+      admin.from("service_requests").select("id,images,image_keys")
+        .eq("created_by", user.id)
+    );
+    for (const requestRow of requests) {
+      for (const value of requestRow.images ?? []) {
+        addCloudinaryId(value, cloudinaryIds);
+        addStorageKey(value, storageKeys);
+      }
+      // image_keys are legacy Supabase Storage object keys, not Cloudinary IDs.
+      for (const value of requestRow.image_keys ?? []) addStorageKey(value, storageKeys);
     }
 
-    const { data: applications, error: applicationsError } = await admin
-      .from("verification_applications").select("id").eq("user_id", user.id);
-    if (applicationsError) throw applicationsError;
-    const applicationIds = (applications ?? []).map((row) => row.id);
+    const applications = await fetchAllRows<any>(() =>
+      admin.from("verification_applications").select("id").eq("user_id", user.id)
+    );
+    const applicationIds = applications.map((row) => row.id);
     if (applicationIds.length) {
-      const { data: documents, error } = await admin
-        .from("verification_documents").select("preview_key,file_url")
-        .in("application_id", applicationIds);
-      if (error) throw error;
-      for (const document of documents ?? []) {
+      const documents = await fetchAllRows<any>(() =>
+        admin.from("verification_documents").select("preview_key,file_url")
+          .in("application_id", applicationIds)
+      );
+      for (const document of documents) {
         addCloudinaryId(document.preview_key, cloudinaryIds);
         addCloudinaryId(document.file_url, cloudinaryIds);
+        addStorageKey(document.preview_key, storageKeys);
+        addStorageKey(document.file_url, storageKeys);
       }
     }
 
-    const { data: messages, error: messagesError } = await admin
-      .from("messages").select("text,kind").eq("sender_id", user.id).eq("kind", "image");
-    if (messagesError) throw messagesError;
-    for (const message of messages ?? []) addCloudinaryId(message.text, cloudinaryIds);
+    const messages = await fetchAllRows<any>(() =>
+      admin.from("messages").select("text,kind,image_url")
+        .eq("sender_id", user.id)
+    );
+    for (const message of messages) {
+      if (message.kind === "image") addCloudinaryId(message.text, cloudinaryIds);
+      addCloudinaryId(message.image_url, cloudinaryIds);
+      addStorageKey(message.image_url, storageKeys);
+      if (message.kind === "image") addStorageKey(message.text, storageKeys);
+    }
 
     const cloudName = Deno.env.get("CLOUDINARY_CLOUD_NAME");
     const cloudApiKey = Deno.env.get("CLOUDINARY_API_KEY");
@@ -175,6 +213,7 @@ Deno.serve(async (request: Request) => {
       }, 503);
     }
 
+    // Remove external assets first. Both providers treat already-missing assets as safe to retry.
     if (storageKeys.size) {
       const keys = Array.from(storageKeys);
       for (let index = 0; index < keys.length; index += 100) {
@@ -189,13 +228,40 @@ Deno.serve(async (request: Request) => {
       }
     }
 
+    // These relationships use ON DELETE SET NULL, so remove the user's authored rows
+    // explicitly before deleting the Auth user/profile.
+    const cleanupDeletes = [
+      admin.from("reviews").delete().eq("user_id", user.id),
+      admin.from("service_request_comments").delete().eq("user_id", user.id),
+      admin.from("service_requests").delete().eq("created_by", user.id),
+      admin.from("admin_notifications").delete().eq("created_by", user.id),
+    ];
+    if (professionalIds.length) {
+      cleanupDeletes.push(
+        admin.from("service_request_offers").delete().in("professional_id", professionalIds) as any,
+      );
+    }
+    const cleanupResults = await Promise.all(cleanupDeletes);
+    const cleanupError = cleanupResults.find((result) => result.error)?.error;
+    if (cleanupError) throw cleanupError;
+
+    // Auth deletion cascades all remaining user-owned rows (profile, professional,
+    // services, portfolio, bookings, conversations/messages, offers, likes, etc.).
     const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
     if (deleteError) {
       console.error("Account deletion failed:", deleteError.message);
       return jsonResponse({ error: "We could not delete your account. Please contact Doovly Support." }, 500);
     }
 
-    return jsonResponse({ ok: true });
+    return jsonResponse({
+      ok: true,
+      deleted: {
+        authoredReviews: cleanupResults[0].count ?? null,
+        authoredComments: cleanupResults[1].count ?? null,
+        serviceRequests: cleanupResults[2].count ?? null,
+        adminNotifications: cleanupResults[3].count ?? null,
+      },
+    });
   } catch (error) {
     console.error("Unexpected account deletion error:", error instanceof Error ? error.message : String(error));
     return jsonResponse({
