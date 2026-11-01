@@ -37,6 +37,7 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -123,6 +124,71 @@ export default function Settings() {
     }
   };
 
+  const openRateApp = async () => {
+    const storeUrl =
+      Platform.OS === "ios"
+        ? "https://apps.apple.com/ng/search?term=Doovly"
+        : "market://details?id=com.johnjerry.doovly";
+    const fallbackUrl =
+      Platform.OS === "ios"
+        ? "https://apps.apple.com/ng/search?term=Doovly"
+        : "https://play.google.com/store/apps/details?id=com.johnjerry.doovly";
+
+    try {
+      await Linking.openURL(storeUrl);
+    } catch {
+      try {
+        await Linking.openURL(fallbackUrl);
+      } catch {
+        Alert.alert(
+          "Store Unavailable",
+          "Please search for Doovly in your device's app store.",
+        );
+      }
+    }
+  };
+
+  const requestAccountDeletion = () => {
+    if (deletingAccount) return;
+
+    Alert.alert(
+      "Delete your Doovly account?",
+      "This permanently deletes your account and associated account records. This action cannot be undone. Deleting your Doovly account does not cancel an active App Store or Google Play subscription; cancel any subscription separately in your store settings.",
+      [
+        { text: "Keep Account", style: "cancel" },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: () => {
+            void deleteAccount();
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  };
+
+  const deleteAccount = async () => {
+    if (deletingAccount) return;
+
+    setDeletingAccount(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-account");
+      if (error) throw error;
+      if (!data?.ok) {
+        throw new Error(data?.error || "Account deletion could not be completed.");
+      }
+
+      await supabase.auth.signOut({ scope: "local" });
+      await AsyncStorage.clear();
+      router.replace("/(auth)/login");
+    } catch (error) {
+      Alert.alert("Account Deletion Failed", getErrorMessage(error));
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <StatusBar barStyle="dark-content" />
@@ -148,6 +214,12 @@ export default function Settings() {
             icon="lock-closed-outline"
             title="Change Password"
             onPress={openPasswordChange}
+          />
+          <Row
+            icon="person-remove-outline"
+            title="Delete Account"
+            onPress={requestAccountDeletion}
+            loading={deletingAccount}
             last
           />
         </Section>
@@ -171,9 +243,7 @@ export default function Settings() {
           <Row
             icon="star-outline"
             title="Rate App"
-            onPress={() =>
-              Alert.alert("Rate Doovly", "Thanks! Rating will open the store later.")
-            }
+            onPress={openRateApp}
           />
           <Row
             icon="document-text-outline"
@@ -295,6 +365,7 @@ function Row({
   onPress,
   last,
   disabled,
+  loading,
 }: {
   icon: React.ComponentProps<typeof Ionicons>["name"];
   title: string;
@@ -302,13 +373,14 @@ function Row({
   onPress?: () => void;
   last?: boolean;
   disabled?: boolean;
+  loading?: boolean;
 }) {
   return (
     <TouchableOpacity
       style={[styles.row, last && styles.rowLast]}
       onPress={onPress}
-      disabled={disabled}
-      activeOpacity={disabled ? 1 : 0.7}
+      disabled={disabled || loading}
+      activeOpacity={disabled || loading ? 1 : 0.7}
     >
       <View style={styles.iconBg}>
         <Ionicons name={icon} size={18} color={PRIMARY} />
@@ -319,11 +391,15 @@ function Row({
           {rightText}
         </Text>
       ) : null}
-      <Ionicons
-        name={disabled ? "checkmark-circle" : "chevron-forward"}
-        size={18}
-        color={disabled ? PRIMARY : "#9CA3AF"}
-      />
+      {loading ? (
+        <ActivityIndicator size="small" color={PRIMARY} />
+      ) : (
+        <Ionicons
+          name={disabled ? "checkmark-circle" : "chevron-forward"}
+          size={18}
+          color={disabled ? PRIMARY : "#9CA3AF"}
+        />
+      )}
     </TouchableOpacity>
   );
 }
