@@ -177,6 +177,39 @@ Deno.serve(async (request: Request) => {
       for (const value of requestRow.image_keys ?? []) addStorageKey(value, storageKeys);
     }
 
+    const ownOffers = await fetchAllRows<any>(() =>
+      admin.from("service_request_offers").select("id")
+        .eq("user_id", user.id).order("id")
+    );
+    const professionalOffers = professionalIds.length
+      ? await fetchAllRows<any>(() =>
+          admin.from("service_request_offers").select("id")
+            .in("professional_id", professionalIds).order("id")
+        )
+      : [];
+    const offerIds = Array.from(new Set([
+      ...ownOffers.map((row) => row.id),
+      ...professionalOffers.map((row) => row.id),
+    ]));
+    const requestIds = requests.map((row) => row.id);
+
+    // Request/offer-linked conversations can otherwise survive with their FK set to NULL.
+    const linkedConversationIds = new Set<string>();
+    if (requestIds.length) {
+      const linked = await fetchAllRows<any>(() =>
+        admin.from("conversations").select("id")
+          .in("service_request_id", requestIds).order("id")
+      );
+      for (const row of linked) linkedConversationIds.add(row.id);
+    }
+    if (offerIds.length) {
+      const linked = await fetchAllRows<any>(() =>
+        admin.from("conversations").select("id")
+          .in("offer_id", offerIds).order("id")
+      );
+      for (const row of linked) linkedConversationIds.add(row.id);
+    }
+
     const applications = await fetchAllRows<any>(() =>
       admin.from("verification_applications").select("id")
         .eq("user_id", user.id).order("id")
@@ -228,6 +261,15 @@ Deno.serve(async (request: Request) => {
       for (const publicId of cloudinaryIds) {
         await deleteCloudinaryAsset(cloudName, cloudApiKey, cloudApiSecret, publicId);
       }
+    }
+
+    // Remove conversations attached to the user's own requests/offers before deleting
+    // those records; these FKs use SET NULL and would otherwise leave stale chat threads.
+    const conversationIds = Array.from(linkedConversationIds);
+    for (let index = 0; index < conversationIds.length; index += 100) {
+      const { error } = await admin.from("conversations")
+        .delete().in("id", conversationIds.slice(index, index + 100));
+      if (error) throw error;
     }
 
     // These relationships use ON DELETE SET NULL, so remove the user's authored rows
