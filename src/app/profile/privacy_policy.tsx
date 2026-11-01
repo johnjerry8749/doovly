@@ -78,7 +78,7 @@ const PRIVACY_SECTIONS = [
     id: 10,
     title: "Retention and Security",
     icon: "shield-checkmark-outline" as const,
-    body: "We keep information for as long as reasonably needed to provide the service, maintain account and booking records, resolve disputes, enforce our terms, meet legal obligations and protect the platform. Retention periods can vary by data type and circumstance. We use appropriate safeguards intended to protect information, but no online service or storage method can be guaranteed completely secure.",
+    body: "We keep information for as long as reasonably needed to provide the service, maintain account and booking records, resolve disputes, enforce our terms, meet legal obligations and protect the platform. When an account is deleted, information linked to that account is removed through the account-deletion process, subject to technical limitations and records we are legally permitted or required to retain. Any retained information is limited to the relevant purpose and kept only for as long as necessary. Retention periods can vary by data type and circumstance. We use appropriate safeguards intended to protect information, but no online service or storage method can be guaranteed completely secure.",
   },
   {
     id: 11,
@@ -90,7 +90,7 @@ const PRIVACY_SECTIONS = [
     id: 12,
     title: "Account Deletion",
     icon: "person-remove-outline" as const,
-    body: "If you want to delete your Doovly account or make a privacy request, contact support using the details below and clearly state your request. We may ask you to verify account ownership. Deletion may not immediately remove information that must be retained for legal, security, accounting or dispute-resolution reasons, and content already shared with other users may remain in their possession. We will handle valid requests in accordance with applicable law and our retention requirements.",
+    body: "You can request permanent deletion directly in the Doovly app: open Profile, go to Settings, choose Delete Account, review the notice and confirm by selecting Yes, Delete My Account. The request is submitted securely for the account currently signed in. If deletion succeeds, your Doovly authentication account is deleted and account records linked through our database relationships are removed. We also attempt to remove uploaded images and files associated with your account from the storage services used by Doovly. You will be signed out and will need to create a new account to use Doovly again. Deleting your Doovly account does not automatically cancel an Apple App Store or Google Play subscription; cancel any active subscription separately in the store where you purchased it. Some information may be retained where necessary or permitted for legal, security, accounting, fraud-prevention or dispute-resolution purposes. Messages or other content already delivered to another user, or copies that another user saved, may remain available to that user. If the in-app deletion request fails, contact support@doovly.com from your registered email address where possible; we may ask you to verify account ownership. We handle deletion requests in accordance with applicable law and our retention requirements.",
   },
   {
     id: 13,
@@ -152,7 +152,7 @@ export default function PrivacyPolicy() {
           </View>
           <Text style={styles.brand}>Doovly</Text>
           <Text style={styles.heroTitle}>Privacy Policy</Text>
-          <Text style={styles.updated}>Last updated: 16 October 2026</Text>
+          <Text style={styles.updated}>Last updated: 1 November 2026</Text>
           <Text style={styles.intro}>
             Your privacy matters. This page explains what information Doovly may handle, how it is used, when it is shared, and the choices available to you.
           </Text>
